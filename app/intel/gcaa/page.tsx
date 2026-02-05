@@ -1,18 +1,42 @@
-import { Shield } from 'lucide-react';
+'use client';
+
+import { ArrowLeft, Shield } from 'lucide-react';
+import Link from 'next/link';
+import { useAgencyData } from '@/hooks/useAgencyData';
+import { GCAADetail } from '@/components/intel/GCAADetail';
 
 export default function GCAAIntelPage() {
+  const { rawData, isLoading } = useAgencyData();
+
   return (
-    <div className="animate-fade-in">
-      <div className="flex items-center space-x-3 mb-8">
-        <Shield className="h-8 w-8 text-[#d4af37]" />
-        <div>
-          <h1 className="text-3xl font-bold text-white">GCAA Compliance</h1>
-          <p className="text-[#64748b] text-sm mt-1">Guyana Civil Aviation Authority — Safety & Compliance</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Link
+          href="/intel"
+          className="p-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5 text-[#94a3b8]" />
+        </Link>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg">
+            <Shield className="text-white" size={22} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white">GCAA Deep Dive</h1>
+            <p className="text-[#64748b] text-sm">Guyana Civil Aviation Authority — Compliance Monitoring</p>
+          </div>
         </div>
       </div>
-      <div className="card-premium p-8 text-center">
-        <p className="text-[#64748b]">GCAA compliance dashboard coming soon</p>
-      </div>
+
+      {/* Content */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-24">
+          <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (
+        <GCAADetail data={rawData.gcaa} />
+      )}
     </div>
   );
 }

@@ -1,18 +1,42 @@
-import { Droplets } from 'lucide-react';
+'use client';
+
+import { ArrowLeft, Droplets } from 'lucide-react';
+import Link from 'next/link';
+import { useAgencyData } from '@/hooks/useAgencyData';
+import { GWIDetail } from '@/components/intel/GWIDetail';
 
 export default function GWIIntelPage() {
+  const { rawData, isLoading } = useAgencyData();
+
   return (
-    <div className="animate-fade-in">
-      <div className="flex items-center space-x-3 mb-8">
-        <Droplets className="h-8 w-8 text-[#d4af37]" />
-        <div>
-          <h1 className="text-3xl font-bold text-white">GWI Metrics</h1>
-          <p className="text-[#64748b] text-sm mt-1">Guyana Water Inc. — Service & Infrastructure</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Link
+          href="/intel"
+          className="p-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5 text-[#94a3b8]" />
+        </Link>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-600 shadow-lg">
+            <Droplets className="text-white" size={22} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white">GWI Deep Dive</h1>
+            <p className="text-[#64748b] text-sm">Guyana Water Inc. — Service Metrics</p>
+          </div>
         </div>
       </div>
-      <div className="card-premium p-8 text-center">
-        <p className="text-[#64748b]">GWI metrics coming soon</p>
-      </div>
+
+      {/* Content */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-24">
+          <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (
+        <GWIDetail data={rawData.gwi} />
+      )}
     </div>
   );
 }
