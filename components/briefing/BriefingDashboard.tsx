@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import { AlertTriangle, Calendar, CheckSquare, Clock, RefreshCw, Edit2 } from 'lucide-react';
 import { TaskEditModal } from './TaskEditModal';
+import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
+import { LoadingSkeleton } from '@/components/intel/common/LoadingSkeleton';
 
 interface Task {
   notion_id: string;
@@ -71,11 +73,7 @@ export function BriefingDashboard() {
   };
 
   if (loading && !briefing) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+    return <LoadingSkeleton type="briefing" />;
   }
 
   if (error && !briefing) {
@@ -168,26 +166,13 @@ export function BriefingDashboard() {
         <div className="lg:col-span-2 space-y-6">
           {/* Overdue */}
           {briefing.overdue.length > 0 && (
-            <div className="card-premium p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-red-400 flex items-center">
-                  <AlertTriangle className="h-5 w-5 mr-2" />
-                  Overdue ({briefing.overdue.length})
-                </h2>
-                <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-red-500/20 text-red-400">
-                  {briefing.overdue.length} tasks
-                </span>
-              </div>
+            <CollapsibleSection title="Overdue" badge={{ text: String(briefing.overdue.length), variant: 'danger' }} icon={AlertTriangle} defaultOpen={true}>
               <TaskList tasks={briefing.overdue} showOverdueInfo onEdit={handleEditTask} />
-            </div>
+            </CollapsibleSection>
           )}
 
           {/* Due Today */}
-          <div className="card-premium p-6">
-            <h2 className="text-lg font-semibold text-white flex items-center mb-4">
-              <Clock className="h-5 w-5 mr-2 text-[#d4af37]" />
-              Today
-            </h2>
+          <CollapsibleSection title="Due Today" badge={{ text: String(briefing.due_today.length), variant: 'gold' }} icon={Clock} defaultOpen={true}>
             {briefing.due_today.length > 0 ? (
               <TaskList tasks={briefing.due_today} onEdit={handleEditTask} />
             ) : (
@@ -199,33 +184,25 @@ export function BriefingDashboard() {
                 <CalendarView events={briefing.calendar.today} />
               </div>
             )}
-          </div>
+          </CollapsibleSection>
 
           {/* This Week */}
           {briefing.due_this_week.length > 0 && (
-            <div className="card-premium p-6">
-              <h2 className="text-lg font-semibold text-white flex items-center mb-4">
-                <Calendar className="h-5 w-5 mr-2 text-[#d4af37]" />
-                This Week ({briefing.due_this_week.length})
-              </h2>
+            <CollapsibleSection title="This Week" badge={{ text: String(briefing.due_this_week.length), variant: 'default' }} icon={Calendar} defaultOpen={false}>
               <TaskList tasks={briefing.due_this_week} showDueDate onEdit={handleEditTask} />
-            </div>
+            </CollapsibleSection>
           )}
 
           {/* Open Tasks */}
           {briefing.no_due_date.length > 0 && (
-            <div className="card-premium p-6">
-              <h2 className="text-lg font-semibold text-white flex items-center mb-4">
-                <CheckSquare className="h-5 w-5 mr-2 text-[#64748b]" />
-                Open Tasks ({briefing.no_due_date.length})
-              </h2>
+            <CollapsibleSection title="Open Tasks" badge={{ text: String(briefing.no_due_date.length), variant: 'default' }} icon={CheckSquare} defaultOpen={false}>
               <TaskList tasks={briefing.no_due_date.slice(0, 10)} onEdit={handleEditTask} />
               {briefing.no_due_date.length > 10 && (
                 <p className="text-sm text-[#64748b] mt-3 text-center">
                   + {briefing.no_due_date.length - 10} more tasks
                 </p>
               )}
-            </div>
+            </CollapsibleSection>
           )}
         </div>
 
@@ -238,14 +215,13 @@ export function BriefingDashboard() {
           </div>
 
           {/* Upcoming Events */}
-          <div className="card-premium p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Upcoming Events</h2>
+          <CollapsibleSection title="Upcoming Events" badge={{ text: String(briefing.calendar.this_week.length), variant: 'default' }} icon={Calendar} defaultOpen={false}>
             {briefing.calendar.this_week.length > 0 ? (
               <CalendarView events={briefing.calendar.this_week} showDate />
             ) : (
               <p className="text-[#64748b] text-sm">No upcoming events</p>
             )}
-          </div>
+          </CollapsibleSection>
         </div>
       </div>
     </div>

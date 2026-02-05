@@ -89,6 +89,7 @@ export default function IntelPage() {
                 key={agency.id}
                 agency={agency}
                 onClick={() => setSelectedAgency(agency.id)}
+                compact
               />
             ))}
           </div>

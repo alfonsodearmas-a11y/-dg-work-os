@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { GPLData } from '@/data/mockData';
+import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -752,6 +753,14 @@ export function GPLDetail({ data }: GPLDetailProps) {
                   <ChevronDown className={`text-[#64748b] transition-transform ${briefingExpanded ? 'rotate-180' : ''}`} size={18} />
                 </button>
 
+                {!briefingExpanded && (
+                  <div className="px-4 pb-3">
+                    <p className="line-clamp-2 text-[#94a3b8] text-sm">
+                      {data.aiAnalysis.executive_briefing.split('\n')[0] || 'System status analysis available.'}
+                    </p>
+                  </div>
+                )}
+
                 {briefingExpanded && (
                   <div className="px-4 pb-4 space-y-4">
                     {/* Bottom Line */}
@@ -824,45 +833,46 @@ export function GPLDetail({ data }: GPLDetailProps) {
 
             {/* Station Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredStations.map(station => (
-                <div key={station.name} className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-5 hover:border-[#d4af37]/30 transition-colors">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      {station.name.includes('PS') ? (
-                        <Ship className="text-blue-400" size={20} />
-                      ) : (
-                        <Factory className="text-[#94a3b8]" size={20} />
-                      )}
-                      <h4 className="text-[#f1f5f9] font-medium text-base">{station.name}</h4>
+              {filteredStations.map(station => {
+                const statusVariant = (
+                  station.status === 'operational' ? 'success' :
+                  station.status === 'degraded' ? 'warning' :
+                  station.status === 'critical' ? 'danger' :
+                  'danger'
+                ) as 'success' | 'warning' | 'danger';
+
+                return (
+                  <CollapsibleSection
+                    key={station.name}
+                    title={station.name}
+                    icon={station.name.includes('PS') ? Ship : Factory}
+                    badge={{ text: station.status.charAt(0).toUpperCase() + station.status.slice(1), variant: statusVariant }}
+                    defaultOpen={station.status === 'critical' || station.status === 'offline'}
+                  >
+                    <div className="mb-3">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-bold text-[#f1f5f9]">{station.available}</span>
+                        <span className="text-[#64748b] text-base">/ {station.derated} MW</span>
+                      </div>
                     </div>
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium border ${getStatusBg(station.status)}`}>
-                      {station.status.charAt(0).toUpperCase() + station.status.slice(1)}
-                    </span>
-                  </div>
 
-                  <div className="mb-3">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-bold text-[#f1f5f9]">{station.available}</span>
-                      <span className="text-[#64748b] text-base">/ {station.derated} MW</span>
+                    <div className="h-2.5 bg-[#2d3a52] rounded-full overflow-hidden mb-3">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${station.availability}%`,
+                          backgroundColor: getStatusColor(station.status)
+                        }}
+                      />
                     </div>
-                  </div>
 
-                  <div className="h-2.5 bg-[#2d3a52] rounded-full overflow-hidden mb-3">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: `${station.availability}%`,
-                        backgroundColor: getStatusColor(station.status)
-                      }}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between text-sm text-[#64748b]">
-                    <span>{station.units} units</span>
-                    <span>{station.availability.toFixed(0)}% available</span>
-                  </div>
-                </div>
-              ))}
+                    <div className="flex items-center justify-between text-sm text-[#64748b]">
+                      <span>{station.units} units</span>
+                      <span>{station.availability.toFixed(0)}% available</span>
+                    </div>
+                  </CollapsibleSection>
+                );
+              })}
             </div>
           </div>
         )}

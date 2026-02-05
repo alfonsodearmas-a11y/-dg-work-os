@@ -8,16 +8,16 @@ import {
   FolderKanban,
   FileText,
   Settings,
-  Database,
-  Building2,
   Zap,
   Plane,
   Droplets,
   Shield,
   ChevronRight,
   ChevronDown,
+  X,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useSidebar } from './SidebarContext';
 
 const mainNavItems = [
   { href: '/', label: 'Daily Briefing', icon: LayoutDashboard },
@@ -40,111 +40,139 @@ const adminItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const [agenciesOpen, setAgenciesOpen] = useState(true);
+  const { mobileOpen, setMobileOpen } = useSidebar();
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
     return pathname.startsWith(href);
   };
 
+  const handleNavClick = () => {
+    setMobileOpen(false);
+  };
+
   return (
-    <aside className="sidebar w-64 min-h-screen flex flex-col shrink-0">
-      {/* Logo */}
-      <div className="p-6 border-b border-[#2d3a52]/50">
-        <Link href="/" className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center shadow-lg">
-            <span className="text-[#0a1628] font-bold text-lg">DG</span>
-          </div>
-          <div>
-            <h1 className="font-bold text-white text-lg leading-tight">Work</h1>
-            <p className="text-[#d4af37] text-sm font-medium">OS</p>
-          </div>
-        </Link>
-      </div>
+    <>
+      {/* Mobile backdrop */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
 
-      {/* Main Navigation */}
-      <nav className="flex-1 py-6 overflow-y-auto">
-        <div className="px-4 mb-2">
-          <span className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">Main Menu</span>
-        </div>
-        {mainNavItems.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`sidebar-item ${active ? 'active' : ''}`}
-            >
-              <Icon className={active ? 'text-[#d4af37]' : ''} />
-              <span>{item.label}</span>
-              {active && <ChevronRight className="ml-auto h-4 w-4" />}
-            </Link>
-          );
-        })}
-
-        {/* Agencies Section */}
-        <div className="mt-8">
-          <button
-            onClick={() => setAgenciesOpen(!agenciesOpen)}
-            className="w-full px-4 mb-2 flex items-center justify-between"
-          >
-            <span className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">Agencies</span>
-            {agenciesOpen ? (
-              <ChevronDown className="h-3 w-3 text-[#64748b]" />
-            ) : (
-              <ChevronRight className="h-3 w-3 text-[#64748b]" />
-            )}
-          </button>
-          {agenciesOpen && (
-            <div className="space-y-0.5">
-              {agencies.map((agency) => {
-                const Icon = agency.icon;
-                const href = `/intel/${agency.code}`;
-                const active = pathname.startsWith(href);
-                return (
-                  <Link
-                    key={agency.code}
-                    href={href}
-                    className={`sidebar-item ${active ? 'active' : ''}`}
-                  >
-                    <Icon className={`h-4 w-4 ${active ? 'text-[#d4af37]' : ''}`} />
-                    <span className="text-sm">{agency.label}</span>
-                    <span className="ml-auto text-[10px] text-[#64748b] hidden group-hover:inline">{agency.name}</span>
-                  </Link>
-                );
-              })}
+      <aside
+        className={`sidebar w-64 min-h-screen flex flex-col shrink-0 fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-out md:static md:translate-x-0 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Logo */}
+        <div className="p-6 border-b border-[#2d3a52]/50 flex items-center justify-between">
+          <Link href="/" className="flex items-center space-x-3" onClick={handleNavClick}>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center shadow-lg">
+              <span className="text-[#0a1628] font-bold text-lg">DG</span>
             </div>
-          )}
+            <div>
+              <h1 className="font-bold text-white text-lg leading-tight">Work</h1>
+              <p className="text-[#d4af37] text-sm font-medium">OS</p>
+            </div>
+          </Link>
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="md:hidden p-1.5 rounded-lg hover:bg-[#2d3a52]/50 text-[#64748b] hover:text-white transition-colors"
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        {/* Admin Section */}
-        <div className="mt-8 px-4 mb-2">
-          <span className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">Admin</span>
-        </div>
-        {adminItems.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`sidebar-item ${active ? 'active' : ''}`}
+        {/* Main Navigation */}
+        <nav className="flex-1 py-6 overflow-y-auto">
+          <div className="px-4 mb-2">
+            <span className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">Main Menu</span>
+          </div>
+          {mainNavItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={handleNavClick}
+                className={`sidebar-item ${active ? 'active' : ''}`}
+              >
+                <Icon className={active ? 'text-[#d4af37]' : ''} />
+                <span>{item.label}</span>
+                {active && <ChevronRight className="ml-auto h-4 w-4" />}
+              </Link>
+            );
+          })}
+
+          {/* Agencies Section */}
+          <div className="mt-8">
+            <button
+              onClick={() => setAgenciesOpen(!agenciesOpen)}
+              className="w-full px-4 mb-2 flex items-center justify-between"
             >
-              <Icon className={active ? 'text-[#d4af37]' : ''} />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+              <span className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">Agencies</span>
+              {agenciesOpen ? (
+                <ChevronDown className="h-3 w-3 text-[#64748b]" />
+              ) : (
+                <ChevronRight className="h-3 w-3 text-[#64748b]" />
+              )}
+            </button>
+            {agenciesOpen && (
+              <div className="space-y-0.5">
+                {agencies.map((agency) => {
+                  const Icon = agency.icon;
+                  const href = `/intel/${agency.code}`;
+                  const active = pathname.startsWith(href);
+                  return (
+                    <Link
+                      key={agency.code}
+                      href={href}
+                      onClick={handleNavClick}
+                      className={`sidebar-item ${active ? 'active' : ''}`}
+                    >
+                      <Icon className={`h-4 w-4 ${active ? 'text-[#d4af37]' : ''}`} />
+                      <span className="text-sm">{agency.label}</span>
+                      <span className="ml-auto text-[10px] text-[#64748b] hidden group-hover:inline">{agency.name}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-[#2d3a52]/50">
-        <div className="glass-card p-4">
-          <p className="text-xs text-[#64748b] mb-1">Director General</p>
-          <p className="text-sm font-medium text-white">Ministry of Public Utilities</p>
-          <p className="text-xs text-[#d4af37] mt-1">& Aviation</p>
+          {/* Admin Section */}
+          <div className="mt-8 px-4 mb-2">
+            <span className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">Admin</span>
+          </div>
+          {adminItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={handleNavClick}
+                className={`sidebar-item ${active ? 'active' : ''}`}
+              >
+                <Icon className={active ? 'text-[#d4af37]' : ''} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-[#2d3a52]/50">
+          <div className="glass-card p-4">
+            <p className="text-xs text-[#64748b] mb-1">Director General</p>
+            <p className="text-sm font-medium text-white">Ministry of Public Utilities</p>
+            <p className="text-xs text-[#d4af37] mt-1">& Aviation</p>
+          </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }

@@ -5,6 +5,7 @@ import { Upload, FileText, Building2, FolderOpen, RefreshCw, Search } from 'luci
 import { UploadZone } from '@/components/documents/UploadZone';
 import { DocumentCard } from '@/components/documents/DocumentCard';
 import { DocumentSearch } from '@/components/documents/DocumentSearch';
+import { LoadingSkeleton } from '@/components/intel/common/LoadingSkeleton';
 
 interface Document {
   id: string;
@@ -172,9 +173,7 @@ export default function DocumentsPage() {
               Recent Uploads
             </h2>
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin"></div>
-              </div>
+              <LoadingSkeleton type="documentList" count={5} />
             ) : documents.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 rounded-2xl bg-[#1a2744] flex items-center justify-center mx-auto mb-4">
@@ -186,7 +185,7 @@ export default function DocumentsPage() {
             ) : (
               <div className="space-y-3">
                 {documents.slice(0, 10).map((doc) => (
-                  <DocumentCard key={doc.id} document={doc} />
+                  <DocumentCard key={doc.id} document={doc} expandable />
                 ))}
               </div>
             )}

@@ -34,15 +34,16 @@ export interface AgencyData {
 interface AgencyCardProps {
   agency: AgencyData;
   onClick: () => void;
+  compact?: boolean;
 }
 
-export function AgencyCard({ agency, onClick }: AgencyCardProps) {
+export function AgencyCard({ agency, onClick, compact = false }: AgencyCardProps) {
   const { title, subtitle, icon: Icon, accentColor, status, metrics, sparklineData, trend, warningBadge } = agency;
 
   return (
     <div
       onClick={onClick}
-      className={`bg-[#1a2744] backdrop-blur-sm border rounded-2xl p-5 cursor-pointer transition-all duration-200 group hover:shadow-xl ${
+      className={`bg-[#1a2744] backdrop-blur-sm border rounded-2xl ${compact ? 'p-4' : 'p-5'} cursor-pointer transition-all duration-200 group hover:shadow-xl ${
         status?.type === 'critical'
           ? 'border-red-500/40 hover:border-red-400/60 hover:shadow-red-500/10'
           : status?.type === 'warning'
@@ -71,7 +72,7 @@ export function AgencyCard({ agency, onClick }: AgencyCardProps) {
       </div>
 
       {/* Warning Badge */}
-      {warningBadge && (
+      {!compact && warningBadge && (
         <div className={`flex items-center gap-2 mb-4 px-3 py-2 rounded-lg border ${
           warningBadge.severity === 'critical'
             ? 'bg-orange-500/15 border-orange-500/40'
@@ -112,54 +113,58 @@ export function AgencyCard({ agency, onClick }: AgencyCardProps) {
 
       {/* Primary Metric with Sparkline */}
       {metrics?.[0] && (
-        <div className="flex items-end justify-between gap-2 mb-4 pb-4 border-b border-[#2d3a52]">
+        <div className={`flex items-end justify-between gap-2 ${compact ? '' : 'mb-4 pb-4 border-b border-[#2d3a52]'}`}>
           <div className="min-w-0 flex-1">
             <p className="text-[#64748b] text-xs mb-1">{metrics[0].label}</p>
-            <p className={`text-xl sm:text-2xl font-bold truncate ${metrics[0].highlight ? 'text-[#d4af37]' : 'text-white'}`}>
+            <p className={`${compact ? 'text-lg' : 'text-xl sm:text-2xl'} font-bold truncate ${metrics[0].highlight ? 'text-[#d4af37]' : 'text-white'}`}>
               {metrics[0].value}
             </p>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {sparklineData && (
-              <Sparkline
-                data={sparklineData}
-                color={
-                  status?.type === 'critical'
-                    ? '#ef4444'
-                    : status?.type === 'warning'
-                    ? '#f59e0b'
-                    : '#10b981'
-                }
-                height={28}
-                width={48}
-              />
-            )}
-            {trend != null && <TrendIndicator value={trend} />}
-          </div>
+          {!compact && (
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {sparklineData && (
+                <Sparkline
+                  data={sparklineData}
+                  color={
+                    status?.type === 'critical'
+                      ? '#ef4444'
+                      : status?.type === 'warning'
+                      ? '#f59e0b'
+                      : '#10b981'
+                  }
+                  height={28}
+                  width={48}
+                />
+              )}
+              {trend != null && <TrendIndicator value={trend} />}
+            </div>
+          )}
         </div>
       )}
 
       {/* Secondary Metrics */}
-      <div className="space-y-2.5">
-        {metrics?.slice(1).map((metric, i) => (
-          <div key={i} className="flex justify-between items-center gap-3">
-            <span className="text-[#94a3b8] text-sm flex-shrink-0">{metric.label}</span>
-            <span
-              className={`font-medium text-sm text-right ${
-                metric.status === 'good'
-                  ? 'text-emerald-400'
-                  : metric.status === 'warning'
-                  ? 'text-amber-400'
-                  : metric.status === 'critical'
-                  ? 'text-red-400'
-                  : 'text-white'
-              }`}
-            >
-              {metric.value}
-            </span>
-          </div>
-        ))}
-      </div>
+      {!compact && (
+        <div className="space-y-2.5">
+          {metrics?.slice(1).map((metric, i) => (
+            <div key={i} className="flex justify-between items-center gap-3">
+              <span className="text-[#94a3b8] text-sm flex-shrink-0">{metric.label}</span>
+              <span
+                className={`font-medium text-sm text-right ${
+                  metric.status === 'good'
+                    ? 'text-emerald-400'
+                    : metric.status === 'warning'
+                    ? 'text-amber-400'
+                    : metric.status === 'critical'
+                    ? 'text-red-400'
+                    : 'text-white'
+                }`}
+              >
+                {metric.value}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
