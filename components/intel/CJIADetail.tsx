@@ -8,7 +8,8 @@ import {
 } from 'lucide-react';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { InsightCard, type InsightCardData } from '@/components/ui/InsightCard';
-import { HealthScoreGauge } from '@/components/ui/HealthScoreGauge';
+import { HealthScoreTooltip } from '@/components/ui/HealthScoreTooltip';
+import { HealthBreakdownSection } from '@/components/ui/HealthBreakdownSection';
 import { computeCJIAHealth } from '@/lib/agency-health';
 import type { CJIAData } from '@/data/mockData';
 
@@ -218,9 +219,17 @@ export function CJIADetail({ data }: CJIADetailProps) {
           {/* Left: Health Score Gauge */}
           <div className="flex items-center gap-5">
             {insights?.overall?.health_score != null ? (
-              <HealthScoreGauge score={insights.overall.health_score} size={100} />
+              <div className="flex flex-col items-center flex-shrink-0">
+                <HealthScoreTooltip score={insights.overall.health_score} breakdown={health?.breakdown} size={100} />
+                {health && (
+                  <HealthBreakdownSection breakdown={health.breakdown} score={health.score} label={health.label} severity={health.severity} />
+                )}
+              </div>
             ) : health ? (
-              <HealthScoreGauge score={health.score} size={100} />
+              <div className="flex flex-col items-center flex-shrink-0">
+                <HealthScoreTooltip score={health.score} severity={health.severity} breakdown={health.breakdown} size={100} />
+                <HealthBreakdownSection breakdown={health.breakdown} score={health.score} label={health.label} severity={health.severity} />
+              </div>
             ) : insightsLoading ? (
               <div className="w-[100px] h-[100px] flex items-center justify-center">
                 <Loader2 className="w-6 h-6 text-[#64748b] animate-spin" />

@@ -16,7 +16,8 @@ import type { LucideIcon } from 'lucide-react';
 import type { GPLData } from '@/data/mockData';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { InsightCard, INSIGHT_SEVERITY, type InsightCardData } from '@/components/ui/InsightCard';
-import { HealthScoreGauge } from '@/components/ui/HealthScoreGauge';
+import { HealthScoreTooltip } from '@/components/ui/HealthScoreTooltip';
+import { HealthBreakdownSection } from '@/components/ui/HealthBreakdownSection';
 import { computeGPLHealth } from '@/lib/agency-health';
 import { GPLMonthlyKpi } from './GPLMonthlyKpi';
 import { GPLExcelUpload } from './GPLExcelUpload';
@@ -641,10 +642,15 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
       <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-4">
         <div className="flex items-start justify-between mb-3 gap-4">
           <div className="flex items-start gap-4 flex-1 min-w-0">
-            {/* Health Score Gauge */}
+            {/* Health Score Gauge with Tooltip */}
             {gplHealth && (
               <div className="flex flex-col items-center flex-shrink-0">
-                <HealthScoreGauge score={gplHealth.score} size={88} />
+                <HealthScoreTooltip
+                  score={gplHealth.score}
+                  severity={gplHealth.severity}
+                  breakdown={gplHealth.breakdown}
+                  size={88}
+                />
                 <span className={`text-[10px] font-medium mt-1 ${
                   gplHealth.severity === 'critical' ? 'text-red-400'
                     : gplHealth.severity === 'warning' ? 'text-amber-400'
@@ -653,6 +659,12 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                 }`}>
                   {gplHealth.label}
                 </span>
+                <HealthBreakdownSection
+                  breakdown={gplHealth.breakdown}
+                  score={gplHealth.score}
+                  label={gplHealth.label}
+                  severity={gplHealth.severity}
+                />
               </div>
             )}
             {/* AI Headline */}

@@ -8,7 +8,9 @@ import {
 } from 'lucide-react';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { InsightCard, type InsightCardData } from '@/components/ui/InsightCard';
-import { HealthScoreGauge } from '@/components/ui/HealthScoreGauge';
+import { HealthScoreTooltip } from '@/components/ui/HealthScoreTooltip';
+import { HealthBreakdownSection } from '@/components/ui/HealthBreakdownSection';
+import { computeGWIHealth } from '@/lib/agency-health';
 import { GWIDocUpload } from './GWIDocUpload';
 import type { GWIInsights } from '@/lib/gwi-insights';
 
@@ -238,6 +240,12 @@ export function GWIDetail() {
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [regenerating, setRegenerating] = useState(false);
 
+  // Compute health score with breakdown
+  const gwiHealth = useMemo(
+    () => report ? computeGWIHealth(report, insights?.overall?.health_score) : null,
+    [report, insights]
+  );
+
   // Fetch report data
   useEffect(() => {
     async function fetchReport() {
@@ -389,8 +397,15 @@ export function GWIDetail() {
         <div className="flex items-start justify-between gap-4">
           {/* Left: Health Score Gauge */}
           <div className="flex items-center gap-5">
-            {insights?.overall?.health_score != null ? (
-              <HealthScoreGauge score={insights.overall.health_score} size={100} />
+            {gwiHealth ? (
+              <div className="flex flex-col items-center flex-shrink-0">
+                <HealthScoreTooltip score={gwiHealth.score} severity={gwiHealth.severity} breakdown={gwiHealth.breakdown} size={100} />
+                <HealthBreakdownSection breakdown={gwiHealth.breakdown} score={gwiHealth.score} label={gwiHealth.label} severity={gwiHealth.severity} />
+              </div>
+            ) : insights?.overall?.health_score != null ? (
+              <div className="flex flex-col items-center flex-shrink-0">
+                <HealthScoreTooltip score={insights.overall.health_score} size={100} />
+              </div>
             ) : insightsLoading ? (
               <div className="w-[100px] h-[100px] flex items-center justify-center">
                 <Loader2 className="w-6 h-6 text-[#64748b] animate-spin" />

@@ -6,7 +6,7 @@ import type { AgencyRawData, GPLData, CJIAData, GCAAData } from '@/data/mockData
 import { Plane, Droplets, Zap, Shield } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { GridMetric } from '@/components/intel/AgencyCard';
-import { computeGPLHealth, computeGWIHealth, computeCJIAHealth, computeGCAAHealth } from '@/lib/agency-health';
+import { computeGPLHealth, computeGWIHealth, computeCJIAHealth, computeGCAAHealth, type HealthBreakdownItem } from '@/lib/agency-health';
 
 // Transform API response to match expected GPL data structure
 const transformGPLData = (apiData: any): GPLData | null => {
@@ -568,6 +568,7 @@ export const useAgencyData = () => {
       healthScore: health?.score,
       healthLabel: health?.label,
       healthSeverity: health?.severity,
+      healthBreakdown: health?.breakdown ?? null,
       sparklineData: getSparklineData(id, data),
       trend: getAgencyTrend(id, data),
       warningBadge: getAgencyWarningBadge(id, data),

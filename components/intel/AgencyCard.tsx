@@ -2,7 +2,8 @@
 
 import { ChevronRight, AlertTriangle } from 'lucide-react';
 import { StatusBadge, Sparkline, TrendIndicator } from './common';
-import { HealthScoreGauge } from '@/components/ui/HealthScoreGauge';
+import { HealthScoreTooltip } from '@/components/ui/HealthScoreTooltip';
+import type { HealthBreakdownItem } from '@/lib/agency-health';
 import type { LucideIcon } from 'lucide-react';
 
 interface Metric {
@@ -37,6 +38,7 @@ export interface AgencyData {
   healthScore?: number;
   healthLabel?: string;
   healthSeverity?: 'critical' | 'warning' | 'stable' | 'positive';
+  healthBreakdown?: HealthBreakdownItem[] | null;
   sparklineData?: number[];
   trend?: number | null;
   warningBadge?: WarningBadge | null;
@@ -126,10 +128,15 @@ export function AgencyCard({ agency, onClick, compact = false }: AgencyCardProps
       {/* Compact Grid Metrics with optional Health Gauge */}
       {compact && agency.gridMetrics && agency.gridMetrics.length > 0 ? (
         <div className={agency.healthScore ? 'flex items-start gap-3' : ''}>
-          {/* Health Score Gauge */}
+          {/* Health Score Gauge with Tooltip */}
           {agency.healthScore && (
             <div className="flex flex-col items-center flex-shrink-0">
-              <HealthScoreGauge score={agency.healthScore} compact />
+              <HealthScoreTooltip
+                score={agency.healthScore}
+                severity={agency.healthSeverity}
+                breakdown={agency.healthBreakdown ?? undefined}
+                compact
+              />
               {agency.healthLabel && (
                 <span className={`text-[10px] font-medium mt-1 ${
                   agency.healthSeverity === 'critical' ? 'text-red-400'
