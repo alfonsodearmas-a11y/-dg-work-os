@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateRequest, AuthError } from '@/lib/auth';
 import { transaction } from '@/lib/db-pg';
 import { auditService } from '@/lib/audit';
 import { generateGPLBriefing } from '@/lib/ai-analysis';
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await authenticateRequest(request);
     const body = await request.json();
     const { uploadData, reportDate } = body;
 
@@ -33,7 +31,7 @@ export async function POST(request: NextRequest) {
         [
           reportDate,
           uploadData.fileName || 'gpl-dbis.xlsx',
-          user.id,
+          'dg-admin',
           JSON.stringify(uploadData),
         ]
       );
@@ -124,7 +122,7 @@ export async function POST(request: NextRequest) {
 
     // Audit log
     await auditService.log({
-      userId: user.id,
+      userId: 'dg-admin',
       action: 'CREATE',
       entityType: 'gpl_uploads',
       entityId: result.uploadId,
@@ -212,12 +210,6 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error: any) {
-    if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message, code: error.code },
-        { status: error.status }
-      );
-    }
     console.error('[gpl/upload/confirm] Error:', error.message);
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to confirm GPL upload' },

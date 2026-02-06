@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateRequest, AuthError } from '@/lib/auth';
 import { query, transaction } from '@/lib/db-pg';
 import { auditService } from '@/lib/audit';
 import { analyzeMetrics } from '@/lib/ai-analysis';
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await authenticateRequest(request);
     const { date, records, filename } = await request.json();
 
     if (!date || !records || !Array.isArray(records)) {
@@ -29,7 +27,7 @@ export async function POST(request: NextRequest) {
       const uploadResult = await client.query(
         `INSERT INTO daily_uploads (report_date, filename, uploaded_by, record_count, status)
          VALUES ($1, $2, $3, $4, 'confirmed') RETURNING id`,
-        [date, filename, user.id, records.length]
+        [date, filename, 'dg-admin', records.length]
       );
       const uploadId = uploadResult.rows[0].id;
 
@@ -46,7 +44,7 @@ export async function POST(request: NextRequest) {
       return { uploadId, duplicateWarning };
     });
 
-    await auditService.log({ userId: user.id, action: 'DAILY_UPLOAD', entityType: 'daily_uploads', entityId: result.uploadId, newValues: { date, filename, recordCount: records.length }, request });
+    await auditService.log({ userId: 'dg-admin', action: 'DAILY_UPLOAD', entityType: 'daily_uploads', entityId: result.uploadId, newValues: { date, filename, recordCount: records.length }, request });
 
     // Trigger AI analysis async (non-blocking)
     analyzeMetrics(records, date).then(async (analysis) => {
@@ -68,7 +66,6 @@ export async function POST(request: NextRequest) {
       data: { uploadId: result.uploadId, date, recordCount: records.length, duplicateWarning: result.duplicateWarning },
     });
   } catch (error: any) {
-    if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

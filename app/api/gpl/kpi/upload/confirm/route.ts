@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateRequest, AuthError } from '@/lib/auth';
 import { query } from '@/lib/db-pg';
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await authenticateRequest(request);
     const body = await request.json();
     const { data, filename } = body;
 
@@ -50,12 +48,6 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: error.status }
-      );
-    }
     console.error('[gpl-kpi-confirm] Error:', error.message);
     return NextResponse.json(
       { success: false, error: 'Failed to save KPI data' },
