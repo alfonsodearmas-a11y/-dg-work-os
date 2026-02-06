@@ -15,6 +15,9 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import type { GPLData } from '@/data/mockData';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
+import { InsightCard, INSIGHT_SEVERITY, type InsightCardData } from '@/components/ui/InsightCard';
+import { HealthScoreGauge } from '@/components/ui/HealthScoreGauge';
+import { computeGPLHealth } from '@/lib/agency-health';
 import { GPLMonthlyKpi } from './GPLMonthlyKpi';
 import { GPLExcelUpload } from './GPLExcelUpload';
 
@@ -170,65 +173,6 @@ function ForecastMetricCard({ title, value, unit = '', isDate = false, trend = '
     <div className={`bg-[#1a2744] rounded-xl border border-[#2d3a52] border-l-4 ${trendStyles[trend]} p-5`}>
       <p className="text-[#64748b] text-[15px] mb-1">{title}</p>
       <p className="text-2xl font-bold text-[#f1f5f9]">{displayValue}</p>
-    </div>
-  );
-}
-
-// Severity config for insight cards
-const INSIGHT_SEVERITY: Record<string, { bg: string; text: string; border: string; label: string }> = {
-  critical: { bg: 'bg-red-500/15', text: 'text-red-400', border: 'border-red-500/30', label: 'Critical' },
-  warning:  { bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/30', label: 'Warning' },
-  stable:   { bg: 'bg-blue-500/15', text: 'text-blue-400', border: 'border-blue-500/30', label: 'Stable' },
-  positive: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30', label: 'Good' },
-};
-
-interface InsightCardData {
-  emoji: string;
-  title: string;
-  severity: string;
-  summary: string;
-  detail: string | null;
-}
-
-function InsightCard({ card }: { card: InsightCardData }) {
-  const [expanded, setExpanded] = useState(false);
-  const sev = INSIGHT_SEVERITY[card.severity] || INSIGHT_SEVERITY.stable;
-  const hasDetail = card.detail && card.detail.length > 0;
-
-  return (
-    <div className={`bg-[#1a2744] rounded-xl border ${sev.border} overflow-hidden`}>
-      <button
-        type="button"
-        onClick={() => hasDetail && setExpanded(!expanded)}
-        className={`w-full text-left px-4 py-3.5 transition-colors ${hasDetail ? 'hover:bg-white/[0.02] cursor-pointer' : 'cursor-default'}`}
-      >
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">{card.emoji}</span>
-            <span className="text-[17px] font-semibold text-white">{card.title}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[13px] font-medium ${sev.bg} ${sev.text}`}>
-              {sev.label}
-            </span>
-            {hasDetail && (
-              <ChevronDown className={`w-4 h-4 text-[#64748b] transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
-            )}
-          </div>
-        </div>
-        <p className="text-[15px] text-[#c8d0dc] leading-snug">{card.summary}</p>
-      </button>
-      {hasDetail && (
-        <div className={`collapse-grid ${expanded ? 'open' : ''}`}>
-          <div>
-            <div className="px-4 pb-4 pt-0">
-              <div className="bg-[#0a1628] rounded-lg p-4 border border-[#2d3a52]">
-                <p className="text-[15px] text-[#94a3b8] leading-relaxed whitespace-pre-line">{card.detail}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -594,6 +538,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
   }, [forecastData, eveningPeak, kpiData]);
 
   const healthStatus = reserveMargin < 10 ? 'critical' : reserveMargin < 15 ? 'warning' : 'good';
+  const gplHealth = useMemo(() => computeGPLHealth(data), [data]);
 
   // Consolidate alerts from AI analysis
   const consolidatedAlerts = useMemo<ConsolidatedAlert[]>(() => {
@@ -694,15 +639,45 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
     <div className="space-y-4">
       {/* PERSISTENT KPI STRIP */}
       <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${
-              healthStatus === 'critical' ? 'bg-red-500 animate-pulse' :
-              healthStatus === 'warning' ? 'bg-amber-500' : 'bg-emerald-500'
-            }`} />
-            <span className="text-[#94a3b8] text-[15px] font-medium">System Health</span>
+        <div className="flex items-start justify-between mb-3 gap-4">
+          <div className="flex items-start gap-4 flex-1 min-w-0">
+            {/* Health Score Gauge */}
+            {gplHealth && (
+              <div className="flex flex-col items-center flex-shrink-0">
+                <HealthScoreGauge score={gplHealth.score} size={88} />
+                <span className={`text-[10px] font-medium mt-1 ${
+                  gplHealth.severity === 'critical' ? 'text-red-400'
+                    : gplHealth.severity === 'warning' ? 'text-amber-400'
+                    : gplHealth.severity === 'positive' ? 'text-emerald-400'
+                    : 'text-blue-400'
+                }`}>
+                  {gplHealth.label}
+                </span>
+              </div>
+            )}
+            {/* AI Headline */}
+            <div className="min-w-0 flex-1 pt-1">
+              {data.aiAnalysis?.executiveBriefing ? (
+                <>
+                  <p className="text-[#d4af37] text-sm font-semibold mb-1">AI Executive Briefing</p>
+                  <p className="text-[#94a3b8] text-[13px] leading-relaxed line-clamp-3">
+                    {typeof data.aiAnalysis.executiveBriefing === 'string'
+                      ? data.aiAnalysis.executiveBriefing
+                      : data.aiAnalysis.executiveBriefing.executive_summary || data.aiAnalysis.executiveBriefing.headline || 'Analysis available'}
+                  </p>
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full ${
+                    healthStatus === 'critical' ? 'bg-red-500 animate-pulse' :
+                    healthStatus === 'warning' ? 'bg-amber-500' : 'bg-emerald-500'
+                  }`} />
+                  <span className="text-[#94a3b8] text-[15px] font-medium">System Health</span>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-shrink-0">
             {historyDates.length > 1 && (
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-[#64748b]" />

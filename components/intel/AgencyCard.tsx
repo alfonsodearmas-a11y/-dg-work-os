@@ -2,6 +2,7 @@
 
 import { ChevronRight, AlertTriangle } from 'lucide-react';
 import { StatusBadge, Sparkline, TrendIndicator } from './common';
+import { HealthScoreGauge } from '@/components/ui/HealthScoreGauge';
 import type { LucideIcon } from 'lucide-react';
 
 interface Metric {
@@ -9,6 +10,13 @@ interface Metric {
   value: string | number;
   highlight?: boolean;
   status?: 'good' | 'warning' | 'critical';
+}
+
+export interface GridMetric {
+  label: string;
+  value: string;
+  badge?: string;
+  badgeColor?: 'green' | 'amber' | 'red' | 'blue';
 }
 
 interface WarningBadge {
@@ -25,6 +33,10 @@ export interface AgencyData {
   accentColor: string;
   status?: { type: 'good' | 'warning' | 'critical'; text: string };
   metrics?: Metric[];
+  gridMetrics?: GridMetric[];
+  healthScore?: number;
+  healthLabel?: string;
+  healthSeverity?: 'critical' | 'warning' | 'stable' | 'positive';
   sparklineData?: number[];
   trend?: number | null;
   warningBadge?: WarningBadge | null;
@@ -111,59 +123,104 @@ export function AgencyCard({ agency, onClick, compact = false }: AgencyCardProps
         </div>
       )}
 
-      {/* Primary Metric with Sparkline */}
-      {metrics?.[0] && (
-        <div className={`flex items-end justify-between gap-2 ${compact ? '' : 'mb-4 pb-4 border-b border-[#2d3a52]'}`}>
-          <div className="min-w-0 flex-1">
-            <p className="text-[#64748b] text-xs mb-1">{metrics[0].label}</p>
-            <p className={`${compact ? 'text-lg' : 'text-xl sm:text-2xl'} font-bold truncate ${metrics[0].highlight ? 'text-[#d4af37]' : 'text-white'}`}>
-              {metrics[0].value}
-            </p>
-          </div>
-          {!compact && (
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {sparklineData && (
-                <Sparkline
-                  data={sparklineData}
-                  color={
-                    status?.type === 'critical'
-                      ? '#ef4444'
-                      : status?.type === 'warning'
-                      ? '#f59e0b'
-                      : '#10b981'
-                  }
-                  height={28}
-                  width={48}
-                />
+      {/* Compact Grid Metrics with optional Health Gauge */}
+      {compact && agency.gridMetrics && agency.gridMetrics.length > 0 ? (
+        <div className={agency.healthScore ? 'flex items-start gap-3' : ''}>
+          {/* Health Score Gauge */}
+          {agency.healthScore && (
+            <div className="flex flex-col items-center flex-shrink-0">
+              <HealthScoreGauge score={agency.healthScore} compact />
+              {agency.healthLabel && (
+                <span className={`text-[10px] font-medium mt-1 ${
+                  agency.healthSeverity === 'critical' ? 'text-red-400'
+                    : agency.healthSeverity === 'warning' ? 'text-amber-400'
+                    : agency.healthSeverity === 'positive' ? 'text-emerald-400'
+                    : 'text-blue-400'
+                }`}>
+                  {agency.healthLabel}
+                </span>
               )}
-              {trend != null && <TrendIndicator value={trend} />}
             </div>
           )}
+          {/* Grid Metrics */}
+          <div className={`grid ${agency.gridMetrics.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'} gap-x-3 gap-y-2.5 flex-1 min-w-0`}>
+            {agency.gridMetrics.map((gm, i) => (
+              <div key={i} className="min-w-0">
+                <p className="text-[#64748b] text-xs leading-tight truncate">{gm.label}</p>
+                <div className="flex items-baseline gap-1 mt-0.5">
+                  <span className="text-base font-bold text-[#d4af37] truncate">{gm.value}</span>
+                  {gm.badge && (
+                    <span className={`text-[10px] font-medium px-1 py-px rounded whitespace-nowrap ${
+                      gm.badgeColor === 'green' ? 'bg-emerald-500/20 text-emerald-400'
+                        : gm.badgeColor === 'amber' ? 'bg-amber-500/20 text-amber-400'
+                        : gm.badgeColor === 'red' ? 'bg-red-500/20 text-red-400'
+                        : 'bg-blue-500/20 text-blue-400'
+                    }`}>
+                      {gm.badge}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      )}
-
-      {/* Secondary Metrics */}
-      {!compact && (
-        <div className="space-y-2.5">
-          {metrics?.slice(1).map((metric, i) => (
-            <div key={i} className="flex justify-between items-center gap-3">
-              <span className="text-[#94a3b8] text-sm flex-shrink-0">{metric.label}</span>
-              <span
-                className={`font-medium text-sm text-right ${
-                  metric.status === 'good'
-                    ? 'text-emerald-400'
-                    : metric.status === 'warning'
-                    ? 'text-amber-400'
-                    : metric.status === 'critical'
-                    ? 'text-red-400'
-                    : 'text-white'
-                }`}
-              >
-                {metric.value}
-              </span>
+      ) : (
+        <>
+          {/* Primary Metric with Sparkline */}
+          {metrics?.[0] && (
+            <div className={`flex items-end justify-between gap-2 ${compact ? '' : 'mb-4 pb-4 border-b border-[#2d3a52]'}`}>
+              <div className="min-w-0 flex-1">
+                <p className="text-[#64748b] text-xs mb-1">{metrics[0].label}</p>
+                <p className={`${compact ? 'text-lg' : 'text-xl sm:text-2xl'} font-bold truncate ${metrics[0].highlight ? 'text-[#d4af37]' : 'text-white'}`}>
+                  {metrics[0].value}
+                </p>
+              </div>
+              {!compact && (
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {sparklineData && (
+                    <Sparkline
+                      data={sparklineData}
+                      color={
+                        status?.type === 'critical'
+                          ? '#ef4444'
+                          : status?.type === 'warning'
+                          ? '#f59e0b'
+                          : '#10b981'
+                      }
+                      height={28}
+                      width={48}
+                    />
+                  )}
+                  {trend != null && <TrendIndicator value={trend} />}
+                </div>
+              )}
             </div>
-          ))}
-        </div>
+          )}
+
+          {/* Secondary Metrics */}
+          {!compact && (
+            <div className="space-y-2.5">
+              {metrics?.slice(1).map((metric, i) => (
+                <div key={i} className="flex justify-between items-center gap-3">
+                  <span className="text-[#94a3b8] text-sm flex-shrink-0">{metric.label}</span>
+                  <span
+                    className={`font-medium text-sm text-right ${
+                      metric.status === 'good'
+                        ? 'text-emerald-400'
+                        : metric.status === 'warning'
+                        ? 'text-amber-400'
+                        : metric.status === 'critical'
+                        ? 'text-red-400'
+                        : 'text-white'
+                    }`}
+                  >
+                    {metric.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

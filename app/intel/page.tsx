@@ -29,7 +29,7 @@ export default function IntelPage() {
       case 'cjia':
         return <CJIADetail data={rawData.cjia} />;
       case 'gwi':
-        return <GWIDetail data={rawData.gwi} />;
+        return <GWIDetail />;
       case 'gcaa':
         return <GCAADetail data={rawData.gcaa} />;
       default:

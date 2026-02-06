@@ -24,12 +24,12 @@ export default function GCAAIntelPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white">GCAA Deep Dive</h1>
-            <p className="text-[#64748b] text-sm">Guyana Civil Aviation Authority — Compliance Monitoring</p>
+            <p className="text-[#64748b] text-sm">Guyana Civil Aviation Authority — Compliance & Safety Monitoring</p>
           </div>
         </div>
       </div>
 
-      {/* Content */}
+      {/* Self-managing GCAA Detail (mock data as fallback) */}
       {isLoading ? (
         <div className="flex items-center justify-center py-24">
           <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />

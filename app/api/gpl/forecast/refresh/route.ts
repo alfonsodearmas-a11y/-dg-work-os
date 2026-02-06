@@ -8,12 +8,11 @@ export async function POST(request: NextRequest) {
       console.log(`[gpl-forecast-refresh] Triggered by dg-admin`);
       result = await runAllForecasts();
     } catch (importError: any) {
-      console.warn('[gpl-forecast-refresh] gpl-forecasting module unavailable:', importError.message);
+      console.error('[gpl-forecast-refresh] gpl-forecasting module error:', importError.message);
       return NextResponse.json({
-        success: true,
-        message: 'Forecast refresh is not yet available. The forecasting module is still being set up.',
-        placeholder: true,
-      });
+        success: false,
+        error: `Forecasting module failed: ${importError.message}`,
+      }, { status: 500 });
     }
 
     return NextResponse.json({

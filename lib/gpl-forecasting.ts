@@ -94,15 +94,13 @@ export interface AllForecasts {
 
 interface DailySummaryRow {
   report_date: string;
-  total_fossil_fuel_capacity_mw: string | null;
+  total_fossil_capacity_mw: string | null;
   expected_peak_demand_mw: string | null;
   reserve_capacity_mw: string | null;
   evening_peak_on_bars_mw: string | null;
   evening_peak_suppressed_mw: string | null;
   day_peak_on_bars_mw: string | null;
   day_peak_suppressed_mw: string | null;
-  system_utilization_pct: string | null;
-  reserve_margin_pct: string | null;
   total_dbis_capacity_mw: string | null;
   total_renewable_mwp: string | null;
 }
@@ -113,10 +111,8 @@ interface StationRow {
   total_units: number;
   units_online: number;
   units_offline: number;
-  units_no_data: number;
   total_derated_capacity_mw: string | null;
   total_available_mw: string | null;
-  station_utilization_pct: string | null;
 }
 
 interface UnitRow {
@@ -127,7 +123,6 @@ interface UnitRow {
   derated_capacity_mw: string | null;
   available_mw: string | null;
   status: string;
-  utilization_pct: string | null;
 }
 
 interface MonthlyKpiMap {
@@ -218,7 +213,7 @@ async function getDailySummaryData(daysBack: number = 365): Promise<DailySummary
 
   const { data, error } = await supabaseAdmin
     .from('gpl_daily_summary')
-    .select('report_date, total_fossil_fuel_capacity_mw, expected_peak_demand_mw, reserve_capacity_mw, evening_peak_on_bars_mw, evening_peak_suppressed_mw, day_peak_on_bars_mw, day_peak_suppressed_mw, system_utilization_pct, reserve_margin_pct, total_dbis_capacity_mw, total_renewable_mwp')
+    .select('report_date, total_fossil_capacity_mw, expected_peak_demand_mw, reserve_capacity_mw, evening_peak_on_bars_mw, evening_peak_suppressed_mw, day_peak_on_bars_mw, day_peak_suppressed_mw, total_dbis_capacity_mw, total_renewable_mwp')
     .gte('report_date', cutoffDate)
     .order('report_date', { ascending: true });
 
@@ -267,7 +262,7 @@ async function getStationData(daysBack: number = 90): Promise<StationRow[]> {
 
   const { data, error } = await supabaseAdmin
     .from('gpl_daily_stations')
-    .select('report_date, station, total_units, units_online, units_offline, units_no_data, total_derated_capacity_mw, total_available_mw, station_utilization_pct')
+    .select('report_date, station, total_units, units_online, units_offline, total_derated_capacity_mw, total_available_mw')
     .in('upload_id', confirmedIds)
     .gte('report_date', cutoffDate)
     .order('report_date', { ascending: true })
@@ -296,7 +291,7 @@ async function getUnitData(daysBack: number = 90): Promise<UnitRow[]> {
 
   const { data, error } = await supabaseAdmin
     .from('gpl_daily_units')
-    .select('report_date, station, engine, unit_number, derated_capacity_mw, available_mw, status, utilization_pct')
+    .select('report_date, station, engine, unit_number, derated_capacity_mw, available_mw, status')
     .in('upload_id', confirmedIds)
     .gte('report_date', cutoffDate)
     .order('report_date', { ascending: true })
@@ -591,10 +586,14 @@ export async function computeStationReliability(periodDays: number = 90): Promis
     const daysOnline = days.filter(d => d.units_online > 0).length;
     const uptimePct = (daysOnline / totalDays) * 100;
 
-    // Average utilization
+    // Average utilization (derived from available_mw / derated_capacity_mw)
     const utilizations = days
-      .filter(d => d.station_utilization_pct)
-      .map(d => parseFloat(d.station_utilization_pct!));
+      .filter(d => d.total_available_mw && d.total_derated_capacity_mw)
+      .map(d => {
+        const available = parseFloat(d.total_available_mw!);
+        const derated = parseFloat(d.total_derated_capacity_mw!);
+        return derated > 0 ? (available / derated) * 100 : 0;
+      });
     const avgUtilization = utilizations.length > 0
       ? utilizations.reduce((a, b) => a + b, 0) / utilizations.length
       : 0;

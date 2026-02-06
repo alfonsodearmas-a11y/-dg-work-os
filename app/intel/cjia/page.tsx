@@ -24,12 +24,12 @@ export default function CJIAIntelPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white">CJIA Deep Dive</h1>
-            <p className="text-[#64748b] text-sm">Cheddi Jagan International Airport — Passenger Analytics</p>
+            <p className="text-[#64748b] text-sm">Cheddi Jagan International Airport — Operations & Passenger Analytics</p>
           </div>
         </div>
       </div>
 
-      {/* Content */}
+      {/* Self-managing CJIA Detail (mock data as fallback) */}
       {isLoading ? (
         <div className="flex items-center justify-center py-24">
           <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
