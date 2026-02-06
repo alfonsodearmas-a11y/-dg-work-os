@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db-pg';
+import { supabaseAdmin } from '@/lib/db';
 import { generateGPLBriefing } from '@/lib/ai-analysis';
 
 export async function GET(
@@ -10,17 +10,17 @@ export async function GET(
     const { id } = await params;
 
     // Look up existing analysis for this upload
-    const analysisResult = await query(
-      `SELECT id, upload_id, report_date, analysis_data, status, created_at
-       FROM gpl_analysis
-       WHERE upload_id = $1
-       ORDER BY created_at DESC
-       LIMIT 1`,
-      [id]
-    );
+    const { data: analysisRows, error: analysisError } = await supabaseAdmin
+      .from('gpl_analysis')
+      .select('id, upload_id, report_date, analysis_data, status, created_at')
+      .eq('upload_id', id)
+      .order('created_at', { ascending: false })
+      .limit(1);
 
-    if (analysisResult.rows.length > 0) {
-      const row = analysisResult.rows[0];
+    if (analysisError) throw analysisError;
+
+    if (analysisRows && analysisRows.length > 0) {
+      const row = analysisRows[0];
       const analysisData = typeof row.analysis_data === 'string'
         ? JSON.parse(row.analysis_data)
         : row.analysis_data;
@@ -39,19 +39,21 @@ export async function GET(
     }
 
     // No existing analysis found -- attempt to generate one on the fly
-    const uploadResult = await query(
-      `SELECT id, report_date, raw_data FROM gpl_uploads WHERE id = $1`,
-      [id]
-    );
+    const { data: upload, error: uploadError } = await supabaseAdmin
+      .from('gpl_uploads')
+      .select('id, report_date, raw_data')
+      .eq('id', id)
+      .maybeSingle();
 
-    if (uploadResult.rows.length === 0) {
+    if (uploadError) throw uploadError;
+
+    if (!upload) {
       return NextResponse.json(
         { success: false, error: 'Upload not found' },
         { status: 404 }
       );
     }
 
-    const upload = uploadResult.rows[0];
     const rawData = typeof upload.raw_data === 'string'
       ? JSON.parse(upload.raw_data)
       : upload.raw_data;
@@ -117,11 +119,16 @@ export async function GET(
     const analysis = await generateGPLBriefing(briefingContext);
 
     // Persist the analysis
-    await query(
-      `INSERT INTO gpl_analysis (upload_id, report_date, analysis_data, status)
-       VALUES ($1, $2, $3, $4)`,
-      [id, upload.report_date, JSON.stringify(analysis), analysis.success ? 'completed' : 'failed']
-    );
+    const { error: insertError } = await supabaseAdmin
+      .from('gpl_analysis')
+      .insert({
+        upload_id: id,
+        report_date: upload.report_date,
+        analysis_data: analysis,
+        status: analysis.success ? 'completed' : 'failed',
+      });
+
+    if (insertError) throw insertError;
 
     return NextResponse.json({
       success: true,
@@ -151,19 +158,21 @@ export async function POST(
     const { id } = await params;
 
     // Verify the upload exists
-    const uploadResult = await query(
-      `SELECT id, report_date, raw_data FROM gpl_uploads WHERE id = $1`,
-      [id]
-    );
+    const { data: upload, error: uploadError } = await supabaseAdmin
+      .from('gpl_uploads')
+      .select('id, report_date, raw_data')
+      .eq('id', id)
+      .maybeSingle();
 
-    if (uploadResult.rows.length === 0) {
+    if (uploadError) throw uploadError;
+
+    if (!upload) {
       return NextResponse.json(
         { success: false, error: 'Upload not found' },
         { status: 404 }
       );
     }
 
-    const upload = uploadResult.rows[0];
     const rawData = typeof upload.raw_data === 'string'
       ? JSON.parse(upload.raw_data)
       : upload.raw_data;
@@ -229,25 +238,38 @@ export async function POST(
     // Generate fresh analysis
     const analysis = await generateGPLBriefing(briefingContext);
 
-    // Save (or update existing) analysis record
-    const existingAnalysis = await query(
-      `SELECT id FROM gpl_analysis WHERE upload_id = $1`,
-      [id]
-    );
+    // Check if an existing analysis record exists
+    const { data: existingRows, error: existingError } = await supabaseAdmin
+      .from('gpl_analysis')
+      .select('id')
+      .eq('upload_id', id);
 
-    if (existingAnalysis.rows.length > 0) {
-      await query(
-        `UPDATE gpl_analysis
-         SET analysis_data = $1, status = $2, created_at = NOW()
-         WHERE upload_id = $3`,
-        [JSON.stringify(analysis), analysis.success ? 'completed' : 'failed', id]
-      );
+    if (existingError) throw existingError;
+
+    if (existingRows && existingRows.length > 0) {
+      // Update existing record
+      const { error: updateError } = await supabaseAdmin
+        .from('gpl_analysis')
+        .update({
+          analysis_data: analysis,
+          status: analysis.success ? 'completed' : 'failed',
+          created_at: new Date().toISOString(),
+        })
+        .eq('upload_id', id);
+
+      if (updateError) throw updateError;
     } else {
-      await query(
-        `INSERT INTO gpl_analysis (upload_id, report_date, analysis_data, status)
-         VALUES ($1, $2, $3, $4)`,
-        [id, upload.report_date, JSON.stringify(analysis), analysis.success ? 'completed' : 'failed']
-      );
+      // Insert new record
+      const { error: insertError } = await supabaseAdmin
+        .from('gpl_analysis')
+        .insert({
+          upload_id: id,
+          report_date: upload.report_date,
+          analysis_data: analysis,
+          status: analysis.success ? 'completed' : 'failed',
+        });
+
+      if (insertError) throw insertError;
     }
 
     return NextResponse.json({

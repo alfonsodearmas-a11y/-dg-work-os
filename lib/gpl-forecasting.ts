@@ -5,7 +5,7 @@
  * unit risk scores, and load shedding trends from historical data.
  */
 
-import { query, getClient } from './db-pg';
+import { supabaseAdmin } from './db';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -214,41 +214,33 @@ function yoyGrowthRate(currentValue: number, previousYearValue: number): number 
  * Get daily summary data for forecasting
  */
 async function getDailySummaryData(daysBack: number = 365): Promise<DailySummaryRow[]> {
-  const result = await query(`
-    SELECT
-      report_date,
-      total_fossil_fuel_capacity_mw,
-      expected_peak_demand_mw,
-      reserve_capacity_mw,
-      evening_peak_on_bars_mw,
-      evening_peak_suppressed_mw,
-      day_peak_on_bars_mw,
-      day_peak_suppressed_mw,
-      system_utilization_pct,
-      reserve_margin_pct,
-      total_dbis_capacity_mw,
-      total_renewable_mwp
-    FROM gpl_daily_summary
-    WHERE report_date >= CURRENT_DATE - INTERVAL '${daysBack} days'
-    ORDER BY report_date ASC
-  `);
-  return result.rows;
+  const cutoffDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  const { data, error } = await supabaseAdmin
+    .from('gpl_daily_summary')
+    .select('report_date, total_fossil_fuel_capacity_mw, expected_peak_demand_mw, reserve_capacity_mw, evening_peak_on_bars_mw, evening_peak_suppressed_mw, day_peak_on_bars_mw, day_peak_suppressed_mw, system_utilization_pct, reserve_margin_pct, total_dbis_capacity_mw, total_renewable_mwp')
+    .gte('report_date', cutoffDate)
+    .order('report_date', { ascending: true });
+
+  if (error) throw error;
+  return data as DailySummaryRow[];
 }
 
 /**
  * Get monthly KPI data
  */
 async function getMonthlyKpiData(): Promise<MonthlyKpiMap> {
-  const result = await query(`
-    SELECT report_month, kpi_name, value
-    FROM gpl_monthly_kpis
-    ORDER BY report_month ASC, kpi_name
-  `);
+  const { data, error } = await supabaseAdmin
+    .from('gpl_monthly_kpis')
+    .select('report_month, kpi_name, value')
+    .order('report_month', { ascending: true });
+
+  if (error) throw error;
 
   // Group by month
   const byMonth: MonthlyKpiMap = {};
-  result.rows.forEach((row: { report_month: Date; kpi_name: string; value: string }) => {
-    const month = row.report_month.toISOString().split('T')[0];
+  (data || []).forEach((row: { report_month: string; kpi_name: string; value: string }) => {
+    const month = new Date(row.report_month).toISOString().split('T')[0];
     if (!byMonth[month]) byMonth[month] = {};
     byMonth[month][row.kpi_name] = parseFloat(row.value);
   });
@@ -260,47 +252,59 @@ async function getMonthlyKpiData(): Promise<MonthlyKpiMap> {
  * Get station data for reliability analysis
  */
 async function getStationData(daysBack: number = 90): Promise<StationRow[]> {
-  const result = await query(`
-    SELECT
-      s.report_date,
-      s.station,
-      s.total_units,
-      s.units_online,
-      s.units_offline,
-      s.units_no_data,
-      s.total_derated_capacity_mw,
-      s.total_available_mw,
-      s.station_utilization_pct
-    FROM gpl_daily_stations s
-    JOIN gpl_uploads u ON s.upload_id = u.id
-    WHERE u.status = 'confirmed'
-      AND s.report_date >= CURRENT_DATE - INTERVAL '${daysBack} days'
-    ORDER BY s.report_date ASC, s.station
-  `);
-  return result.rows;
+  const cutoffDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  // First get confirmed upload IDs
+  const { data: uploads, error: uploadsError } = await supabaseAdmin
+    .from('gpl_uploads')
+    .select('id')
+    .eq('status', 'confirmed');
+
+  if (uploadsError) throw uploadsError;
+
+  const confirmedIds = (uploads || []).map((u: { id: number }) => u.id);
+  if (confirmedIds.length === 0) return [];
+
+  const { data, error } = await supabaseAdmin
+    .from('gpl_daily_stations')
+    .select('report_date, station, total_units, units_online, units_offline, units_no_data, total_derated_capacity_mw, total_available_mw, station_utilization_pct')
+    .in('upload_id', confirmedIds)
+    .gte('report_date', cutoffDate)
+    .order('report_date', { ascending: true })
+    .order('station', { ascending: true });
+
+  if (error) throw error;
+  return data as StationRow[];
 }
 
 /**
  * Get unit data for failure prediction
  */
 async function getUnitData(daysBack: number = 90): Promise<UnitRow[]> {
-  const result = await query(`
-    SELECT
-      u.report_date,
-      u.station,
-      u.engine,
-      u.unit_number,
-      u.derated_capacity_mw,
-      u.available_mw,
-      u.status,
-      u.utilization_pct
-    FROM gpl_daily_units u
-    JOIN gpl_uploads up ON u.upload_id = up.id
-    WHERE up.status = 'confirmed'
-      AND u.report_date >= CURRENT_DATE - INTERVAL '${daysBack} days'
-    ORDER BY u.report_date ASC, u.station, u.unit_number
-  `);
-  return result.rows;
+  const cutoffDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  // First get confirmed upload IDs
+  const { data: uploads, error: uploadsError } = await supabaseAdmin
+    .from('gpl_uploads')
+    .select('id')
+    .eq('status', 'confirmed');
+
+  if (uploadsError) throw uploadsError;
+
+  const confirmedIds = (uploads || []).map((u: { id: number }) => u.id);
+  if (confirmedIds.length === 0) return [];
+
+  const { data, error } = await supabaseAdmin
+    .from('gpl_daily_units')
+    .select('report_date, station, engine, unit_number, derated_capacity_mw, available_mw, status, utilization_pct')
+    .in('upload_id', confirmedIds)
+    .gte('report_date', cutoffDate)
+    .order('report_date', { ascending: true })
+    .order('station', { ascending: true })
+    .order('unit_number', { ascending: true });
+
+  if (error) throw error;
+  return data as UnitRow[];
 }
 
 // ---------------------------------------------------------------------------
@@ -841,82 +845,130 @@ async function saveForecastsToDb(
   unitRisk: UnitRisk[],
   kpiForecasts: KpiForecast[]
 ): Promise<void> {
-  const client = await getClient();
   const today = new Date().toISOString().split('T')[0];
 
   try {
-    await client.query('BEGIN');
-
-    // Clear old forecasts for today
-    await client.query('DELETE FROM gpl_forecast_demand WHERE forecast_date = $1', [today]);
-    await client.query('DELETE FROM gpl_forecast_capacity WHERE forecast_date = $1', [today]);
-    await client.query('DELETE FROM gpl_forecast_load_shedding WHERE forecast_date = $1', [today]);
-    await client.query('DELETE FROM gpl_forecast_station_reliability WHERE forecast_date = $1', [today]);
-    await client.query('DELETE FROM gpl_forecast_unit_risk WHERE forecast_date = $1', [today]);
-    await client.query('DELETE FROM gpl_forecast_kpi WHERE forecast_date = $1', [today]);
+    // Clear old forecasts for today (sequential deletes)
+    const { error: e1 } = await supabaseAdmin.from('gpl_forecast_demand').delete().eq('forecast_date', today);
+    if (e1) throw e1;
+    const { error: e2 } = await supabaseAdmin.from('gpl_forecast_capacity').delete().eq('forecast_date', today);
+    if (e2) throw e2;
+    const { error: e3 } = await supabaseAdmin.from('gpl_forecast_load_shedding').delete().eq('forecast_date', today);
+    if (e3) throw e3;
+    const { error: e4 } = await supabaseAdmin.from('gpl_forecast_station_reliability').delete().eq('forecast_date', today);
+    if (e4) throw e4;
+    const { error: e5 } = await supabaseAdmin.from('gpl_forecast_unit_risk').delete().eq('forecast_date', today);
+    if (e5) throw e5;
+    const { error: e6 } = await supabaseAdmin.from('gpl_forecast_kpi').delete().eq('forecast_date', today);
+    if (e6) throw e6;
 
     // Save demand forecasts
-    for (const f of forecasts) {
-      await client.query(`
-        INSERT INTO gpl_forecast_demand
-        (forecast_date, projected_month, grid, projected_peak_mw, confidence_low_mw, confidence_high_mw, growth_rate_pct, data_source)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      `, [today, f.projected_month, f.grid, f.projected_peak_mw, f.confidence_low_mw, f.confidence_high_mw, f.growth_rate_pct, f.data_source]);
+    if (forecasts.length > 0) {
+      const demandRows = forecasts.map(f => ({
+        forecast_date: today,
+        projected_month: f.projected_month,
+        grid: f.grid,
+        projected_peak_mw: f.projected_peak_mw,
+        confidence_low_mw: f.confidence_low_mw,
+        confidence_high_mw: f.confidence_high_mw,
+        growth_rate_pct: f.growth_rate_pct,
+        data_source: f.data_source,
+      }));
+      const { error } = await supabaseAdmin.from('gpl_forecast_demand').insert(demandRows);
+      if (error) throw error;
     }
 
     // Save capacity timeline
-    for (const c of capacityTimeline) {
-      await client.query(`
-        INSERT INTO gpl_forecast_capacity
-        (forecast_date, grid, current_capacity_mw, projected_capacity_mw, shortfall_date, reserve_margin_pct, months_until_shortfall, risk_level)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      `, [today, c.grid, c.current_capacity_mw, c.projected_capacity_mw, c.shortfall_date, c.reserve_margin_pct, c.months_until_shortfall, c.risk_level]);
+    if (capacityTimeline.length > 0) {
+      const capacityRows = capacityTimeline.map(c => ({
+        forecast_date: today,
+        grid: c.grid,
+        current_capacity_mw: c.current_capacity_mw,
+        projected_capacity_mw: c.projected_capacity_mw,
+        shortfall_date: c.shortfall_date,
+        reserve_margin_pct: c.reserve_margin_pct,
+        months_until_shortfall: c.months_until_shortfall,
+        risk_level: c.risk_level,
+      }));
+      const { error } = await supabaseAdmin.from('gpl_forecast_capacity').insert(capacityRows);
+      if (error) throw error;
     }
 
     // Save load shedding
-    await client.query(`
-      INSERT INTO gpl_forecast_load_shedding
-      (forecast_date, period_days, avg_shed_mw, max_shed_mw, shed_days_count, trend, projected_avg_6mo)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-    `, [today, loadShedding.period_days, loadShedding.avg_shed_mw, loadShedding.max_shed_mw, loadShedding.shed_days_count, loadShedding.trend, loadShedding.projected_avg_6mo]);
+    {
+      const { error } = await supabaseAdmin.from('gpl_forecast_load_shedding').insert({
+        forecast_date: today,
+        period_days: loadShedding.period_days,
+        avg_shed_mw: loadShedding.avg_shed_mw,
+        max_shed_mw: loadShedding.max_shed_mw,
+        shed_days_count: loadShedding.shed_days_count,
+        trend: loadShedding.trend,
+        projected_avg_6mo: loadShedding.projected_avg_6mo,
+      });
+      if (error) throw error;
+    }
 
     // Save station reliability
-    for (const s of stationReliability) {
-      await client.query(`
-        INSERT INTO gpl_forecast_station_reliability
-        (forecast_date, station, period_days, uptime_pct, avg_utilization_pct, total_units, online_units, offline_units, failure_count, mtbf_days, trend, risk_level)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      `, [today, s.station, s.period_days, s.uptime_pct, s.avg_utilization_pct, s.total_units, s.online_units, s.offline_units, s.failure_count, s.mtbf_days, s.trend, s.risk_level]);
+    if (stationReliability.length > 0) {
+      const reliabilityRows = stationReliability.map(s => ({
+        forecast_date: today,
+        station: s.station,
+        period_days: s.period_days,
+        uptime_pct: s.uptime_pct,
+        avg_utilization_pct: s.avg_utilization_pct,
+        total_units: s.total_units,
+        online_units: s.online_units,
+        offline_units: s.offline_units,
+        failure_count: s.failure_count,
+        mtbf_days: s.mtbf_days,
+        trend: s.trend,
+        risk_level: s.risk_level,
+      }));
+      const { error } = await supabaseAdmin.from('gpl_forecast_station_reliability').insert(reliabilityRows);
+      if (error) throw error;
     }
 
     // Save unit risk (only medium and high)
     const riskyUnits = unitRisk.filter(u => u.risk_level !== 'low');
-    for (const u of riskyUnits) {
-      await client.query(`
-        INSERT INTO gpl_forecast_unit_risk
-        (forecast_date, station, engine, unit_number, derated_mw, uptime_pct_90d, failure_count_90d, mtbf_days, days_since_last_failure, predicted_failure_days, risk_level, risk_score)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      `, [today, u.station, u.engine, u.unit_number, u.derated_mw, u.uptime_pct_90d, u.failure_count_90d, u.mtbf_days, u.days_since_last_failure, u.predicted_failure_days, u.risk_level, u.risk_score]);
+    if (riskyUnits.length > 0) {
+      const unitRiskRows = riskyUnits.map(u => ({
+        forecast_date: today,
+        station: u.station,
+        engine: u.engine,
+        unit_number: u.unit_number,
+        derated_mw: u.derated_mw,
+        uptime_pct_90d: u.uptime_pct_90d,
+        failure_count_90d: u.failure_count_90d,
+        mtbf_days: u.mtbf_days,
+        days_since_last_failure: u.days_since_last_failure,
+        predicted_failure_days: u.predicted_failure_days,
+        risk_level: u.risk_level,
+        risk_score: u.risk_score,
+      }));
+      const { error } = await supabaseAdmin.from('gpl_forecast_unit_risk').insert(unitRiskRows);
+      if (error) throw error;
     }
 
     // Save KPI forecasts
-    for (const k of kpiForecasts) {
-      await client.query(`
-        INSERT INTO gpl_forecast_kpi
-        (forecast_date, kpi_name, projected_month, projected_value, confidence_low, confidence_high, trend)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-      `, [today, k.kpi_name, k.projected_month, k.projected_value, k.confidence_low, k.confidence_high, k.trend]);
+    if (kpiForecasts.length > 0) {
+      const kpiRows = kpiForecasts.map(k => ({
+        forecast_date: today,
+        kpi_name: k.kpi_name,
+        projected_month: k.projected_month,
+        projected_value: k.projected_value,
+        confidence_low: k.confidence_low,
+        confidence_high: k.confidence_high,
+        trend: k.trend,
+      }));
+      const { error } = await supabaseAdmin.from('gpl_forecast_kpi').insert(kpiRows);
+      if (error) throw error;
     }
 
-    await client.query('COMMIT');
     console.log('[gpl-forecast] Saved all forecasts to database');
 
   } catch (err) {
-    await client.query('ROLLBACK');
     console.error('[gpl-forecast] Failed to save forecasts:', err);
     throw err;
-  } finally {
-    client.release();
   }
 }
 

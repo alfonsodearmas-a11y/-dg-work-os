@@ -1,13 +1,19 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db-pg';
+import { supabaseAdmin } from '@/lib/db';
 
 export async function GET() {
   try {
     // Get the latest forecast date
-    const latestDateResult = await query(
-      `SELECT MAX(forecast_date) AS latest FROM gpl_forecast_demand`
-    );
-    const latestDate = latestDateResult.rows[0]?.latest;
+    const { data: latestRow, error: latestError } = await supabaseAdmin
+      .from('gpl_forecast_demand')
+      .select('forecast_date')
+      .order('forecast_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (latestError) throw latestError;
+
+    const latestDate = latestRow?.forecast_date;
 
     if (!latestDate) {
       return NextResponse.json({
@@ -17,17 +23,18 @@ export async function GET() {
       });
     }
 
-    const result = await query(
-      `SELECT forecast_date, projected_month, grid, projected_peak_mw, confidence_low_mw, confidence_high_mw, growth_rate_pct, data_source
-       FROM gpl_forecast_demand
-       WHERE forecast_date = $1
-       ORDER BY grid, projected_month`,
-      [latestDate]
-    );
+    const { data: rows, error } = await supabaseAdmin
+      .from('gpl_forecast_demand')
+      .select('forecast_date, projected_month, grid, projected_peak_mw, confidence_low_mw, confidence_high_mw, growth_rate_pct, data_source')
+      .eq('forecast_date', latestDate)
+      .order('grid')
+      .order('projected_month');
+
+    if (error) throw error;
 
     // Group by grid
     const byGrid: Record<string, any[]> = {};
-    for (const row of result.rows) {
+    for (const row of rows || []) {
       if (!byGrid[row.grid]) byGrid[row.grid] = [];
       byGrid[row.grid].push({
         projectedMonth: row.projected_month,
@@ -44,7 +51,7 @@ export async function GET() {
       data: {
         forecastDate: latestDate,
         grids: byGrid,
-        totalProjections: result.rows.length,
+        totalProjections: (rows || []).length,
       },
     });
   } catch (error: any) {

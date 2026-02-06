@@ -6,7 +6,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import { query } from './db-pg';
+import { supabaseAdmin } from './db';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -344,19 +344,34 @@ export async function generateStrategicBriefing(forecastData: ForecastData): Pro
   try {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    // Get data point counts via direct queries
-    const dailyCountResult = await query('SELECT COUNT(*) as cnt FROM gpl_daily_summary');
-    const dailyDataPoints = parseInt(dailyCountResult.rows[0]?.cnt || '0');
-    const monthlyCountResult = await query('SELECT COUNT(DISTINCT report_month) as cnt FROM gpl_monthly_kpis');
-    const monthlyDataPoints = parseInt(monthlyCountResult.rows[0]?.cnt || '0');
-    const latestDateResult = await query('SELECT MAX(report_date) as latest FROM gpl_daily_summary');
-    const dataThrough = latestDateResult.rows[0]?.latest
-      ? new Date(latestDateResult.rows[0].latest).toISOString().split('T')[0]
+    // Get data point counts via Supabase
+    const { count: dailyDataPoints, error: dailyCountError } = await supabaseAdmin
+      .from('gpl_daily_summary')
+      .select('*', { count: 'exact', head: true });
+    if (dailyCountError) throw dailyCountError;
+
+    // Get distinct monthly count - fetch all report_month values and deduplicate in JS
+    const { data: monthlyRows, error: monthlyCountError } = await supabaseAdmin
+      .from('gpl_monthly_kpis')
+      .select('report_month');
+    if (monthlyCountError) throw monthlyCountError;
+    const uniqueMonths = new Set((monthlyRows || []).map((r: { report_month: string }) => r.report_month));
+    const monthlyDataPoints = uniqueMonths.size;
+
+    // Get latest date
+    const { data: latestDateRows, error: latestDateError } = await supabaseAdmin
+      .from('gpl_daily_summary')
+      .select('report_date')
+      .order('report_date', { ascending: false })
+      .limit(1);
+    if (latestDateError) throw latestDateError;
+    const dataThrough = latestDateRows && latestDateRows.length > 0
+      ? new Date(latestDateRows[0].report_date).toISOString().split('T')[0]
       : new Date().toISOString().split('T')[0];
 
     const promptData: PromptData = {
       ...forecastData,
-      dailyDataPoints,
+      dailyDataPoints: dailyDataPoints || 0,
       monthlyDataPoints,
       dataThrough,
     };
@@ -383,30 +398,28 @@ export async function generateStrategicBriefing(forecastData: ForecastData): Pro
     const sections = parseBriefingSections(responseText);
 
     // Save to database
-    await query(`
-      INSERT INTO gpl_forecast_ai_analysis (
-        analysis_type, data_through_date, daily_data_points, monthly_data_points,
-        executive_briefing, demand_outlook, capacity_risk, infrastructure_reliability,
-        customer_revenue_impact, essequibo_assessment, recommendations,
-        raw_response, prompt_tokens, completion_tokens, processing_time_ms
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-    `, [
-      'strategic_briefing',
-      dataThrough,
-      dailyDataPoints,
-      monthlyDataPoints,
-      responseText,
-      sections.demandOutlook,
-      sections.capacityRisk,
-      sections.infrastructureReliability,
-      sections.customerRevenueImpact,
-      sections.essequiboAssessment,
-      JSON.stringify(sections.recommendations),
-      JSON.stringify(response),
-      response.usage?.input_tokens,
-      response.usage?.output_tokens,
-      processingTime,
-    ]);
+    const { error: insertError } = await supabaseAdmin
+      .from('gpl_forecast_ai_analysis')
+      .insert({
+        analysis_type: 'strategic_briefing',
+        data_through_date: dataThrough,
+        daily_data_points: dailyDataPoints || 0,
+        monthly_data_points: monthlyDataPoints,
+        executive_briefing: responseText,
+        demand_outlook: sections.demandOutlook,
+        capacity_risk: sections.capacityRisk,
+        infrastructure_reliability: sections.infrastructureReliability,
+        customer_revenue_impact: sections.customerRevenueImpact,
+        essequibo_assessment: sections.essequiboAssessment,
+        recommendations: JSON.stringify(sections.recommendations),
+        raw_response: JSON.stringify(response),
+        prompt_tokens: response.usage?.input_tokens,
+        completion_tokens: response.usage?.output_tokens,
+        processing_time_ms: processingTime,
+      });
+    if (insertError) {
+      console.error('[gpl-forecast-ai] Failed to save briefing to DB:', insertError);
+    }
 
     console.log(`[gpl-forecast-ai] Strategic briefing generated in ${processingTime}ms`);
 
@@ -434,18 +447,22 @@ export async function generateStrategicBriefing(forecastData: ForecastData): Pro
  * Get latest AI briefing from database
  */
 export async function getLatestBriefing(): Promise<AiAnalysisRow | null> {
-  const result = await query(`
-    SELECT *
-    FROM gpl_forecast_ai_analysis
-    ORDER BY generated_at DESC
-    LIMIT 1
-  `);
+  const { data, error } = await supabaseAdmin
+    .from('gpl_forecast_ai_analysis')
+    .select('*')
+    .order('generated_at', { ascending: false })
+    .limit(1);
 
-  if (result.rows.length === 0) {
+  if (error) {
+    console.error('[gpl-forecast-ai] Failed to get latest briefing:', error);
     return null;
   }
 
-  return result.rows[0] as AiAnalysisRow;
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  return data[0] as AiAnalysisRow;
 }
 
 /**

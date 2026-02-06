@@ -1,13 +1,19 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db-pg';
+import { supabaseAdmin } from '@/lib/db';
 
 export async function GET() {
   try {
     // Get the latest forecast date
-    const latestDateResult = await query(
-      `SELECT MAX(forecast_date) AS latest FROM gpl_forecast_capacity`
-    );
-    const latestDate = latestDateResult.rows[0]?.latest;
+    const { data: latestRow, error: latestError } = await supabaseAdmin
+      .from('gpl_forecast_capacity')
+      .select('forecast_date')
+      .order('forecast_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (latestError) throw latestError;
+
+    const latestDate = latestRow?.forecast_date;
 
     if (!latestDate) {
       return NextResponse.json({
@@ -17,15 +23,15 @@ export async function GET() {
       });
     }
 
-    const result = await query(
-      `SELECT forecast_date, grid, current_capacity_mw, projected_capacity_mw, shortfall_date, reserve_margin_pct, months_until_shortfall, risk_level
-       FROM gpl_forecast_capacity
-       WHERE forecast_date = $1
-       ORDER BY grid`,
-      [latestDate]
-    );
+    const { data: rows, error } = await supabaseAdmin
+      .from('gpl_forecast_capacity')
+      .select('forecast_date, grid, current_capacity_mw, projected_capacity_mw, shortfall_date, reserve_margin_pct, months_until_shortfall, risk_level')
+      .eq('forecast_date', latestDate)
+      .order('grid');
 
-    const grids = result.rows.map((row: any) => ({
+    if (error) throw error;
+
+    const grids = (rows || []).map((row: any) => ({
       grid: row.grid,
       currentCapacityMw: parseFloat(row.current_capacity_mw),
       projectedCapacityMw: parseFloat(row.projected_capacity_mw),

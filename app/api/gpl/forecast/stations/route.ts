@@ -1,13 +1,19 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db-pg';
+import { supabaseAdmin } from '@/lib/db';
 
 export async function GET() {
   try {
     // Get the latest forecast date
-    const latestDateResult = await query(
-      `SELECT MAX(forecast_date) AS latest FROM gpl_forecast_station_reliability`
-    );
-    const latestDate = latestDateResult.rows[0]?.latest;
+    const { data: latestRow, error: latestError } = await supabaseAdmin
+      .from('gpl_forecast_station_reliability')
+      .select('forecast_date')
+      .order('forecast_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (latestError) throw latestError;
+
+    const latestDate = latestRow?.forecast_date;
 
     if (!latestDate) {
       return NextResponse.json({
@@ -17,21 +23,24 @@ export async function GET() {
       });
     }
 
-    const result = await query(
-      `SELECT forecast_date, station, period_days, uptime_pct, avg_utilization_pct, total_units, online_units, offline_units, failure_count, mtbf_days, trend, risk_level
-       FROM gpl_forecast_station_reliability
-       WHERE forecast_date = $1
-       ORDER BY
-         CASE risk_level
-           WHEN 'critical' THEN 0
-           WHEN 'warning' THEN 1
-           ELSE 2
-         END,
-         station`,
-      [latestDate]
-    );
+    const { data: rows, error } = await supabaseAdmin
+      .from('gpl_forecast_station_reliability')
+      .select('forecast_date, station, period_days, uptime_pct, avg_utilization_pct, total_units, online_units, offline_units, failure_count, mtbf_days, trend, risk_level')
+      .eq('forecast_date', latestDate)
+      .order('station');
 
-    const stations = result.rows.map((row: any) => ({
+    if (error) throw error;
+
+    // Sort by risk_level: critical first, then warning, then others; then by station name
+    const riskOrder: Record<string, number> = { critical: 0, warning: 1 };
+    const sortedRows = (rows || []).sort((a: any, b: any) => {
+      const aOrder = riskOrder[a.risk_level] ?? 2;
+      const bOrder = riskOrder[b.risk_level] ?? 2;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return (a.station || '').localeCompare(b.station || '');
+    });
+
+    const stations = sortedRows.map((row: any) => ({
       station: row.station,
       periodDays: row.period_days,
       uptimePct: parseFloat(row.uptime_pct),

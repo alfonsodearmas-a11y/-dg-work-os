@@ -151,8 +151,11 @@ export default function DocumentsPage() {
       {showUpload && (
         <div className="card-premium p-6">
           <UploadZone onUploadComplete={() => {
-            setShowUpload(false);
+            // Keep the upload zone visible so the user sees the success message.
+            // Refetch immediately (will show completed docs), then poll once
+            // more after a delay to catch the newly processed document.
             fetchDocuments();
+            setTimeout(() => fetchDocuments(), 8000);
           }} />
         </div>
       )}

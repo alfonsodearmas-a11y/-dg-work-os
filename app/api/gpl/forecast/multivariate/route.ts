@@ -1,20 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db-pg';
+import { supabaseAdmin } from '@/lib/db';
 
 export async function GET() {
   try {
-    const result = await query(
-      `SELECT
-         id, generated_at, data_period, methodology_summary,
-         conservative_json, aggressive_json, demand_drivers_json,
-         executive_summary, model_used, processing_time_ms,
-         input_tokens, output_tokens, is_fallback
-       FROM gpl_multivariate_forecasts
-       ORDER BY generated_at DESC
-       LIMIT 1`
-    );
+    const { data, error } = await supabaseAdmin
+      .from('gpl_multivariate_forecasts')
+      .select('*')
+      .order('generated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (result.rows.length === 0) {
+    if (error) throw error;
+
+    if (!data) {
       return NextResponse.json({
         success: true,
         data: null,
@@ -22,25 +20,23 @@ export async function GET() {
       });
     }
 
-    const row = result.rows[0];
-
     return NextResponse.json({
       success: true,
       data: {
-        id: row.id,
-        generatedAt: row.generated_at,
-        dataPeriod: row.data_period,
-        methodologySummary: row.methodology_summary,
-        conservative: row.conservative_json,
-        aggressive: row.aggressive_json,
-        demandDrivers: row.demand_drivers_json,
-        executiveSummary: row.executive_summary,
+        id: data.id,
+        generatedAt: data.generated_at,
+        dataPeriod: data.data_period,
+        methodologySummary: data.methodology_summary,
+        conservative: data.conservative_json,
+        aggressive: data.aggressive_json,
+        demandDrivers: data.demand_drivers_json,
+        executiveSummary: data.executive_summary,
         metadata: {
-          modelUsed: row.model_used,
-          processingTimeMs: row.processing_time_ms,
-          inputTokens: row.input_tokens,
-          outputTokens: row.output_tokens,
-          isFallback: row.is_fallback,
+          modelUsed: data.model_used,
+          processingTimeMs: data.processing_time_ms,
+          inputTokens: data.input_tokens,
+          outputTokens: data.output_tokens,
+          isFallback: data.is_fallback,
         },
       },
     });

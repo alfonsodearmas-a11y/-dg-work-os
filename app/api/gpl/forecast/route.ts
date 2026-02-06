@@ -1,13 +1,19 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db-pg';
+import { supabaseAdmin } from '@/lib/db';
 
 export async function GET() {
   try {
-    // Try to get the most recent forecast date for cached data
-    const latestDateResult = await query(
-      `SELECT MAX(forecast_date) AS latest FROM gpl_forecast_demand`
-    );
-    const latestDate = latestDateResult.rows[0]?.latest;
+    // Get the most recent forecast date from gpl_forecast_demand
+    const { data: latestRow, error: latestError } = await supabaseAdmin
+      .from('gpl_forecast_demand')
+      .select('forecast_date')
+      .order('forecast_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (latestError) throw latestError;
+
+    const latestDate = latestRow?.forecast_date;
 
     if (!latestDate) {
       return NextResponse.json({
@@ -24,53 +30,64 @@ export async function GET() {
     }
 
     // Fetch all forecast tables in parallel using the latest forecast date
-    const [demand, capacity, loadShedding, stations, unitRisk] = await Promise.all([
-      query(
-        `SELECT forecast_date, projected_month, grid, projected_peak_mw, confidence_low_mw, confidence_high_mw, growth_rate_pct, data_source
-         FROM gpl_forecast_demand
-         WHERE forecast_date = $1
-         ORDER BY grid, projected_month`,
-        [latestDate]
-      ),
-      query(
-        `SELECT forecast_date, grid, current_capacity_mw, projected_capacity_mw, shortfall_date, reserve_margin_pct, months_until_shortfall, risk_level
-         FROM gpl_forecast_capacity
-         WHERE forecast_date = $1
-         ORDER BY grid`,
-        [latestDate]
-      ),
-      query(
-        `SELECT forecast_date, period_days, avg_shed_mw, max_shed_mw, shed_days_count, trend, projected_avg_6mo
-         FROM gpl_forecast_load_shedding
-         WHERE forecast_date = $1
-         LIMIT 1`,
-        [latestDate]
-      ),
-      query(
-        `SELECT forecast_date, station, period_days, uptime_pct, avg_utilization_pct, total_units, online_units, offline_units, failure_count, mtbf_days, trend, risk_level
-         FROM gpl_forecast_station_reliability
-         WHERE forecast_date = $1
-         ORDER BY risk_level, station`,
-        [latestDate]
-      ),
-      query(
-        `SELECT forecast_date, station, engine, unit_number, derated_mw, uptime_pct_90d, failure_count_90d, mtbf_days, days_since_last_failure, predicted_failure_days, risk_level, risk_score
-         FROM gpl_forecast_unit_risk
-         WHERE forecast_date = $1
-         ORDER BY risk_score DESC`,
-        [latestDate]
-      ),
+    const [demandResult, capacityResult, loadSheddingResult, stationsResult, unitRiskResult] = await Promise.all([
+      supabaseAdmin
+        .from('gpl_forecast_demand')
+        .select('forecast_date, projected_month, grid, projected_peak_mw, confidence_low_mw, confidence_high_mw, growth_rate_pct, data_source')
+        .eq('forecast_date', latestDate)
+        .order('grid')
+        .order('projected_month'),
+
+      supabaseAdmin
+        .from('gpl_forecast_capacity')
+        .select('forecast_date, grid, current_capacity_mw, projected_capacity_mw, shortfall_date, reserve_margin_pct, months_until_shortfall, risk_level')
+        .eq('forecast_date', latestDate)
+        .order('grid'),
+
+      supabaseAdmin
+        .from('gpl_forecast_load_shedding')
+        .select('forecast_date, period_days, avg_shed_mw, max_shed_mw, shed_days_count, trend, projected_avg_6mo')
+        .eq('forecast_date', latestDate)
+        .limit(1)
+        .maybeSingle(),
+
+      supabaseAdmin
+        .from('gpl_forecast_station_reliability')
+        .select('forecast_date, station, period_days, uptime_pct, avg_utilization_pct, total_units, online_units, offline_units, failure_count, mtbf_days, trend, risk_level')
+        .eq('forecast_date', latestDate)
+        .order('station'),
+
+      supabaseAdmin
+        .from('gpl_forecast_unit_risk')
+        .select('forecast_date, station, engine, unit_number, derated_mw, uptime_pct_90d, failure_count_90d, mtbf_days, days_since_last_failure, predicted_failure_days, risk_level, risk_score')
+        .eq('forecast_date', latestDate)
+        .order('risk_score', { ascending: false }),
     ]);
+
+    if (demandResult.error) throw demandResult.error;
+    if (capacityResult.error) throw capacityResult.error;
+    if (loadSheddingResult.error) throw loadSheddingResult.error;
+    if (stationsResult.error) throw stationsResult.error;
+    if (unitRiskResult.error) throw unitRiskResult.error;
+
+    // Sort station reliability: critical first, then warning, then others
+    const riskOrder: Record<string, number> = { critical: 0, warning: 1 };
+    const sortedStations = (stationsResult.data || []).sort((a: any, b: any) => {
+      const aOrder = riskOrder[a.risk_level] ?? 2;
+      const bOrder = riskOrder[b.risk_level] ?? 2;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return (a.station || '').localeCompare(b.station || '');
+    });
 
     return NextResponse.json({
       success: true,
       data: {
         forecastDate: latestDate,
-        demandForecasts: demand.rows,
-        capacityTimeline: capacity.rows,
-        loadShedding: loadShedding.rows[0] || null,
-        stationReliability: stations.rows,
-        unitRisk: unitRisk.rows,
+        demandForecasts: demandResult.data || [],
+        capacityTimeline: capacityResult.data || [],
+        loadShedding: loadSheddingResult.data || null,
+        stationReliability: sortedStations,
+        unitRisk: unitRiskResult.data || [],
       },
     });
   } catch (error: any) {

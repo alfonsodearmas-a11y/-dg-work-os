@@ -129,6 +129,11 @@ export function DocumentCard({ document, expandable = false }: DocumentCardProps
                 {document.agency}
               </span>
             )}
+            {isProcessing && (
+              <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-400 animate-pulse">
+                AI analyzing...
+              </span>
+            )}
           </div>
         </div>
         <ChevronDown
@@ -140,6 +145,12 @@ export function DocumentCard({ document, expandable = false }: DocumentCardProps
       <div className={`collapse-grid ${expanded ? 'open' : ''}`}>
         <div>
           <div className="px-4 pb-4 space-y-3">
+            {isProcessing && (
+              <div className="flex items-center space-x-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <Loader2 className="h-4 w-4 text-blue-400 animate-spin flex-shrink-0" />
+                <p className="text-sm text-blue-400">Claude Opus is analyzing this document. Summary and insights will appear shortly.</p>
+              </div>
+            )}
             {document.summary && (
               <p className="text-sm text-[#94a3b8]">{document.summary}</p>
             )}

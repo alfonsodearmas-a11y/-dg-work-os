@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db-pg';
+import { supabaseAdmin } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,31 +8,33 @@ export async function GET(request: NextRequest) {
     const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
 
     // Get total count
-    const countResult = await query(
-      `SELECT COUNT(*) as total FROM gpl_uploads`
-    );
-    const total = parseInt(countResult.rows[0].total, 10);
+    const { count, error: countError } = await supabaseAdmin
+      .from('gpl_uploads')
+      .select('*', { count: 'exact', head: true });
 
-    // Get uploads with user info
-    const uploadsResult = await query(
-      `SELECT gu.id, gu.report_date, gu.file_name, gu.uploaded_by, gu.status,
-              gu.created_at, u.full_name as uploaded_by_name, u.username
-       FROM gpl_uploads gu
-       LEFT JOIN users u ON gu.uploaded_by = u.id
-       ORDER BY gu.report_date DESC, gu.created_at DESC
-       LIMIT $1 OFFSET $2`,
-      [limit, offset]
-    );
+    if (countError) throw countError;
+
+    const total = count ?? 0;
+
+    // Get uploads (no JOIN to users — just return uploaded_by as-is)
+    const { data: uploads, error: uploadsError } = await supabaseAdmin
+      .from('gpl_uploads')
+      .select('id, report_date, file_name, uploaded_by, status, created_at')
+      .order('report_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (uploadsError) throw uploadsError;
 
     return NextResponse.json({
       success: true,
       data: {
-        uploads: uploadsResult.rows.map((row) => ({
+        uploads: (uploads || []).map((row) => ({
           id: row.id,
           reportDate: row.report_date,
           fileName: row.file_name,
           uploadedBy: row.uploaded_by,
-          uploadedByName: row.uploaded_by_name || row.username || 'Unknown',
+          uploadedByName: row.uploaded_by || 'Unknown',
           status: row.status,
           createdAt: row.created_at,
         })),

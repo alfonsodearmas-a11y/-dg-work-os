@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db-pg';
+import { supabaseAdmin } from '@/lib/db';
 
 export async function GET() {
   try {
-    const result = await query(
-      `SELECT id, analysis_text, analysis_date, model_used, forecast_date, created_at
-       FROM gpl_forecast_ai_analysis
-       ORDER BY created_at DESC
-       LIMIT 1`
-    );
+    const { data, error } = await supabaseAdmin
+      .from('gpl_forecast_ai_analysis')
+      .select('*')
+      .order('generated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (result.rows.length === 0) {
+    if (error) throw error;
+
+    if (!data) {
       return NextResponse.json({
         success: true,
         data: null,
@@ -18,17 +20,18 @@ export async function GET() {
       });
     }
 
-    const row = result.rows[0];
-
     return NextResponse.json({
       success: true,
       data: {
-        id: row.id,
-        analysisText: row.analysis_text,
-        analysisDate: row.analysis_date,
-        modelUsed: row.model_used,
-        forecastDate: row.forecast_date,
-        createdAt: row.created_at,
+        id: data.id,
+        executiveBriefing: data.executive_briefing,
+        demandOutlook: data.demand_outlook,
+        capacityRisk: data.capacity_risk,
+        infrastructureReliability: data.infrastructure_reliability,
+        customerRevenueImpact: data.customer_revenue_impact,
+        essequiboAssessment: data.essequibo_assessment,
+        recommendations: data.recommendations,
+        generatedAt: data.generated_at,
       },
     });
   } catch (error: any) {

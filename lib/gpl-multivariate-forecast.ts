@@ -6,7 +6,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import { query, getClient } from './db-pg';
+import { supabaseAdmin } from './db';
 
 // Claude configuration
 const AI_CONFIG = {
@@ -168,52 +168,90 @@ export const DEMAND_CONTEXT = {
  */
 export async function assembleHistoricalData(): Promise<HistoricalData> {
   try {
-    // Get monthly KPI trends (last 24 months if available)
-    const kpiResult = await query(`
-      SELECT report_month, kpi_name, value
-      FROM gpl_monthly_kpis
-      ORDER BY report_month ASC, kpi_name
-    `);
+    // Get monthly KPI trends (all available)
+    const { data: kpiRows, error: kpiError } = await supabaseAdmin
+      .from('gpl_monthly_kpis')
+      .select('report_month, kpi_name, value')
+      .order('report_month', { ascending: true });
+
+    if (kpiError) throw kpiError;
 
     // Group KPIs by month
     const monthlyData: Record<string, Record<string, number>> = {};
-    kpiResult.rows.forEach((row: any) => {
-      const month = row.report_month.toISOString().split('T')[0].slice(0, 7);
+    (kpiRows || []).forEach((row: any) => {
+      const month = new Date(row.report_month).toISOString().split('T')[0].slice(0, 7);
       if (!monthlyData[month]) monthlyData[month] = {};
       monthlyData[month][row.kpi_name] = parseFloat(row.value);
     });
 
     // Get latest daily summary for current state
-    const dailyResult = await query(`
-      SELECT *
-      FROM gpl_daily_summary
-      ORDER BY report_date DESC
-      LIMIT 1
-    `);
-    const latestDaily = dailyResult.rows[0] || null;
+    const { data: dailyRows, error: dailyError } = await supabaseAdmin
+      .from('gpl_daily_summary')
+      .select('*')
+      .order('report_date', { ascending: false })
+      .limit(1);
 
-    // Get station reliability data
-    const stationResult = await query(`
-      SELECT
+    if (dailyError) throw dailyError;
+    const latestDaily = (dailyRows && dailyRows.length > 0) ? dailyRows[0] : null;
+
+    // Get station reliability data (last 90 days)
+    // Fetch raw station data and compute aggregation in JS
+    const cutoffDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const { data: stationRows, error: stationError } = await supabaseAdmin
+      .from('gpl_daily_stations')
+      .select('station, station_utilization_pct, units_offline, report_date')
+      .gte('report_date', cutoffDate);
+
+    if (stationError) throw stationError;
+
+    // Group by station and compute aggregates in JS
+    const stationGroups: Record<string, { utilizations: number[]; outages: number; total: number }> = {};
+    (stationRows || []).forEach((row: any) => {
+      if (!stationGroups[row.station]) {
+        stationGroups[row.station] = { utilizations: [], outages: 0, total: 0 };
+      }
+      stationGroups[row.station].total++;
+      if (row.station_utilization_pct != null) {
+        stationGroups[row.station].utilizations.push(parseFloat(row.station_utilization_pct));
+      }
+      if (row.units_offline > 0) {
+        stationGroups[row.station].outages++;
+      }
+    });
+
+    const stationReliability: StationReliability[] = Object.entries(stationGroups)
+      .map(([station, data]) => ({
         station,
-        AVG(station_utilization_pct) as avg_utilization,
-        COUNT(CASE WHEN units_offline > 0 THEN 1 END) as days_with_outages,
-        COUNT(*) as total_days
-      FROM gpl_daily_stations
-      WHERE report_date >= CURRENT_DATE - INTERVAL '90 days'
-      GROUP BY station
-      ORDER BY station
-    `);
+        avg_utilization: data.utilizations.length > 0
+          ? data.utilizations.reduce((a, b) => a + b, 0) / data.utilizations.length
+          : 0,
+        days_with_outages: data.outages,
+        total_days: data.total,
+      }))
+      .sort((a, b) => a.station.localeCompare(b.station));
 
-    // Get capacity data
-    const capacityResult = await query(`
-      SELECT
-        grid,
-        current_capacity_mw,
-        reserve_margin_pct
-      FROM gpl_forecast_capacity
-      WHERE forecast_date = (SELECT MAX(forecast_date) FROM gpl_forecast_capacity)
-    `);
+    // Get capacity data from latest forecast
+    // First find the max forecast_date
+    const { data: latestForecastRows, error: latestForecastError } = await supabaseAdmin
+      .from('gpl_forecast_capacity')
+      .select('forecast_date')
+      .order('forecast_date', { ascending: false })
+      .limit(1);
+
+    if (latestForecastError) throw latestForecastError;
+
+    let capacityData: CapacityData[] = [];
+    if (latestForecastRows && latestForecastRows.length > 0) {
+      const latestForecastDate = latestForecastRows[0].forecast_date;
+      const { data: capacityRows, error: capacityError } = await supabaseAdmin
+        .from('gpl_forecast_capacity')
+        .select('grid, current_capacity_mw, reserve_margin_pct')
+        .eq('forecast_date', latestForecastDate);
+
+      if (capacityError) throw capacityError;
+      capacityData = (capacityRows || []) as CapacityData[];
+    }
 
     // Format monthly data as a clean table
     const months = Object.keys(monthlyData).sort();
@@ -235,8 +273,8 @@ export async function assembleHistoricalData(): Promise<HistoricalData> {
     return {
       monthlyKPIs: formattedTable,
       latestDaily,
-      stationReliability: stationResult.rows as StationReliability[],
-      capacityData: capacityResult.rows as CapacityData[],
+      stationReliability,
+      capacityData,
       dataRange: {
         start: months[0] || 'N/A',
         end: months[months.length - 1] || 'N/A',
@@ -617,35 +655,33 @@ function generateFallbackForecast(historicalData: HistoricalData): ForecastResul
  * Save forecast to database
  */
 async function saveForecastToDb(forecast: ForecastResult): Promise<void> {
-  const client = await getClient();
   try {
-    await client.query(`
-      INSERT INTO gpl_multivariate_forecasts (
-        generated_at, data_period, methodology_summary,
-        conservative_json, aggressive_json, demand_drivers_json,
-        executive_summary, model_used, processing_time_ms,
-        input_tokens, output_tokens, is_fallback
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-    `, [
-      forecast.metadata.generatedAt,
-      forecast.data_period,
-      forecast.methodology_summary,
-      JSON.stringify(forecast.conservative),
-      JSON.stringify(forecast.aggressive),
-      JSON.stringify(forecast.demand_drivers),
-      forecast.executive_summary,
-      forecast.metadata.model,
-      forecast.metadata.processingTimeMs,
-      forecast.metadata.inputTokens,
-      forecast.metadata.outputTokens,
-      forecast.metadata.isFallback
-    ]);
-    console.log('[gpl-multivariate] Saved to database');
+    const { error } = await supabaseAdmin
+      .from('gpl_multivariate_forecasts')
+      .insert({
+        generated_at: forecast.metadata.generatedAt,
+        data_period: forecast.data_period,
+        methodology_summary: forecast.methodology_summary,
+        conservative_json: JSON.stringify(forecast.conservative),
+        aggressive_json: JSON.stringify(forecast.aggressive),
+        demand_drivers_json: JSON.stringify(forecast.demand_drivers),
+        executive_summary: forecast.executive_summary,
+        model_used: forecast.metadata.model,
+        processing_time_ms: forecast.metadata.processingTimeMs,
+        input_tokens: forecast.metadata.inputTokens,
+        output_tokens: forecast.metadata.outputTokens,
+        is_fallback: forecast.metadata.isFallback,
+      });
+
+    if (error) {
+      console.error('[gpl-multivariate] Failed to save:', error);
+      // Non-fatal, continue
+    } else {
+      console.log('[gpl-multivariate] Saved to database');
+    }
   } catch (err) {
     console.error('[gpl-multivariate] Failed to save:', err);
     // Non-fatal, continue
-  } finally {
-    client.release();
   }
 }
 
@@ -654,15 +690,20 @@ async function saveForecastToDb(forecast: ForecastResult): Promise<void> {
  */
 export async function getLatestForecast(): Promise<ForecastResult | null> {
   try {
-    const result = await query(`
-      SELECT * FROM gpl_multivariate_forecasts
-      ORDER BY generated_at DESC
-      LIMIT 1
-    `);
+    const { data, error } = await supabaseAdmin
+      .from('gpl_multivariate_forecasts')
+      .select('*')
+      .order('generated_at', { ascending: false })
+      .limit(1);
 
-    if (result.rows.length === 0) return null;
+    if (error) {
+      console.error('[gpl-multivariate] Failed to get latest:', error);
+      return null;
+    }
 
-    const row = result.rows[0] as any;
+    if (!data || data.length === 0) return null;
+
+    const row = data[0] as any;
     return {
       generated_at: row.generated_at,
       data_period: row.data_period,
