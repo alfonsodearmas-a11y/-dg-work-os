@@ -81,17 +81,30 @@ ${dataLines}
 
 ## Your Analysis Task
 
-Provide a concise executive briefing (3-4 paragraphs) analyzing these monthly KPI trends for the Director General. Focus on:
-1. Overall trajectory — are things improving or declining?
-2. Notable month-over-month changes or inflection points
-3. Correlations between KPIs (e.g., demand vs losses, generation vs sales)
-4. Actionable insights and areas of concern
+Analyze these KPI trends for the Director General. Return EXACTLY 3-4 thematic insight sections plus action items.
 
-Write in a professional, direct style suitable for an executive briefing. Use specific numbers from the data to support your points.
+Each section should cover one theme (e.g., Demand & Capacity, Generation Mix, Revenue & Collections, System Reliability). For each section:
+- "title": short theme name (2-4 words)
+- "icon": one of "zap" (power/demand), "fuel" (generation), "dollar-sign" (revenue/collections), "users" (customers), "trending-up" (growth), "alert-triangle" (risk), "shield" (reliability)
+- "severity": one of "critical" (immediate risk), "warning" (needs attention), "stable" (acceptable), "positive" (improving)
+- "summary": ONE sentence key takeaway — the most important thing the DG needs to know (max 120 chars)
+- "detail": 2-3 sentence explanation with specific numbers from the data
+
+For action_items: extract 3-5 concrete recommendations, each with:
+- "action": what to do (imperative, concise)
+- "urgency": "immediate", "short-term", or "long-term"
+- "impact": brief expected outcome
+
+Write in a professional, direct style. Use specific numbers.
 
 Respond in JSON format:
 {
-  "executive_briefing": "Your 3-4 paragraph analysis here"
+  "sections": [
+    { "title": "string", "icon": "string", "severity": "critical|warning|stable|positive", "summary": "string", "detail": "string" }
+  ],
+  "action_items": [
+    { "action": "string", "urgency": "immediate|short-term|long-term", "impact": "string" }
+  ]
 }`;
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -107,8 +120,9 @@ Respond in JSON format:
       .map(b => (b as Anthropic.TextBlock).text)
       .join('\n');
 
-    // Parse JSON response
-    let executiveBriefing: string;
+    // Parse structured JSON response
+    let sections: any[] = [];
+    let actionItems: any[] = [];
     try {
       let jsonStr = responseText;
       const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -116,13 +130,22 @@ Respond in JSON format:
       const objectMatch = jsonStr.match(/\{[\s\S]*\}/);
       if (objectMatch) jsonStr = objectMatch[0];
       const parsed = JSON.parse(jsonStr);
-      executiveBriefing = parsed.executive_briefing || responseText.slice(0, 2000);
+      sections = Array.isArray(parsed.sections) ? parsed.sections : [];
+      actionItems = Array.isArray(parsed.action_items) ? parsed.action_items : [];
     } catch {
-      executiveBriefing = responseText.slice(0, 2000);
+      // Fallback: wrap raw text as a single section
+      sections = [{
+        title: 'Analysis',
+        icon: 'sparkles',
+        severity: 'stable',
+        summary: 'AI analysis completed — expand for details.',
+        detail: responseText.slice(0, 2000),
+      }];
     }
 
     const analysis = {
-      executive_briefing: executiveBriefing,
+      sections,
+      action_items: actionItems,
       date_range_start: dateRangeStart,
       date_range_end: dateRangeEnd,
       months_analyzed: months.length,

@@ -8,7 +8,9 @@ import {
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, Minus, Users, Zap, DollarSign,
-  Fuel, Upload, AlertTriangle, Sparkles, RefreshCw
+  Fuel, Upload, AlertTriangle, Sparkles, RefreshCw, Shield,
+  ChevronDown, CheckCircle2, Clock, ArrowRight,
+  type LucideIcon
 } from 'lucide-react';
 import { GPLKpiUpload } from './GPLKpiUpload';
 
@@ -24,6 +26,112 @@ interface KpiCardProps {
   name: string;
   icon: any;
   data: KpiData | null;
+}
+
+// --- Icon map for AI sections ---
+const SECTION_ICONS: Record<string, LucideIcon> = {
+  'zap': Zap,
+  'fuel': Fuel,
+  'dollar-sign': DollarSign,
+  'users': Users,
+  'trending-up': TrendingUp,
+  'alert-triangle': AlertTriangle,
+  'shield': Shield,
+  'sparkles': Sparkles,
+};
+
+const SEVERITY_CONFIG: Record<string, { label: string; bg: string; text: string; border: string }> = {
+  critical: { label: 'Critical', bg: 'bg-red-500/15', text: 'text-red-400', border: 'border-red-500/30' },
+  warning:  { label: 'Warning',  bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/30' },
+  stable:   { label: 'Stable',   bg: 'bg-blue-500/15', text: 'text-blue-400', border: 'border-blue-500/30' },
+  positive: { label: 'Positive', bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+};
+
+const URGENCY_CONFIG: Record<string, { icon: LucideIcon; color: string }> = {
+  immediate:  { icon: AlertTriangle, color: 'text-red-400' },
+  'short-term': { icon: Clock, color: 'text-amber-400' },
+  'long-term':  { icon: ArrowRight, color: 'text-blue-400' },
+};
+
+function InsightCard({ section }: { section: any }) {
+  const [expanded, setExpanded] = useState(false);
+  const Icon = SECTION_ICONS[section.icon] || Sparkles;
+  const severity = SEVERITY_CONFIG[section.severity] || SEVERITY_CONFIG.stable;
+
+  return (
+    <div className={`card-premium rounded-xl border ${severity.border} overflow-hidden`}>
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full text-left px-4 py-3.5 flex items-start gap-3 hover:bg-white/[0.02] transition-colors"
+      >
+        <div className={`w-9 h-9 rounded-lg ${severity.bg} flex items-center justify-center shrink-0 mt-0.5`}>
+          <Icon className={`w-4.5 h-4.5 ${severity.text}`} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-sm font-semibold text-white">{section.title}</span>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium ${severity.bg} ${severity.text}`}>
+              {severity.label}
+            </span>
+          </div>
+          <p className="text-sm text-[#c8d0dc] font-medium leading-snug">{section.summary}</p>
+        </div>
+        <ChevronDown
+          className={`w-4 h-4 text-[#64748b] shrink-0 mt-1 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {expanded && (
+        <div className="px-4 pb-4 pt-0">
+          <div className="ml-12 text-sm text-[#94a3b8] leading-relaxed">
+            {section.detail}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ActionItemsCard({ items }: { items: any[] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="card-premium rounded-xl border border-[#d4af37]/30 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full text-left px-4 py-3.5 flex items-center gap-3 hover:bg-white/[0.02] transition-colors"
+      >
+        <div className="w-9 h-9 rounded-lg bg-[#d4af37]/15 flex items-center justify-center shrink-0">
+          <CheckCircle2 className="w-4.5 h-4.5 text-[#d4af37]" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="text-sm font-semibold text-white">Key Action Items</span>
+          <span className="ml-2 text-xs text-[#64748b]">{items.length} recommendations</span>
+        </div>
+        <ChevronDown
+          className={`w-4 h-4 text-[#64748b] shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {expanded && (
+        <div className="px-4 pb-4 pt-0 space-y-2.5">
+          {items.map((item: any, i: number) => {
+            const urgency = URGENCY_CONFIG[item.urgency] || URGENCY_CONFIG['short-term'];
+            const UrgencyIcon = urgency.icon;
+            return (
+              <div key={i} className="ml-12 flex items-start gap-3 group">
+                <UrgencyIcon className={`w-4 h-4 ${urgency.color} shrink-0 mt-0.5`} />
+                <div className="min-w-0">
+                  <p className="text-sm text-white font-medium">{item.action}</p>
+                  <p className="text-xs text-[#64748b] mt-0.5">{item.impact}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function GPLMonthlyKpi() {
@@ -470,23 +578,33 @@ export function GPLMonthlyKpi() {
         </div>
       )}
 
-      {/* AI Analysis */}
-      {analysis && analysis.executive_briefing && (
-        <div className="bg-gradient-to-br from-purple-500/10 to-violet-500/10 border border-purple-500/30 rounded-xl p-5">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
+      {/* AI Analysis — Structured Insight Cards */}
+      {analysis && analysis.sections && analysis.sections.length > 0 && (
+        <div className="space-y-3">
+          {/* Section header */}
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h4 className="text-white font-semibold">AI Trend Analysis</h4>
+              <h4 className="text-sm font-semibold text-white">AI Trend Analysis</h4>
               <p className="text-[#64748b] text-xs">
-                Analyzing {analysis.date_range_start} to {analysis.date_range_end}
+                {analysis.date_range_start?.slice(0, 7)} to {analysis.date_range_end?.slice(0, 7)} &middot; {analysis.months_analyzed} months
               </p>
             </div>
           </div>
-          <div className="text-white text-sm leading-relaxed whitespace-pre-wrap">
-            {analysis.executive_briefing}
+
+          {/* Insight cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {analysis.sections.map((section: any, i: number) => (
+              <InsightCard key={i} section={section} />
+            ))}
           </div>
+
+          {/* Action items */}
+          {analysis.action_items && analysis.action_items.length > 0 && (
+            <ActionItemsCard items={analysis.action_items} />
+          )}
         </div>
       )}
 
