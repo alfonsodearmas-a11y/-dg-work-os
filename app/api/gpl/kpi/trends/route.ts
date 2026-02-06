@@ -1,34 +1,24 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db-pg';
+import { supabaseAdmin } from '@/lib/db';
 
 export async function GET() {
   try {
-    // Get the last 24 months of KPI data
-    const result = await query(
-      `SELECT report_month, kpi_name, value
-       FROM gpl_monthly_kpis
-       WHERE report_month >= (
-         SELECT MAX(report_month) - INTERVAL '24 months'
-         FROM gpl_monthly_kpis
-       )
-       ORDER BY report_month ASC, kpi_name`
-    );
+    const { data, error } = await supabaseAdmin
+      .from('gpl_monthly_kpis')
+      .select('report_month, kpi_name, value')
+      .order('report_month', { ascending: true });
 
-    if (result.rows.length === 0) {
-      return NextResponse.json({
-        success: true,
-        trends: [],
-      });
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return NextResponse.json({ success: true, trends: [] });
     }
 
     // Group by month — each row becomes { month, 'Peak Demand DBIS': value, ... }
     const byMonth: Record<string, Record<string, number | string>> = {};
 
-    for (const row of result.rows) {
-      const month = row.report_month instanceof Date
-        ? row.report_month.toISOString().split('T')[0]
-        : String(row.report_month);
-
+    for (const row of data) {
+      const month = String(row.report_month);
       if (!byMonth[month]) byMonth[month] = { month };
       byMonth[month][row.kpi_name] = parseFloat(row.value);
     }
@@ -37,10 +27,7 @@ export async function GET() {
       String(a.month).localeCompare(String(b.month))
     );
 
-    return NextResponse.json({
-      success: true,
-      trends,
-    });
+    return NextResponse.json({ success: true, trends });
   } catch (error: any) {
     console.error('[gpl-kpi-trends] Error:', error.message);
     return NextResponse.json(

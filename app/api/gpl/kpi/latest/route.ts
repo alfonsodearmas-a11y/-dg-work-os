@@ -1,15 +1,17 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db-pg';
+import { supabaseAdmin } from '@/lib/db';
 
 export async function GET() {
   try {
-    // Get the latest month that has KPI data
-    const latestMonthResult = await query(
-      `SELECT MAX(report_month) AS latest_month FROM gpl_monthly_kpis`
-    );
+    // Get the latest month
+    const { data: latestRow } = await supabaseAdmin
+      .from('gpl_monthly_kpis')
+      .select('report_month')
+      .order('report_month', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    const latestMonth = latestMonthResult.rows[0]?.latest_month;
-    if (!latestMonth) {
+    if (!latestRow) {
       return NextResponse.json({
         success: true,
         hasData: false,
@@ -17,37 +19,40 @@ export async function GET() {
       });
     }
 
+    const latestMonth = latestRow.report_month;
+
     // Get all KPIs for the latest month
-    const latestResult = await query(
-      `SELECT kpi_name, value, report_month
-       FROM gpl_monthly_kpis
-       WHERE report_month = $1
-       ORDER BY kpi_name`,
-      [latestMonth]
-    );
+    const { data: latestData } = await supabaseAdmin
+      .from('gpl_monthly_kpis')
+      .select('kpi_name, value, report_month')
+      .eq('report_month', latestMonth)
+      .order('kpi_name');
 
-    // Get the previous month's data for month-over-month comparison
-    const previousResult = await query(
-      `SELECT kpi_name, value, report_month
-       FROM gpl_monthly_kpis
-       WHERE report_month = (
-         SELECT MAX(report_month) FROM gpl_monthly_kpis
-         WHERE report_month < $1
-       )
-       ORDER BY kpi_name`,
-      [latestMonth]
-    );
+    // Get previous month's data — find the max month that's less than latestMonth
+    const { data: prevRow } = await supabaseAdmin
+      .from('gpl_monthly_kpis')
+      .select('report_month')
+      .lt('report_month', latestMonth)
+      .order('report_month', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    // Build comparison map
     const previousMap: Record<string, number> = {};
-    for (const row of previousResult.rows) {
-      previousMap[row.kpi_name] = parseFloat(row.value);
+    if (prevRow) {
+      const { data: prevData } = await supabaseAdmin
+        .from('gpl_monthly_kpis')
+        .select('kpi_name, value')
+        .eq('report_month', prevRow.report_month);
+
+      for (const row of prevData || []) {
+        previousMap[row.kpi_name] = parseFloat(row.value);
+      }
     }
 
-    // Build kpis as a map keyed by kpi_name (what component expects)
+    // Build kpis map keyed by name
     const kpis: Record<string, { value: number; previousValue: number | null; changePct: number | null }> = {};
 
-    for (const row of latestResult.rows) {
+    for (const row of latestData || []) {
       const currentValue = parseFloat(row.value);
       const previousValue = previousMap[row.kpi_name] ?? null;
       let changePct: number | null = null;
@@ -56,11 +61,7 @@ export async function GET() {
         changePct = Math.round(((currentValue - previousValue) / previousValue) * 10000) / 100;
       }
 
-      kpis[row.kpi_name] = {
-        value: currentValue,
-        previousValue,
-        changePct,
-      };
+      kpis[row.kpi_name] = { value: currentValue, previousValue, changePct };
     }
 
     return NextResponse.json({

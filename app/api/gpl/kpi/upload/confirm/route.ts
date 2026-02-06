@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db-pg';
+import { supabaseAdmin } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,36 +15,53 @@ export async function POST(request: NextRequest) {
 
     let inserted = 0;
     let updated = 0;
+    let skipped = 0;
 
     for (const row of data) {
       if (!row.reportMonth || !row.kpiName || row.value === null || row.value === undefined) {
+        skipped++;
         continue;
       }
 
-      const result = await query(
-        `INSERT INTO gpl_monthly_kpis (report_month, kpi_name, value)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (report_month, kpi_name) DO UPDATE SET value = EXCLUDED.value
-         RETURNING (xmax = 0) AS is_insert`,
-        [row.reportMonth, row.kpiName, row.value]
-      );
+      // Check if row exists
+      const { data: existing, error: selectErr } = await supabaseAdmin
+        .from('gpl_monthly_kpis')
+        .select('id')
+        .eq('report_month', row.reportMonth)
+        .eq('kpi_name', row.kpiName)
+        .maybeSingle();
 
-      if (result.rows[0]?.is_insert) {
-        inserted++;
-      } else {
+      if (selectErr) throw selectErr;
+
+      if (existing) {
+        const { error: updateErr } = await supabaseAdmin
+          .from('gpl_monthly_kpis')
+          .update({ value: row.value })
+          .eq('id', existing.id);
+        if (updateErr) throw updateErr;
         updated++;
+      } else {
+        const { error: insertErr } = await supabaseAdmin
+          .from('gpl_monthly_kpis')
+          .insert({
+            report_month: row.reportMonth,
+            kpi_name: row.kpiName,
+            value: row.value,
+          });
+        if (insertErr) throw insertErr;
+        inserted++;
       }
     }
 
     return NextResponse.json({
       success: true,
-      message: `KPI data saved successfully`,
+      message: 'KPI data saved successfully',
       filename: filename || 'unknown.csv',
       counts: {
         total: data.length,
         inserted,
         updated,
-        skipped: data.length - inserted - updated,
+        skipped,
       },
     });
   } catch (error: any) {
