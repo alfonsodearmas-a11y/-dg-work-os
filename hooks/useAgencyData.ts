@@ -28,9 +28,9 @@ const transformGPLData = (apiData: any): GPLData | null => {
   });
 
   const solarStations = [
-    { name: 'Hampshire Solar', capacity: parseFloat(summary.solar_hampshire_mwp) || 0 },
-    { name: 'Prospect Solar', capacity: parseFloat(summary.solar_prospect_mwp) || 0 },
-    { name: 'Trafalgar Solar', capacity: parseFloat(summary.solar_trafalgar_mwp) || 0 },
+    { name: 'Hampshire Solar', capacity: parseFloat(summary.hampshire_solar_mwp ?? summary.solar_hampshire_mwp) || 0 },
+    { name: 'Prospect Solar', capacity: parseFloat(summary.prospect_solar_mwp ?? summary.solar_prospect_mwp) || 0 },
+    { name: 'Trafalgar Solar', capacity: parseFloat(summary.trafalgar_solar_mwp ?? summary.solar_trafalgar_mwp) || 0 },
   ].filter(s => s.capacity > 0);
 
   return {
@@ -54,7 +54,9 @@ const transformGPLData = (apiData: any): GPLData | null => {
     approximateSuppressedPeak: null,
     peakDemandHistory: [],
     reportDate: summary.report_date,
-    aiAnalysis: analysis || null,
+    // analysis may be the raw generateGPLBriefing result: { success, executiveBriefing, criticalAlerts, ... }
+    // or wrapped in analysis_data. Normalize to the inner analysis object.
+    aiAnalysis: analysis?.analysis_data || analysis || null,
   };
 };
 
@@ -264,28 +266,39 @@ export const useAgencyData = () => {
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchGPLData = useCallback(async () => {
+  const fetchGPLData = useCallback(async (date?: string) => {
     try {
-      const response = await fetch('/api/gpl/latest');
+      const url = date ? `/api/gpl/daily/${date}` : '/api/gpl/latest';
+      const response = await fetch(url);
       if (!response.ok) {
+        if (response.status === 404) return null; // No data for this date
         console.warn('Failed to fetch GPL data:', response.status);
         return null;
       }
-      const data = await response.json();
+      const json = await response.json();
 
-      let analysis = null;
-      if (data.summary?.upload_id) {
+      // Unwrap: API returns { success, data: { upload, summary, stations, analysis? } }
+      const payload = json?.data;
+      if (!payload) return null;
+
+      const { upload, summary, stations } = payload;
+
+      // Use analysis from payload if included, otherwise fetch separately
+      let analysis = payload.analysis || null;
+      if (!analysis && upload?.id) {
         try {
-          const analysisResponse = await fetch(`/api/gpl/analysis/${data.summary.upload_id}`);
+          const analysisResponse = await fetch(`/api/gpl/analysis/${upload.id}`);
           if (analysisResponse.ok) {
-            analysis = await analysisResponse.json();
+            const analysisJson = await analysisResponse.json();
+            // Unwrap: { success, data: { analysis: { executiveBriefing, ... } } }
+            analysis = analysisJson?.data?.analysis || analysisJson?.analysis || null;
           }
         } catch (err) {
           console.warn('Failed to fetch AI analysis:', err);
         }
       }
 
-      return transformGPLData({ ...data, analysis });
+      return transformGPLData({ summary, stations, analysis });
     } catch (err) {
       console.warn('Error fetching GPL data:', err);
       return null;
@@ -366,6 +379,17 @@ export const useAgencyData = () => {
     }] : []),
   ];
 
+  const loadGPLByDate = useCallback(async (date: string) => {
+    setIsLoading(true);
+    const gplData = await fetchGPLData(date);
+    if (gplData) {
+      setRawData(prev => ({ ...prev, gpl: gplData }));
+    }
+    setLastUpdated(new Date());
+    setIsLoading(false);
+    return gplData;
+  }, [fetchGPLData]);
+
   return {
     agencies,
     alerts,
@@ -373,5 +397,6 @@ export const useAgencyData = () => {
     lastUpdated,
     isLoading,
     refresh,
+    loadGPLByDate,
   };
 };

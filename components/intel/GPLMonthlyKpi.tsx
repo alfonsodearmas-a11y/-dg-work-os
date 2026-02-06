@@ -13,6 +13,7 @@ import {
   type LucideIcon
 } from 'lucide-react';
 import { GPLKpiUpload } from './GPLKpiUpload';
+import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 
 const API_BASE = '/api';
 
@@ -70,12 +71,12 @@ function InsightCard({ section }: { section: any }) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-semibold text-white">{section.title}</span>
+            <span className="text-[15px] font-semibold text-white">{section.title}</span>
             <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium ${severity.bg} ${severity.text}`}>
               {severity.label}
             </span>
           </div>
-          <p className="text-sm text-[#c8d0dc] font-medium leading-snug">{section.summary}</p>
+          <p className="text-[15px] text-[#c8d0dc] font-medium leading-snug">{section.summary}</p>
         </div>
         <ChevronDown
           className={`w-4 h-4 text-[#64748b] shrink-0 mt-1 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
@@ -106,7 +107,7 @@ function ActionItemsCard({ items }: { items: any[] }) {
           <CheckCircle2 className="w-4.5 h-4.5 text-[#d4af37]" />
         </div>
         <div className="flex-1 min-w-0">
-          <span className="text-sm font-semibold text-white">Key Action Items</span>
+          <span className="text-[15px] font-semibold text-white">Key Action Items</span>
           <span className="ml-2 text-xs text-[#64748b]">{items.length} recommendations</span>
         </div>
         <ChevronDown
@@ -245,7 +246,7 @@ export function GPLMonthlyKpi() {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-white">GPL Monthly Performance</h3>
+          <h3 className="text-[22px] font-semibold text-white">GPL Monthly Performance</h3>
           <button
             onClick={() => setShowUpload(true)}
             className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg flex items-center gap-2 text-sm"
@@ -284,7 +285,7 @@ export function GPLMonthlyKpi() {
             <div className="w-8 h-8 rounded-lg bg-[#2d3a52]/50 flex items-center justify-center">
               <Icon className="w-4 h-4 text-[#94a3b8]" />
             </div>
-            <span className="text-[#94a3b8] text-xs">{name}</span>
+            <span className="text-[#94a3b8] text-sm">{name}</span>
           </div>
           {data.changePct !== null && (
             <div className={`flex items-center gap-1 px-2 py-0.5 rounded ${trend.bg}`}>
@@ -312,7 +313,7 @@ export function GPLMonthlyKpi() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-white">GPL Monthly Performance</h3>
+          <h3 className="text-[22px] font-semibold text-white">GPL Monthly Performance</h3>
           {latestKpis?.reportMonth && (
             <p className="text-[#64748b] text-sm">
               Latest data: {latestKpis.reportMonth.slice(0, 7)}
@@ -348,12 +349,18 @@ export function GPLMonthlyKpi() {
         </div>
       )}
 
-      {/* Charts */}
+      {/* Charts — collapsible */}
       {chartData.length > 0 && (
+        <CollapsibleSection
+          title="Trend Charts"
+          icon={TrendingUp}
+          badge={{ text: '5 charts', variant: 'info' }}
+          defaultOpen={false}
+        >
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Peak Demand Chart */}
           <div className="bg-[#1a2744]/80 rounded-xl p-4 border border-[#2d3a52]">
-            <h4 className="text-white font-medium mb-4">Peak Demand Trends</h4>
+            <h4 className="text-white font-medium text-lg mb-4">Peak Demand Trends</h4>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
@@ -399,7 +406,7 @@ export function GPLMonthlyKpi() {
 
           {/* Installed Capacity Chart */}
           <div className="bg-[#1a2744]/80 rounded-xl p-4 border border-[#2d3a52]">
-            <h4 className="text-white font-medium mb-4">Installed Capacity</h4>
+            <h4 className="text-white font-medium text-lg mb-4">Installed Capacity</h4>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
@@ -445,7 +452,7 @@ export function GPLMonthlyKpi() {
 
           {/* Generation Mix Chart */}
           <div className="bg-[#1a2744]/80 rounded-xl p-4 border border-[#2d3a52]">
-            <h4 className="text-white font-medium mb-4">Generation Mix (HFO vs LFO)</h4>
+            <h4 className="text-white font-medium text-lg mb-4">Generation Mix (HFO vs LFO)</h4>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
@@ -494,7 +501,7 @@ export function GPLMonthlyKpi() {
 
           {/* Affected Customers Chart */}
           <div className="bg-[#1a2744]/80 rounded-xl p-4 border border-[#2d3a52]">
-            <h4 className="text-white font-medium mb-4">Affected Customers</h4>
+            <h4 className="text-white font-medium text-lg mb-4">Affected Customers</h4>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={chartData}>
@@ -536,7 +543,7 @@ export function GPLMonthlyKpi() {
 
           {/* Collection Rate Chart */}
           <div className="bg-[#1a2744]/80 rounded-xl p-4 border border-[#2d3a52] lg:col-span-2">
-            <h4 className="text-white font-medium mb-4">Collection Rate Performance</h4>
+            <h4 className="text-white font-medium text-lg mb-4">Collection Rate Performance</h4>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
@@ -576,6 +583,7 @@ export function GPLMonthlyKpi() {
             </div>
           </div>
         </div>
+        </CollapsibleSection>
       )}
 
       {/* AI Analysis — Structured Insight Cards */}
@@ -587,7 +595,7 @@ export function GPLMonthlyKpi() {
               <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-white">AI Trend Analysis</h4>
+              <h4 className="text-[15px] font-semibold text-white">AI Trend Analysis</h4>
               <p className="text-[#64748b] text-xs">
                 {analysis.date_range_start?.slice(0, 7)} to {analysis.date_range_end?.slice(0, 7)} &middot; {analysis.months_analyzed} months
               </p>

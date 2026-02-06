@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     // Get uploads (no JOIN to users — just return uploaded_by as-is)
     const { data: uploads, error: uploadsError } = await supabaseAdmin
       .from('gpl_uploads')
-      .select('id, report_date, file_name, uploaded_by, status, created_at')
+      .select('id, report_date, filename, uploaded_by, status, created_at')
       .order('report_date', { ascending: false })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
         uploads: (uploads || []).map((row) => ({
           id: row.id,
           reportDate: row.report_date,
-          fileName: row.file_name,
+          fileName: row.filename,
           uploadedBy: row.uploaded_by,
           uploadedByName: row.uploaded_by || 'Unknown',
           status: row.status,

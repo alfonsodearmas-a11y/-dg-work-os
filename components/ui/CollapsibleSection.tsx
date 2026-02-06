@@ -33,8 +33,8 @@ export function CollapsibleSection({
         className="collapsible-header w-full"
       >
         <div className="flex items-center gap-2.5 min-w-0">
-          {Icon && <Icon size={16} className="text-[#d4af37] shrink-0" />}
-          <span className="text-sm font-semibold text-white truncate">{title}</span>
+          {Icon && <Icon size={18} className="text-[#d4af37] shrink-0" />}
+          <span className="text-[15px] font-semibold text-white truncate">{title}</span>
           {subtitle && (
             <span className="text-xs text-[#64748b] truncate hidden sm:inline">{subtitle}</span>
           )}
@@ -43,7 +43,7 @@ export function CollapsibleSection({
           )}
         </div>
         <ChevronDown
-          size={16}
+          size={18}
           className={`text-[#64748b] shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>

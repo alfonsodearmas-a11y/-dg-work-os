@@ -6,7 +6,7 @@ import { useAgencyData } from '@/hooks/useAgencyData';
 import { GPLDetail } from '@/components/intel/GPLDetail';
 
 export default function GPLIntelPage() {
-  const { rawData, isLoading } = useAgencyData();
+  const { rawData, isLoading, loadGPLByDate } = useAgencyData();
 
   return (
     <div className="space-y-6">
@@ -35,7 +35,7 @@ export default function GPLIntelPage() {
           <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
-        <GPLDetail data={rawData.gpl} />
+        <GPLDetail data={rawData.gpl} onLoadDate={loadGPLByDate} />
       )}
     </div>
   );

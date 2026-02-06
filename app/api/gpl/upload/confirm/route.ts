@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       .from('gpl_uploads')
       .insert({
         report_date: reportDate,
-        file_name: uploadData.fileName || 'gpl-dbis.xlsx',
+        filename: uploadData.fileName || 'gpl-dbis.xlsx',
         uploaded_by: 'dg-admin',
         status: 'confirmed',
         raw_data: uploadData,
@@ -59,6 +59,11 @@ export async function POST(request: NextRequest) {
     const eveningPeakSuppressedMw = scheduleSummary.eveningPeakSuppressedMw ?? null;
     const dayPeakOnBarsMw = scheduleSummary.dayPeakOnBarsMw ?? null;
     const dayPeakSuppressedMw = scheduleSummary.dayPeakSuppressedMw ?? null;
+
+    // Remove any previous data for this date (allows re-uploads)
+    await supabaseAdmin.from('gpl_daily_units').delete().eq('report_date', reportDate);
+    await supabaseAdmin.from('gpl_daily_stations').delete().eq('report_date', reportDate);
+    await supabaseAdmin.from('gpl_daily_summary').delete().eq('report_date', reportDate);
 
     // Insert into gpl_daily_summary
     const { error: summaryError } = await supabaseAdmin

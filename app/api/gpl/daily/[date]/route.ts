@@ -19,7 +19,7 @@ export async function GET(
     // Get the upload for this date
     const { data: upload, error: uploadError } = await supabaseAdmin
       .from('gpl_uploads')
-      .select('id, report_date, file_name, uploaded_by, status, created_at')
+      .select('id, report_date, filename, uploaded_by, status, created_at')
       .eq('report_date', date)
       .eq('status', 'confirmed')
       .order('created_at', { ascending: false })
@@ -54,17 +54,35 @@ export async function GET(
 
     if (stationsError) throw stationsError;
 
+    // Get AI analysis for this upload
+    let analysis = null;
+    const { data: analysisRows, error: analysisError } = await supabaseAdmin
+      .from('gpl_analysis')
+      .select('analysis_data, status')
+      .eq('upload_id', upload.id)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (!analysisError && analysisRows && analysisRows.length > 0) {
+      const row = analysisRows[0];
+      analysis = typeof row.analysis_data === 'string'
+        ? JSON.parse(row.analysis_data)
+        : row.analysis_data;
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         upload: {
           id: upload.id,
           reportDate: upload.report_date,
-          fileName: upload.file_name,
+          fileName: upload.filename,
           uploadedAt: upload.created_at,
         },
         summary: summaryRows?.[0] || null,
         stations: stations || [],
+        analysis,
       },
     });
   } catch (error: any) {

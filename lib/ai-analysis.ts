@@ -163,18 +163,32 @@ ${outageLines}
 
 Respond in JSON format:
 {
-  "executiveBriefing": "3-5 paragraph executive summary",
+  "executiveBriefing": {
+    "headline": "1-2 sentence newspaper-style summary with key numbers (MW values, unit counts, percentages). Example: 'GPL operating at 221.2 MW / 340.6 MW (65% capacity). 37 of 64 units online. 23.5 MW suppressed demand during evening peak.'",
+    "sections": [
+      { "title": "System Status", "severity": "critical|warning|stable|positive", "summary": "one-line summary with numbers", "detail": "full paragraph with analysis" },
+      { "title": "Critical Issues", "severity": "critical|warning|stable|positive", "summary": "one-line summary: count of problems", "detail": "full paragraph listing each issue" },
+      { "title": "Positive Performance", "severity": "positive", "summary": "one-line: best-performing stations/metrics", "detail": "full paragraph with details" },
+      { "title": "Action Required", "severity": "critical|warning", "summary": "one-line: count of actions needed", "detail": "full paragraph with specific recommended actions" }
+    ]
+  },
   "criticalAlerts": [{ "severity": "CRITICAL|HIGH|MEDIUM", "title": "string", "description": "string", "recommendation": "string" }],
   "stationConcerns": [{ "station": "string", "issue": "string", "impact": "string", "priority": "HIGH|MEDIUM|LOW" }],
   "recommendations": [{ "category": "Operations|Maintenance|Planning|Policy", "recommendation": "string", "rationale": "string", "urgency": "Immediate|Short-term|Long-term" }]
-}`;
+}
+
+IMPORTANT for executiveBriefing:
+- The "headline" must be exactly 1-2 sentences with SPECIFIC numbers (MW, %, unit counts). Think newspaper headline.
+- Each section "summary" must be exactly ONE line with specific numbers. The DG reads only this line unless they click to expand.
+- Each section "detail" is the full analysis paragraph, only shown on click.
+- severity values: "critical" (red), "warning" (amber), "stable" (blue), "positive" (green)`;
 }
 
 export async function generateGPLBriefing(context: GPLBriefingContext) {
   const startTime = Date.now();
   try {
     if (!process.env.ANTHROPIC_API_KEY) {
-      return { success: false, error: 'AI analysis not configured', executiveBriefing: 'AI analysis is not available.', criticalAlerts: [], stationConcerns: [], recommendations: [] };
+      return { success: false, error: 'AI analysis not configured', executiveBriefing: { headline: 'AI analysis is not available.', sections: [] }, criticalAlerts: [], stationConcerns: [], recommendations: [] };
     }
     const client = getClient();
     const prompt = buildGPLPrompt(context);
@@ -190,19 +204,31 @@ export async function generateGPLBriefing(context: GPLBriefingContext) {
       if (objectMatch) jsonStr = objectMatch[0];
       parsed = JSON.parse(jsonStr);
     } catch {
-      parsed = { executiveBriefing: responseText.slice(0, 2000), criticalAlerts: [], stationConcerns: [], recommendations: [] };
+      parsed = { executiveBriefing: { headline: responseText.split('\n')[0]?.slice(0, 200) || 'Analysis completed.', sections: [{ title: 'Full Analysis', severity: 'stable', summary: '', detail: responseText.slice(0, 2000) }] }, criticalAlerts: [], stationConcerns: [], recommendations: [] };
+    }
+
+    // Handle executiveBriefing — can be structured object (new) or plain string (legacy)
+    let executiveBriefing = parsed.executiveBriefing;
+    if (typeof executiveBriefing === 'string') {
+      // Legacy format — wrap in structured object for consistent handling
+      executiveBriefing = {
+        headline: executiveBriefing.split('\n')[0]?.slice(0, 200) || 'Analysis completed.',
+        sections: [{ title: 'Full Analysis', severity: 'stable', summary: executiveBriefing.split('\n')[0]?.slice(0, 120) || '', detail: executiveBriefing }],
+      };
+    } else if (!executiveBriefing || !executiveBriefing.headline) {
+      executiveBriefing = { headline: 'Analysis completed.', sections: [] };
     }
 
     return {
       success: true,
-      executiveBriefing: parsed.executiveBriefing || 'Analysis completed.',
+      executiveBriefing,
       criticalAlerts: parsed.criticalAlerts || [],
       stationConcerns: parsed.stationConcerns || [],
       recommendations: parsed.recommendations || [],
       usage: { promptTokens: response.usage?.input_tokens, completionTokens: response.usage?.output_tokens },
     };
   } catch (error: any) {
-    return { success: false, error: error.message, executiveBriefing: `AI analysis failed: ${error.message}`, criticalAlerts: [], stationConcerns: [], recommendations: [] };
+    return { success: false, error: error.message, executiveBriefing: { headline: `AI analysis failed: ${error.message}`, sections: [] }, criticalAlerts: [], stationConcerns: [], recommendations: [] };
   }
 }
 

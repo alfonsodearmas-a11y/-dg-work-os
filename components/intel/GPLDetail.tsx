@@ -16,6 +16,7 @@ import type { LucideIcon } from 'lucide-react';
 import type { GPLData } from '@/data/mockData';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { GPLMonthlyKpi } from './GPLMonthlyKpi';
+import { GPLExcelUpload } from './GPLExcelUpload';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,6 +26,7 @@ const API_BASE = '/api';
 
 interface GPLDetailProps {
   data: GPLData;
+  onLoadDate?: (date: string) => Promise<GPLData | null>;
 }
 
 interface EnrichedStation {
@@ -119,7 +121,7 @@ function KpiSummaryCard({ name, data, icon: Icon, unit, inverseGood = false, tar
           <div className="w-10 h-10 rounded-lg bg-[#2d3a52] flex items-center justify-center">
             <Icon className="w-5 h-5 text-[#94a3b8]" />
           </div>
-          <span className="text-[#94a3b8] text-sm">{name}</span>
+          <span className="text-[#94a3b8] text-[15px]">{name}</span>
         </div>
         {data.changePct !== null && (
           <div className={`flex items-center gap-1 px-2 py-1 rounded ${isGood ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
@@ -166,8 +168,58 @@ function ForecastMetricCard({ title, value, unit = '', isDate = false, trend = '
 
   return (
     <div className={`bg-[#1a2744] rounded-xl border border-[#2d3a52] border-l-4 ${trendStyles[trend]} p-5`}>
-      <p className="text-[#64748b] text-sm mb-1">{title}</p>
+      <p className="text-[#64748b] text-[15px] mb-1">{title}</p>
       <p className="text-2xl font-bold text-[#f1f5f9]">{displayValue}</p>
+    </div>
+  );
+}
+
+// Severity config for briefing insight cards
+const BRIEFING_SEVERITY: Record<string, { bg: string; text: string; border: string; label: string }> = {
+  critical: { bg: 'bg-red-500/15', text: 'text-red-400', border: 'border-red-500/30', label: 'Critical' },
+  warning:  { bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/30', label: 'Warning' },
+  stable:   { bg: 'bg-blue-500/15', text: 'text-blue-400', border: 'border-blue-500/30', label: 'Stable' },
+  positive: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30', label: 'Good' },
+};
+
+interface BriefingSection {
+  title: string;
+  severity: string;
+  summary: string;
+  detail: string;
+}
+
+function BriefingInsightCard({ section }: { section: BriefingSection }) {
+  const [expanded, setExpanded] = useState(false);
+  const sev = BRIEFING_SEVERITY[section.severity] || BRIEFING_SEVERITY.stable;
+
+  return (
+    <div className={`bg-[#1a2744] rounded-xl border ${sev.border} overflow-hidden`}>
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full text-left px-4 py-3.5 hover:bg-white/[0.02] transition-colors"
+      >
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-lg font-semibold text-white">{section.title}</span>
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium ${sev.bg} ${sev.text}`}>
+              {sev.label}
+            </span>
+            <ChevronDown className={`w-4 h-4 text-[#64748b] transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+          </div>
+        </div>
+        <p className="text-base text-[#c8d0dc] leading-snug">{section.summary}</p>
+      </button>
+      <div className={`collapse-grid ${expanded ? 'open' : ''}`}>
+        <div>
+          <div className="px-4 pb-4 pt-0">
+            <div className="bg-[#0a1628] rounded-lg p-4 border border-[#2d3a52]">
+              <p className="text-base text-[#94a3b8] leading-relaxed">{section.detail}</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -176,18 +228,23 @@ function ForecastMetricCard({ title, value, unit = '', isDate = false, trend = '
 // Main component
 // ---------------------------------------------------------------------------
 
-export function GPLDetail({ data }: GPLDetailProps) {
+export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
   // Tab state
   const [activeTab, setActiveTab] = useState<string>('overview');
 
   // Station filter state (for Station Health tab)
   const [stationFilter, setStationFilter] = useState<string>('all');
 
-  // Collapsible AI briefing state
-  const [briefingExpanded, setBriefingExpanded] = useState(false);
+  // DBIS upload toggle
+  const [showDbisUpload, setShowDbisUpload] = useState(false);
 
   // Alert expansion state
   const [expandedAlerts, setExpandedAlerts] = useState<Record<string, boolean>>({});
+
+  // History state
+  const [historyDates, setHistoryDates] = useState<{ reportDate: string; fileName: string; createdAt: string }[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // KPI data state
   const [kpiData, setKpiData] = useState<KpiState>({ latest: null, trends: [], analysis: null });
@@ -265,6 +322,43 @@ export function GPLDetail({ data }: GPLDetailProps) {
     fetchForecastData();
   }, []);
 
+  // Fetch report history for date picker
+  useEffect(() => {
+    async function fetchHistory() {
+      try {
+        const res = await fetch(`${API_BASE}/gpl/history?limit=30`);
+        const json = await res.json();
+        if (json.success && json.data?.uploads) {
+          setHistoryDates(
+            json.data.uploads
+              .filter((u: any) => u.status === 'confirmed')
+              .map((u: any) => ({
+                reportDate: u.reportDate,
+                fileName: u.fileName,
+                createdAt: u.createdAt,
+              }))
+          );
+          // Set initial selected date from current data
+          if (data.reportDate) {
+            setSelectedDate(data.reportDate);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch GPL history:', err);
+      }
+    }
+    fetchHistory();
+  }, [data.reportDate]);
+
+  // Handle date change
+  const handleDateChange = async (date: string) => {
+    if (!date || date === selectedDate || !onLoadDate) return;
+    setHistoryLoading(true);
+    setSelectedDate(date);
+    await onLoadDate(date);
+    setHistoryLoading(false);
+  };
+
   // Refresh multivariate forecasts
   const handleRefreshForecast = async () => {
     setRefreshingForecast(true);
@@ -338,7 +432,20 @@ export function GPLDetail({ data }: GPLDetailProps) {
     };
   }, [data]);
 
-  if (!summary) return null;
+  if (!summary) {
+    return (
+      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-12 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-[#2d3a52] flex items-center justify-center mx-auto mb-4">
+          <Upload className="w-8 h-8 text-[#64748b]" />
+        </div>
+        <h3 className="text-[#f1f5f9] text-lg font-semibold mb-2">No DBIS Data Available</h3>
+        <p className="text-[#64748b] text-base mb-6 max-w-md mx-auto">
+          Upload a GPL DBIS Excel report to populate the dashboard with generation data, station status, and AI analysis.
+        </p>
+        <GPLExcelUpload onCancel={() => {}} />
+      </div>
+    );
+  }
 
   // Calculate reserve margin for health indicator
   const eveningPeak = data.actualEveningPeak?.onBars || 0;
@@ -440,9 +547,10 @@ export function GPLDetail({ data }: GPLDetailProps) {
   const consolidatedAlerts = useMemo<ConsolidatedAlert[]>(() => {
     const alerts: ConsolidatedAlert[] = [];
 
-    // Add critical alerts
-    if (data.aiAnalysis?.critical_alerts) {
-      data.aiAnalysis.critical_alerts.forEach((alert: any, i: number) => {
+    // Add critical alerts (camelCase from API)
+    const critAlerts = data.aiAnalysis?.criticalAlerts || data.aiAnalysis?.critical_alerts;
+    if (critAlerts) {
+      critAlerts.forEach((alert: any, i: number) => {
         alerts.push({
           id: `critical-${i}`,
           severity: 'critical',
@@ -455,8 +563,9 @@ export function GPLDetail({ data }: GPLDetailProps) {
     }
 
     // Add station concerns
-    if (data.aiAnalysis?.station_concerns) {
-      data.aiAnalysis.station_concerns.forEach((concern: any, i: number) => {
+    const concerns = data.aiAnalysis?.stationConcerns || data.aiAnalysis?.station_concerns;
+    if (concerns) {
+      concerns.forEach((concern: any, i: number) => {
         alerts.push({
           id: `station-${i}`,
           severity: concern.priority === 'HIGH' ? 'high' : concern.priority === 'MEDIUM' ? 'medium' : 'low',
@@ -539,10 +648,32 @@ export function GPLDetail({ data }: GPLDetailProps) {
               healthStatus === 'critical' ? 'bg-red-500 animate-pulse' :
               healthStatus === 'warning' ? 'bg-amber-500' : 'bg-emerald-500'
             }`} />
-            <span className="text-[#94a3b8] text-sm font-medium">System Health</span>
+            <span className="text-[#94a3b8] text-[15px] font-medium">System Health</span>
           </div>
-          <div className="flex items-center gap-3 text-sm text-[#64748b]">
-            <span>Updated: {data.capacityDate || '-'}</span>
+          <div className="flex items-center gap-3">
+            {historyDates.length > 1 && (
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[#64748b]" />
+                <select
+                  value={selectedDate}
+                  onChange={(e) => handleDateChange(e.target.value)}
+                  disabled={historyLoading}
+                  className="bg-[#0a1628] text-[#94a3b8] text-sm border border-[#2d3a52] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#d4af37] disabled:opacity-50"
+                >
+                  {historyDates.map(h => (
+                    <option key={h.reportDate} value={h.reportDate}>
+                      {new Date(h.reportDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </option>
+                  ))}
+                </select>
+                {historyLoading && (
+                  <RefreshCw className="w-4 h-4 text-[#d4af37] animate-spin" />
+                )}
+              </div>
+            )}
+            {historyDates.length <= 1 && (
+              <span className="text-sm text-[#64748b]">Updated: {data.capacityDate || '-'}</span>
+            )}
           </div>
         </div>
 
@@ -550,7 +681,7 @@ export function GPLDetail({ data }: GPLDetailProps) {
           {/* Available Capacity */}
           <div className="flex items-center gap-3 p-4 bg-[#0a1628] rounded-lg border-l-4 border-emerald-500">
             <div>
-              <p className="text-[#64748b] text-sm">Available Capacity</p>
+              <p className="text-[#64748b] text-[15px]">Available Capacity</p>
               <p className="text-2xl font-bold text-[#f1f5f9]">{summary.totalAvailable}<span className="text-base font-normal text-[#64748b]"> / {summary.totalDerated} MW</span></p>
             </div>
           </div>
@@ -560,7 +691,7 @@ export function GPLDetail({ data }: GPLDetailProps) {
             reserveMargin < 10 ? 'border-red-500' : reserveMargin < 15 ? 'border-amber-500' : 'border-emerald-500'
           }`}>
             <div>
-              <p className="text-[#64748b] text-sm">Reserve Margin</p>
+              <p className="text-[#64748b] text-[15px]">Reserve Margin</p>
               <p className={`text-2xl font-bold ${
                 reserveMargin < 10 ? 'text-red-400' : reserveMargin < 15 ? 'text-amber-400' : 'text-emerald-400'
               }`}>{reserveMargin.toFixed(1)}%</p>
@@ -573,7 +704,7 @@ export function GPLDetail({ data }: GPLDetailProps) {
             summary.offline.length > 0 ? 'border-red-500' : 'border-[#2d3a52]'
           }`}>
             <div>
-              <p className="text-[#64748b] text-sm">Offline Capacity</p>
+              <p className="text-[#64748b] text-[15px]">Offline Capacity</p>
               <p className="text-2xl font-bold text-red-400">{summary.totalOffline} MW</p>
               <p className="text-[#64748b] text-xs">{summary.offline.length} stations offline</p>
             </div>
@@ -582,7 +713,7 @@ export function GPLDetail({ data }: GPLDetailProps) {
           {/* Peak Demand */}
           <div className="flex items-center gap-3 p-4 bg-[#0a1628] rounded-lg border-l-4 border-purple-500">
             <div>
-              <p className="text-[#64748b] text-sm">Peak Demand (Evening)</p>
+              <p className="text-[#64748b] text-[15px]">Peak Demand (Evening)</p>
               <p className="text-2xl font-bold text-purple-400">{eveningPeak || '-'} MW</p>
               <p className="text-[#64748b] text-xs">{data.peakDemandDate || '-'}</p>
             </div>
@@ -620,7 +751,7 @@ export function GPLDetail({ data }: GPLDetailProps) {
               <div className="px-4 py-2.5 border-b border-[#2d3a52] flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="text-amber-400" size={16} />
-                  <h3 className="text-[#f1f5f9] font-medium text-sm">Active Alerts</h3>
+                  <h3 className="text-[#f1f5f9] font-medium text-lg">Active Alerts</h3>
                   {criticalCount > 0 && (
                     <span className="bg-red-500/20 text-red-400 text-xs px-1.5 py-0.5 rounded-full font-medium">
                       {criticalCount}
@@ -653,44 +784,73 @@ export function GPLDetail({ data }: GPLDetailProps) {
               </div>
             </div>
 
+            {/* Upload DBIS Report */}
+            {!showDbisUpload ? (
+              <button
+                onClick={() => setShowDbisUpload(true)}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-[#2d3a52] hover:border-[#d4af37]/50 bg-[#1a2744]/50 hover:bg-[#1a2744] text-[#94a3b8] hover:text-[#d4af37] transition-all"
+              >
+                <Upload size={16} />
+                <span className="text-sm font-medium">Upload DBIS Excel Report</span>
+              </button>
+            ) : (
+              <GPLExcelUpload
+                onCancel={() => setShowDbisUpload(false)}
+              />
+            )}
+
             {/* Fleet at a Glance */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Station Grid */}
-              <div className="lg:col-span-2 bg-[#1a2744] rounded-xl border border-[#2d3a52] p-4">
-                <h3 className="text-[#f1f5f9] font-medium text-base mb-4">Fleet at a Glance</h3>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                  {summary.stations.map(station => (
-                    <div
-                      key={station.name}
-                      className="bg-[#0a1628] rounded-lg p-3 border border-[#2d3a52] hover:border-[#d4af37]/50 transition-colors group relative"
-                      title={`${station.name}: ${station.available}/${station.derated} MW (${station.units} units)`}
-                    >
-                      <p className="text-[#f1f5f9] text-xs font-medium truncate">{station.name}</p>
-                      <p className="text-[#94a3b8] text-xs">{station.available}/{station.derated}</p>
-                      <div className="h-2 bg-[#2d3a52] rounded-full mt-1.5 overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{
-                            width: `${station.availability}%`,
-                            backgroundColor: getStatusColor(station.status)
-                          }}
-                        />
+              <div className="lg:col-span-2 space-y-3">
+                {/* Summary line — always visible */}
+                <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-4">
+                  <h3 className="text-[#f1f5f9] font-medium text-lg mb-2">Fleet at a Glance</h3>
+                  <p className="text-[#94a3b8] text-[15px]">
+                    {summary.operational.length} operational, {summary.degraded.length} degraded, {summary.offline.length} offline
+                  </p>
+                </div>
+                {/* Collapsible station detail */}
+                <CollapsibleSection
+                  title="Station Detail"
+                  icon={Factory}
+                  badge={{ text: `${summary.stations.length} stations`, variant: 'gold' }}
+                  defaultOpen={false}
+                >
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                    {summary.stations.map(station => (
+                      <div
+                        key={station.name}
+                        className="bg-[#0a1628] rounded-lg p-3 border border-[#2d3a52] hover:border-[#d4af37]/50 transition-colors group relative"
+                        title={`${station.name}: ${station.available}/${station.derated} MW (${station.units} units)`}
+                      >
+                        <p className="text-[#f1f5f9] text-xs font-medium truncate">{station.name}</p>
+                        <p className="text-[#94a3b8] text-xs">{station.available}/{station.derated}</p>
+                        <div className="h-2 bg-[#2d3a52] rounded-full mt-1.5 overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${station.availability}%`,
+                              backgroundColor: getStatusColor(station.status)
+                            }}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-                {/* Legend */}
-                <div className="flex flex-wrap gap-4 mt-4 pt-3 border-t border-[#2d3a52]">
-                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-emerald-500" /><span className="text-[#94a3b8] text-sm">Operational</span></div>
-                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-amber-500" /><span className="text-[#94a3b8] text-sm">Degraded</span></div>
-                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-orange-500" /><span className="text-[#94a3b8] text-sm">Critical</span></div>
-                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-red-500" /><span className="text-[#94a3b8] text-sm">Offline</span></div>
-                </div>
+                    ))}
+                  </div>
+                  {/* Legend */}
+                  <div className="flex flex-wrap gap-4 mt-4 pt-3 border-t border-[#2d3a52]">
+                    <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-emerald-500" /><span className="text-[#94a3b8] text-sm">Operational</span></div>
+                    <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-amber-500" /><span className="text-[#94a3b8] text-sm">Degraded</span></div>
+                    <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-orange-500" /><span className="text-[#94a3b8] text-sm">Critical</span></div>
+                    <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-red-500" /><span className="text-[#94a3b8] text-sm">Offline</span></div>
+                  </div>
+                </CollapsibleSection>
               </div>
 
               {/* Utilization Donut */}
               <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-4">
-                <h3 className="text-[#f1f5f9] font-medium text-base mb-2">Capacity Utilization</h3>
+                <h3 className="text-[#f1f5f9] font-medium text-lg mb-2">Capacity Utilization</h3>
                 <div className="h-48 relative">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -735,71 +895,78 @@ export function GPLDetail({ data }: GPLDetailProps) {
               </div>
             </div>
 
-            {/* AI Executive Briefing - Collapsible */}
-            {data.aiAnalysis?.executive_briefing && (
-              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] overflow-hidden">
-                <button
-                  onClick={() => setBriefingExpanded(!briefingExpanded)}
-                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-[#2d3a52]/30 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center">
-                      <Activity className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="text-left">
-                      <h3 className="text-[#f1f5f9] font-medium text-base">AI Executive Briefing</h3>
-                      <p className="text-[#64748b] text-sm">Click to {briefingExpanded ? 'collapse' : 'expand'}</p>
-                    </div>
-                  </div>
-                  <ChevronDown className={`text-[#64748b] transition-transform ${briefingExpanded ? 'rotate-180' : ''}`} size={18} />
-                </button>
+            {/* AI Executive Briefing — Progressive Disclosure */}
+            {(() => {
+              // Resolve briefing data: handle both camelCase (API) and snake_case (legacy)
+              const rawBriefing = data.aiAnalysis?.executiveBriefing || data.aiAnalysis?.executive_briefing;
+              if (!rawBriefing) return null;
 
-                {!briefingExpanded && (
-                  <div className="px-4 pb-3">
-                    <p className="line-clamp-2 text-[#94a3b8] text-sm">
-                      {data.aiAnalysis.executive_briefing.split('\n')[0] || 'System status analysis available.'}
-                    </p>
-                  </div>
-                )}
+              // Parse: structured object (new) vs plain string (legacy)
+              const briefing: { headline: string; sections: BriefingSection[] } =
+                typeof rawBriefing === 'object' && rawBriefing.headline
+                  ? rawBriefing
+                  : typeof rawBriefing === 'string'
+                    ? {
+                        headline: rawBriefing.split('\n')[0]?.slice(0, 250) || 'System analysis available.',
+                        sections: [{ title: 'Full Analysis', severity: 'stable', summary: rawBriefing.split('\n')[1]?.slice(0, 120) || '', detail: rawBriefing }],
+                      }
+                    : { headline: 'System analysis available.', sections: [] };
 
-                {briefingExpanded && (
-                  <div className="px-4 pb-4 space-y-4">
-                    {/* Bottom Line */}
-                    <div className="bg-[#0a1628] rounded-lg p-4 border border-[#2d3a52]">
-                      <p className="text-purple-400 text-sm font-medium mb-1">Bottom Line</p>
-                      <p className="text-[#94a3b8] text-base leading-relaxed">
-                        {data.aiAnalysis.executive_briefing.split('\n')[0] || 'System status analysis available.'}
-                      </p>
-                    </div>
+              const critAlerts = data.aiAnalysis?.criticalAlerts || data.aiAnalysis?.critical_alerts || [];
 
-                    {/* Immediate Priorities */}
-                    {data.aiAnalysis.recommendations?.length > 0 && (
-                      <div className="bg-[#0a1628] rounded-lg p-4 border border-[#2d3a52]">
-                        <p className="text-blue-400 text-sm font-medium mb-2">Immediate Priorities</p>
-                        <ul className="space-y-2">
-                          {data.aiAnalysis.recommendations.slice(0, 3).map((rec: any, i: number) => (
-                            <li key={i} className="text-[#94a3b8] text-sm flex items-start gap-2">
-                              <span className="text-blue-400">{i + 1}.</span>
-                              <span>{rec.recommendation}</span>
-                            </li>
-                          ))}
-                        </ul>
+              return (
+                <div className="space-y-3">
+                  {/* HEADLINE — always visible, newspaper style */}
+                  <div className="bg-gradient-to-r from-[#1a2744] to-[#2d3a52]/80 rounded-xl border border-[#d4af37]/20 p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <Activity className="w-5 h-5 text-white" />
                       </div>
-                    )}
-
-                    {/* Grid Note */}
-                    {summary.offline.length > 0 && (
-                      <div className="bg-amber-500/10 rounded-lg p-4 border border-amber-500/20">
-                        <p className="text-amber-400 text-sm font-medium mb-1">Attention Required</p>
-                        <p className="text-[#94a3b8] text-sm">
-                          {summary.offline.length} stations currently offline: {summary.offline.map(s => s.name).join(', ')}
-                        </p>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-widest text-[#d4af37] font-semibold mb-1.5">AI Executive Briefing</p>
+                        <p className="text-[22px] font-bold text-[#f1f5f9] leading-snug">{briefing.headline}</p>
                       </div>
-                    )}
+                    </div>
                   </div>
-                )}
-              </div>
-            )}
+
+                  {/* INSIGHT CARDS — all collapsed */}
+                  {briefing.sections.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {briefing.sections.map((section, i) => (
+                        <BriefingInsightCard key={i} section={section} />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* CRITICAL ALERTS — collapsed */}
+                  {critAlerts.length > 0 && (
+                    <CollapsibleSection
+                      title={`Critical Alerts (${critAlerts.length})`}
+                      icon={AlertTriangle}
+                      badge={{ text: `${critAlerts.length}`, variant: 'danger' }}
+                      defaultOpen={false}
+                    >
+                      <div className="space-y-2">
+                        {critAlerts.map((alert: any, i: number) => (
+                          <div key={i} className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-semibold text-red-300">{alert.title}</span>
+                              <span className="text-[10px] uppercase px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded font-medium">
+                                {alert.severity || 'CRITICAL'}
+                              </span>
+                            </div>
+                            <p className="text-[#94a3b8] text-sm">{alert.description}</p>
+                            {alert.recommendation && (
+                              <p className="text-blue-400 text-sm mt-1.5">→ {alert.recommendation}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </CollapsibleSection>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -867,7 +1034,7 @@ export function GPLDetail({ data }: GPLDetailProps) {
                       />
                     </div>
 
-                    <div className="flex items-center justify-between text-sm text-[#64748b]">
+                    <div className="flex items-center justify-between text-[15px] text-[#64748b]">
                       <span>{station.units} units</span>
                       <span>{station.availability.toFixed(0)}% available</span>
                     </div>
@@ -916,12 +1083,18 @@ export function GPLDetail({ data }: GPLDetailProps) {
                   </div>
                 )}
 
-                {/* Charts */}
+                {/* Charts — collapsible */}
                 {kpiData.trends.length > 0 && (
+                  <CollapsibleSection
+                    title="Historical Charts"
+                    icon={Activity}
+                    badge={{ text: '2 charts', variant: 'info' }}
+                    defaultOpen={false}
+                  >
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {/* Peak Demand Trends */}
                     <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-4">
-                      <h4 className="text-[#f1f5f9] font-medium text-base mb-4">Peak Demand Trends</h4>
+                      <h4 className="text-[#f1f5f9] font-medium text-lg mb-4">Peak Demand Trends</h4>
                       <div className="h-72">
                         <ResponsiveContainer width="100%" height="100%">
                           <AreaChart data={kpiData.trends}>
@@ -961,7 +1134,7 @@ export function GPLDetail({ data }: GPLDetailProps) {
 
                     {/* Collection Rate - Bar Chart (Fixed legibility) */}
                     <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-4">
-                      <h4 className="text-[#f1f5f9] font-medium text-base mb-4">Collection Rate Performance</h4>
+                      <h4 className="text-[#f1f5f9] font-medium text-lg mb-4">Collection Rate Performance</h4>
                       <div className="h-80">
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={kpiData.trends} margin={{ top: 25, right: 20, left: 10, bottom: 20 }}>
@@ -1026,6 +1199,7 @@ export function GPLDetail({ data }: GPLDetailProps) {
                       </div>
                     </div>
                   </div>
+                  </CollapsibleSection>
                 )}
               </>
             )}
@@ -1037,7 +1211,7 @@ export function GPLDetail({ data }: GPLDetailProps) {
           <div className="space-y-4">
             {/* Header with Refresh Button */}
             <div className="flex items-center justify-between">
-              <h3 className="text-[#f1f5f9] font-medium text-lg">Predictive Analytics</h3>
+              <h3 className="text-[#f1f5f9] font-medium text-[22px]">Predictive Analytics</h3>
               <button
                 onClick={handleRefreshForecast}
                 disabled={refreshingForecast}
@@ -1062,7 +1236,7 @@ export function GPLDetail({ data }: GPLDetailProps) {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                       <h4 className="text-[#f1f5f9] font-medium text-base mb-1">Forecast Scenario</h4>
-                      <p className="text-[#64748b] text-sm">
+                      <p className="text-[#64748b] text-[15px]">
                         {selectedScenario === 'conservative'
                           ? 'Historical trend extrapolation — assumes no major demand changes'
                           : 'Factors in oil & gas expansion, commercial growth, and housing programs'}
@@ -1273,10 +1447,11 @@ export function GPLDetail({ data }: GPLDetailProps) {
                 </div>
 
                 {/* Scenario Comparison Table */}
-                <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] overflow-hidden">
-                  <div className="px-4 py-3 border-b border-[#2d3a52]">
-                    <h4 className="text-[#f1f5f9] font-medium text-base">Scenario Comparison — {selectedGrid === 'dbis' ? 'DBIS Grid' : 'Essequibo Grid'}</h4>
-                  </div>
+                <CollapsibleSection
+                  title={`Scenario Comparison — ${selectedGrid === 'dbis' ? 'DBIS Grid' : 'Essequibo Grid'}`}
+                  icon={Activity}
+                  defaultOpen={false}
+                >
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
@@ -1369,31 +1544,37 @@ export function GPLDetail({ data }: GPLDetailProps) {
                       </tbody>
                     </table>
                   </div>
-                </div>
+                </CollapsibleSection>
 
                 {/* Demand Drivers */}
                 {multiForecast?.demand_drivers && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {[
-                      { key: 'industrial', icon: Factory, color: 'text-amber-400', bg: 'bg-amber-500/10' },
-                      { key: 'commercial', icon: Building2, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-                      { key: 'residential', icon: Home, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-                      { key: 'seasonal', icon: Thermometer, color: 'text-purple-400', bg: 'bg-purple-500/10' }
-                    ].map(({ key, icon: Icon, color, bg }) => {
-                      const driver = multiForecast.demand_drivers[key];
-                      if (!driver) return null;
-                      return (
-                        <div key={key} className={`${bg} rounded-xl border border-[#2d3a52] p-4`}>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Icon className={`w-5 h-5 ${color}`} />
-                            <span className={`text-sm font-medium ${color} capitalize`}>{key}</span>
+                  <CollapsibleSection
+                    title="Demand Drivers"
+                    icon={TrendingUp}
+                    defaultOpen={false}
+                  >
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {[
+                        { key: 'industrial', icon: Factory, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+                        { key: 'commercial', icon: Building2, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+                        { key: 'residential', icon: Home, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+                        { key: 'seasonal', icon: Thermometer, color: 'text-purple-400', bg: 'bg-purple-500/10' }
+                      ].map(({ key, icon: DIcon, color, bg }) => {
+                        const driver = multiForecast.demand_drivers[key];
+                        if (!driver) return null;
+                        return (
+                          <div key={key} className={`${bg} rounded-xl border border-[#2d3a52] p-4`}>
+                            <div className="flex items-center gap-2 mb-2">
+                              <DIcon className={`w-5 h-5 ${color}`} />
+                              <span className={`text-sm font-medium ${color} capitalize`}>{key}</span>
+                            </div>
+                            <p className="text-[#f1f5f9] text-xs font-medium mb-1">{driver.impact}</p>
+                            <p className="text-[#64748b] text-xs">{driver.factors?.slice(0, 2).join(', ')}</p>
                           </div>
-                          <p className="text-[#f1f5f9] text-xs font-medium mb-1">{driver.impact}</p>
-                          <p className="text-[#64748b] text-xs">{driver.factors?.slice(0, 2).join(', ')}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  </CollapsibleSection>
                 )}
 
                 {/* Methodology & Assumptions Panel */}

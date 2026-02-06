@@ -109,7 +109,7 @@ export function Sidebar() {
                 className={`sidebar-item ${active ? 'active' : ''}`}
               >
                 <Icon className={active ? 'text-[#d4af37]' : ''} />
-                <span>{item.label}</span>
+                <span className="text-[15px]">{item.label}</span>
                 {active && <ChevronRight className="ml-auto h-4 w-4" />}
               </Link>
             );
@@ -142,7 +142,7 @@ export function Sidebar() {
                       className={`sidebar-item ${active ? 'active' : ''}`}
                     >
                       <Icon className={`h-4 w-4 ${active ? 'text-[#d4af37]' : ''}`} />
-                      <span className="text-sm">{agency.label}</span>
+                      <span className="text-[15px]">{agency.label}</span>
                       <span className="ml-auto text-[10px] text-[#64748b] hidden group-hover:inline">{agency.name}</span>
                     </Link>
                   );
@@ -166,7 +166,7 @@ export function Sidebar() {
                 className={`sidebar-item ${active ? 'active' : ''}`}
               >
                 <Icon className={active ? 'text-[#d4af37]' : ''} />
-                <span>{item.label}</span>
+                <span className="text-[15px]">{item.label}</span>
               </Link>
             );
           })}

@@ -1,13 +1,47 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, X, Sun, Zap, Brain, AlertTriangle, RefreshCw, TrendingUp } from 'lucide-react';
+import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, X, Sun, Zap, Brain, AlertTriangle, RefreshCw, TrendingUp, ChevronDown, Activity } from 'lucide-react';
+import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 
 const API_BASE = '/api';
 
 interface GPLExcelUploadProps {
   onSuccess?: (result: any) => void;
   onCancel?: () => void;
+}
+
+function UploadBriefingCard({ section, sevConfig }: { section: { title: string; severity: string; summary: string; detail: string }; sevConfig: { bg: string; text: string; border: string; label: string } }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className={`bg-[#1a2744] rounded-xl border ${sevConfig.border} overflow-hidden`}>
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full text-left px-4 py-3.5 hover:bg-white/[0.02] transition-colors"
+      >
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-lg font-semibold text-white">{section.title}</span>
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium ${sevConfig.bg} ${sevConfig.text}`}>
+              {sevConfig.label}
+            </span>
+            <ChevronDown className={`w-4 h-4 text-[#64748b] transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+          </div>
+        </div>
+        <p className="text-base text-[#c8d0dc] leading-snug">{section.summary}</p>
+      </button>
+      <div className={`collapse-grid ${expanded ? 'open' : ''}`}>
+        <div>
+          <div className="px-4 pb-4 pt-0">
+            <div className="bg-[#0a1628] rounded-lg p-4 border border-[#2d3a52]">
+              <p className="text-base text-[#94a3b8] leading-relaxed">{section.detail}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
@@ -101,8 +135,8 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          preview,
-          triggerAI: true
+          uploadData: preview,
+          reportDate: preview.reportDate,
         }),
       });
 
@@ -114,8 +148,9 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
         return;
       }
 
-      // Save the result and fetch the full data
+      // Save the result, clear preview so the success view renders
       setSavedData(result);
+      setPreview(null);
 
       // Fetch the latest data to display
       await fetchLatestData();
@@ -123,10 +158,6 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
       // Start polling for AI analysis
       if (result.uploadId) {
         pollForAnalysis(result.uploadId);
-      }
-
-      if (onSuccess) {
-        onSuccess(result);
       }
     } catch (err: any) {
       setError('Failed to submit: ' + err.message);
@@ -138,9 +169,9 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
   const fetchLatestData = async () => {
     try {
       const response = await fetch(`${API_BASE}/gpl/latest`);
-      const data = await response.json();
-      if (data.summary) {
-        setSavedData((prev: any) => ({ ...prev, latestData: data }));
+      const result = await response.json();
+      if (result.success && result.data) {
+        setSavedData((prev: any) => ({ ...prev, latestData: result.data }));
       }
     } catch (err) {
       console.error('Failed to fetch latest data:', err);
@@ -157,16 +188,19 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
     const checkAnalysis = async (): Promise<boolean> => {
       try {
         const response = await fetch(`${API_BASE}/gpl/analysis/${uploadId}`);
-        const data = await response.json();
+        const result = await response.json();
 
-        if (data.analysis_status === 'completed' && data.executive_briefing) {
-          setAiAnalysis(data);
-          setLoadingAnalysis(false);
-          return true;
-        } else if (data.analysis_status === 'failed') {
-          setAiAnalysis({ error: data.error_message || 'Analysis failed', ...data });
-          setLoadingAnalysis(false);
-          return true;
+        if (result.success && result.data) {
+          const { status, analysis } = result.data;
+          if (status === 'completed' && analysis?.executiveBriefing) {
+            setAiAnalysis(analysis);
+            setLoadingAnalysis(false);
+            return true;
+          } else if (status === 'failed') {
+            setAiAnalysis({ error: analysis?.error || 'Analysis failed' });
+            setLoadingAnalysis(false);
+            return true;
+          }
         }
       } catch (err) {
         console.error('Error checking analysis:', err);
@@ -192,7 +226,7 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
     setAiAnalysis(null);
 
     try {
-      await fetch(`${API_BASE}/gpl/analysis/${savedData.uploadId}/retry`, {
+      await fetch(`${API_BASE}/gpl/analysis/${savedData.uploadId}`, {
         method: 'POST'
       });
 
@@ -218,7 +252,13 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
     // Keep savedData visible but allow new upload
   };
 
-  const { summary, stats, stations, warnings } = preview || {};
+  const schedule = preview?.schedule;
+  const summary = schedule?.summary;
+  const stats = schedule?.stats
+    ? { ...schedule.stats, totalOutages: (preview?.outages || []).length }
+    : null;
+  const stations = schedule?.stations || [];
+  const warnings = preview?.warnings || [];
   const latestData = savedData?.latestData;
 
   // If we have saved data, show the results view
@@ -226,6 +266,13 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
     const displaySummary = latestData?.summary;
     const displayStations = latestData?.stations || [];
     const displayAnalysis = latestData?.analysis || aiAnalysis;
+
+    // Compute derived metrics
+    const fossilMw = parseFloat(displaySummary?.total_fossil_capacity_mw || 0);
+    const eveningPeakMw = parseFloat(displaySummary?.evening_peak_on_bars_mw || 0);
+    const reserveMw = parseFloat(displaySummary?.reserve_capacity_mw || 0);
+    const dbisMw = parseFloat(displaySummary?.total_dbis_capacity_mw || 0);
+    const reserveMarginPct = eveningPeakMw > 0 ? ((fossilMw - eveningPeakMw) / fossilMw) * 100 : 0;
 
     return (
       <div className="bg-[#1a2744] rounded-xl p-6 border border-[#2d3a52]">
@@ -236,8 +283,8 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
               <CheckCircle className="w-6 h-6 text-green-400" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">Data Saved Successfully</h3>
-              <p className="text-sm text-[#94a3b8]">Report Date: {savedData.latestData?.summary?.report_date?.split('T')[0] || 'N/A'}</p>
+              <h3 className="text-[22px] font-semibold text-white">Data Saved Successfully</h3>
+              <p className="text-sm text-[#94a3b8]">Report Date: {savedData.reportDate || latestData?.upload?.reportDate || 'N/A'}</p>
             </div>
           </div>
           <button
@@ -253,126 +300,190 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
         {displaySummary && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             <div className="p-3 bg-amber-500/20 rounded-lg">
-              <div className="text-[#94a3b8] text-xs">Fossil Capacity</div>
+              <div className="text-[#94a3b8] text-sm">Fossil Capacity</div>
               <div className="text-xl font-bold text-amber-400">
-                {parseFloat(displaySummary.total_fossil_fuel_capacity_mw || 0).toFixed(1)} MW
+                {fossilMw.toFixed(1)} MW
               </div>
             </div>
             <div className="p-3 bg-blue-500/20 rounded-lg">
-              <div className="text-[#94a3b8] text-xs">Evening Peak</div>
+              <div className="text-[#94a3b8] text-sm">Evening Peak</div>
               <div className="text-xl font-bold text-blue-400">
-                {parseFloat(displaySummary.evening_peak_on_bars_mw || 0).toFixed(1)} MW
+                {eveningPeakMw.toFixed(1)} MW
               </div>
             </div>
             <div className="p-3 bg-cyan-500/20 rounded-lg">
-              <div className="text-[#94a3b8] text-xs">Reserve Margin</div>
-              <div className={`text-xl font-bold ${parseFloat(displaySummary.reserve_margin_pct || 0) < 15 ? 'text-red-400' : 'text-cyan-400'}`}>
-                {parseFloat(displaySummary.reserve_margin_pct || 0).toFixed(1)}%
+              <div className="text-[#94a3b8] text-sm">Reserve Margin</div>
+              <div className={`text-xl font-bold ${reserveMarginPct < 15 ? 'text-red-400' : 'text-cyan-400'}`}>
+                {reserveMarginPct.toFixed(1)}%
               </div>
             </div>
             <div className="p-3 bg-green-500/20 rounded-lg">
-              <div className="text-[#94a3b8] text-xs">Utilization</div>
+              <div className="text-[#94a3b8] text-sm">DBIS Capacity</div>
               <div className="text-xl font-bold text-green-400">
-                {parseFloat(displaySummary.system_utilization_pct || 0).toFixed(1)}%
+                {dbisMw.toFixed(1)} MW
               </div>
             </div>
           </div>
         )}
 
-        {/* Station Status Grid */}
+        {/* Station Status Grid — collapsible */}
         {displayStations.length > 0 && (
           <div className="mb-6">
-            <h4 className="text-sm font-medium text-[#94a3b8] mb-3 flex items-center gap-2">
-              <Zap className="w-4 h-4" />
-              Station Status
-            </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-              {displayStations.map((station: any) => (
-                <div key={station.station} className="p-2 bg-[#2d3a52]/50 rounded flex items-center justify-between">
-                  <div>
-                    <span className="text-white text-xs block">{station.station}</span>
-                    <span className="text-[#64748b] text-xs">{station.units_online}/{station.total_units} online</span>
-                  </div>
-                  <div className="text-right">
-                    <span className={`font-medium text-sm ${parseFloat(station.station_utilization_pct || 0) >= 80 ? 'text-green-400' : parseFloat(station.station_utilization_pct || 0) >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
-                      {parseFloat(station.station_utilization_pct || 0).toFixed(0)}%
-                    </span>
-                    <span className="text-[#64748b] text-xs block">{parseFloat(station.total_available_mw || 0).toFixed(1)} MW</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <CollapsibleSection
+              title="Station Status"
+              icon={Zap}
+              badge={{ text: `${displayStations.length} stations`, variant: 'gold' }}
+              defaultOpen={false}
+            >
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                {displayStations.map((station: any) => {
+                  const stationUtil = parseFloat(station.total_derated_capacity_mw || 0) > 0
+                    ? (parseFloat(station.total_available_mw || 0) / parseFloat(station.total_derated_capacity_mw)) * 100
+                    : 0;
+                  return (
+                    <div key={station.station} className="p-2 bg-[#2d3a52]/50 rounded flex items-center justify-between">
+                      <div>
+                        <span className="text-white text-xs block">{station.station}</span>
+                        <span className="text-[#64748b] text-xs">{station.units_online}/{station.total_units} online</span>
+                      </div>
+                      <div className="text-right">
+                        <span className={`font-medium text-sm ${stationUtil >= 80 ? 'text-green-400' : stationUtil >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                          {stationUtil.toFixed(0)}%
+                        </span>
+                        <span className="text-[#64748b] text-xs block">{parseFloat(station.total_available_mw || 0).toFixed(1)} MW</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CollapsibleSection>
           </div>
         )}
 
-        {/* AI Analysis Section */}
-        <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-medium text-purple-300 flex items-center gap-2">
-              <Brain className="w-4 h-4" />
-              AI Executive Briefing
-            </h4>
-            {aiAnalysis?.error && (
-              <button
-                onClick={retryAnalysis}
-                disabled={loadingAnalysis}
-                className="px-3 py-1 text-xs bg-purple-500 hover:bg-purple-600 text-white rounded flex items-center gap-1"
-              >
-                <RefreshCw className={`w-3 h-3 ${loadingAnalysis ? 'animate-spin' : ''}`} />
-                Retry
-              </button>
-            )}
-          </div>
-
+        {/* AI Analysis Section — Progressive Disclosure */}
+        <div className="space-y-3">
           {loadingAnalysis ? (
-            <div className="flex items-center gap-3 text-[#94a3b8]">
+            <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg flex items-center gap-3 text-[#94a3b8]">
               <Loader2 className="w-5 h-5 animate-spin" />
               <span>Generating AI analysis...</span>
             </div>
-          ) : aiAnalysis?.executive_briefing && !aiAnalysis.executive_briefing.includes('failed') ? (
-            <div className="space-y-4">
-              <div className="text-white text-sm whitespace-pre-wrap leading-relaxed">
-                {aiAnalysis.executive_briefing}
-              </div>
+          ) : aiAnalysis?.executiveBriefing && !(typeof aiAnalysis.executiveBriefing === 'string' && aiAnalysis.executiveBriefing.includes('failed')) && !(typeof aiAnalysis.executiveBriefing === 'object' && aiAnalysis.executiveBriefing.headline?.includes('failed')) ? (
+            (() => {
+              // Parse: structured object (new) vs plain string (legacy)
+              const rawBriefing = aiAnalysis.executiveBriefing;
+              const briefing: { headline: string; sections: { title: string; severity: string; summary: string; detail: string }[] } =
+                typeof rawBriefing === 'object' && rawBriefing.headline
+                  ? rawBriefing
+                  : typeof rawBriefing === 'string'
+                    ? {
+                        headline: rawBriefing.split('\n')[0]?.slice(0, 250) || 'Analysis completed.',
+                        sections: [{ title: 'Full Analysis', severity: 'stable', summary: rawBriefing.split('\n')[1]?.slice(0, 120) || '', detail: rawBriefing }],
+                      }
+                    : { headline: 'Analysis completed.', sections: [] };
 
-              {/* Critical Alerts */}
-              {aiAnalysis.critical_alerts && aiAnalysis.critical_alerts.length > 0 && (
-                <div className="mt-4">
-                  <h5 className="text-xs font-medium text-red-400 mb-2">Critical Alerts</h5>
-                  <div className="space-y-2">
-                    {aiAnalysis.critical_alerts.map((alert: any, i: number) => (
-                      <div key={i} className="p-2 bg-red-500/10 border border-red-500/30 rounded text-xs">
-                        <span className="font-medium text-red-300">{alert.title}</span>
-                        <p className="text-[#94a3b8] mt-1">{alert.description}</p>
+              const sevConfig: Record<string, { bg: string; text: string; border: string; label: string }> = {
+                critical: { bg: 'bg-red-500/15', text: 'text-red-400', border: 'border-red-500/30', label: 'Critical' },
+                warning:  { bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/30', label: 'Warning' },
+                stable:   { bg: 'bg-blue-500/15', text: 'text-blue-400', border: 'border-blue-500/30', label: 'Stable' },
+                positive: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30', label: 'Good' },
+              };
+
+              return (
+                <>
+                  {/* HEADLINE */}
+                  <div className="bg-gradient-to-r from-[#1a2744] to-[#2d3a52]/80 rounded-xl border border-[#d4af37]/20 p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <Activity className="w-5 h-5 text-white" />
                       </div>
-                    ))}
+                      <div>
+                        <p className="text-[10px] uppercase tracking-widest text-[#d4af37] font-semibold mb-1.5">AI Executive Briefing</p>
+                        <p className="text-[22px] font-bold text-[#f1f5f9] leading-snug">{briefing.headline}</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
 
-              {/* Recommendations */}
-              {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
-                <div className="mt-4">
-                  <h5 className="text-xs font-medium text-blue-400 mb-2">Recommendations</h5>
-                  <ul className="space-y-1 text-xs text-[#94a3b8]">
-                    {aiAnalysis.recommendations.map((rec: any, i: number) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <TrendingUp className="w-3 h-3 text-blue-400 mt-0.5 flex-shrink-0" />
-                        <span>{rec.recommendation}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {/* INSIGHT CARDS — all collapsed */}
+                  {briefing.sections.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {briefing.sections.map((section, i) => {
+                        const sev = sevConfig[section.severity] || sevConfig.stable;
+                        return (
+                          <UploadBriefingCard key={i} section={section} sevConfig={sev} />
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* CRITICAL ALERTS — collapsed */}
+                  {aiAnalysis.criticalAlerts && aiAnalysis.criticalAlerts.length > 0 && (
+                    <CollapsibleSection
+                      title={`Critical Alerts (${aiAnalysis.criticalAlerts.length})`}
+                      icon={AlertTriangle}
+                      badge={{ text: `${aiAnalysis.criticalAlerts.length}`, variant: 'danger' }}
+                      defaultOpen={false}
+                    >
+                      <div className="space-y-2">
+                        {aiAnalysis.criticalAlerts.map((alert: any, i: number) => (
+                          <div key={i} className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                            <span className="text-sm font-semibold text-red-300">{alert.title}</span>
+                            <p className="text-[#94a3b8] text-sm mt-1">{alert.description}</p>
+                            {alert.recommendation && (
+                              <p className="text-blue-400 text-sm mt-1.5">→ {alert.recommendation}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </CollapsibleSection>
+                  )}
+
+                  {/* RECOMMENDATIONS — collapsed */}
+                  {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
+                    <CollapsibleSection
+                      title={`Recommendations (${aiAnalysis.recommendations.length})`}
+                      icon={TrendingUp}
+                      badge={{ text: `${aiAnalysis.recommendations.length}`, variant: 'info' }}
+                      defaultOpen={false}
+                    >
+                      <ul className="space-y-2 text-sm text-[#94a3b8]">
+                        {aiAnalysis.recommendations.map((rec: any, i: number) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <TrendingUp className="w-3.5 h-3.5 text-blue-400 mt-0.5 flex-shrink-0" />
+                            <span>{rec.recommendation}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CollapsibleSection>
+                  )}
+                </>
+              );
+            })()
+          ) : aiAnalysis?.error ? (
+            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="text-red-400 text-sm">
+                  <AlertCircle className="w-4 h-4 inline mr-2" />
+                  {aiAnalysis.error || 'AI analysis failed. Click Retry to try again.'}
                 </div>
-              )}
-            </div>
-          ) : aiAnalysis?.error || aiAnalysis?.executive_briefing?.includes('failed') ? (
-            <div className="text-red-400 text-sm">
-              <AlertCircle className="w-4 h-4 inline mr-2" />
-              {aiAnalysis.error || 'AI analysis failed. Click Retry to try again.'}
+                <button
+                  onClick={retryAnalysis}
+                  disabled={loadingAnalysis}
+                  className="px-3 py-1 text-xs bg-purple-500 hover:bg-purple-600 text-white rounded flex items-center gap-1"
+                >
+                  <RefreshCw className={`w-3 h-3 ${loadingAnalysis ? 'animate-spin' : ''}`} />
+                  Retry
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="text-[#64748b] text-sm">
-              AI analysis will appear here once processing completes.
+            <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+              <div className="flex items-center gap-3">
+                <Brain className="w-8 h-8 text-purple-400" />
+                <div>
+                  <div className="text-sm font-medium text-purple-300">AI Executive Briefing</div>
+                  <div className="text-xs text-[#94a3b8]">Analysis will appear here once processing completes.</div>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -383,7 +494,7 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
   return (
     <div className="bg-[#1a2744] rounded-xl p-6 border border-[#2d3a52]">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+        <h3 className="text-[22px] font-semibold text-white flex items-center gap-2">
           <FileSpreadsheet className="w-5 h-5 text-amber-400" />
           Upload GPL DBIS Excel
         </h3>
@@ -482,7 +593,7 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
                 <span className="text-white font-semibold">{preview.reportDate}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[#64748b]">Date Column: {preview.detectedDateColumn}</span>
+                <span className="text-[#64748b]">Date Column: {preview.schedule?.dateColumn || 'auto'}</span>
                 <span className="text-[#64748b]">
                   {stats?.totalStations} stations, {stats?.totalUnits} units
                 </span>
@@ -509,12 +620,13 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
               </div>
             </div>
 
-            {/* Station Summary */}
-            <div className="p-4 bg-[#2d3a52]/50 rounded-lg">
-              <h4 className="text-sm font-medium text-[#94a3b8] mb-3 flex items-center gap-2">
-                <Zap className="w-4 h-4" />
-                Station Status
-              </h4>
+            {/* Station Summary — collapsible */}
+            <CollapsibleSection
+              title="Station Status"
+              icon={Zap}
+              badge={{ text: `${stations.length} stations`, variant: 'gold' }}
+              defaultOpen={false}
+            >
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                 {stations?.map((station: any) => (
                   <div key={station.station} className="p-2 bg-[#1a2744] rounded flex items-center justify-between">
@@ -523,70 +635,70 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
                       <span className="text-[#64748b] text-xs">{station.unitsOnline}/{station.totalUnits} online</span>
                     </div>
                     <div className="text-right">
-                      <span className={`font-medium text-sm ${station.utilizationPct >= 80 ? 'text-green-400' : station.utilizationPct >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
-                        {station.utilizationPct?.toFixed(0) || 0}%
+                      <span className={`font-medium text-sm ${station.stationUtilizationPct >= 80 ? 'text-green-400' : station.stationUtilizationPct >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                        {station.stationUtilizationPct?.toFixed(0) || 0}%
                       </span>
                       <span className="text-[#64748b] text-xs block">{station.totalAvailableMw?.toFixed(1)} MW</span>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </CollapsibleSection>
 
             {/* Key Metrics */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="p-3 bg-amber-500/20 rounded-lg">
-                <div className="text-[#94a3b8] text-xs">Fossil Capacity</div>
+                <div className="text-[#94a3b8] text-sm">Fossil Capacity</div>
                 <div className="text-xl font-bold text-amber-400">
                   {summary?.totalFossilFuelCapacityMw?.toFixed(1) || '\u2014'} MW
                 </div>
               </div>
               <div className="p-3 bg-blue-500/20 rounded-lg">
-                <div className="text-[#94a3b8] text-xs">Expected Peak</div>
+                <div className="text-[#94a3b8] text-sm">Expected Peak</div>
                 <div className="text-xl font-bold text-blue-400">
                   {summary?.expectedPeakDemandMw?.toFixed(1) || '\u2014'} MW
                 </div>
               </div>
               <div className="p-3 bg-cyan-500/20 rounded-lg">
-                <div className="text-[#94a3b8] text-xs">Reserve</div>
+                <div className="text-[#94a3b8] text-sm">Reserve</div>
                 <div className="text-xl font-bold text-cyan-400">
                   {summary?.reserveCapacityMw?.toFixed(1) || '\u2014'} MW
                 </div>
               </div>
               <div className="p-3 bg-[#2d3a52]/50 rounded-lg">
-                <div className="text-[#94a3b8] text-xs">DBIS Capacity</div>
+                <div className="text-[#94a3b8] text-sm">DBIS Capacity</div>
                 <div className="text-xl font-bold text-white">
-                  {summary?.totalDBISCapacityMw?.toFixed(1) || '\u2014'} MW
+                  {summary?.totalDbisCapacityMw?.toFixed(1) || '\u2014'} MW
                 </div>
               </div>
             </div>
 
             {/* Peak Demand */}
-            {(summary?.eveningPeak || summary?.dayPeak) && (
+            {(summary?.eveningPeakOnBarsMw || summary?.dayPeakOnBarsMw) && (
               <div className="p-4 bg-[#2d3a52]/50 rounded-lg">
                 <h4 className="text-sm font-medium text-[#94a3b8] mb-3">Peak Demand</h4>
                 <div className="grid grid-cols-2 gap-4">
-                  {summary?.eveningPeak && (
+                  {summary?.eveningPeakOnBarsMw && (
                     <div>
                       <div className="text-xs text-[#64748b]">Evening Peak</div>
                       <div className="text-lg font-semibold text-white">
-                        {summary.eveningPeak.onBars?.toFixed(1)} MW
-                        {summary.eveningPeak.suppressed && (
+                        {summary.eveningPeakOnBarsMw?.toFixed(1)} MW
+                        {summary.eveningPeakSuppressedMw && (
                           <span className="text-sm text-[#94a3b8] ml-1">
-                            ({summary.eveningPeak.suppressed?.toFixed(1)} suppressed)
+                            ({summary.eveningPeakSuppressedMw?.toFixed(1)} suppressed)
                           </span>
                         )}
                       </div>
                     </div>
                   )}
-                  {summary?.dayPeak && (
+                  {summary?.dayPeakOnBarsMw && (
                     <div>
                       <div className="text-xs text-[#64748b]">Day Peak</div>
                       <div className="text-lg font-semibold text-white">
-                        {summary.dayPeak.onBars?.toFixed(1)} MW
-                        {summary.dayPeak.suppressed && (
+                        {summary.dayPeakOnBarsMw?.toFixed(1)} MW
+                        {summary.dayPeakSuppressedMw && (
                           <span className="text-sm text-[#94a3b8] ml-1">
-                            ({summary.dayPeak.suppressed?.toFixed(1)} suppressed)
+                            ({summary.dayPeakSuppressedMw?.toFixed(1)} suppressed)
                           </span>
                         )}
                       </div>
@@ -596,12 +708,12 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
               </div>
             )}
 
-            {/* Solar Data */}
-            <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-              <h4 className="text-sm font-medium text-green-400 mb-3 flex items-center gap-2">
-                <Sun className="w-4 h-4" />
-                Renewable Capacity (MWp)
-              </h4>
+            {/* Solar Data — collapsible */}
+            <CollapsibleSection
+              title="Renewable Capacity"
+              icon={Sun}
+              defaultOpen={false}
+            >
               <div className="grid grid-cols-4 gap-3">
                 <div>
                   <div className="text-xs text-[#94a3b8]">Hampshire</div>
@@ -620,7 +732,7 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
                   <div className="text-lg font-semibold text-green-400">{summary?.totalRenewableMwp || 0}</div>
                 </div>
               </div>
-            </div>
+            </CollapsibleSection>
 
             {/* AI Analysis Notice */}
             <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg flex items-center gap-3">
