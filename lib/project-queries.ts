@@ -5,7 +5,7 @@ export async function getDelayedProjects() {
   const { data } = await supabaseAdmin
     .from('projects')
     .select('*')
-    .eq('project_status', 'DELAYED')
+    .eq('project_status', 'Delayed')
     .order('contract_value', { ascending: false });
   return data || [];
 }
@@ -65,14 +65,17 @@ export async function getAgencySummary() {
     }
 
     summary[agency].total++;
-    summary[agency].total_value += project.contract_value || 0;
+    // Guard against corrupted values (e.g. 1.2e+32 from bad Excel data)
+    const value = project.contract_value || 0;
+    if (value < 1e12) summary[agency].total_value += value;
     summary[agency].avg_completion += project.completion_percent || 0;
 
-    switch (project.project_status) {
-      case 'COMPLETED': summary[agency].completed++; break;
-      case 'COMMENCED': summary[agency].in_progress++; break;
-      case 'DELAYED': summary[agency].delayed++; break;
-      case 'CANCELLED': summary[agency].cancelled++; break;
+    const status = (project.project_status || '').toLowerCase();
+    switch (status) {
+      case 'completed': summary[agency].completed++; break;
+      case 'commenced': case 'in progress': case 'in_progress': case 'rollover': summary[agency].in_progress++; break;
+      case 'delayed': summary[agency].delayed++; break;
+      case 'cancelled': summary[agency].cancelled++; break;
     }
   }
 

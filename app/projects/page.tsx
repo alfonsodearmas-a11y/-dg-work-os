@@ -42,7 +42,8 @@ const AGENCY_NAMES: Record<string, string> = {
 };
 
 function formatCurrency(value: number): string {
-  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
+  if (!value || !isFinite(value) || value > 1e12) return '$0';
+  if (value >= 1e9) return `$${(value / 1e9).toFixed(1)}B`;
   if (value >= 1e6) return `$${(value / 1e6).toFixed(0)}M`;
   return `$${value.toLocaleString()}`;
 }
@@ -80,11 +81,12 @@ export default function ProjectsPage() {
   }
 
   function getStatusVariant(status: string): 'success' | 'warning' | 'danger' | 'default' | 'gold' {
-    switch (status) {
-      case 'COMPLETED': return 'success';
-      case 'DELAYED': return 'danger';
-      case 'COMMENCED': return 'gold';
-      case 'CANCELLED': return 'default';
+    switch ((status || '').toLowerCase()) {
+      case 'completed': return 'success';
+      case 'delayed': return 'danger';
+      case 'commenced': return 'gold';
+      case 'rollover': return 'warning';
+      case 'cancelled': return 'default';
       default: return 'default';
     }
   }
