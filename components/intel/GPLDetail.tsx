@@ -174,52 +174,61 @@ function ForecastMetricCard({ title, value, unit = '', isDate = false, trend = '
   );
 }
 
-// Severity config for briefing insight cards
-const BRIEFING_SEVERITY: Record<string, { bg: string; text: string; border: string; label: string }> = {
+// Severity config for insight cards
+const INSIGHT_SEVERITY: Record<string, { bg: string; text: string; border: string; label: string }> = {
   critical: { bg: 'bg-red-500/15', text: 'text-red-400', border: 'border-red-500/30', label: 'Critical' },
   warning:  { bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/30', label: 'Warning' },
   stable:   { bg: 'bg-blue-500/15', text: 'text-blue-400', border: 'border-blue-500/30', label: 'Stable' },
   positive: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30', label: 'Good' },
 };
 
-interface BriefingSection {
+interface InsightCardData {
+  emoji: string;
   title: string;
   severity: string;
   summary: string;
-  detail: string;
+  detail: string | null;
 }
 
-function BriefingInsightCard({ section }: { section: BriefingSection }) {
+function InsightCard({ card }: { card: InsightCardData }) {
   const [expanded, setExpanded] = useState(false);
-  const sev = BRIEFING_SEVERITY[section.severity] || BRIEFING_SEVERITY.stable;
+  const sev = INSIGHT_SEVERITY[card.severity] || INSIGHT_SEVERITY.stable;
+  const hasDetail = card.detail && card.detail.length > 0;
 
   return (
     <div className={`bg-[#1a2744] rounded-xl border ${sev.border} overflow-hidden`}>
       <button
         type="button"
-        onClick={() => setExpanded(!expanded)}
-        className="w-full text-left px-4 py-3.5 hover:bg-white/[0.02] transition-colors"
+        onClick={() => hasDetail && setExpanded(!expanded)}
+        className={`w-full text-left px-4 py-3.5 transition-colors ${hasDetail ? 'hover:bg-white/[0.02] cursor-pointer' : 'cursor-default'}`}
       >
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-lg font-semibold text-white">{section.title}</span>
           <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium ${sev.bg} ${sev.text}`}>
+            <span className="text-lg">{card.emoji}</span>
+            <span className="text-[17px] font-semibold text-white">{card.title}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[13px] font-medium ${sev.bg} ${sev.text}`}>
               {sev.label}
             </span>
-            <ChevronDown className={`w-4 h-4 text-[#64748b] transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+            {hasDetail && (
+              <ChevronDown className={`w-4 h-4 text-[#64748b] transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+            )}
           </div>
         </div>
-        <p className="text-base text-[#c8d0dc] leading-snug">{section.summary}</p>
+        <p className="text-[15px] text-[#c8d0dc] leading-snug">{card.summary}</p>
       </button>
-      <div className={`collapse-grid ${expanded ? 'open' : ''}`}>
-        <div>
-          <div className="px-4 pb-4 pt-0">
-            <div className="bg-[#0a1628] rounded-lg p-4 border border-[#2d3a52]">
-              <p className="text-base text-[#94a3b8] leading-relaxed">{section.detail}</p>
+      {hasDetail && (
+        <div className={`collapse-grid ${expanded ? 'open' : ''}`}>
+          <div>
+            <div className="px-4 pb-4 pt-0">
+              <div className="bg-[#0a1628] rounded-lg p-4 border border-[#2d3a52]">
+                <p className="text-[15px] text-[#94a3b8] leading-relaxed whitespace-pre-line">{card.detail}</p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -824,7 +833,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                         className="bg-[#0a1628] rounded-lg p-3 border border-[#2d3a52] hover:border-[#d4af37]/50 transition-colors group relative"
                         title={`${station.name}: ${station.available}/${station.derated} MW (${station.units} units)`}
                       >
-                        <p className="text-[#f1f5f9] text-xs font-medium truncate">{station.name}</p>
+                        <p className="text-[#f1f5f9] text-[11px] font-medium leading-tight break-words">{station.name}</p>
                         <p className="text-[#94a3b8] text-xs">{station.available}/{station.derated}</p>
                         <div className="h-2 bg-[#2d3a52] rounded-full mt-1.5 overflow-hidden">
                           <div
@@ -895,74 +904,138 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
               </div>
             </div>
 
-            {/* AI Executive Briefing — Progressive Disclosure */}
+            {/* AI Executive Briefing — Data-Driven Insight Cards */}
             {(() => {
-              // Resolve briefing data: handle both camelCase (API) and snake_case (legacy)
+              // Resolve AI briefing data (may or may not exist)
               const rawBriefing = data.aiAnalysis?.executiveBriefing || data.aiAnalysis?.executive_briefing;
-              if (!rawBriefing) return null;
+              const aiSections: Record<string, { summary?: string; detail?: string; severity?: string }> = {};
 
-              // Parse: structured object (new) vs plain string (legacy)
-              const briefing: { headline: string; sections: BriefingSection[] } =
-                typeof rawBriefing === 'object' && rawBriefing.headline
-                  ? rawBriefing
-                  : typeof rawBriefing === 'string'
-                    ? {
-                        headline: rawBriefing.split('\n')[0]?.slice(0, 250) || 'System analysis available.',
-                        sections: [{ title: 'Full Analysis', severity: 'stable', summary: rawBriefing.split('\n')[1]?.slice(0, 120) || '', detail: rawBriefing }],
-                      }
-                    : { headline: 'System analysis available.', sections: [] };
+              // Map AI sections by normalized title for lookup
+              if (rawBriefing && typeof rawBriefing === 'object' && rawBriefing.sections) {
+                for (const s of rawBriefing.sections) {
+                  const key = (s.title || '').toLowerCase();
+                  if (key.includes('system') || key.includes('status')) aiSections['system'] = s;
+                  else if (key.includes('critical') || key.includes('issue')) aiSections['issues'] = s;
+                  else if (key.includes('positive') || key.includes('strong') || key.includes('performer')) aiSections['performers'] = s;
+                  else if (key.includes('action') || key.includes('required')) aiSections['actions'] = s;
+                }
+              }
+
+              // Build headline — full text, never truncated
+              let headline: string | null = null;
+              if (rawBriefing) {
+                if (typeof rawBriefing === 'object' && rawBriefing.headline) {
+                  headline = rawBriefing.headline;
+                } else if (typeof rawBriefing === 'string') {
+                  headline = rawBriefing.split('\n').filter((l: string) => l.trim()).slice(0, 3).join(' ');
+                }
+              }
+
+              // Data-driven summaries for each card
+              const critStations = [...summary.critical, ...summary.offline];
+              const lostMw = critStations.reduce((sum, s) => sum + (s.derated - s.available), 0);
+              const topPerformers = summary.operational
+                .filter(s => s.availability >= 95)
+                .sort((a, b) => b.available - a.available);
+              const topBaseload = topPerformers.reduce((sum, s) => sum + s.available, 0);
 
               const critAlerts = data.aiAnalysis?.criticalAlerts || data.aiAnalysis?.critical_alerts || [];
+              const recommendations = data.aiAnalysis?.recommendations || [];
+              const urgentRecs = recommendations.filter((r: any) => r.urgency === 'Immediate' || r.urgency === 'Short-term');
+              const actionCount = urgentRecs.length + critAlerts.length;
+
+              // Build 4 insight cards
+              const insightCards: InsightCardData[] = [
+                {
+                  emoji: '\u26A1',
+                  title: 'System Status',
+                  severity: summary.availability >= 75 ? 'stable' : summary.availability >= 60 ? 'warning' : 'critical',
+                  summary: `${summary.totalAvailable} MW available of ${summary.totalDerated} MW installed (${summary.availability}%)`,
+                  detail: aiSections['system']?.detail || null,
+                },
+                {
+                  emoji: '\uD83D\uDEA8',
+                  title: 'Critical Issues',
+                  severity: critStations.length > 2 ? 'critical' : critStations.length > 0 ? 'warning' : 'positive',
+                  summary: critStations.length > 0
+                    ? `${summary.critical.length} station${summary.critical.length !== 1 ? 's' : ''} below 50%, ${summary.offline.length} offline, ${lostMw.toFixed(1)} MW lost`
+                    : 'No critical issues detected',
+                  detail: aiSections['issues']?.detail || null,
+                },
+                {
+                  emoji: '\u2705',
+                  title: 'Strong Performers',
+                  severity: 'positive',
+                  summary: topPerformers.length > 0
+                    ? `${topPerformers.slice(0, 4).map(s => s.name).join(', ')} at 95%+ capacity \u2014 ${topBaseload.toFixed(1)} MW stable baseload`
+                    : `${summary.operational.length} station${summary.operational.length !== 1 ? 's' : ''} operational`,
+                  detail: aiSections['performers']?.detail || null,
+                },
+                {
+                  emoji: '\uD83D\uDCCB',
+                  title: 'Action Required',
+                  severity: actionCount > 3 ? 'warning' : actionCount > 0 ? 'stable' : 'positive',
+                  summary: actionCount > 0
+                    ? `${actionCount} priority action${actionCount !== 1 ? 's' : ''} for DG attention`
+                    : 'No urgent actions required',
+                  detail: aiSections['actions']?.detail
+                    || (urgentRecs.length > 0
+                      ? urgentRecs.map((r: any) => `\u2022 ${r.recommendation}`).join('\n')
+                      : null),
+                },
+              ];
 
               return (
                 <div className="space-y-3">
-                  {/* HEADLINE — always visible, newspaper style */}
-                  <div className="bg-gradient-to-r from-[#1a2744] to-[#2d3a52]/80 rounded-xl border border-[#d4af37]/20 p-5">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center shrink-0 mt-0.5">
-                        <Activity className="w-5 h-5 text-white" />
+                  {/* HEADLINE — full text, never truncated */}
+                  {headline && (
+                    <div className="bg-gradient-to-r from-[#1a2744] to-[#2d3a52]/80 rounded-xl border border-[#d4af37]/20 p-5">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center shrink-0 mt-0.5">
+                          <Activity className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[10px] uppercase tracking-widest text-[#d4af37] font-semibold mb-1.5">AI Executive Briefing</p>
+                          <p className="text-[20px] font-bold text-[#f1f5f9] leading-snug">{headline}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-[10px] uppercase tracking-widest text-[#d4af37] font-semibold mb-1.5">AI Executive Briefing</p>
-                        <p className="text-[22px] font-bold text-[#f1f5f9] leading-snug">{briefing.headline}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* INSIGHT CARDS — all collapsed */}
-                  {briefing.sections.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {briefing.sections.map((section, i) => (
-                        <BriefingInsightCard key={i} section={section} />
-                      ))}
                     </div>
                   )}
 
-                  {/* CRITICAL ALERTS — collapsed */}
+                  {/* 4 INSIGHT CARDS — 2x2 grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {insightCards.map((card, i) => (
+                      <InsightCard key={i} card={card} />
+                    ))}
+                  </div>
+
+                  {/* CRITICAL ALERTS — each as a mini-card with severity left border */}
                   {critAlerts.length > 0 && (
-                    <CollapsibleSection
-                      title={`Critical Alerts (${critAlerts.length})`}
-                      icon={AlertTriangle}
-                      badge={{ text: `${critAlerts.length}`, variant: 'danger' }}
-                      defaultOpen={false}
-                    >
-                      <div className="space-y-2">
-                        {critAlerts.map((alert: any, i: number) => (
-                          <div key={i} className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 px-1">
+                        <AlertTriangle className="w-4 h-4 text-red-400" />
+                        <span className="text-[15px] font-semibold text-[#f1f5f9]">Critical Alerts</span>
+                        <span className="bg-red-500/20 text-red-400 text-xs px-2 py-0.5 rounded-full font-medium">{critAlerts.length}</span>
+                      </div>
+                      {critAlerts.map((alert: any, i: number) => {
+                        const alertSev = (alert.severity || 'CRITICAL').toUpperCase();
+                        const borderColor = alertSev === 'CRITICAL' ? 'border-l-red-500' : alertSev === 'HIGH' ? 'border-l-orange-500' : 'border-l-amber-500';
+                        return (
+                          <div key={i} className={`bg-[#1a2744] rounded-lg border border-[#2d3a52] border-l-4 ${borderColor} p-4`}>
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-sm font-semibold text-red-300">{alert.title}</span>
-                              <span className="text-[10px] uppercase px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded font-medium">
-                                {alert.severity || 'CRITICAL'}
+                              <span className="text-[15px] font-semibold text-[#f1f5f9]">{alert.title}</span>
+                              <span className="text-[10px] uppercase px-1.5 py-0.5 bg-red-500/15 text-red-400 rounded font-medium">
+                                {alertSev}
                               </span>
                             </div>
-                            <p className="text-[#94a3b8] text-sm">{alert.description}</p>
+                            <p className="text-[#94a3b8] text-sm leading-relaxed">{alert.description}</p>
                             {alert.recommendation && (
-                              <p className="text-blue-400 text-sm mt-1.5">→ {alert.recommendation}</p>
+                              <p className="text-blue-400 text-sm mt-1.5">\u2192 {alert.recommendation}</p>
                             )}
                           </div>
-                        ))}
-                      </div>
-                    </CollapsibleSection>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               );
