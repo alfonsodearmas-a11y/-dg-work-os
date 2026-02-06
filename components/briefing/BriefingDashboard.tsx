@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import { AlertTriangle, Calendar, CheckSquare, Clock, RefreshCw, Edit2 } from 'lucide-react';
 import { TaskEditModal } from './TaskEditModal';
+import { CalendarCommandCenter } from './CalendarCommandCenter';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { LoadingSkeleton } from '@/components/intel/common/LoadingSkeleton';
 
@@ -35,6 +36,12 @@ interface Briefing {
   calendar: {
     today: any[];
     this_week: any[];
+    tomorrow?: any[];
+    stats?: {
+      total_events: number;
+      total_hours: number;
+      free_hours: number;
+    };
   };
   generated_at: string;
 }
@@ -123,6 +130,13 @@ export function BriefingDashboard() {
         </button>
       </div>
 
+      {/* Calendar Command Center */}
+      <CalendarCommandCenter
+        todayEvents={briefing.calendar.today}
+        weekEvents={briefing.calendar.this_week}
+        onRefresh={fetchBriefing}
+      />
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="card-premium p-6">
@@ -184,12 +198,6 @@ export function BriefingDashboard() {
             ) : (
               <p className="text-[#64748b] text-sm">No tasks due today</p>
             )}
-            {briefing.calendar.today.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-[#2d3a52]">
-                <h3 className="text-sm font-medium text-[#94a3b8] mb-3">Meetings</h3>
-                <CalendarView events={briefing.calendar.today} />
-              </div>
-            )}
           </CollapsibleSection>
 
           {/* This Week */}
@@ -219,15 +227,6 @@ export function BriefingDashboard() {
             <h2 className="text-lg font-semibold text-white mb-4">By Agency</h2>
             <RoleSummary data={briefing.by_agency} />
           </div>
-
-          {/* Upcoming Events */}
-          <CollapsibleSection title="Upcoming Events" badge={{ text: String(briefing.calendar.this_week.length), variant: 'default' }} icon={Calendar} defaultOpen={false}>
-            {briefing.calendar.this_week.length > 0 ? (
-              <CalendarView events={briefing.calendar.this_week} showDate />
-            ) : (
-              <p className="text-[#64748b] text-sm">No upcoming events</p>
-            )}
-          </CollapsibleSection>
         </div>
       </div>
     </div>
@@ -295,27 +294,6 @@ function TaskList({ tasks, showOverdueInfo, showDueDate, onEdit }: {
               <Edit2 className="h-4 w-4 text-[#4a5568]" />
             )}
           </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// CalendarView component
-function CalendarView({ events, showDate }: { events: any[]; showDate?: boolean }) {
-  return (
-    <div className="space-y-2">
-      {events.map((event, i) => (
-        <div key={i} className="p-3 rounded-xl bg-[#1a2744]/50">
-          <p className="text-sm font-medium text-white">{event.title}</p>
-          <p className="text-xs text-[#64748b] mt-1">
-            {showDate && event.start && format(new Date(event.start), 'MMM d, ')}
-            {event.start && format(new Date(event.start), 'h:mm a')}
-            {event.end && ` - ${format(new Date(event.end), 'h:mm a')}`}
-          </p>
-          {event.location && (
-            <p className="text-xs text-[#94a3b8] mt-1">{event.location}</p>
-          )}
         </div>
       ))}
     </div>

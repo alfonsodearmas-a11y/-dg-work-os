@@ -1,4 +1,17 @@
-import { google } from 'googleapis';
+import { google, calendar_v3 } from 'googleapis';
+
+// Re-export types for backward compatibility with server-side consumers
+export type {
+  CalendarAttendee,
+  ConferenceData,
+  CalendarEvent,
+  CreateEventInput,
+  UpdateEventInput,
+  EventCategory,
+} from './calendar-types';
+export { detectEventCategory } from './calendar-types';
+
+import type { CalendarAttendee, ConferenceData, CalendarEvent, CreateEventInput, UpdateEventInput } from './calendar-types';
 
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -11,33 +24,48 @@ oauth2Client.setCredentials({
 
 const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
-export interface CalendarEvent {
-  google_id: string;
-  title: string;
-  start_time: string | null;
-  end_time: string | null;
-  location: string | null;
-  description: string | null;
-  all_day?: boolean;
+// --- Shared Transform Helper ---
+
+function transformEvent(event: calendar_v3.Schema$Event): CalendarEvent {
+  return {
+    google_id: event.id || '',
+    title: event.summary || 'Untitled',
+    start_time: event.start?.dateTime || event.start?.date || null,
+    end_time: event.end?.dateTime || event.end?.date || null,
+    location: event.location || null,
+    description: event.description || null,
+    all_day: !event.start?.dateTime,
+    attendees: event.attendees?.map(a => ({
+      email: a.email || '',
+      display_name: a.displayName || undefined,
+      response_status: (a.responseStatus as CalendarAttendee['response_status']) || undefined,
+      self: a.self || undefined,
+      organizer: a.organizer || undefined,
+    })),
+    conference_data: event.conferenceData ? {
+      entry_points: (event.conferenceData.entryPoints || []).map(ep => ({
+        entry_point_type: (ep.entryPointType as ConferenceData['entry_points'][0]['entry_point_type']) || 'more',
+        uri: ep.uri || '',
+        label: ep.label || undefined,
+      })),
+      conference_solution: event.conferenceData.conferenceSolution ? {
+        name: event.conferenceData.conferenceSolution.name || '',
+        icon_uri: event.conferenceData.conferenceSolution.iconUri || undefined,
+      } : undefined,
+    } : null,
+    status: (event.status as CalendarEvent['status']) || undefined,
+    color_id: event.colorId || null,
+    organizer: event.organizer ? {
+      email: event.organizer.email || '',
+      displayName: event.organizer.displayName || undefined,
+      self: event.organizer.self || undefined,
+    } : undefined,
+    html_link: event.htmlLink || undefined,
+    recurring_event_id: event.recurringEventId || null,
+  };
 }
 
-export interface CreateEventInput {
-  title: string;
-  start_time: string;
-  end_time: string;
-  location?: string;
-  description?: string;
-  all_day?: boolean;
-}
-
-export interface UpdateEventInput {
-  title?: string;
-  start_time?: string;
-  end_time?: string;
-  location?: string;
-  description?: string;
-  all_day?: boolean;
-}
+// --- Fetch Functions ---
 
 export async function fetchTodayEvents(): Promise<CalendarEvent[]> {
   const now = new Date();
@@ -54,15 +82,26 @@ export async function fetchTodayEvents(): Promise<CalendarEvent[]> {
     orderBy: 'startTime'
   });
 
-  return response.data.items?.map(event => ({
-    google_id: event.id || '',
-    title: event.summary || 'Untitled',
-    start_time: event.start?.dateTime || event.start?.date || null,
-    end_time: event.end?.dateTime || event.end?.date || null,
-    location: event.location || null,
-    description: event.description || null,
-    all_day: !event.start?.dateTime
-  })) || [];
+  return response.data.items?.map(transformEvent) || [];
+}
+
+export async function fetchTomorrowEvents(): Promise<CalendarEvent[]> {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const startOfDay = new Date(tomorrow);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(tomorrow);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const response = await calendar.events.list({
+    calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+    timeMin: startOfDay.toISOString(),
+    timeMax: endOfDay.toISOString(),
+    singleEvents: true,
+    orderBy: 'startTime'
+  });
+
+  return response.data.items?.map(transformEvent) || [];
 }
 
 export async function fetchWeekEvents(): Promise<CalendarEvent[]> {
@@ -78,15 +117,7 @@ export async function fetchWeekEvents(): Promise<CalendarEvent[]> {
     orderBy: 'startTime'
   });
 
-  return response.data.items?.map(event => ({
-    google_id: event.id || '',
-    title: event.summary || 'Untitled',
-    start_time: event.start?.dateTime || event.start?.date || null,
-    end_time: event.end?.dateTime || event.end?.date || null,
-    location: event.location || null,
-    description: event.description || null,
-    all_day: !event.start?.dateTime
-  })) || [];
+  return response.data.items?.map(transformEvent) || [];
 }
 
 export async function fetchMonthEvents(year: number, month: number): Promise<CalendarEvent[]> {
@@ -102,59 +133,56 @@ export async function fetchMonthEvents(year: number, month: number): Promise<Cal
     maxResults: 250
   });
 
-  return response.data.items?.map(event => ({
-    google_id: event.id || '',
-    title: event.summary || 'Untitled',
-    start_time: event.start?.dateTime || event.start?.date || null,
-    end_time: event.end?.dateTime || event.end?.date || null,
-    location: event.location || null,
-    description: event.description || null,
-    all_day: !event.start?.dateTime
-  })) || [];
+  return response.data.items?.map(transformEvent) || [];
 }
 
+// --- CRUD ---
+
 export async function createEvent(input: CreateEventInput): Promise<CalendarEvent> {
-  const eventBody: any = {
+  const eventBody: Record<string, unknown> = {
     summary: input.title,
     location: input.location,
     description: input.description,
   };
 
   if (input.all_day) {
-    // All-day events use date format (YYYY-MM-DD)
     eventBody.start = { date: input.start_time.split('T')[0] };
     eventBody.end = { date: input.end_time.split('T')[0] };
   } else {
-    // Timed events use dateTime format
     eventBody.start = { dateTime: input.start_time, timeZone: 'America/Guyana' };
     eventBody.end = { dateTime: input.end_time, timeZone: 'America/Guyana' };
   }
 
+  if (input.attendees && input.attendees.length > 0) {
+    eventBody.attendees = input.attendees.map(email => ({ email }));
+  }
+
+  if (input.add_google_meet) {
+    eventBody.conferenceData = {
+      createRequest: {
+        requestId: `meet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        conferenceSolutionKey: { type: 'hangoutsMeet' },
+      },
+    };
+  }
+
   const response = await calendar.events.insert({
     calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
-    requestBody: eventBody
+    requestBody: eventBody,
+    conferenceDataVersion: input.add_google_meet ? 1 : undefined,
+    sendUpdates: input.attendees && input.attendees.length > 0 ? 'all' : 'none',
   });
 
-  const event = response.data;
-  return {
-    google_id: event.id || '',
-    title: event.summary || 'Untitled',
-    start_time: event.start?.dateTime || event.start?.date || null,
-    end_time: event.end?.dateTime || event.end?.date || null,
-    location: event.location || null,
-    description: event.description || null,
-    all_day: !event.start?.dateTime
-  };
+  return transformEvent(response.data);
 }
 
 export async function updateEvent(eventId: string, input: UpdateEventInput): Promise<CalendarEvent> {
-  // First get the existing event
   const existing = await calendar.events.get({
     calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
     eventId
   });
 
-  const eventBody: any = {
+  const eventBody: Record<string, unknown> = {
     summary: input.title ?? existing.data.summary,
     location: input.location ?? existing.data.location,
     description: input.description ?? existing.data.description,
@@ -182,16 +210,7 @@ export async function updateEvent(eventId: string, input: UpdateEventInput): Pro
     requestBody: eventBody
   });
 
-  const event = response.data;
-  return {
-    google_id: event.id || '',
-    title: event.summary || 'Untitled',
-    start_time: event.start?.dateTime || event.start?.date || null,
-    end_time: event.end?.dateTime || event.end?.date || null,
-    location: event.location || null,
-    description: event.description || null,
-    all_day: !event.start?.dateTime
-  };
+  return transformEvent(response.data);
 }
 
 export async function deleteEvent(eventId: string): Promise<void> {

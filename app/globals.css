@@ -459,6 +459,20 @@ h1 { letter-spacing: -0.03em; }
   overflow: hidden;
 }
 
+/* Tooltip popover entrance */
+@keyframes tooltipIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tooltipInAbove {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-tooltip-in { animation: tooltipIn 0.15s ease-out forwards; }
+.animate-tooltip-in-above { animation: tooltipInAbove 0.15s ease-out forwards; }
+
 /* Staggered fade-in for list items */
 .stagger-children > * {
   animation: fadeIn 0.3s ease forwards;
@@ -470,3 +484,14 @@ h1 { letter-spacing: -0.03em; }
 .stagger-children > *:nth-child(4) { animation-delay: 150ms; }
 .stagger-children > *:nth-child(5) { animation-delay: 200ms; }
 .stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+
+/* Timeline event block — striped pattern for blocked/travel time */
+.event-block-striped {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 4px,
+    rgba(100, 116, 139, 0.1) 4px,
+    rgba(100, 116, 139, 0.1) 8px
+  );
+}

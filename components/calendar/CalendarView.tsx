@@ -24,7 +24,7 @@ import {
   addMonths,
   subMonths
 } from 'date-fns';
-import { CalendarEvent } from '@/lib/google-calendar';
+import { CalendarEvent } from '@/lib/calendar-types';
 import { EventModal, EventFormData } from './EventModal';
 
 export function CalendarView() {

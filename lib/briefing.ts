@@ -1,5 +1,6 @@
 import { fetchTasks } from './notion';
-import { fetchTodayEvents, fetchWeekEvents, CalendarEvent } from './google-calendar';
+import { fetchTodayEvents, fetchWeekEvents, fetchTomorrowEvents, CalendarEvent } from './google-calendar';
+import { calculateDayStats } from './calendar-utils';
 import { isToday, isPast, isWithinInterval, addDays } from 'date-fns';
 
 interface Task {
@@ -31,15 +32,22 @@ interface Briefing {
   calendar: {
     today: CalendarEvent[];
     this_week: CalendarEvent[];
+    tomorrow: CalendarEvent[];
+    stats: {
+      total_events: number;
+      total_hours: number;
+      free_hours: number;
+    };
   };
   generated_at: string;
 }
 
 export async function generateBriefing(): Promise<Briefing> {
-  const [tasks, todayEvents, weekEvents] = await Promise.all([
+  const [tasks, todayEvents, weekEvents, tomorrowEvents] = await Promise.all([
     fetchTasks(),
     fetchTodayEvents(),
-    fetchWeekEvents()
+    fetchWeekEvents(),
+    fetchTomorrowEvents()
   ]);
 
   const now = new Date();
@@ -71,6 +79,9 @@ export async function generateBriefing(): Promise<Briefing> {
   // Group by agency
   const byAgency = groupBy(tasks, 'agency');
 
+  // Calculate day stats
+  const dayStats = calculateDayStats(todayEvents);
+
   return {
     summary: {
       total_tasks: tasks.length,
@@ -87,7 +98,13 @@ export async function generateBriefing(): Promise<Briefing> {
     by_agency: byAgency,
     calendar: {
       today: todayEvents,
-      this_week: weekEvents
+      this_week: weekEvents,
+      tomorrow: tomorrowEvents,
+      stats: {
+        total_events: dayStats.total_events,
+        total_hours: dayStats.total_hours,
+        free_hours: dayStats.free_hours,
+      },
     },
     generated_at: new Date().toISOString()
   };
