@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -67,14 +68,21 @@ export function Sidebar() {
         }`}
       >
         {/* Logo */}
-        <div className="p-6 border-b border-[#2d3a52]/50 flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-3" onClick={handleNavClick}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center shadow-lg">
-              <span className="text-[#0a1628] font-bold text-lg">DG</span>
+        <div className="px-6 py-5 border-b border-[#2d3a52]/50 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3" onClick={handleNavClick}>
+            <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-[#d4af37]/40 shadow-lg shadow-[#d4af37]/10 shrink-0">
+              <Image
+                src="/ministry-logo.png"
+                alt="Ministry of Public Utilities and Aviation"
+                width={48}
+                height={48}
+                priority
+                className="w-full h-full object-cover"
+              />
             </div>
             <div>
-              <h1 className="font-bold text-white text-lg leading-tight">Work</h1>
-              <p className="text-[#d4af37] text-sm font-medium">OS</p>
+              <h1 className="font-bold text-white text-base leading-tight tracking-tight">Work <span className="text-[#d4af37]">OS</span></h1>
+              <p className="text-[#64748b] text-[10px] font-medium tracking-wide uppercase">Director General</p>
             </div>
           </Link>
           <button

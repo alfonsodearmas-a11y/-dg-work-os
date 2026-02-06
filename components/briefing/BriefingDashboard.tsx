@@ -91,7 +91,13 @@ export function BriefingDashboard() {
   if (!briefing) return null;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 relative">
+      {/* Ministry crest watermark */}
+      <div className="pointer-events-none fixed inset-0 flex items-center justify-center z-0" aria-hidden="true">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/ministry-logo.png" alt="" className="w-[400px] h-[400px] opacity-[0.03]" />
+      </div>
+
       {/* Edit Modal */}
       {editingTask && (
         <TaskEditModal

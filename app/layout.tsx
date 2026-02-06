@@ -40,6 +40,12 @@ export default function RootLayout({
                 <div className="h-full px-4 md:px-8 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <MobileMenuButton />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/ministry-logo.png"
+                      alt=""
+                      className="w-7 h-7 rounded-full ring-1 ring-[#d4af37]/30 hidden sm:block"
+                    />
                     <div>
                       <h2 className="text-white/80 text-sm font-light tracking-wide">Welcome back,</h2>
                       <p className="text-[#d4af37] font-semibold tracking-tight">Director General</p>
