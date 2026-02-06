@@ -12,7 +12,7 @@ export async function GET() {
     if (!latestMonth) {
       return NextResponse.json({
         success: true,
-        data: null,
+        hasData: false,
         message: 'No KPI data available',
       });
     }
@@ -44,33 +44,30 @@ export async function GET() {
       previousMap[row.kpi_name] = parseFloat(row.value);
     }
 
-    const kpis = latestResult.rows.map((row: any) => {
+    // Build kpis as a map keyed by kpi_name (what component expects)
+    const kpis: Record<string, { value: number; previousValue: number | null; changePct: number | null }> = {};
+
+    for (const row of latestResult.rows) {
       const currentValue = parseFloat(row.value);
-      const previousValue = previousMap[row.kpi_name];
-      let change: number | null = null;
+      const previousValue = previousMap[row.kpi_name] ?? null;
       let changePct: number | null = null;
 
-      if (previousValue !== undefined && previousValue !== 0) {
-        change = currentValue - previousValue;
-        changePct = ((currentValue - previousValue) / previousValue) * 100;
+      if (previousValue !== null && previousValue !== 0) {
+        changePct = Math.round(((currentValue - previousValue) / previousValue) * 10000) / 100;
       }
 
-      return {
-        kpiName: row.kpi_name,
+      kpis[row.kpi_name] = {
         value: currentValue,
-        reportMonth: row.report_month,
-        previousValue: previousValue ?? null,
-        change: change !== null ? Math.round(change * 100) / 100 : null,
-        changePct: changePct !== null ? Math.round(changePct * 100) / 100 : null,
+        previousValue,
+        changePct,
       };
-    });
+    }
 
     return NextResponse.json({
       success: true,
-      data: {
-        reportMonth: latestMonth,
-        kpis,
-      },
+      hasData: true,
+      reportMonth: latestMonth,
+      kpis,
     });
   } catch (error: any) {
     console.error('[gpl-kpi-latest] Error:', error.message);

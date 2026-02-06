@@ -15,6 +15,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import type { GPLData } from '@/data/mockData';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
+import { GPLMonthlyKpi } from './GPLMonthlyKpi';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -191,7 +192,7 @@ export function GPLDetail({ data }: GPLDetailProps) {
   // KPI data state
   const [kpiData, setKpiData] = useState<KpiState>({ latest: null, trends: [], analysis: null });
   const [kpiLoading, setKpiLoading] = useState(true);
-  const [showKpiUpload, setShowKpiUpload] = useState(false);
+
 
   // Forecast data state
   const [forecastData, setForecastData] = useState<any>(null);
@@ -880,32 +881,8 @@ export function GPLDetail({ data }: GPLDetailProps) {
         {/* ===================== TAB 3: TRENDS & KPIs ===================== */}
         {activeTab === 'trends' && (
           <div className="space-y-4">
-            {/* Header with Upload Button */}
-            <div className="flex items-center justify-between">
-              <h3 className="text-[#f1f5f9] font-medium text-lg">Monthly KPI Trends</h3>
-              <button
-                onClick={() => setShowKpiUpload(true)}
-                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg flex items-center gap-2 text-base"
-              >
-                <Upload size={16} />
-                Upload KPI CSV
-              </button>
-            </div>
-
-            {/* KPI Upload placeholder - GPLKpiUpload not yet migrated */}
-            {showKpiUpload && (
-              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-6 text-center">
-                <Upload className="w-8 h-8 text-[#64748b] mx-auto mb-3" />
-                <p className="text-[#94a3b8] text-sm mb-3">KPI CSV Upload</p>
-                <p className="text-[#64748b] text-xs mb-4">GPLKpiUpload component pending migration</p>
-                <button
-                  onClick={() => setShowKpiUpload(false)}
-                  className="px-4 py-2 bg-[#2d3a52] hover:bg-[#2d3a52]/80 text-[#94a3b8] rounded-lg text-sm"
-                >
-                  Close
-                </button>
-              </div>
-            )}
+            {/* Full GPLMonthlyKpi component (includes upload, cards, charts, AI analysis) */}
+            <GPLMonthlyKpi />
 
             {kpiLoading ? (
               <div className="flex items-center justify-center py-12">

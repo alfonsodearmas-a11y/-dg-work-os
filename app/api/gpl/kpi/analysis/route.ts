@@ -13,22 +13,34 @@ export async function GET() {
     if (result.rows.length === 0) {
       return NextResponse.json({
         success: true,
-        data: null,
+        hasAnalysis: false,
         message: 'No KPI analysis available',
       });
     }
 
     const row = result.rows[0];
 
+    // Parse analysis_text if it's JSON with structured fields
+    let analysis: Record<string, any> = {
+      executive_briefing: row.analysis_text,
+      date_range_start: row.analysis_date,
+      date_range_end: row.analysis_date,
+    };
+
+    // Try parsing as JSON in case it contains structured data
+    try {
+      const parsed = JSON.parse(row.analysis_text);
+      if (parsed && typeof parsed === 'object') {
+        analysis = { ...analysis, ...parsed };
+      }
+    } catch {
+      // Not JSON — use raw text as executive_briefing
+    }
+
     return NextResponse.json({
       success: true,
-      data: {
-        id: row.id,
-        analysisText: row.analysis_text,
-        analysisDate: row.analysis_date,
-        modelUsed: row.model_used,
-        createdAt: row.created_at,
-      },
+      hasAnalysis: true,
+      analysis,
     });
   } catch (error: any) {
     console.error('[gpl-kpi-analysis] Error:', error.message);
