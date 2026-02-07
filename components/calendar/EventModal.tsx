@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { X, Trash2, Loader2, MapPin, FileText, Sparkles, Video, Users, Bell, Repeat } from 'lucide-react';
+import { X, XCircle, Trash2, Loader2, MapPin, FileText, Sparkles, Video, Users, Bell, Repeat } from 'lucide-react';
 import { CalendarEvent } from '@/lib/calendar-types';
 
 interface EventModalProps {
@@ -52,6 +52,7 @@ export function EventModal({
   });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Quick create state
   const [quickInput, setQuickInput] = useState('');
@@ -63,6 +64,7 @@ export function EventModal({
   const [contactSuggestions, setContactSuggestions] = useState<Array<{ email: string; display_name: string | null }>>([]);
 
   useEffect(() => {
+    setError(null);
     if (event) {
       setFormData({
         title: event.title,
@@ -157,9 +159,12 @@ export function EventModal({
   const handleSave = async () => {
     if (!formData.title.trim()) return;
     setSaving(true);
+    setError(null);
     try {
       await onSave(formData);
       onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save event');
     } finally {
       setSaving(false);
     }
@@ -169,9 +174,12 @@ export function EventModal({
     if (!event || !onDelete) return;
     if (!confirm('Delete this event? This cannot be undone.')) return;
     setDeleting(true);
+    setError(null);
     try {
       await onDelete(event.google_id);
       onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete event');
     } finally {
       setDeleting(false);
     }
@@ -198,7 +206,15 @@ export function EventModal({
 
   const formatDateTimeForInput = (dateStr: string) => {
     if (!dateStr) return '';
+    // All-day events: "2026-02-10"
     if (dateStr.length === 10) return dateStr;
+    // Already in datetime-local format: "2026-02-10T14:00"
+    if (dateStr.length === 16) return dateStr;
+    // ISO with timezone: "2026-02-10T14:00:00-04:00" — parse to get correct local values
+    // Use the date/time portion directly (before timezone offset) since the API
+    // returns times in America/Guyana timezone already
+    const match = dateStr.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+    if (match) return `${match[1]}T${match[2]}`;
     return dateStr.slice(0, 16);
   };
 
@@ -227,6 +243,14 @@ export function EventModal({
 
         {/* Content */}
         <div className="p-4 space-y-4">
+          {/* Error Banner */}
+          {error && (
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-2">
+              <XCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
+              <p className="text-sm text-red-400">{error}</p>
+            </div>
+          )}
+
           {/* Quick Create */}
           {showQuickCreate && (
             <div className="p-4 rounded-xl bg-[#0a1628]/50 border border-[#2d3a52] space-y-3">
@@ -272,7 +296,7 @@ export function EventModal({
                 <input
                   type="text"
                   value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  onChange={(e) => { setError(null); setFormData({ ...formData, title: e.target.value }); }}
                   placeholder="Meeting with..."
                   autoFocus={!enableQuickCreate}
                   className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] transition-colors"

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
-import { Plus, AlertTriangle } from 'lucide-react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { Plus, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import { CalendarEvent } from '@/lib/calendar-types';
 import { detectConflicts } from '@/lib/calendar-utils';
 import { isSameDay, startOfDay, isToday as isTodayFn, format } from 'date-fns';
@@ -24,6 +24,18 @@ export function CalendarCommandCenter({ todayEvents, weekEvents, onRefresh, cale
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback((type: 'success' | 'error', message: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ type, message });
+    toastTimer.current = setTimeout(() => setToast(null), 4000);
+  }, []);
+
+  useEffect(() => {
+    return () => { if (toastTimer.current) clearTimeout(toastTimer.current); };
+  }, []);
 
   // Events for the focused day (selected or today)
   const isViewingToday = !selectedDay || isTodayFn(selectedDay);
@@ -65,13 +77,19 @@ export function CalendarCommandCenter({ todayEvents, weekEvents, onRefresh, cale
     if (!confirm('Delete this event? This cannot be undone.')) return;
     try {
       const res = await fetch(`/api/calendar/${eventId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Delete failed');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Delete failed');
+      }
       setSelectedEvent(null);
+      showToast('success', 'Event deleted');
       onRefresh();
     } catch (err) {
       console.error('Failed to delete event:', err);
+      showToast('error', err instanceof Error ? err.message : 'Failed to delete event');
+      throw err;
     }
-  }, [onRefresh]);
+  }, [onRefresh, showToast]);
 
   const handleSave = useCallback(async (data: EventFormData) => {
     try {
@@ -81,20 +99,30 @@ export function CalendarCommandCenter({ todayEvents, weekEvents, onRefresh, cale
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         });
-        if (!res.ok) throw new Error('Update failed');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData._errorMessage || errData.error || 'Update failed');
+        }
+        showToast('success', 'Event updated');
       } else {
         const res = await fetch('/api/calendar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         });
-        if (!res.ok) throw new Error('Create failed');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData._errorMessage || errData.error || 'Create failed');
+        }
+        showToast('success', 'Event created');
       }
       onRefresh();
     } catch (err) {
       console.error('Failed to save event:', err);
+      showToast('error', err instanceof Error ? err.message : 'Failed to save event');
+      throw err;
     }
-  }, [editingEvent, onRefresh]);
+  }, [editingEvent, onRefresh, showToast]);
 
   const handleJoinCall = useCallback((url: string) => {
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -200,6 +228,24 @@ export function CalendarCommandCenter({ todayEvents, weekEvents, onRefresh, cale
         onSave={handleSave}
         onDelete={handleDelete}
       />
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-2xl border transition-all animate-fade-in ${
+          toast.type === 'success'
+            ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+            : 'bg-red-500/15 border-red-500/30 text-red-400'
+        }`}>
+          {toast.type === 'success'
+            ? <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+            : <XCircle className="h-4 w-4 flex-shrink-0" />
+          }
+          <span className="text-sm">{toast.message}</span>
+          <button onClick={() => setToast(null)} className="ml-2 opacity-60 hover:opacity-100">
+            <span className="sr-only">Dismiss</span>&times;
+          </button>
+        </div>
+      )}
     </div>
   );
 }

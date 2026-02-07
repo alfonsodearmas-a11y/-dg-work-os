@@ -54,7 +54,9 @@ export async function POST(request: NextRequest) {
       end_time: body.end_time,
       location: body.location,
       description: body.description,
-      all_day: body.all_day
+      all_day: body.all_day,
+      attendees: body.attendees,
+      add_google_meet: body.add_google_meet,
     });
 
     return NextResponse.json({ event });

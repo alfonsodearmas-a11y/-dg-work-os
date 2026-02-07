@@ -53,6 +53,8 @@ export interface UpdateEventInput {
   location?: string;
   description?: string;
   all_day?: boolean;
+  attendees?: string[];
+  add_google_meet?: boolean;
 }
 
 // --- Event Category Detection ---

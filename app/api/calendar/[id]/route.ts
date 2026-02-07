@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateEvent, deleteEvent } from '@/lib/google-calendar';
+import { updateEvent, deleteEvent, classifyCalendarError } from '@/lib/google-calendar';
 
 export async function PATCH(
   request: NextRequest,
@@ -15,15 +15,18 @@ export async function PATCH(
       end_time: body.end_time,
       location: body.location,
       description: body.description,
-      all_day: body.all_day
+      all_day: body.all_day,
+      attendees: body.attendees,
+      add_google_meet: body.add_google_meet,
     });
 
     return NextResponse.json({ event });
-  } catch (error) {
-    console.error('Update calendar event error:', error);
+  } catch (err) {
+    console.error('Update calendar event error:', err);
+    const classified = classifyCalendarError(err);
     return NextResponse.json(
-      { error: 'Failed to update event' },
-      { status: 500 }
+      { error: 'Failed to update event', _errorType: classified.type, _errorMessage: classified.message },
+      { status: classified.type === 'token_expired' ? 401 : 500 }
     );
   }
 }
@@ -38,11 +41,12 @@ export async function DELETE(
     await deleteEvent(id);
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Delete calendar event error:', error);
+  } catch (err) {
+    console.error('Delete calendar event error:', err);
+    const classified = classifyCalendarError(err);
     return NextResponse.json(
-      { error: 'Failed to delete event' },
-      { status: 500 }
+      { error: 'Failed to delete event', _errorType: classified.type, _errorMessage: classified.message },
+      { status: classified.type === 'token_expired' ? 401 : 500 }
     );
   }
 }

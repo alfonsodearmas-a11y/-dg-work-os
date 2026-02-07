@@ -196,6 +196,18 @@ export async function fetchMonthEvents(year: number, month: number): Promise<Cal
   return response.data.items?.map(transformEvent) || [];
 }
 
+// --- Helpers ---
+
+/** Normalize datetime-local values ("2026-02-08T14:00") to full ISO with timezone */
+function normalizeDateTime(dt: string): string {
+  // Already has timezone offset or Z → leave as-is
+  if (/[Z+-]\d{2}:\d{2}$/.test(dt) || dt.endsWith('Z')) return dt;
+  // Add seconds if missing ("T14:00" → "T14:00:00")
+  if (/T\d{2}:\d{2}$/.test(dt)) dt += ':00';
+  // Append Guyana timezone (UTC-04:00)
+  return dt + '-04:00';
+}
+
 // --- CRUD ---
 
 export async function createEvent(input: CreateEventInput): Promise<CalendarEvent> {
@@ -209,8 +221,8 @@ export async function createEvent(input: CreateEventInput): Promise<CalendarEven
     eventBody.start = { date: input.start_time.split('T')[0] };
     eventBody.end = { date: input.end_time.split('T')[0] };
   } else {
-    eventBody.start = { dateTime: input.start_time, timeZone: 'America/Guyana' };
-    eventBody.end = { dateTime: input.end_time, timeZone: 'America/Guyana' };
+    eventBody.start = { dateTime: normalizeDateTime(input.start_time), timeZone: 'America/Guyana' };
+    eventBody.end = { dateTime: normalizeDateTime(input.end_time), timeZone: 'America/Guyana' };
   }
 
   if (input.attendees && input.attendees.length > 0) {
@@ -248,26 +260,42 @@ export async function updateEvent(eventId: string, input: UpdateEventInput): Pro
     description: input.description ?? existing.data.description,
   };
 
-  if (input.start_time || input.end_time) {
-    if (input.all_day) {
-      eventBody.start = { date: (input.start_time || existing.data.start?.dateTime || existing.data.start?.date)?.split('T')[0] };
-      eventBody.end = { date: (input.end_time || existing.data.end?.dateTime || existing.data.end?.date)?.split('T')[0] };
-    } else {
-      eventBody.start = {
-        dateTime: input.start_time || existing.data.start?.dateTime,
-        timeZone: 'America/Guyana'
-      };
-      eventBody.end = {
-        dateTime: input.end_time || existing.data.end?.dateTime,
-        timeZone: 'America/Guyana'
-      };
-    }
+  const isAllDay = input.all_day ?? !existing.data.start?.dateTime;
+  if (isAllDay) {
+    eventBody.start = { date: (input.start_time || existing.data.start?.dateTime || existing.data.start?.date)?.split('T')[0] };
+    eventBody.end = { date: (input.end_time || existing.data.end?.dateTime || existing.data.end?.date)?.split('T')[0] };
+  } else {
+    const startDt = input.start_time || existing.data.start?.dateTime;
+    const endDt = input.end_time || existing.data.end?.dateTime;
+    eventBody.start = {
+      dateTime: startDt ? normalizeDateTime(startDt) : undefined,
+      timeZone: 'America/Guyana'
+    };
+    eventBody.end = {
+      dateTime: endDt ? normalizeDateTime(endDt) : undefined,
+      timeZone: 'America/Guyana'
+    };
+  }
+
+  if (input.attendees !== undefined) {
+    eventBody.attendees = input.attendees.map(email => ({ email }));
+  }
+
+  if (input.add_google_meet) {
+    eventBody.conferenceData = {
+      createRequest: {
+        requestId: `meet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        conferenceSolutionKey: { type: 'hangoutsMeet' },
+      },
+    };
   }
 
   const response = await calendar.events.update({
     calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
     eventId,
-    requestBody: eventBody
+    requestBody: eventBody,
+    conferenceDataVersion: input.add_google_meet ? 1 : undefined,
+    sendUpdates: input.attendees && input.attendees.length > 0 ? 'all' : 'none',
   });
 
   return transformEvent(response.data);
