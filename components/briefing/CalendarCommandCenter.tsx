@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { CalendarEvent } from '@/lib/calendar-types';
 import { detectConflicts } from '@/lib/calendar-utils';
 import { DayAtGlance } from './DayAtGlance';
 import { TimelineView } from './TimelineView';
-import { MeetingPrepCard } from './MeetingPrepCard';
+import { UpcomingThisWeek } from './UpcomingThisWeek';
+import { WeekStrip } from './WeekStrip';
 import { EventDetailPopover } from './EventDetailPopover';
 import { EventModal, EventFormData } from '@/components/calendar/EventModal';
 
@@ -14,17 +15,18 @@ interface CalendarCommandCenterProps {
   todayEvents: CalendarEvent[];
   weekEvents: CalendarEvent[];
   onRefresh: () => void;
+  calendarError?: { type: string; message: string } | null;
 }
 
-export function CalendarCommandCenter({ todayEvents, weekEvents, onRefresh }: CalendarCommandCenterProps) {
+export function CalendarCommandCenter({ todayEvents, weekEvents, onRefresh, calendarError }: CalendarCommandCenterProps) {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
 
   const conflicts = useMemo(() => detectConflicts(todayEvents), [todayEvents]);
   const hasConflicts = conflicts.size > 0;
 
-  // Unique conflicting event pairs for the banner
   const conflictCount = useMemo(() => {
     const pairs = new Set<string>();
     conflicts.forEach((others, id) => {
@@ -60,7 +62,6 @@ export function CalendarCommandCenter({ todayEvents, weekEvents, onRefresh }: Ca
   const handleSave = useCallback(async (data: EventFormData) => {
     try {
       if (editingEvent) {
-        // Update
         const res = await fetch(`/api/calendar/${editingEvent.google_id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -68,7 +69,6 @@ export function CalendarCommandCenter({ todayEvents, weekEvents, onRefresh }: Ca
         });
         if (!res.ok) throw new Error('Update failed');
       } else {
-        // Create
         const res = await fetch('/api/calendar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -86,13 +86,36 @@ export function CalendarCommandCenter({ todayEvents, weekEvents, onRefresh }: Ca
     window.open(url, '_blank', 'noopener,noreferrer');
   }, []);
 
+  const handleNewEvent = useCallback(() => {
+    setEditingEvent(null);
+    setIsCreating(true);
+  }, []);
+
+  const handleDayClick = useCallback((date: Date) => {
+    setSelectedDay(prev => {
+      if (prev && prev.toDateString() === date.toDateString()) return null;
+      return date;
+    });
+  }, []);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Day at a Glance */}
       <DayAtGlance
         events={todayEvents}
         weekEvents={weekEvents}
         onJoinNextCall={handleJoinCall}
+        onNewEvent={handleNewEvent}
+        onEventClick={handleEventClick}
+        calendarError={calendarError}
+      />
+
+      {/* Week Strip */}
+      <WeekStrip
+        weekEvents={weekEvents}
+        todayEvents={todayEvents}
+        onDayClick={handleDayClick}
+        selectedDay={selectedDay}
       />
 
       {/* Conflict Banner */}
@@ -105,7 +128,7 @@ export function CalendarCommandCenter({ todayEvents, weekEvents, onRefresh }: Ca
         </div>
       )}
 
-      {/* Main Layout: Timeline + Meeting Prep */}
+      {/* Main Layout: Timeline + Upcoming This Week */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Timeline (2 cols) */}
         <div className="lg:col-span-2">
@@ -113,7 +136,7 @@ export function CalendarCommandCenter({ todayEvents, weekEvents, onRefresh }: Ca
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-medium text-[#94a3b8] uppercase tracking-wider">Timeline</h3>
               <button
-                onClick={() => { setEditingEvent(null); setIsCreating(true); }}
+                onClick={handleNewEvent}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#d4af37] text-[#0a1628] text-xs font-medium hover:bg-[#c9a432] transition-colors"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -124,10 +147,14 @@ export function CalendarCommandCenter({ todayEvents, weekEvents, onRefresh }: Ca
           </div>
         </div>
 
-        {/* Meeting Prep (1 col) */}
+        {/* Upcoming This Week (1 col) */}
         <div>
           <div className="card-premium p-3 md:p-4">
-            <MeetingPrepCard events={todayEvents} onJoinCall={handleJoinCall} />
+            <UpcomingThisWeek
+              weekEvents={weekEvents}
+              onEventClick={handleEventClick}
+              selectedDay={selectedDay}
+            />
           </div>
         </div>
       </div>

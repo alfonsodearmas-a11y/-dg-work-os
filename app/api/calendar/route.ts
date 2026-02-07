@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchMonthEvents, fetchWeekEvents, createEvent } from '@/lib/google-calendar';
+import { fetchMonthEvents, fetchWeekEvents, createEvent, classifyCalendarError } from '@/lib/google-calendar';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,12 +17,22 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ events });
-  } catch (error) {
-    console.error('Fetch calendar events error:', error);
-    // Return empty structure so the page still renders
+  } catch (err) {
+    console.error('Fetch calendar events error:', err);
+    const classified = classifyCalendarError(err);
+
+    if (classified.type === 'token_expired' || classified.type === 'invalid_credentials') {
+      return NextResponse.json({
+        events: [],
+        _error: classified.message,
+        _errorType: classified.type,
+      }, { status: 401 });
+    }
+
     return NextResponse.json({
       events: [],
-      _error: 'Google Calendar API unavailable'
+      _error: classified.message,
+      _errorType: classified.type,
     });
   }
 }
@@ -48,11 +58,12 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ event });
-  } catch (error) {
-    console.error('Create calendar event error:', error);
+  } catch (err) {
+    console.error('Create calendar event error:', err);
+    const classified = classifyCalendarError(err);
     return NextResponse.json(
-      { error: 'Failed to create event' },
-      { status: 500 }
+      { error: 'Failed to create event', _errorType: classified.type, _errorMessage: classified.message },
+      { status: classified.type === 'token_expired' ? 401 : 500 }
     );
   }
 }

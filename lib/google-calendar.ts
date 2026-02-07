@@ -24,6 +24,66 @@ oauth2Client.setCredentials({
 
 const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
+// --- Connection Test ---
+
+export interface CalendarConnectionStatus {
+  ok: boolean;
+  error?: 'token_expired' | 'invalid_credentials' | 'no_refresh_token' | 'network_error' | 'unknown';
+  message?: string;
+}
+
+export async function testCalendarConnection(): Promise<CalendarConnectionStatus> {
+  if (!process.env.GOOGLE_REFRESH_TOKEN) {
+    return { ok: false, error: 'no_refresh_token', message: 'Google Calendar refresh token not configured' };
+  }
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    return { ok: false, error: 'invalid_credentials', message: 'Google OAuth credentials not configured' };
+  }
+
+  try {
+    await calendar.events.list({
+      calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+      maxResults: 1,
+      timeMin: new Date().toISOString(),
+    });
+    return { ok: true };
+  } catch (err: unknown) {
+    const error = err as { code?: number; message?: string; response?: { status?: number } };
+    const status = error.code || error.response?.status;
+
+    if (status === 401 || status === 403) {
+      const msg = error.message || '';
+      if (msg.includes('invalid_grant') || msg.includes('Token has been expired') || msg.includes('Token has been revoked')) {
+        return { ok: false, error: 'token_expired', message: 'Google Calendar refresh token has expired. Please re-authorize.' };
+      }
+      return { ok: false, error: 'invalid_credentials', message: `Google Calendar auth failed (${status}): ${msg}` };
+    }
+
+    return { ok: false, error: 'network_error', message: `Google Calendar connection error: ${error.message || 'Unknown'}` };
+  }
+}
+
+// --- Error Classification Helper ---
+
+export function classifyCalendarError(err: unknown): { type: string; message: string } {
+  const error = err as { code?: number; message?: string; response?: { status?: number } };
+  const status = error.code || error.response?.status;
+  const msg = error.message || 'Unknown error';
+
+  if (status === 401 || status === 403) {
+    if (msg.includes('invalid_grant') || msg.includes('expired') || msg.includes('revoked')) {
+      return { type: 'token_expired', message: 'Google Calendar token expired — please reconnect' };
+    }
+    return { type: 'invalid_credentials', message: `Auth error: ${msg}` };
+  }
+
+  if (msg.includes('ENOTFOUND') || msg.includes('ECONNREFUSED') || msg.includes('network')) {
+    return { type: 'network_error', message: 'Cannot reach Google Calendar API' };
+  }
+
+  return { type: 'unknown', message: msg };
+}
+
 // --- Shared Transform Helper ---
 
 function transformEvent(event: calendar_v3.Schema$Event): CalendarEvent {

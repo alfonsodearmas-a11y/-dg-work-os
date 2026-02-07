@@ -1,5 +1,5 @@
 import { fetchTasks } from './notion';
-import { fetchTodayEvents, fetchWeekEvents, fetchTomorrowEvents, CalendarEvent } from './google-calendar';
+import { fetchTodayEvents, fetchWeekEvents, fetchTomorrowEvents, CalendarEvent, classifyCalendarError } from './google-calendar';
 import { calculateDayStats } from './calendar-utils';
 import { isToday, isPast, isWithinInterval, addDays } from 'date-fns';
 
@@ -39,6 +39,10 @@ interface Briefing {
       free_hours: number;
     };
   };
+  _errors?: {
+    calendar?: { type: string; message: string };
+    tasks?: { type: string; message: string };
+  };
   generated_at: string;
 }
 
@@ -56,10 +60,24 @@ export async function generateBriefing(): Promise<Briefing> {
   const weekEvents = weekResult.status === 'fulfilled' ? weekResult.value : [];
   const tomorrowEvents = tomorrowResult.status === 'fulfilled' ? tomorrowResult.value : [];
 
-  if (tasksResult.status === 'rejected') console.error('Notion tasks fetch failed:', tasksResult.reason);
-  if (todayResult.status === 'rejected') console.error('Calendar today fetch failed:', todayResult.reason);
-  if (weekResult.status === 'rejected') console.error('Calendar week fetch failed:', weekResult.reason);
-  if (tomorrowResult.status === 'rejected') console.error('Calendar tomorrow fetch failed:', tomorrowResult.reason);
+  // Collect error details for frontend
+  const _errors: Briefing['_errors'] = {};
+
+  if (tasksResult.status === 'rejected') {
+    console.error('Notion tasks fetch failed:', tasksResult.reason);
+    const msg = tasksResult.reason?.message || 'Notion API unavailable';
+    _errors.tasks = { type: msg.includes('Unauthorized') ? 'token_expired' : 'unknown', message: msg };
+  }
+
+  const calendarFailed = todayResult.status === 'rejected' || weekResult.status === 'rejected';
+  if (calendarFailed) {
+    const reason = todayResult.status === 'rejected' ? todayResult.reason : weekResult.status === 'rejected' ? weekResult.reason : null;
+    if (reason) {
+      console.error('Calendar fetch failed:', reason);
+      const classified = classifyCalendarError(reason);
+      _errors.calendar = classified;
+    }
+  }
 
   const now = new Date();
   const weekFromNow = addDays(now, 7);
@@ -117,6 +135,7 @@ export async function generateBriefing(): Promise<Briefing> {
         free_hours: dayStats.free_hours,
       },
     },
+    ...(Object.keys(_errors).length > 0 && { _errors }),
     generated_at: new Date().toISOString()
   };
 }
