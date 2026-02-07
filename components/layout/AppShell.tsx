@@ -6,6 +6,7 @@ import { SidebarProvider } from './SidebarContext';
 import { MobileMenuButton } from './MobileMenuButton';
 import { BottomNav } from './BottomNav';
 import { HeaderDate } from './HeaderDate';
+import { ChatButton } from '@/components/ai/ChatButton';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -61,6 +62,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Mobile Bottom Navigation */}
       <BottomNav />
+
+      {/* AI Chat Button (every page except login) */}
+      <ChatButton />
     </SidebarProvider>
   );
 }
