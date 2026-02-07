@@ -111,6 +111,8 @@ function fmtRegion(code: string | null): string {
 
 // ── Upload Modal ───────────────────────────────────────────────────────────
 
+const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB Vercel limit
+
 function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<{ project_count: number; agency_counts: Record<string, number>; total_value: number } | null>(null);
@@ -119,6 +121,10 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
   const [success, setSuccess] = useState('');
 
   async function handleFile(f: File) {
+    if (f.size > MAX_FILE_SIZE) {
+      setError('File too large. Maximum 4.5MB.');
+      return;
+    }
     setFile(f);
     setError('');
     setPreview(null);

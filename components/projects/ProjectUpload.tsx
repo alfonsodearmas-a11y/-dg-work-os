@@ -19,6 +19,8 @@ interface ProjectUploadProps {
   onUploadComplete?: () => void;
 }
 
+const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB Vercel limit
+
 export function ProjectUpload({ onUploadComplete }: ProjectUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -28,6 +30,12 @@ export function ProjectUpload({ onUploadComplete }: ProjectUploadProps) {
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      setStatus('error');
+      setMessage('File too large. Maximum 4.5MB.');
+      return;
+    }
 
     setUploading(true);
     setStatus('idle');

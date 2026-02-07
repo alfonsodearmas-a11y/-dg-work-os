@@ -13,6 +13,8 @@ interface GPLKpiUploadProps {
   onCancel?: () => void;
 }
 
+const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB Vercel limit
+
 export function GPLKpiUpload({ onSuccess, onCancel }: GPLKpiUploadProps) {
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -38,6 +40,10 @@ export function GPLKpiUpload({ onSuccess, onCancel }: GPLKpiUploadProps) {
     setDragOver(false);
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile?.name.endsWith('.csv')) {
+      if (droppedFile.size > MAX_FILE_SIZE) {
+        setError('File too large. Maximum 4.5MB.');
+        return;
+      }
       setFile(droppedFile);
       setError(null);
       setPreview(null);
@@ -49,6 +55,10 @@ export function GPLKpiUpload({ onSuccess, onCancel }: GPLKpiUploadProps) {
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
+      if (selectedFile.size > MAX_FILE_SIZE) {
+        setError('File too large. Maximum 4.5MB.');
+        return;
+      }
       setFile(selectedFile);
       setError(null);
       setPreview(null);

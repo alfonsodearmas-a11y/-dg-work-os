@@ -4,6 +4,8 @@ import { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload } from 'lucide-react';
 
+const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB Vercel limit
+
 interface DropZoneProps {
   onDrop: (files: File[]) => void;
   accept?: Record<string, string[]>;
@@ -15,7 +17,7 @@ interface DropZoneProps {
 export function DropZone({
   onDrop,
   accept,
-  maxSize = 10 * 1024 * 1024, // 10MB default
+  maxSize = MAX_FILE_SIZE,
   className = '',
   label = 'Drop files here or click to upload'
 }: DropZoneProps) {

@@ -52,6 +52,8 @@ interface GWIDocUploadProps {
   onSaved?: () => void;
 }
 
+const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB Vercel limit
+
 export function GWIDocUpload({ reportPeriod, onClose, onSaved }: GWIDocUploadProps) {
   const [zones, setZones] = useState<Record<string, ZoneState>>({
     management: { file: null, stage: 'idle', preview: null, error: null },
@@ -68,6 +70,10 @@ export function GWIDocUpload({ reportPeriod, onClose, onSaved }: GWIDocUploadPro
     if (!file) return;
     if (!file.name.match(/\.docx$/i)) {
       updateZone(key, { error: 'Only .docx files are supported' });
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      updateZone(key, { error: 'File too large. Maximum 4.5MB.' });
       return;
     }
     updateZone(key, { file, stage: 'idle', error: null, preview: null });

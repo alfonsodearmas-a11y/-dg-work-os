@@ -15,9 +15,11 @@ import {
   Shield,
   ChevronRight,
   ChevronDown,
+  LogOut,
   X,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSidebar } from './SidebarContext';
 
 const mainNavItems = [
@@ -40,8 +42,14 @@ const adminItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [agenciesOpen, setAgenciesOpen] = useState(true);
   const { mobileOpen, setMobileOpen } = useSidebar();
+
+  const handleSignOut = async () => {
+    await fetch('/api/auth/gate/logout', { method: 'POST' });
+    router.push('/login');
+  };
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
@@ -174,12 +182,19 @@ export function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-[#2d3a52]/50">
+        <div className="p-4 border-t border-[#2d3a52]/50 space-y-3">
           <div className="glass-card p-4">
             <p className="text-xs text-[#64748b] mb-1">Director General</p>
             <p className="text-sm font-medium text-white">Ministry of Public Utilities</p>
             <p className="text-xs text-[#d4af37] mt-1">& Aviation</p>
           </div>
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-2 w-full px-4 py-2.5 rounded-lg text-[#64748b] hover:text-red-400 hover:bg-red-500/10 transition-colors text-sm"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </button>
         </div>
       </aside>
     </>

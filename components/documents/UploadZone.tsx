@@ -8,6 +8,8 @@ interface UploadZoneProps {
   onUploadComplete?: () => void;
 }
 
+const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB Vercel limit
+
 export function UploadZone({ onUploadComplete }: UploadZoneProps) {
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -16,6 +18,12 @@ export function UploadZone({ onUploadComplete }: UploadZoneProps) {
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      setStatus('error');
+      setMessage('File too large. Maximum 4.5MB.');
+      return;
+    }
 
     setUploading(true);
     setStatus('idle');
@@ -57,7 +65,7 @@ export function UploadZone({ onUploadComplete }: UploadZoneProps) {
       'text/plain': ['.txt']
     },
     maxFiles: 1,
-    maxSize: 20 * 1024 * 1024,
+    maxSize: MAX_FILE_SIZE,
     disabled: uploading
   });
 
@@ -90,7 +98,7 @@ export function UploadZone({ onUploadComplete }: UploadZoneProps) {
               {isDragActive ? 'Drop your document here' : 'Drop document or click to browse'}
             </p>
             <p className="text-[#64748b] text-sm mt-1">
-              PDF, Word, Excel, or Text files (max 20MB)
+              PDF, Word, Excel, or Text files (max 4.5MB)
             </p>
           </div>
         )}
