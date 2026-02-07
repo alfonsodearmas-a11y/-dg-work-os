@@ -1203,10 +1203,8 @@ export default function ProjectsPage() {
                               <Badge variant={ss.variant}>{ss.label}</Badge>
                             </td>
                             <td className="px-4 py-3">
-                              <span className="text-white truncate block max-w-[280px]" title={p.project_name || ''}>
-                                {(p.project_name || '').length > 60
-                                  ? (p.project_name || '').slice(0, 60) + '...'
-                                  : p.project_name || '-'}
+                              <span className="text-white line-clamp-2 max-w-[320px]" title={p.project_name || ''}>
+                                {p.project_name || '-'}
                               </span>
                             </td>
                             <td className="px-4 py-3">
@@ -1214,10 +1212,8 @@ export default function ProjectsPage() {
                             </td>
                             <td className="px-4 py-3 text-[#94a3b8]">{fmtRegion(p.region)}</td>
                             <td className="px-4 py-3">
-                              <span className="text-[#94a3b8] truncate block max-w-[160px]" title={p.contractor || ''}>
-                                {(p.contractor || '').length > 25
-                                  ? (p.contractor || '').slice(0, 25) + '...'
-                                  : p.contractor || '-'}
+                              <span className="text-[#94a3b8] line-clamp-2 max-w-[200px]" title={p.contractor || ''}>
+                                {p.contractor || '-'}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">

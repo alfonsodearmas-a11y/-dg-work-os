@@ -51,7 +51,7 @@ export function ProblemsList({ projects }: ProblemsListProps) {
         {projects.map((project) => (
           <TableRow key={project.project_reference}>
             <TableCell className="max-w-xs">
-              <p className="font-medium truncate">{project.project_name}</p>
+              <p className="font-medium line-clamp-2" title={project.project_name}>{project.project_name}</p>
               <p className="text-xs text-gray-500 font-mono">{project.project_reference}</p>
             </TableCell>
             <TableCell>
