@@ -279,7 +279,7 @@ export function GPLMonthlyKpi() {
     const TrendIcon = trend.icon;
 
     return (
-      <div className="bg-[#1a2744]/80 rounded-xl p-4 border border-[#2d3a52]">
+      <div className="bg-[#1a2744]/80 rounded-xl p-3 md:p-4 border border-[#2d3a52]">
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-[#2d3a52]/50 flex items-center justify-center">
@@ -296,7 +296,7 @@ export function GPLMonthlyKpi() {
             </div>
           )}
         </div>
-        <p className="text-2xl font-bold text-white">
+        <p className="text-xl md:text-2xl font-bold text-white">
           {formatValue(name, data.value)}
         </p>
         {data.previousValue !== null && (

@@ -8,7 +8,7 @@ export default function CalendarPage() {
   return (
     <div className="space-y-4 md:space-y-6">
       {/* Page Header */}
-      <div className="flex items-center gap-3 md:gap-4">
+      <div className="flex items-center flex-wrap gap-3 md:gap-4">
         <Link
           href="/"
           className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors touch-active"

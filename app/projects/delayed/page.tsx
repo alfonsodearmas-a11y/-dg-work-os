@@ -64,9 +64,9 @@ export default function DelayedProjectsPage() {
         <div className="space-y-3">
           {projects.map((p: any) => (
             <Link key={p.id} href={`/projects/${p.id}`} className="card-premium p-5 block hover:border-[#d4af37]/50 transition-all">
-              <div className="flex items-start justify-between">
+              <div className="flex flex-col md:flex-row items-start justify-between">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2">
+                  <div className="flex items-center flex-wrap gap-3 mb-2">
                     <span className="px-3 py-1 rounded-lg text-sm font-bold bg-gradient-to-r from-[#d4af37] to-[#b8860b] text-[#0a1628]">
                       {p.sub_agency || 'MOPUA'}
                     </span>

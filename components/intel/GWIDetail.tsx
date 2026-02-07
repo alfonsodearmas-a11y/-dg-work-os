@@ -429,7 +429,7 @@ export function GWIDetail() {
                 <HealthScoreTooltip score={insights.overall.health_score} size={100} />
               </div>
             ) : insightsLoading ? (
-              <div className="w-[100px] h-[100px] flex items-center justify-center">
+              <div className="w-20 h-20 md:w-[100px] md:h-[100px] flex items-center justify-center">
                 <Loader2 className="w-6 h-6 text-[#64748b] animate-spin" />
               </div>
             ) : null}
@@ -537,7 +537,7 @@ export function GWIDetail() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex-shrink-0 px-4 py-2.5 rounded-lg text-sm md:text-base font-medium transition-all whitespace-nowrap ${
+              className={`flex-1 flex-shrink-0 px-2.5 md:px-4 py-2 md:py-2.5 rounded-lg text-sm md:text-base font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'bg-[#d4af37] text-[#0a1628] shadow-lg shadow-[#d4af37]/20'
                   : 'text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-[#2d3a52]'
@@ -561,7 +561,7 @@ export function GWIDetail() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <KPICard
                 title="Net Profit/Loss"
                 value={formatGYD(fin.net_profit)}
@@ -622,7 +622,7 @@ export function GWIDetail() {
               icon={Receipt}
               defaultOpen={false}
             >
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {[
                   { label: 'Employment', value: fin.employment_cost },
                   { label: 'Premises', value: fin.premises_cost },
@@ -645,7 +645,7 @@ export function GWIDetail() {
               icon={Scale}
               defaultOpen={false}
             >
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                 {[
                   { label: 'Net Assets', value: fin.net_assets },
                   { label: 'Property & Equipment', value: fin.property_equipment },
@@ -688,7 +688,7 @@ export function GWIDetail() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <KPICard
                 title="Total Collections"
                 value={formatGYD(coll.total_collections)}
@@ -724,7 +724,7 @@ export function GWIDetail() {
               icon={DollarSign}
               defaultOpen={false}
             >
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 {[
                   { label: 'Region 1', value: coll.region_1_collections },
                   { label: 'Region 2', value: coll.region_2_collections },
@@ -746,7 +746,7 @@ export function GWIDetail() {
               icon={FileText}
               defaultOpen={false}
             >
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 <div className="bg-[#0a1628] rounded-lg p-3 border border-[#2d3a52]">
                   <p className="text-[#64748b] text-xs mb-1">Billing Efficiency</p>
                   <p className="text-lg font-bold text-[#f1f5f9]">{formatPct(coll.billing_efficiency_pct)}</p>
@@ -810,7 +810,7 @@ export function GWIDetail() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <KPICard
                 title="Complaints"
                 value={formatNum(cs.total_complaints)}
@@ -847,7 +847,7 @@ export function GWIDetail() {
               icon={ShieldAlert}
               defaultOpen={false}
             >
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 <div className="bg-[#0a1628] rounded-lg p-3 border border-[#2d3a52]">
                   <p className="text-[#64748b] text-xs mb-1">Total Complaints</p>
                   <p className="text-lg font-bold text-[#f1f5f9]">{formatNum(cs.total_complaints)}</p>
@@ -869,7 +869,7 @@ export function GWIDetail() {
               icon={Users}
               defaultOpen={false}
             >
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="bg-[#0a1628] rounded-lg p-3 border border-[#2d3a52]">
                   <p className="text-[#64748b] text-xs mb-1">Reconnection Payments</p>
                   <p className="text-lg font-bold text-[#f1f5f9]">{formatGYD(cs.reconnection_payments)}</p>
@@ -895,7 +895,7 @@ export function GWIDetail() {
               icon={FileText}
               defaultOpen={false}
             >
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="bg-[#0a1628] rounded-lg p-3 border border-[#2d3a52]">
                   <p className="text-[#64748b] text-xs mb-1">PUC Complaints</p>
                   <p className="text-lg font-bold text-[#f1f5f9]">{cs.puc_complaints ?? '--'}</p>
@@ -931,7 +931,7 @@ export function GWIDetail() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <KPICard
                 title="Total Purchases"
                 value={formatGYD(proc.total_purchases)}

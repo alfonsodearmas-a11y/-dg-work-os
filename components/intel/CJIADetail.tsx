@@ -256,7 +256,7 @@ export function CJIADetail({ data }: CJIADetailProps) {
                 <HealthBreakdownSection breakdown={health.breakdown} score={health.score} label={health.label} severity={health.severity} />
               </div>
             ) : insightsLoading ? (
-              <div className="w-[100px] h-[100px] flex items-center justify-center">
+              <div className="w-20 h-20 md:w-[100px] md:h-[100px] flex items-center justify-center">
                 <Loader2 className="w-6 h-6 text-[#64748b] animate-spin" />
               </div>
             ) : null}
@@ -353,7 +353,7 @@ export function CJIADetail({ data }: CJIADetailProps) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex-shrink-0 px-4 py-2.5 rounded-lg text-base font-medium transition-all whitespace-nowrap ${
+              className={`flex-1 flex-shrink-0 px-2.5 md:px-4 py-2 md:py-2.5 rounded-lg text-sm md:text-base font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'bg-[#d4af37] text-[#0a1628] shadow-lg shadow-[#d4af37]/20'
                   : 'text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-[#2d3a52]'
@@ -373,7 +373,7 @@ export function CJIADetail({ data }: CJIADetailProps) {
           <div className="space-y-4">
             <h3 className="text-[#f1f5f9] font-medium text-[22px]">Airport Operations</h3>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <KPICard
                 title="On-Time Performance"
                 value={data ? formatPct(data.onTimePercent) : '--'}
@@ -399,7 +399,7 @@ export function CJIADetail({ data }: CJIADetailProps) {
             {/* Cargo Summary */}
             {data && (data.ytdCargoArrived || data.ytdCargoDeparted) && (
               <CollapsibleSection title="Cargo Summary" icon={Package} defaultOpen={false}>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className="text-[#64748b] text-xs mb-1">Arrived</p>
                     <p className="text-lg font-bold text-teal-400">
@@ -486,7 +486,7 @@ export function CJIADetail({ data }: CJIADetailProps) {
                 </div>
 
                 {/* 2025 Annual Summary */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   <div className="bg-[#1a2744] rounded-xl p-3 sm:p-4 border border-[#2d3a52] text-center">
                     <p className="text-[#64748b] text-[10px] sm:text-xs mb-1">2025 Arrivals</p>
                     <p className="text-lg sm:text-xl font-bold text-teal-400">{formatNumber(metrics.annual2025.arrivals)}</p>

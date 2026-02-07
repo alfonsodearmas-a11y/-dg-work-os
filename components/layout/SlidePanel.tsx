@@ -40,7 +40,7 @@ export function SlidePanel({ isOpen, onClose, title, subtitle, icon: Icon, accen
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-[46] transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
@@ -82,7 +82,7 @@ export function SlidePanel({ isOpen, onClose, title, subtitle, icon: Icon, accen
         </div>
 
         {/* Content */}
-        <div className="h-[calc(100%-73px)] overflow-y-auto p-3 md:p-6 pb-24 md:pb-6">
+        <div className="h-[calc(100%-73px)] overflow-y-auto overflow-x-hidden p-3 md:p-6 pb-24 md:pb-6">
           {children}
         </div>
       </div>

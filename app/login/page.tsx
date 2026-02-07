@@ -110,7 +110,7 @@ export default function LoginPage() {
             alt="Ministry Logo"
             width={72}
             height={72}
-            className="login-logo-img"
+            className="login-logo-img w-14 h-14 md:w-[72px] md:h-[72px]"
           />
         </div>
 

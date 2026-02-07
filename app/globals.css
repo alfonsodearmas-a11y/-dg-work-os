@@ -1090,6 +1090,7 @@ html, body {
 
   .login-card {
     transform: none;
+    padding: 24px 16px;
   }
 
   .login-shake {

@@ -192,7 +192,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
                 <HealthBreakdownSection breakdown={health.breakdown} score={health.score} label={health.label} severity={health.severity} />
               </div>
             ) : insightsLoading ? (
-              <div className="w-[100px] h-[100px] flex items-center justify-center">
+              <div className="w-20 h-20 md:w-[100px] md:h-[100px] flex items-center justify-center">
                 <Loader2 className="w-6 h-6 text-[#64748b] animate-spin" />
               </div>
             ) : null}
@@ -287,7 +287,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex-shrink-0 px-4 py-2.5 min-h-[44px] rounded-lg text-sm md:text-base font-medium transition-all whitespace-nowrap ${
+              className={`flex-1 flex-shrink-0 px-2.5 md:px-4 py-2 md:py-2.5 min-h-[44px] rounded-lg text-sm md:text-base font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'bg-[#d4af37] text-[#0a1628] shadow-lg shadow-[#d4af37]/20'
                   : 'text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-[#2d3a52]'
@@ -369,7 +369,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
 
             {data ? (
               <>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <KPICard
                     title="Inspections MTD"
                     value={data.inspectionsMTD}
@@ -430,7 +430,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
             <h3 className="text-[#f1f5f9] font-medium text-lg md:text-[22px]">Aircraft Registrations</h3>
 
             {data ? (
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <KPICard
                   title="Active Aircraft"
                   value={data.activeRegistrations}
@@ -472,7 +472,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
             <h3 className="text-[#f1f5f9] font-medium text-lg md:text-[22px]">Safety & Incidents</h3>
 
             {data ? (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <KPICard
                   title="Incident Reports"
                   value={data.incidentReports ?? 0}

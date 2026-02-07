@@ -113,12 +113,12 @@ export default function AgencyPage() {
         <div className="card-premium p-5"><p className="stat-number">{fmtCurrency(stats.totalValue)}</p><p className="text-[#64748b] text-sm mt-1">Total Value</p></div>
       </div>
 
-      <div className="flex gap-2 border-b border-[#2d3a52]">
+      <div className="flex gap-2 border-b border-[#2d3a52] overflow-x-auto">
         {tabs.map(t => (
           <button
             key={t.key}
             onClick={() => setStatusFilter(t.key)}
-            className={`px-4 py-3 font-medium border-b-2 transition-colors ${statusFilter === t.key ? 'border-[#d4af37] text-[#d4af37]' : 'border-transparent text-[#64748b] hover:text-white'}`}
+            className={`px-4 py-3 font-medium border-b-2 transition-colors whitespace-nowrap ${statusFilter === t.key ? 'border-[#d4af37] text-[#d4af37]' : 'border-transparent text-[#64748b] hover:text-white'}`}
           >
             {t.label} ({t.count})
           </button>

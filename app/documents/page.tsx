@@ -112,7 +112,7 @@ export default function DocumentsPage() {
               <FileText className="h-5 w-5 md:h-6 md:w-6 text-[#d4af37]" />
             </div>
           </div>
-          <p className="text-2xl md:text-[2.5rem] font-semibold text-[#d4af37] leading-none">{documents.length}</p>
+          <p className="text-xl md:text-[2.5rem] font-semibold text-[#d4af37] leading-none">{documents.length}</p>
           <p className="text-[#64748b] text-xs md:text-sm mt-1">Total Documents</p>
         </div>
 
@@ -122,7 +122,7 @@ export default function DocumentsPage() {
               <Building2 className="h-5 w-5 md:h-6 md:w-6 text-[#d4af37]" />
             </div>
           </div>
-          <p className="text-2xl md:text-[2.5rem] font-semibold text-[#d4af37] leading-none">{Object.keys(byAgency).length}</p>
+          <p className="text-xl md:text-[2.5rem] font-semibold text-[#d4af37] leading-none">{Object.keys(byAgency).length}</p>
           <p className="text-[#64748b] text-xs md:text-sm mt-1">Agencies</p>
         </div>
 
@@ -132,7 +132,7 @@ export default function DocumentsPage() {
               <FolderOpen className="h-5 w-5 md:h-6 md:w-6 text-[#d4af37]" />
             </div>
           </div>
-          <p className="text-2xl md:text-[2.5rem] font-semibold text-[#d4af37] leading-none">{Object.keys(byType).length}</p>
+          <p className="text-xl md:text-[2.5rem] font-semibold text-[#d4af37] leading-none">{Object.keys(byType).length}</p>
           <p className="text-[#64748b] text-xs md:text-sm mt-1">Document Types</p>
         </div>
 
@@ -142,7 +142,7 @@ export default function DocumentsPage() {
               <Search className="h-5 w-5 md:h-6 md:w-6 text-emerald-400" />
             </div>
           </div>
-          <p className="text-2xl md:text-[2.5rem] font-semibold text-emerald-400 leading-none">AI</p>
+          <p className="text-xl md:text-[2.5rem] font-semibold text-emerald-400 leading-none">AI</p>
           <p className="text-[#64748b] text-xs md:text-sm mt-1">Search Enabled</p>
         </div>
       </div>
@@ -199,7 +199,7 @@ export default function DocumentsPage() {
         <div className="space-y-6">
           {/* By Agency */}
           {Object.keys(byAgency).length > 0 && (
-            <div className="card-premium p-6">
+            <div className="card-premium p-4 md:p-6">
               <h2 className="text-lg font-semibold text-white mb-4">By Agency</h2>
               <div className="space-y-2">
                 {Object.entries(byAgency)
@@ -222,7 +222,7 @@ export default function DocumentsPage() {
 
           {/* By Type */}
           {Object.keys(byType).length > 0 && (
-            <div className="card-premium p-6">
+            <div className="card-premium p-4 md:p-6">
               <h2 className="text-lg font-semibold text-white mb-4">By Type</h2>
               <div className="space-y-2">
                 {Object.entries(byType)

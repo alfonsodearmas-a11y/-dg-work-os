@@ -83,7 +83,7 @@ export function ProjectUpload({ onUploadComplete }: ProjectUploadProps) {
     <div className="space-y-4">
       <div
         {...getRootProps()}
-        className={`upload-zone p-8 text-center cursor-pointer ${
+        className={`upload-zone p-4 md:p-8 text-center cursor-pointer ${
           isDragActive ? 'drag-over' : ''
         } ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
@@ -97,7 +97,7 @@ export function ProjectUpload({ onUploadComplete }: ProjectUploadProps) {
           </div>
         ) : (
           <div className="flex flex-col items-center">
-            <div className="w-16 h-16 rounded-2xl bg-[#d4af37]/20 flex items-center justify-center mb-4">
+            <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-[#d4af37]/20 flex items-center justify-center mb-4">
               {isDragActive ? (
                 <FileSpreadsheet className="h-8 w-8 text-[#d4af37]" />
               ) : (

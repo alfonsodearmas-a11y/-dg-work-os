@@ -126,7 +126,7 @@ export default function ProjectDetailPage() {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="card-premium p-6">
+        <div className="card-premium p-3 md:p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
               <TrendingUp className="h-5 w-5 text-[#d4af37]" />
@@ -139,7 +139,7 @@ export default function ProjectDetailPage() {
           </div>
         </div>
 
-        <div className="card-premium p-6">
+        <div className="card-premium p-3 md:p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
               <DollarSign className="h-5 w-5 text-[#d4af37]" />
@@ -149,7 +149,7 @@ export default function ProjectDetailPage() {
           <p className="stat-number-lg text-[#d4af37]">{fmtCurrency(project.contract_value)}</p>
         </div>
 
-        <div className="card-premium p-6">
+        <div className="card-premium p-3 md:p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
               <MapPin className="h-5 w-5 text-[#d4af37]" />
@@ -159,7 +159,7 @@ export default function ProjectDetailPage() {
           <p className="stat-number">{fmtRegion(project.region)}</p>
         </div>
 
-        <div className="card-premium p-6">
+        <div className="card-premium p-3 md:p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDelayed ? 'bg-red-500/20' : 'bg-[#d4af37]/20'}`}>
               <Calendar className={`h-5 w-5 ${isDelayed ? 'text-red-400' : 'text-[#d4af37]'}`} />

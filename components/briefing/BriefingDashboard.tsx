@@ -150,43 +150,43 @@ export function BriefingDashboard() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <div className="card-premium p-4 md:p-6">
+        <div className="card-premium p-3 md:p-6">
           <div className="flex items-center justify-between mb-2 md:mb-4">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
               <CheckSquare className="h-5 w-5 md:h-6 md:w-6 text-[#d4af37]" />
             </div>
           </div>
-          <p className="text-2xl md:text-[2.5rem] font-semibold text-[#d4af37] leading-none">{briefing.summary.total_tasks}</p>
+          <p className="text-xl md:text-[2.5rem] font-semibold text-[#d4af37] leading-none">{briefing.summary.total_tasks}</p>
           <p className="text-[#64748b] text-xs md:text-sm mt-1">Open Tasks</p>
         </div>
 
-        <div className="card-premium p-4 md:p-6">
+        <div className="card-premium p-3 md:p-6">
           <div className="flex items-center justify-between mb-2 md:mb-4">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
               <Clock className="h-5 w-5 md:h-6 md:w-6 text-[#d4af37]" />
             </div>
           </div>
-          <p className="text-2xl md:text-[2.5rem] font-semibold text-[#d4af37] leading-none">{briefing.summary.due_today_count}</p>
+          <p className="text-xl md:text-[2.5rem] font-semibold text-[#d4af37] leading-none">{briefing.summary.due_today_count}</p>
           <p className="text-[#64748b] text-xs md:text-sm mt-1">Due Today</p>
         </div>
 
-        <div className="card-premium p-4 md:p-6">
+        <div className="card-premium p-3 md:p-6">
           <div className="flex items-center justify-between mb-2 md:mb-4">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-red-500/20 flex items-center justify-center">
               <AlertTriangle className="h-5 w-5 md:h-6 md:w-6 text-red-400" />
             </div>
           </div>
-          <p className="text-2xl md:text-[2.5rem] font-semibold text-red-400 leading-none">{briefing.summary.overdue_count}</p>
+          <p className="text-xl md:text-[2.5rem] font-semibold text-red-400 leading-none">{briefing.summary.overdue_count}</p>
           <p className="text-[#64748b] text-xs md:text-sm mt-1">Overdue</p>
         </div>
 
-        <div className="card-premium p-4 md:p-6">
+        <div className="card-premium p-3 md:p-6">
           <div className="flex items-center justify-between mb-2 md:mb-4">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
               <Calendar className="h-5 w-5 md:h-6 md:w-6 text-emerald-400" />
             </div>
           </div>
-          <p className="text-2xl md:text-[2.5rem] font-semibold text-emerald-400 leading-none">{briefing.summary.meetings_today}</p>
+          <p className="text-xl md:text-[2.5rem] font-semibold text-emerald-400 leading-none">{briefing.summary.meetings_today}</p>
           <p className="text-[#64748b] text-xs md:text-sm mt-1">Meetings Today</p>
         </div>
       </div>
@@ -269,7 +269,7 @@ function TaskList({ tasks, showOverdueInfo, showDueDate, onEdit }: {
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white">{task.title}</p>
+            <p className="text-sm font-medium text-white line-clamp-2">{task.title}</p>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               {task.agency && (
                 <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#d4af37]/20 text-[#f4d03f]">

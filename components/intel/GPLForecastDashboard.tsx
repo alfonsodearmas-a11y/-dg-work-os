@@ -517,7 +517,7 @@ export function GPLForecastDashboard() {
       {forecastData.loadShedding && (
         <div className="bg-[#1a2744] rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-white mb-4">Load Shedding Analysis</h3>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div className="bg-[#0a1628] rounded-lg p-4">
               <p className="text-sm text-[#64748b]">Period Analyzed</p>
               <p className="text-xl font-semibold text-white">{forecastData.loadShedding.period_days} days</p>

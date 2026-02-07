@@ -357,6 +357,7 @@ function AgencyProjectList({
 
   return (
     <div className="bg-[#0a1628]/40">
+      <div className="overflow-x-auto">
       <table className="w-full text-xs">
         <thead>
           <tr className="text-[#64748b] text-[10px] uppercase border-b border-[#2d3a52]/50">
@@ -403,6 +404,7 @@ function AgencyProjectList({
           })}
         </tbody>
       </table>
+      </div>
       {hasMore && (
         <div className="px-5 py-2.5 border-t border-[#2d3a52]/30 flex items-center justify-between">
           <button onClick={() => setShowAll(true)} className="text-[#d4af37] hover:text-[#e5c04b] text-xs font-medium flex items-center gap-1">
@@ -1250,7 +1252,7 @@ export default function ProjectsPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-2 md:px-4 py-3 mt-2 md:mt-0 md:border-t md:border-[#2d3a52]">
+          <div className="flex flex-wrap items-center justify-between px-2 md:px-4 py-3 mt-2 md:mt-0 md:border-t md:border-[#2d3a52] gap-2">
             <span className="text-[#64748b] text-xs md:text-sm">
               {(page - 1) * limit + 1}-{Math.min(page * limit, totalCount)} of {totalCount}
             </span>

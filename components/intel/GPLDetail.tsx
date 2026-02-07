@@ -742,7 +742,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Available Capacity */}
           <div className="flex items-center gap-3 p-2.5 md:p-4 bg-[#0a1628] rounded-lg border-l-4 border-emerald-500">
             <div>
@@ -793,7 +793,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex-shrink-0 px-4 py-2.5 rounded-lg text-base font-medium transition-all whitespace-nowrap ${
+              className={`flex-1 flex-shrink-0 px-2.5 md:px-4 py-2 md:py-2.5 rounded-lg text-sm md:text-base font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'bg-[#d4af37] text-[#0a1628] shadow-lg shadow-[#d4af37]/20'
                   : 'text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-[#2d3a52]'
@@ -1236,7 +1236,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                     {/* Peak Demand Trends */}
                     <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-4">
                       <h4 className="text-[#f1f5f9] font-medium text-lg mb-4">Peak Demand Trends</h4>
-                      <div className="h-72 overflow-x-auto">
+                      <div className="h-48 md:h-72 overflow-x-auto">
                         <ResponsiveContainer width="100%" height="100%">
                           <AreaChart data={kpiData.trends}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#2d3a52" />
@@ -1276,7 +1276,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                     {/* Collection Rate - Bar Chart (Fixed legibility) */}
                     <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-4">
                       <h4 className="text-[#f1f5f9] font-medium text-lg mb-4">Collection Rate Performance</h4>
-                      <div className="h-80 overflow-x-auto">
+                      <div className="h-48 md:h-80 overflow-x-auto">
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={kpiData.trends} margin={{ top: 25, right: 20, left: 10, bottom: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#2d3a52" />
@@ -1403,7 +1403,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                   const proj12 = projections[11];
 
                   return (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <ForecastMetricCard
                         title="Most Likely Peak (6mo)"
                         value={proj6?.peak_mw || 0}
@@ -1448,7 +1448,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                       </span>
                     </div>
                   </div>
-                  <div className="h-80 overflow-x-auto">
+                  <div className="h-48 md:h-80 overflow-x-auto">
                     <ResponsiveContainer width="100%" height="100%">
                       {(() => {
                         const cons = enhancedForecast.scenarios?.conservative?.monthly_projections || [];
@@ -1583,7 +1583,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                 >
                   <div className="space-y-4">
                     {/* Model Info */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                       <div className="bg-[#0a1628] rounded-lg p-3 border border-[#2d3a52]">
                         <p className="text-[#64748b] text-xs mb-1">Model Type</p>
                         <p className="text-[#f1f5f9] text-sm font-medium">{enhancedForecast.methodology?.model_type || 'N/A'}</p>
