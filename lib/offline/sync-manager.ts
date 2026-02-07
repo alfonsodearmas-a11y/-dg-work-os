@@ -1,4 +1,5 @@
 import { saveToOffline, getFromOffline, getOfflineAge, type StoreName } from './offline-store';
+import { getCacheKey } from './user-context';
 
 export interface FetchResult<T> {
   data: T;
@@ -16,18 +17,19 @@ export async function fetchWithOffline<T>(
   cacheKey: string,
   options?: RequestInit
 ): Promise<FetchResult<T>> {
+  const namespacedKey = getCacheKey(cacheKey);
   try {
     const response = await fetch(apiUrl, options);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = (await response.json()) as T;
     // Save to IndexedDB for offline use (fire-and-forget)
-    saveToOffline(storeName, cacheKey, data).catch(() => {});
+    saveToOffline(storeName, namespacedKey, data).catch(() => {});
     return { data, source: 'network', age: 0 };
   } catch {
     // Network failed — try offline store
-    const cached = await getFromOffline<T>(storeName, cacheKey);
+    const cached = await getFromOffline<T>(storeName, namespacedKey);
     if (cached) {
-      const age = await getOfflineAge(storeName, cacheKey);
+      const age = await getOfflineAge(storeName, namespacedKey);
       return { data: cached.data, source: 'offline', age };
     }
     throw new Error('No network and no cached data');

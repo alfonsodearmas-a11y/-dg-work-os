@@ -1,7 +1,7 @@
 import { openDB, type IDBPDatabase } from 'idb';
 
 const DB_NAME = 'dg-work-os-offline';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 const STORES = [
   'agency-data',
@@ -10,6 +10,7 @@ const STORES = [
   'calendar',
   'briefing',
   'ai-conversations',
+  'sync-queue',
 ] as const;
 
 export type StoreName = (typeof STORES)[number];
@@ -25,10 +26,19 @@ let dbPromise: Promise<IDBPDatabase> | null = null;
 function getDB(): Promise<IDBPDatabase> {
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
-      upgrade(db) {
-        for (const store of STORES) {
-          if (!db.objectStoreNames.contains(store)) {
-            db.createObjectStore(store, { keyPath: 'key' });
+      upgrade(db, oldVersion) {
+        // v1 stores
+        if (oldVersion < 1) {
+          for (const store of ['agency-data', 'projects', 'tasks', 'calendar', 'briefing', 'ai-conversations'] as const) {
+            if (!db.objectStoreNames.contains(store)) {
+              db.createObjectStore(store, { keyPath: 'key' });
+            }
+          }
+        }
+        // v2: add sync-queue store
+        if (oldVersion < 2) {
+          if (!db.objectStoreNames.contains('sync-queue')) {
+            db.createObjectStore('sync-queue', { keyPath: 'key' });
           }
         }
       },
@@ -68,4 +78,13 @@ export async function getOfflineAge(
 export async function clearOfflineStore(storeName: StoreName): Promise<void> {
   const db = await getDB();
   await db.clear(storeName);
+}
+
+/**
+ * Clear all offline data across all stores.
+ * Useful on logout or when switching users.
+ */
+export async function clearAllOfflineData(): Promise<void> {
+  const db = await getDB();
+  await Promise.all(STORES.map((store) => db.clear(store)));
 }

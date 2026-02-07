@@ -2,21 +2,21 @@
 
 import { useEffect, useState } from 'react';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-import { Wifi, WifiOff, Check } from 'lucide-react';
+import { WifiOff, Check } from 'lucide-react';
 
 export function OfflineBanner() {
   const { isOnline, wasOffline } = useOnlineStatus();
   const [show, setShow] = useState(false);
-  const [syncing, setSyncing] = useState(false);
+  const [synced, setSynced] = useState(false);
 
   useEffect(() => {
     if (!isOnline) {
       setShow(true);
-      setSyncing(false);
+      setSynced(false);
     } else if (wasOffline) {
-      setSyncing(true);
+      setSynced(true);
       const timer = setTimeout(() => {
-        setSyncing(false);
+        setSynced(false);
         setShow(false);
       }, 3000);
       return () => clearTimeout(timer);
@@ -25,25 +25,25 @@ export function OfflineBanner() {
     }
   }, [isOnline, wasOffline]);
 
-  if (!show && !syncing) return null;
+  if (!show && !synced) return null;
 
   return (
     <div
       className={`fixed top-0 left-0 right-0 z-[998] transition-all duration-300 ${
-        show || syncing ? 'translate-y-0' : '-translate-y-full'
+        show || synced ? 'translate-y-0' : '-translate-y-full'
       }`}
     >
       <div
         className={`flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium ${
-          syncing
+          synced
             ? 'bg-emerald-500/15 text-emerald-400 border-b border-emerald-500/30'
             : 'bg-amber-500/15 text-[#d4af37] border-b border-amber-500/30'
         }`}
       >
-        {syncing ? (
+        {synced ? (
           <>
             <Check className="h-4 w-4" />
-            Data synced
+            Back online
           </>
         ) : (
           <>
@@ -57,7 +57,6 @@ export function OfflineBanner() {
 }
 
 export function DataFreshnessPill({ source, age }: { source: 'network' | 'offline'; age: number }) {
-  // Only show when data is from offline cache or stale (>5 min)
   if (source === 'network' && age < 5) return null;
 
   const isStale = age > 1440; // >24 hours

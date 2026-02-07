@@ -4,34 +4,33 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { prefetchAllStores } from '@/lib/offline/sync-manager';
 import { OfflineBanner } from './OfflineBanner';
+import { ConnectivityPill } from './ConnectivityPill';
+import { SyncToast } from './SyncToast';
 import { X, Download, RefreshCw } from 'lucide-react';
 
 export function PWAProvider({ children }: { children: React.ReactNode }) {
-  const { isOnline, wasOffline } = useOnlineStatus();
+  const { isOnline, wasOffline, isSyncing, syncQueueCount } = useOnlineStatus();
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const [showIOSInstall, setShowIOSInstall] = useState(false);
   const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
   const prefetchedRef = useRef(false);
 
-  // Service worker registration + update detection
+  // Serwist handles SW registration — just detect updates
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw.js')
-        .then((reg) => {
-          reg.addEventListener('updatefound', () => {
-            const newWorker = reg.installing;
-            if (!newWorker) return;
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                setUpdateAvailable(true);
-              }
-            });
-          });
-        })
-        .catch((err) => console.warn('SW registration failed:', err));
-    }
+    if (!('serviceWorker' in navigator)) return;
+
+    navigator.serviceWorker.ready.then((reg) => {
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            setUpdateAvailable(true);
+          }
+        });
+      });
+    });
   }, []);
 
   // Startup prefetch
@@ -55,14 +54,12 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
       e.preventDefault();
       deferredPromptRef.current = e as BeforeInstallPromptEvent;
 
-      // Check cooldown
       const dismissed = localStorage.getItem('pwa-install-dismissed');
       if (dismissed) {
         const dismissedAt = parseInt(dismissed, 10);
         if (Date.now() - dismissedAt < 7 * 24 * 60 * 60 * 1000) return;
       }
 
-      // Check not already in standalone
       if (window.matchMedia('(display-mode: standalone)').matches) return;
 
       setShowInstall(true);
@@ -117,6 +114,8 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
   return (
     <>
       <OfflineBanner />
+      <ConnectivityPill isOnline={isOnline} isSyncing={isSyncing} syncQueueCount={syncQueueCount} />
+      <SyncToast />
 
       {/* Update available toast */}
       {updateAvailable && (

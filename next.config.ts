@@ -1,4 +1,5 @@
-import type { NextConfig } from "next";
+import { withSerwist } from '@serwist/turbopack';
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   turbopack: {
@@ -7,7 +8,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: '/sw.js',
+        source: '/serwist/:path*',
         headers: [
           { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
           { key: 'Content-Type', value: 'application/javascript' },
@@ -17,4 +18,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSerwist(nextConfig);
