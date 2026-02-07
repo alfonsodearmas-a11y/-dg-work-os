@@ -28,7 +28,7 @@ type TasksByStatus = {
 
 const COLUMNS: (keyof TasksByStatus)[] = ['To Do', 'In Progress', 'Waiting', 'Done'];
 const AGENCIES = ['GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'HAS', 'Ministry'];
-const ROLES = ['Ministry', 'GWI Board', 'NCN Board', 'UG', 'City Council'];
+const ROLES = ['Ministry', 'GWI Board', 'NCN Board', 'UG', 'City Council', 'Meeting Action Item'];
 
 export function KanbanBoard() {
   const [tasks, setTasks] = useState<TasksByStatus>({

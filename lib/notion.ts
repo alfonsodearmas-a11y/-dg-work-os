@@ -32,9 +32,10 @@ export interface TaskCreate {
   agency?: string | null;
   role?: string | null;
   priority?: 'High' | 'Medium' | 'Low' | null;
+  description?: string | null;
 }
 
-interface Meeting {
+export interface Meeting {
   notion_id: string;
   title: string;
   meeting_date: string | null;
@@ -178,10 +179,23 @@ export async function createTask(task: TaskCreate): Promise<Task> {
     properties['Priority'] = { select: { name: task.priority } };
   }
 
-  const response = await notion.pages.create({
+  const createParams: any = {
     parent: { database_id: process.env.NOTION_TASKS_DATABASE_ID! },
-    properties
-  });
+    properties,
+  };
+
+  // Add page body content if description provided
+  if (task.description) {
+    createParams.children = task.description.split('\n').filter(Boolean).map((line: string) => ({
+      object: 'block' as const,
+      type: 'paragraph' as const,
+      paragraph: {
+        rich_text: [{ type: 'text' as const, text: { content: line } }],
+      },
+    }));
+  }
+
+  const response = await notion.pages.create(createParams);
 
   return parseTaskPage(response);
 }
@@ -228,4 +242,86 @@ function parseMeetingPage(page: any): Meeting {
     summary: props['Summary']?.rich_text?.[0]?.plain_text || null,
     category: props['Category']?.multi_select?.[0]?.name || null
   };
+}
+
+// Extract rich text content from a Notion rich_text array
+function extractRichText(richText: any[]): string {
+  if (!richText || !Array.isArray(richText)) return '';
+  return richText.map((t: any) => t.plain_text || '').join('');
+}
+
+// Convert a single Notion block to plain text
+function blockToText(block: any): string {
+  const type = block.type;
+  switch (type) {
+    case 'paragraph':
+      return extractRichText(block.paragraph?.rich_text);
+    case 'heading_1':
+      return `# ${extractRichText(block.heading_1?.rich_text)}`;
+    case 'heading_2':
+      return `## ${extractRichText(block.heading_2?.rich_text)}`;
+    case 'heading_3':
+      return `### ${extractRichText(block.heading_3?.rich_text)}`;
+    case 'bulleted_list_item':
+      return `- ${extractRichText(block.bulleted_list_item?.rich_text)}`;
+    case 'numbered_list_item':
+      return `1. ${extractRichText(block.numbered_list_item?.rich_text)}`;
+    case 'to_do': {
+      const checked = block.to_do?.checked ? '[x]' : '[ ]';
+      return `- ${checked} ${extractRichText(block.to_do?.rich_text)}`;
+    }
+    case 'toggle':
+      return `> ${extractRichText(block.toggle?.rich_text)}`;
+    case 'code':
+      return `\`\`\`${block.code?.language || ''}\n${extractRichText(block.code?.rich_text)}\n\`\`\``;
+    case 'callout':
+      return `> ${extractRichText(block.callout?.rich_text)}`;
+    case 'quote':
+      return `> ${extractRichText(block.quote?.rich_text)}`;
+    case 'divider':
+      return '---';
+    case 'table_row':
+      return (block.table_row?.cells || [])
+        .map((cell: any[]) => extractRichText(cell))
+        .join(' | ');
+    default:
+      return '';
+  }
+}
+
+// Fetch all blocks (page body) from a Notion page and convert to plain text
+export async function fetchPageBlocks(pageId: string): Promise<string> {
+  const lines: string[] = [];
+  let cursor: string | undefined = undefined;
+
+  do {
+    const response: any = await notion.blocks.children.list({
+      block_id: pageId,
+      start_cursor: cursor,
+      page_size: 100,
+    });
+
+    for (const block of response.results) {
+      const text = blockToText(block);
+      if (text) lines.push(text);
+
+      // Recursively fetch children if the block has them
+      if (block.has_children && block.type !== 'child_page' && block.type !== 'child_database') {
+        try {
+          const childText = await fetchPageBlocks(block.id);
+          if (childText) {
+            // Indent child content
+            const indented = childText.split('\n').map((l: string) => `  ${l}`).join('\n');
+            lines.push(indented);
+          }
+        } catch {
+          // Skip inaccessible children
+        }
+      }
+    }
+
+    cursor = response.has_more ? response.next_cursor : undefined;
+  } while (cursor);
+
+  return lines.join('\n');
 }

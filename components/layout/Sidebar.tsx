@@ -8,6 +8,7 @@ import {
   Activity,
   FolderKanban,
   FileText,
+  BookOpen,
   Settings,
   Zap,
   Plane,
@@ -26,6 +27,7 @@ const mainNavItems = [
   { href: '/', label: 'Daily Briefing', icon: LayoutDashboard },
   { href: '/intel', label: 'Agency Intel', icon: Activity },
   { href: '/projects', label: 'Projects', icon: FolderKanban },
+  { href: '/meetings', label: 'Meetings', icon: BookOpen },
   { href: '/documents', label: 'Documents', icon: FileText },
 ];
 

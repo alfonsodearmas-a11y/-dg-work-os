@@ -6,7 +6,7 @@ import {
   LayoutDashboard,
   Activity,
   FolderKanban,
-  FileText,
+  BookOpen,
   MoreHorizontal,
 } from 'lucide-react';
 import { useSidebar } from './SidebarContext';
@@ -15,7 +15,7 @@ const tabs = [
   { href: '/', label: 'Briefing', icon: LayoutDashboard },
   { href: '/intel', label: 'Intel', icon: Activity },
   { href: '/projects', label: 'Projects', icon: FolderKanban },
-  { href: '/documents', label: 'Docs', icon: FileText },
+  { href: '/meetings', label: 'Meetings', icon: BookOpen },
 ];
 
 export function BottomNav() {

@@ -14,7 +14,7 @@ interface TaskDetailModalProps {
 
 const STATUSES = ['To Do', 'In Progress', 'Waiting', 'Done'] as const;
 const AGENCIES = ['GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'HAS', 'Ministry'] as const;
-const ROLES = ['Ministry', 'GWI Board', 'NCN Board', 'UG', 'City Council'] as const;
+const ROLES = ['Ministry', 'GWI Board', 'NCN Board', 'UG', 'City Council', 'Meeting Action Item'] as const;
 const PRIORITIES = ['High', 'Medium', 'Low'] as const;
 
 export function TaskDetailModal({ task, isOpen, onClose, onUpdate, onDelete }: TaskDetailModalProps) {
