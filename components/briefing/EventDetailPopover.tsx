@@ -10,6 +10,20 @@ import { CalendarEvent, detectEventCategory } from '@/lib/calendar-types';
 import { formatDuration, getEventDurationMinutes, getVideoLink } from '@/lib/calendar-utils';
 import { useState } from 'react';
 
+function cleanDescription(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&hellip;/g, '...')
+    .trim();
+}
+
 interface EventDetailPopoverProps {
   event: CalendarEvent;
   conflictingEvents?: CalendarEvent[];
@@ -202,21 +216,25 @@ export function EventDetailPopover({
           )}
 
           {/* Description */}
-          {event.description && (
-            <div>
-              <p className="text-sm text-[#94a3b8] whitespace-pre-wrap">
-                {showFullDescription ? event.description : event.description.split('\n').slice(0, 3).join('\n')}
-              </p>
-              {event.description.split('\n').length > 3 && (
-                <button
-                  onClick={() => setShowFullDescription(s => !s)}
-                  className="text-xs text-[#d4af37] mt-1 hover:underline"
-                >
-                  {showFullDescription ? 'Show less' : 'Show more'}
-                </button>
-              )}
-            </div>
-          )}
+          {event.description && (() => {
+            const cleaned = cleanDescription(event.description);
+            const lines = cleaned.split('\n');
+            return (
+              <div>
+                <p className="text-sm text-[#94a3b8] whitespace-pre-wrap">
+                  {showFullDescription ? cleaned : lines.slice(0, 3).join('\n')}
+                </p>
+                {lines.length > 3 && (
+                  <button
+                    onClick={() => setShowFullDescription(s => !s)}
+                    className="text-xs text-[#d4af37] mt-1 hover:underline"
+                  >
+                    {showFullDescription ? 'Show less' : 'Show more'}
+                  </button>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Footer */}

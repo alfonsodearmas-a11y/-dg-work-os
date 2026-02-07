@@ -45,6 +45,21 @@ function getInitials(name: string): string {
 
 const AVATAR_COLORS = ['bg-blue-600', 'bg-emerald-600', 'bg-purple-600', 'bg-amber-600', 'bg-rose-600'];
 
+function stripHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&hellip;/g, '...')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function StatusDot({ status }: { status?: string }) {
   if (status === 'confirmed') return <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" title="Confirmed" />;
   if (status === 'tentative') return <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" title="Tentative" />;
@@ -205,7 +220,8 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
             const videoLink = getVideoLink(event);
 
             const top = (startHour - TIMELINE_START) * HOUR_HEIGHT + startMin;
-            const height = Math.max(30, duration);
+            // Min 48px so title + time are never clipped by overflow-hidden
+            const height = Math.max(48, duration);
 
             return (
               <button
@@ -242,7 +258,7 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
                     <div className="mt-1 flex-1 min-h-0">
                       {event.description && (
                         <p className="text-[10px] text-[#64748b] line-clamp-2">
-                          {event.description.slice(0, 80)}
+                          {stripHtml(event.description).slice(0, 80)}
                         </p>
                       )}
                       <div className="flex items-center gap-1 mt-1">
