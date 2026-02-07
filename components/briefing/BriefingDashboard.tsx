@@ -10,6 +10,8 @@ import { LoadingSkeleton } from '@/components/intel/common/LoadingSkeleton';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '@/components/ui/PullToRefreshIndicator';
+import { fetchWithOffline } from '@/lib/offline/sync-manager';
+import { DataFreshnessPill } from '@/components/pwa/OfflineBanner';
 
 interface Task {
   notion_id: string;
@@ -65,6 +67,8 @@ export function BriefingDashboard() {
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
   const [isStale, setIsStale] = useState(false);
   const [staleText, setStaleText] = useState('');
+  const [dataSource, setDataSource] = useState<'network' | 'offline'>('network');
+  const [dataAge, setDataAge] = useState(0);
   const isMobile = useIsMobile();
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const staleRef = useRef<NodeJS.Timeout | null>(null);
@@ -72,10 +76,11 @@ export function BriefingDashboard() {
   const fetchBriefing = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/briefing');
-      if (!res.ok) throw new Error('Failed to fetch briefing');
-      const data = await res.json();
-      setBriefing(data);
+      const dateKey = new Date().toISOString().slice(0, 10);
+      const result = await fetchWithOffline<Briefing>('/api/briefing', 'briefing', dateKey);
+      setBriefing(result.data);
+      setDataSource(result.source);
+      setDataAge(result.age);
       setError(null);
       setLastFetched(new Date());
       setIsStale(false);
@@ -203,7 +208,10 @@ export function BriefingDashboard() {
       {/* 1. Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="text-xl md:text-3xl font-bold text-white">Daily Briefing</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl md:text-3xl font-bold text-white">Daily Briefing</h1>
+            <DataFreshnessPill source={dataSource} age={dataAge} />
+          </div>
           <p className="text-[#64748b] mt-1 text-xs md:text-sm">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">

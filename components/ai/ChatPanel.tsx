@@ -2,9 +2,11 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { X, Minus, Trash2, ArrowUp, Loader2, Sparkles, ExternalLink, RotateCcw, AlertTriangle, Zap } from 'lucide-react';
+import { X, Minus, Trash2, ArrowUp, Loader2, Sparkles, ExternalLink, RotateCcw, AlertTriangle, Zap, WifiOff } from 'lucide-react';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { tryLocalAnswer } from '@/lib/ai/local-answers';
+import { saveToOffline, getFromOffline } from '@/lib/offline/offline-store';
 import type { MetricSnapshot, ModelTier, ChatStreamEvent } from '@/lib/ai/types';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -21,6 +23,7 @@ interface ChatMessage {
   tierLabel?: string;
   cached?: boolean;
   local?: boolean;
+  queued?: boolean;
 }
 
 interface ChatPanelProps {
@@ -441,6 +444,20 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
       }
     }
 
+    // ── Offline: queue the question ──
+    if (!navigator.onLine) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: "I'll answer this as soon as you're back online. Your question has been saved.",
+        timestamp: new Date(),
+        queued: true,
+      }]);
+      setIsStreaming(false);
+      // Save to IndexedDB for later
+      saveToOffline('ai-conversations', 'pending-' + Date.now(), { question: text.trim(), page: pathname }).catch(() => {});
+      return;
+    }
+
     const abort = new AbortController();
     abortRef.current = abort;
 
@@ -800,10 +817,13 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
                       className={`max-w-[90%] px-4 py-4 text-[15px] leading-relaxed ${
                         msg.isError
                           ? 'bg-red-500/10 text-red-300 border border-red-500/20'
-                          : 'bg-white/5 text-white'
+                          : msg.queued
+                            ? 'bg-amber-500/10 text-amber-300 border border-dashed border-amber-500/30'
+                            : 'bg-white/5 text-white'
                       }`}
                       style={{ borderRadius: '16px 16px 16px 4px' }}
                     >
+                      {msg.queued && <WifiOff className="h-4 w-4 text-amber-400 mb-2" />}
                       <MarkdownContent text={msg.content} onAgencyClick={handleAgencyClick} />
                     </div>
 

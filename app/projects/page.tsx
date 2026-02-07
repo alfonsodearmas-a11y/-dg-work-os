@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { fetchWithOffline } from '@/lib/offline/sync-manager';
+import { DataFreshnessPill } from '@/components/pwa/OfflineBanner';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -643,9 +645,8 @@ export default function ProjectsPage() {
   // Fetch summary
   const fetchSummary = useCallback(async () => {
     try {
-      const res = await fetch('/api/projects/summary');
-      const data = await res.json();
-      if (data.total_projects !== undefined) setSummary(data);
+      const result = await fetchWithOffline<PortfolioSummary>('/api/projects/summary', 'projects', 'summary');
+      if (result.data.total_projects !== undefined) setSummary(result.data);
     } catch { /* ignore */ }
   }, []);
 
@@ -662,10 +663,10 @@ export default function ProjectsPage() {
       params.set('page', String(page));
       params.set('limit', String(limit));
 
-      const res = await fetch(`/api/projects/list?${params}`);
-      const data = await res.json();
-      setProjects(data.projects || []);
-      setTotalCount(data.total || 0);
+      const cacheKey = `list-${agency || 'all'}-${status || 'all'}-${page}`;
+      const result = await fetchWithOffline<any>(`/api/projects/list?${params}`, 'projects', cacheKey);
+      setProjects(result.data.projects || []);
+      setTotalCount(result.data.total || 0);
     } catch { /* ignore */ }
     setLoadingProjects(false);
   }, [agency, status, region, search, sort, page]);

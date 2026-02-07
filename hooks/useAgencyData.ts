@@ -7,6 +7,7 @@ import { Plane, Droplets, Zap, Shield } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { GridMetric } from '@/components/intel/AgencyCard';
 import { computeGPLHealth, computeGWIHealth, computeCJIAHealth, computeGCAAHealth, type HealthBreakdownItem } from '@/lib/agency-health';
+import { fetchWithOffline } from '@/lib/offline/sync-manager';
 
 // Transform API response to match expected GPL data structure
 const transformGPLData = (apiData: any): GPLData | null => {
@@ -471,13 +472,9 @@ export const useAgencyData = () => {
   const fetchGPLData = useCallback(async (date?: string) => {
     try {
       const url = date ? `/api/gpl/daily/${date}` : '/api/gpl/latest';
-      const response = await fetch(url);
-      if (!response.ok) {
-        if (response.status === 404) return null; // No data for this date
-        console.warn('Failed to fetch GPL data:', response.status);
-        return null;
-      }
-      const json = await response.json();
+      const cacheKey = date ? `gpl-daily-${date}` : 'gpl-latest';
+      const result = await fetchWithOffline<any>(url, 'agency-data', cacheKey);
+      const json = result.data;
 
       // Unwrap: API returns { success, data: { upload, summary, stations, analysis? } }
       const payload = json?.data;
@@ -487,12 +484,11 @@ export const useAgencyData = () => {
 
       // Use analysis from payload if included, otherwise fetch separately
       let analysis = payload.analysis || null;
-      if (!analysis && upload?.id) {
+      if (!analysis && upload?.id && navigator.onLine) {
         try {
           const analysisResponse = await fetch(`/api/gpl/analysis/${upload.id}`);
           if (analysisResponse.ok) {
             const analysisJson = await analysisResponse.json();
-            // Unwrap: { success, data: { analysis: { executiveBriefing, ... } } }
             analysis = analysisJson?.data?.analysis || analysisJson?.analysis || null;
           }
         } catch (err) {
@@ -509,9 +505,8 @@ export const useAgencyData = () => {
 
   const fetchGWIReport = useCallback(async () => {
     try {
-      const res = await fetch('/api/gwi/report/latest');
-      if (!res.ok) return null;
-      const json = await res.json();
+      const result = await fetchWithOffline<any>('/api/gwi/report/latest', 'agency-data', 'gwi-report');
+      const json = result.data;
       return { current: json.data || null, previous: json.previous || null };
     } catch {
       return null;
@@ -520,10 +515,8 @@ export const useAgencyData = () => {
 
   const fetchGWIInsightsScore = useCallback(async (): Promise<number | null> => {
     try {
-      const res = await fetch('/api/gwi/insights/latest');
-      if (!res.ok) return null;
-      const json = await res.json();
-      return json.data?.overall?.health_score ?? null;
+      const result = await fetchWithOffline<any>('/api/gwi/insights/latest', 'agency-data', 'gwi-insights');
+      return result.data?.data?.overall?.health_score ?? null;
     } catch {
       return null;
     }
@@ -531,9 +524,8 @@ export const useAgencyData = () => {
 
   const fetchDelayedCounts = useCallback(async (): Promise<DelayedCounts | null> => {
     try {
-      const res = await fetch('/api/projects/delayed-counts');
-      if (!res.ok) return null;
-      return await res.json();
+      const result = await fetchWithOffline<DelayedCounts>('/api/projects/delayed-counts', 'projects', 'delayed-counts');
+      return result.data;
     } catch {
       return null;
     }
