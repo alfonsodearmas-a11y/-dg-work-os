@@ -1,7 +1,16 @@
 import { NextRequest } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { assembleSystemContext } from '@/lib/ai/context-engine';
 import { format } from 'date-fns';
+
+import { assembleRawData } from '@/lib/ai/context-engine';
+import { classifyQuery } from '@/lib/ai/model-router';
+import { assembleCompressedContext, contextLevelForTier } from '@/lib/ai/context-compressor';
+import { getSystemPrompt } from '@/lib/ai/system-prompts';
+import { getCachedResponse, cacheResponse } from '@/lib/ai/response-cache';
+import { getTokenBudgetStatus, logUsage } from '@/lib/ai/token-budget';
+import { compressHistory } from '@/lib/ai/history-compressor';
+import { tryLocalAnswer } from '@/lib/ai/local-answers';
+import { ModelTier, MODEL_IDS, MAX_TOKENS, TIER_LABELS, MetricSnapshot, ChatStreamEvent } from '@/lib/ai/types';
 
 // ── Rate Limiting (in-memory, per-session) ───────────────────────────────────
 
@@ -26,7 +35,7 @@ function checkRateLimit(sessionId: string): { allowed: boolean; remaining: numbe
   return { allowed: true, remaining: RATE_LIMIT - entry.count };
 }
 
-// Periodic cleanup of stale rate limit entries
+// Periodic cleanup
 setInterval(() => {
   const now = Date.now();
   for (const [key, entry] of rateLimits) {
@@ -35,6 +44,35 @@ setInterval(() => {
     }
   }
 }, RATE_WINDOW_MS);
+
+// ── SSE Helpers ─────────────────────────────────────────────────────────────
+
+function sseEvent(data: ChatStreamEvent): string {
+  return `data: ${JSON.stringify(data)}\n\n`;
+}
+
+function parseSuggestionsFromText(text: string): { clean: string; suggestions: string[] } {
+  const match = text.match(/<!--\s*suggestions:\s*(\[[\s\S]*?\])\s*-->/);
+  if (!match) return { clean: text, suggestions: [] };
+  try {
+    const suggestions = JSON.parse(match[1]) as string[];
+    return { clean: text.replace(match[0], '').trim(), suggestions };
+  } catch { return { clean: text, suggestions: [] }; }
+}
+
+function parseActionsFromText(text: string): { clean: string; actions: Array<{ label: string; route: string }> } {
+  const actions: Array<{ label: string; route: string }> = [];
+  let clean = text;
+  const regex = /<!--\s*action:\s*(\{[^}]*?\})\s*-->/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(text)) !== null) {
+    try {
+      actions.push(JSON.parse(match[1]));
+      clean = clean.replace(match[0], '');
+    } catch { /* skip */ }
+  }
+  return { clean: clean.trim(), actions };
+}
 
 // ── Route Handler ────────────────────────────────────────────────────────────
 
@@ -56,11 +94,15 @@ export async function POST(request: NextRequest) {
       conversation_history = [],
       current_page = '/',
       session_id = 'anonymous',
+      force_deep = false,
+      snapshot = null,
     } = body as {
       message: string;
       conversation_history: Array<{ role: 'user' | 'assistant'; content: string }>;
       current_page: string;
       session_id?: string;
+      force_deep?: boolean;
+      snapshot?: MetricSnapshot | null;
     };
 
     if (!message || typeof message !== 'string') {
@@ -79,91 +121,208 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Assemble system context
-    let systemContext: string;
-    try {
-      systemContext = await assembleSystemContext(current_page);
-    } catch (err) {
-      console.error('[ai/chat] Context assembly failed:', err);
-      systemContext = `=== SYSTEM DATA PARTIALLY UNAVAILABLE ===\nContext assembly encountered errors. Some data may be missing.\nUser is on: ${current_page}`;
+    // ── Step 1: Try local answer (zero cost) ──
+
+    if (snapshot && !force_deep) {
+      const local = tryLocalAnswer(message, snapshot);
+      if (local) {
+        // Log as local answer
+        logUsage(session_id, 'haiku', 'local', 0, 0, 'local_answer', current_page, false, true);
+
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(encoder.encode(sseEvent({
+              type: 'meta', tier: 'haiku', tier_label: 'Instant', cached: false, local: true,
+            })));
+            controller.enqueue(encoder.encode(sseEvent({ type: 'text', text: local.text })));
+            controller.enqueue(encoder.encode(sseEvent({
+              type: 'done', tier: 'haiku', tier_label: 'Instant', cached: false, local: true,
+              usage: { input_tokens: 0, output_tokens: 0 }, remaining: rateCheck.remaining,
+            })));
+            controller.close();
+          },
+        });
+
+        return new Response(stream, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+          },
+        });
+      }
     }
 
-    // Build system prompt
+    // ── Step 2: Check response cache (zero cost) ──
+
+    if (!force_deep) {
+      const cached = await getCachedResponse(message, current_page);
+      if (cached) {
+        logUsage(session_id, cached.model_tier, 'cached', 0, 0, 'cached', current_page, true, false);
+
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(encoder.encode(sseEvent({
+              type: 'meta', tier: cached.model_tier, tier_label: TIER_LABELS[cached.model_tier],
+              cached: true, local: false,
+            })));
+            controller.enqueue(encoder.encode(sseEvent({ type: 'text', text: cached.response_text })));
+
+            // Append suggestions/actions as comment tags so ChatPanel can parse them
+            if (cached.suggestions && cached.suggestions.length > 0) {
+              controller.enqueue(encoder.encode(sseEvent({
+                type: 'text',
+                text: `\n<!-- suggestions: ${JSON.stringify(cached.suggestions)} -->`,
+              })));
+            }
+            if (cached.actions && cached.actions.length > 0) {
+              for (const action of cached.actions) {
+                controller.enqueue(encoder.encode(sseEvent({
+                  type: 'text',
+                  text: `\n<!-- action: ${JSON.stringify(action)} -->`,
+                })));
+              }
+            }
+
+            controller.enqueue(encoder.encode(sseEvent({
+              type: 'done', tier: cached.model_tier, tier_label: TIER_LABELS[cached.model_tier],
+              cached: true, local: false,
+              usage: { input_tokens: 0, output_tokens: 0 }, remaining: rateCheck.remaining,
+            })));
+            controller.close();
+          },
+        });
+
+        return new Response(stream, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+          },
+        });
+      }
+    }
+
+    // ── Step 3: Classify query → tier ──
+
+    let { tier, queryType } = classifyQuery(message);
+
+    // Force deep overrides to opus
+    if (force_deep) {
+      tier = 'opus';
+      queryType = 'forced_deep';
+    }
+
+    // ── Step 4: Budget check → may cap tier ──
+
+    const budget = await getTokenBudgetStatus();
+    const TIER_ORDER: ModelTier[] = ['haiku', 'sonnet', 'opus'];
+    const capIdx = TIER_ORDER.indexOf(budget.tier_cap);
+    const tierIdx = TIER_ORDER.indexOf(tier);
+    if (tierIdx > capIdx) {
+      tier = budget.tier_cap;
+    }
+
+    // ── Step 5: Assemble compressed context ──
+
+    let contextStr: string;
+    try {
+      const raw = await assembleRawData();
+      const level = contextLevelForTier(tier);
+      contextStr = assembleCompressedContext(raw, current_page, level);
+    } catch (err) {
+      console.error('[ai/chat] Context assembly failed:', err);
+      contextStr = `=== SYSTEM DATA PARTIALLY UNAVAILABLE ===\nContext assembly encountered errors.\nUser is on: ${current_page}`;
+    }
+
+    // ── Step 6: Compress history if needed ──
+
+    let messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+    try {
+      const historyWithCurrent = [
+        ...conversation_history.slice(-20),
+        { role: 'user' as const, content: message },
+      ];
+      messages = await compressHistory(historyWithCurrent, apiKey);
+    } catch {
+      messages = [
+        ...conversation_history.slice(-6),
+        { role: 'user' as const, content: message },
+      ];
+    }
+
+    // ── Step 7: Build system prompt ──
+
     const today = format(new Date(), 'EEEE, MMMM d, yyyy');
     const pageDesc = current_page === '/' ? 'Daily Briefing' : current_page;
+    const systemPrompt = getSystemPrompt(tier, today, pageDesc, contextStr);
 
-    const systemPrompt = `You are the Director General's personal AI intelligence analyst for the Ministry of Public Utilities and Aviation in Guyana. You have access to real-time data from all agencies under the DG's oversight: GPL (power), GWI (water), CJIA (airport), GCAA (civil aviation), MARAD (maritime), HECI (hinterland electrification), and HAS (hinterland airstrips).
+    // ── Step 8: Stream with tier-appropriate model ──
 
-Your role:
-- Answer any question about the data directly and specifically with numbers
-- Identify patterns, anomalies, and risks the DG should know about
-- Compare performance across agencies when relevant
-- Provide actionable recommendations, not vague advice
-- When referencing data, always cite the specific numbers
-- Be concise but thorough — the DG is busy
-- If asked about something not in the data, say so clearly
-- Format responses with clear structure: use **bold** for key numbers, bullet points for lists
-- If the question is about a specific agency, focus there but mention cross-cutting implications
+    const modelId = MODEL_IDS[tier];
+    const maxTokens = MAX_TOKENS[tier];
 
-The DG's priorities: infrastructure delivery, revenue collection, service quality, project execution on time and budget.
-
-Current date: ${today}
-The DG is currently viewing: ${pageDesc}
-
-After your response, on a new line, add exactly this format with 2-3 follow-up questions the DG might want to ask:
-<!-- suggestions: ["question 1", "question 2", "question 3"] -->
-
-When you reference specific pages or dashboards that the DG should look at, use this format:
-<!-- action: {"label": "View Details", "route": "/intel/gwi"} -->
-
-${systemContext}`;
-
-    // Build messages array (keep last 20 messages from history)
-    const recentHistory = conversation_history.slice(-20);
-    const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
-      ...recentHistory,
-      { role: 'user', content: message },
-    ];
-
-    // Create Anthropic client and stream
     const anthropic = new Anthropic({ apiKey });
-
     const stream = anthropic.messages.stream({
-      model: 'claude-opus-4-6',
-      max_tokens: 4096,
+      model: modelId,
+      max_tokens: maxTokens,
       system: systemPrompt,
       messages,
     });
 
-    // Convert to ReadableStream for SSE
     const encoder = new TextEncoder();
     const readable = new ReadableStream({
       async start(controller) {
+        // Send meta event first
+        controller.enqueue(encoder.encode(sseEvent({
+          type: 'meta',
+          tier,
+          tier_label: TIER_LABELS[tier],
+          cached: false,
+          local: false,
+        })));
+
+        let accumulated = '';
+
         try {
           for await (const event of stream) {
             if (event.type === 'content_block_delta') {
               const delta = event.delta;
               if ('text' in delta) {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'text', text: delta.text })}\n\n`));
+                accumulated += delta.text;
+                controller.enqueue(encoder.encode(sseEvent({ type: 'text', text: delta.text })));
               }
             } else if (event.type === 'message_stop') {
-              // Send final usage stats
               const finalMessage = await stream.finalMessage();
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+              const inputTokens = finalMessage.usage?.input_tokens || 0;
+              const outputTokens = finalMessage.usage?.output_tokens || 0;
+
+              // ── Step 9: Log usage ──
+              logUsage(session_id, tier, modelId, inputTokens, outputTokens, queryType, current_page, false, false);
+
+              // ── Step 10: Cache response (haiku/sonnet only) ──
+              const { clean: c1, suggestions } = parseSuggestionsFromText(accumulated);
+              const { clean: c2, actions } = parseActionsFromText(c1);
+              cacheResponse(message, current_page, tier, c2, suggestions, actions, inputTokens, outputTokens);
+
+              controller.enqueue(encoder.encode(sseEvent({
                 type: 'done',
-                usage: {
-                  input_tokens: finalMessage.usage?.input_tokens,
-                  output_tokens: finalMessage.usage?.output_tokens,
-                },
+                tier,
+                tier_label: TIER_LABELS[tier],
+                cached: false,
+                local: false,
+                usage: { input_tokens: inputTokens, output_tokens: outputTokens },
                 remaining: rateCheck.remaining,
-              })}\n\n`));
+              })));
               controller.close();
             }
           }
         } catch (err: any) {
           const errorMsg = err.message || 'Stream error';
           console.error('[ai/chat] Stream error:', errorMsg);
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', error: errorMsg })}\n\n`));
+          controller.enqueue(encoder.encode(sseEvent({ type: 'error', error: errorMsg })));
           controller.close();
         }
       },
@@ -175,6 +334,7 @@ ${systemContext}`;
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
         'X-Rate-Limit-Remaining': String(rateCheck.remaining),
+        'X-AI-Tier': tier,
       },
     });
   } catch (err: any) {

@@ -4,6 +4,7 @@ import { fetchTodayEvents, fetchWeekEvents } from '@/lib/google-calendar';
 import { getPortfolioSummary, getDelayedProjects, PortfolioSummary, Project } from '@/lib/project-queries';
 import { CalendarEvent } from '@/lib/calendar-types';
 import { format, parseISO, isPast, isToday, differenceInDays, addDays } from 'date-fns';
+import { RawContextData, AgencyHealth } from './types';
 
 // ── Cache ────────────────────────────────────────────────────────────────────
 
@@ -17,17 +18,20 @@ interface CacheEntry {
 
 let contextCache: CacheEntry | null = null;
 
+// Raw data cache (shared across context levels)
+interface RawCacheEntry {
+  data: RawContextData;
+  timestamp: number;
+}
+
+let rawDataCache: RawCacheEntry | null = null;
+
 export function invalidateContextCache(): void {
   contextCache = null;
+  rawDataCache = null;
 }
 
 // ── Health Scores ────────────────────────────────────────────────────────────
-
-interface HealthScore {
-  score: number;       // 0-10
-  label: string;
-  breakdown: string;
-}
 
 function healthLabel(score: number): string {
   if (score >= 8) return 'Strong';
@@ -37,13 +41,12 @@ function healthLabel(score: number): string {
   return 'Critical';
 }
 
-function computeGPLHealth(summary: Record<string, unknown> | null, stations: Record<string, unknown>[] | null, kpis: Record<string, number>): HealthScore {
+export function computeGPLHealth(summary: Record<string, unknown> | null, stations: Record<string, unknown>[] | null, kpis: Record<string, number>): AgencyHealth {
   if (!summary) return { score: 0, label: 'No Data', breakdown: 'No GPL data uploaded' };
 
   let score = 5; // baseline
   const parts: string[] = [];
 
-  // Reserve margin (higher is better, 15%+ is good)
   const reserveMw = Number(summary.reserve_capacity_mw) || 0;
   const peakMw = Number(summary.expected_peak_demand_mw) || 1;
   const reservePct = (reserveMw / peakMw) * 100;
@@ -53,7 +56,6 @@ function computeGPLHealth(summary: Record<string, unknown> | null, stations: Rec
   else score -= 1;
   parts.push(`Reserve Margin ${reservePct.toFixed(1)}%`);
 
-  // Station availability
   const totalUnits = stations?.reduce((s, st) => s + (Number(st.total_units) || 0), 0) || 0;
   const onlineUnits = stations?.reduce((s, st) => s + (Number(st.units_online) || 0), 0) || 0;
   const availPct = totalUnits > 0 ? (onlineUnits / totalUnits) * 100 : 0;
@@ -62,13 +64,11 @@ function computeGPLHealth(summary: Record<string, unknown> | null, stations: Rec
   else score -= 1;
   parts.push(`${onlineUnits}/${totalUnits} units online`);
 
-  // Suppressed demand (lower is better)
   const suppressed = Number(summary.evening_peak_suppressed_mw) || 0;
   if (suppressed === 0) score += 1;
   else if (suppressed > 20) score -= 1;
   if (suppressed > 0) parts.push(`${suppressed.toFixed(1)}MW suppressed`);
 
-  // Collection rate from KPIs
   const collectionRate = kpis['Collection Rate %'];
   if (collectionRate !== undefined) {
     if (collectionRate >= 95) score += 1;
@@ -80,7 +80,7 @@ function computeGPLHealth(summary: Record<string, unknown> | null, stations: Rec
   return { score: clamped, label: healthLabel(clamped), breakdown: parts.join(', ') };
 }
 
-function computeGWIHealth(report: Record<string, any> | null): HealthScore {
+export function computeGWIHealth(report: Record<string, any> | null): AgencyHealth {
   if (!report) return { score: 0, label: 'No Data', breakdown: 'No GWI data uploaded' };
 
   let score = 5;
@@ -89,7 +89,6 @@ function computeGWIHealth(report: Record<string, any> | null): HealthScore {
   const coll = report.collections_data || {};
   const fin = report.financial_data || {};
 
-  // Resolution rate
   const resRate = Number(cs.resolution_rate_pct) || 0;
   if (resRate >= 90) score += 2;
   else if (resRate >= 75) score += 1;
@@ -97,13 +96,11 @@ function computeGWIHealth(report: Record<string, any> | null): HealthScore {
   else score -= 1;
   parts.push(`Resolution ${resRate}%`);
 
-  // Within timeline
   const timeline = Number(cs.within_timeline_pct) || 0;
   if (timeline >= 80) score += 1;
   else if (timeline < 50) score -= 1;
   parts.push(`Within Timeline ${timeline}%`);
 
-  // Collections vs billings
   const collections = Number(coll.total_collections) || 0;
   const billings = Number(coll.total_billings) || 1;
   const collRatio = (collections / billings) * 100;
@@ -111,7 +108,6 @@ function computeGWIHealth(report: Record<string, any> | null): HealthScore {
   else if (collRatio < 80) score -= 1;
   parts.push(`Collections $${(collections / 1e6).toFixed(0)}M`);
 
-  // Net profit vs budget
   const profit = Number(fin.net_profit) || 0;
   const profitBudget = Number(fin.net_profit_budget) || 1;
   if (profit >= profitBudget) score += 1;
@@ -121,7 +117,7 @@ function computeGWIHealth(report: Record<string, any> | null): HealthScore {
   return { score: clamped, label: healthLabel(clamped), breakdown: parts.join(', ') };
 }
 
-function computeCJIAHealth(report: Record<string, any> | null): HealthScore {
+export function computeCJIAHealth(report: Record<string, any> | null): AgencyHealth {
   if (!report) return { score: 0, label: 'No Data', breakdown: 'No CJIA data uploaded' };
 
   let score = 5;
@@ -144,7 +140,7 @@ function computeCJIAHealth(report: Record<string, any> | null): HealthScore {
   return { score: clamped, label: healthLabel(clamped), breakdown: parts.length > 0 ? parts.join(', ') : 'Limited data available' };
 }
 
-function computeGCAAHealth(report: Record<string, any> | null): HealthScore {
+export function computeGCAAHealth(report: Record<string, any> | null): AgencyHealth {
   if (!report) return { score: 0, label: 'No Data', breakdown: 'No GCAA data uploaded' };
 
   let score = 5;
@@ -327,31 +323,25 @@ const PAGE_DESCRIPTIONS: Record<string, string> = {
   '/calendar': 'Calendar — schedule and meetings',
 };
 
-// ── Main Assembly ────────────────────────────────────────────────────────────
+export { PAGE_DESCRIPTIONS };
 
-export async function assembleSystemContext(currentPage: string): Promise<string> {
-  // Check cache
-  if (contextCache && contextCache.page === currentPage && (Date.now() - contextCache.timestamp) < CACHE_TTL_MS) {
-    return contextCache.context;
+// ── Raw Data Assembly ────────────────────────────────────────────────────────
+
+export async function assembleRawData(): Promise<RawContextData> {
+  // Check raw cache
+  if (rawDataCache && (Date.now() - rawDataCache.timestamp) < CACHE_TTL_MS) {
+    return rawDataCache.data;
   }
 
-  const timestamp = format(new Date(), "yyyy-MM-dd HH:mm 'GYT'");
   const gaps: string[] = [];
 
-  // Fetch all data in parallel
   const [
-    gwiReport,
-    gwiInsights,
-    gwiComplaints,
-    gplData,
-    gplKpiData,
-    cjiaReport,
-    gcaaReport,
-    portfolioResult,
-    delayedResult,
+    gwiReport, gwiInsights, gwiComplaints,
+    gplData, gplKpiData,
+    cjiaReport, gcaaReport,
+    portfolioResult, delayedResult,
     tasksResult,
-    todayEventsResult,
-    weekEventsResult,
+    todayEventsResult, weekEventsResult,
   ] = await Promise.allSettled([
     fetchGWILatest(),
     fetchGWIInsights(),
@@ -367,7 +357,6 @@ export async function assembleSystemContext(currentPage: string): Promise<string
     fetchWeekEvents(),
   ]);
 
-  // Extract values with fallbacks
   const gwi = gwiReport.status === 'fulfilled' ? gwiReport.value : null;
   const gwiAi = gwiInsights.status === 'fulfilled' ? gwiInsights.value : null;
   const gwiComp = gwiComplaints.status === 'fulfilled' ? gwiComplaints.value : null;
@@ -384,28 +373,92 @@ export async function assembleSystemContext(currentPage: string): Promise<string
   if (tasksResult.status === 'rejected') gaps.push('Notion tasks unavailable');
   if (todayEventsResult.status === 'rejected') gaps.push('Google Calendar unavailable');
 
-  // Compute health scores
   const gplHealth = computeGPLHealth(gpl.summary, gpl.stations, gplKpi.kpis);
   const gwiHealth = computeGWIHealth(gwi);
   const cjiaHealth = computeCJIAHealth(cjia);
   const gcaaHealth = computeGCAAHealth(gcaa);
 
-  // ── Build context string ──
+  const data: RawContextData = {
+    gpl: {
+      summary: gpl.summary,
+      stations: gpl.stations,
+      reportDate: gpl.reportDate,
+      kpis: gplKpi.kpis,
+      kpiMonth: gplKpi.month,
+    },
+    gwi: {
+      report: gwi,
+      insights: gwiAi,
+      complaints: gwiComp,
+    },
+    cjia,
+    gcaa,
+    portfolio,
+    delayed,
+    tasks: tasks.map((t: Task) => ({
+      title: t.title,
+      status: t.status,
+      due_date: t.due_date,
+      agency: t.agency,
+    })),
+    todayEvents: todayEvents.map((ev: CalendarEvent) => ({
+      title: ev.title,
+      start_time: ev.start_time,
+      end_time: ev.end_time,
+      location: ev.location,
+      all_day: ev.all_day,
+    })),
+    weekEvents: weekEvents.map((ev: CalendarEvent) => ({
+      title: ev.title,
+      start_time: ev.start_time,
+    })),
+    health: {
+      gpl: gplHealth,
+      gwi: gwiHealth,
+      cjia: cjiaHealth,
+      gcaa: gcaaHealth,
+    },
+    gaps,
+  };
 
+  rawDataCache = { data, timestamp: Date.now() };
+  return data;
+}
+
+// ── Full Context Assembly (existing, now wraps assembleRawData) ──────────────
+
+export async function assembleSystemContext(currentPage: string): Promise<string> {
+  // Check string cache
+  if (contextCache && contextCache.page === currentPage && (Date.now() - contextCache.timestamp) < CACHE_TTL_MS) {
+    return contextCache.context;
+  }
+
+  const raw = await assembleRawData();
+  const context = formatFullContext(raw, currentPage);
+
+  contextCache = { context, timestamp: Date.now(), page: currentPage };
+  return context;
+}
+
+// ── Format Full Context String ──────────────────────────────────────────────
+
+export function formatFullContext(raw: RawContextData, currentPage: string): string {
+  const timestamp = format(new Date(), "yyyy-MM-dd HH:mm 'GYT'");
   const lines: string[] = [];
   lines.push(`=== SYSTEM DATA AS OF ${timestamp} ===`);
-  if (gaps.length > 0) {
-    lines.push(`\nDATA GAPS: ${gaps.join('; ')}`);
+  if (raw.gaps.length > 0) {
+    lines.push(`\nDATA GAPS: ${raw.gaps.join('; ')}`);
   }
 
   // ── Health Scores ──
   lines.push('\n== AGENCY HEALTH SCORES ==');
-  lines.push(`GPL: ${gplHealth.score}/10 (${gplHealth.label}) — ${gplHealth.breakdown}`);
-  lines.push(`GWI: ${gwiHealth.score}/10 (${gwiHealth.label}) — ${gwiHealth.breakdown}`);
-  lines.push(`CJIA: ${cjiaHealth.score}/10 (${cjiaHealth.label}) — ${cjiaHealth.breakdown}`);
-  lines.push(`GCAA: ${gcaaHealth.score}/10 (${gcaaHealth.label}) — ${gcaaHealth.breakdown}`);
+  lines.push(`GPL: ${raw.health.gpl.score}/10 (${raw.health.gpl.label}) — ${raw.health.gpl.breakdown}`);
+  lines.push(`GWI: ${raw.health.gwi.score}/10 (${raw.health.gwi.label}) — ${raw.health.gwi.breakdown}`);
+  lines.push(`CJIA: ${raw.health.cjia.score}/10 (${raw.health.cjia.label}) — ${raw.health.cjia.breakdown}`);
+  lines.push(`GCAA: ${raw.health.gcaa.score}/10 (${raw.health.gcaa.label}) — ${raw.health.gcaa.breakdown}`);
 
   // ── GWI Section ──
+  const gwi = raw.gwi.report;
   if (gwi) {
     const month = gwi.report_month ? format(parseISO(gwi.report_month), 'MMMM yyyy') : 'Unknown';
     lines.push(`\n== GWI — LATEST REPORT (${month}) ==`);
@@ -424,7 +477,6 @@ export async function assembleSystemContext(currentPage: string): Promise<string
     lines.push(`Collections: Total ${$(coll.total_collections)}, YTD ${$(coll.ytd_collections)}, On-time ${pct(coll.on_time_payment_pct)}, Active Accounts ${(Number(coll.active_accounts) || 0).toLocaleString()}, Receivable ${$(coll.accounts_receivable)}`);
 
     if (currentPage === '/intel/gwi' || currentPage === '/intel') {
-      // Extra regional detail
       lines.push(`  Regional: R1 ${$(coll.region_1_collections)}, R2 ${$(coll.region_2_collections)}, R3 ${$(coll.region_3_collections)}, R4 ${$(coll.region_4_collections)}, R5 ${$(coll.region_5_collections)}`);
       lines.push(`  Arrears: 30-day ${$(coll.arrears_30_days)}, 60-day ${$(coll.arrears_60_days)}, 90+ ${$(coll.arrears_90_plus_days)}`);
     }
@@ -435,9 +487,8 @@ export async function assembleSystemContext(currentPage: string): Promise<string
     const proc = gwi.procurement_data || {};
     lines.push(`Procurement: Total ${$(proc.total_purchases)}, GOG ${$(proc.gog_funded)} (${pct(proc.gog_funded_pct)}), GWI ${$(proc.gwi_funded)} (${pct(proc.gwi_funded_pct)}), Major contracts ${proc.major_contracts_count} @ ${$(proc.major_contracts_value)}, Minor ${proc.minor_contracts_count} @ ${$(proc.minor_contracts_value)}, Inventory ${$(proc.inventory_value)}`);
 
-    // GWI AI insights if on GWI page
-    if ((currentPage === '/intel/gwi' || currentPage === '/intel') && gwiAi?.insight_json) {
-      const insight = gwiAi.insight_json;
+    if ((currentPage === '/intel/gwi' || currentPage === '/intel') && raw.gwi.insights?.insight_json) {
+      const insight = raw.gwi.insights.insight_json;
       if (insight.executive_summary) {
         lines.push(`\nGWI AI ANALYSIS: ${insight.executive_summary}`);
       }
@@ -447,6 +498,7 @@ export async function assembleSystemContext(currentPage: string): Promise<string
   }
 
   // ── GWI Weekly Complaints ──
+  const gwiComp = raw.gwi.complaints;
   if (gwiComp) {
     const week = gwiComp.report_week ? format(parseISO(gwiComp.report_week), 'MMM d, yyyy') : 'Unknown';
     const cd = gwiComp.complaints_data || {};
@@ -454,38 +506,35 @@ export async function assembleSystemContext(currentPage: string): Promise<string
   }
 
   // ── GPL Section ──
-  if (gpl.summary) {
-    const rd = gpl.reportDate ? format(parseISO(gpl.reportDate), 'MMM d, yyyy') : 'Unknown';
+  const gplSummary = raw.gpl.summary;
+  if (gplSummary) {
+    const rd = raw.gpl.reportDate ? format(parseISO(raw.gpl.reportDate), 'MMM d, yyyy') : 'Unknown';
     lines.push(`\n== GPL — LATEST DATA (${rd}) ==`);
 
-    const s = gpl.summary;
+    const s = gplSummary;
     lines.push(`System: Fossil Capacity ${num(Number(s.total_fossil_capacity_mw))}MW, Peak Demand ${num(Number(s.expected_peak_demand_mw))}MW, Reserve ${num(Number(s.reserve_capacity_mw))}MW`);
     lines.push(`Evening Peak: On-bars ${num(Number(s.evening_peak_on_bars_mw))}MW, Suppressed ${num(Number(s.evening_peak_suppressed_mw))}MW`);
     lines.push(`Renewables: Hampshire ${num(Number(s.solar_hampshire_mwp))}MWp, Prospect ${num(Number(s.solar_prospect_mwp))}MWp, Trafalgar ${num(Number(s.solar_trafalgar_mwp))}MWp, Total ${num(Number(s.total_renewable_mwp))}MWp`);
 
-    // Stations
-    if (gpl.stations.length > 0) {
-      const stationLines = gpl.stations.map((st: any) =>
+    if (raw.gpl.stations.length > 0) {
+      const stationLines = raw.gpl.stations.map((st: any) =>
         `  ${st.station}: ${st.units_online}/${st.total_units} online, ${num(Number(st.total_available_mw))}/${num(Number(st.total_derated_capacity_mw))}MW`
       );
 
       if (currentPage === '/intel/gpl' || currentPage === '/intel') {
-        // Full station detail
         lines.push('Stations:');
         lines.push(...stationLines);
       } else {
-        // Summary only
-        const totalOnline = gpl.stations.reduce((s: number, st: any) => s + (Number(st.units_online) || 0), 0);
-        const totalUnits = gpl.stations.reduce((s: number, st: any) => s + (Number(st.total_units) || 0), 0);
-        lines.push(`Stations: ${gpl.stations.length} stations, ${totalOnline}/${totalUnits} units online`);
+        const totalOnline = raw.gpl.stations.reduce((s: number, st: any) => s + (Number(st.units_online) || 0), 0);
+        const totalUnits = raw.gpl.stations.reduce((s: number, st: any) => s + (Number(st.total_units) || 0), 0);
+        lines.push(`Stations: ${raw.gpl.stations.length} stations, ${totalOnline}/${totalUnits} units online`);
       }
     }
 
-    // Monthly KPIs
-    if (Object.keys(gplKpi.kpis).length > 0) {
-      const m = gplKpi.month ? format(parseISO(gplKpi.month), 'MMM yyyy') : '';
+    if (Object.keys(raw.gpl.kpis).length > 0) {
+      const m = raw.gpl.kpiMonth ? format(parseISO(raw.gpl.kpiMonth), 'MMM yyyy') : '';
       lines.push(`Monthly KPIs (${m}):`);
-      for (const [name, val] of Object.entries(gplKpi.kpis)) {
+      for (const [name, val] of Object.entries(raw.gpl.kpis)) {
         lines.push(`  ${name}: ${num(val, 2)}`);
       }
     }
@@ -494,6 +543,7 @@ export async function assembleSystemContext(currentPage: string): Promise<string
   }
 
   // ── CJIA Section ──
+  const cjia = raw.cjia;
   if (cjia) {
     const month = cjia.report_month ? format(parseISO(cjia.report_month), 'MMMM yyyy') : 'Unknown';
     lines.push(`\n== CJIA — LATEST REPORT (${month}) ==`);
@@ -508,6 +558,7 @@ export async function assembleSystemContext(currentPage: string): Promise<string
   }
 
   // ── GCAA Section ──
+  const gcaa = raw.gcaa;
   if (gcaa) {
     const month = gcaa.report_month ? format(parseISO(gcaa.report_month), 'MMMM yyyy') : 'Unknown';
     lines.push(`\n== GCAA — LATEST REPORT (${month}) ==`);
@@ -522,20 +573,19 @@ export async function assembleSystemContext(currentPage: string): Promise<string
   }
 
   // ── Projects Section ──
+  const portfolio = raw.portfolio;
   if (portfolio) {
     lines.push('\n== PROJECTS OVERVIEW ==');
     lines.push(`Total: ${portfolio.total_projects} projects, ${$(portfolio.total_value)} portfolio value`);
     lines.push(`By Status: ${portfolio.in_progress} In Progress, ${portfolio.delayed} Delayed, ${portfolio.complete} Complete, ${portfolio.not_started} Not Started`);
 
-    // By agency
     const agencyLine = portfolio.agencies.map(a =>
       `${a.agency} ${a.total} (${$(a.total_value)}, ${a.delayed} delayed)`
     ).join(', ');
     lines.push(`By Agency: ${agencyLine}`);
 
-    // Top delayed projects
-    const maxDelayed = (currentPage === '/projects' || currentPage.startsWith('/projects/')) ? delayed.length : 10;
-    const topDelayed = delayed.slice(0, maxDelayed);
+    const maxDelayed = (currentPage === '/projects' || currentPage.startsWith('/projects/')) ? raw.delayed.length : 10;
+    const topDelayed = raw.delayed.slice(0, maxDelayed);
     if (topDelayed.length > 0) {
       lines.push(`\nTOP DELAYED PROJECTS (most overdue):`);
       topDelayed.forEach((p, i) => {
@@ -548,6 +598,7 @@ export async function assembleSystemContext(currentPage: string): Promise<string
 
   // ── Tasks Section ──
   lines.push('\n== TASKS ==');
+  const tasks = raw.tasks;
   if (tasks.length > 0) {
     const now = new Date();
     const overdue = tasks.filter(t => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)) && t.status !== 'Done');
@@ -561,7 +612,6 @@ export async function assembleSystemContext(currentPage: string): Promise<string
 
     lines.push(`Total: ${activeTasks.length} active tasks, ${overdue.length} overdue, ${dueToday.length} due today, ${dueThisWeek.length} due this week`);
 
-    // By agency
     const byAgency: Record<string, { total: number; overdue: number }> = {};
     for (const t of activeTasks) {
       const ag = t.agency || 'General';
@@ -576,7 +626,6 @@ export async function assembleSystemContext(currentPage: string): Promise<string
     ).join(', ');
     lines.push(`By Agency: ${agLine}`);
 
-    // Overdue tasks
     if (overdue.length > 0) {
       lines.push('\nOVERDUE TASKS:');
       overdue.forEach((t, i) => {
@@ -585,7 +634,6 @@ export async function assembleSystemContext(currentPage: string): Promise<string
       });
     }
 
-    // Due today
     if (dueToday.length > 0) {
       lines.push('\nDUE TODAY:');
       dueToday.forEach((t, i) => {
@@ -593,7 +641,6 @@ export async function assembleSystemContext(currentPage: string): Promise<string
       });
     }
 
-    // On briefing page, include all active tasks
     if (currentPage === '/' || currentPage === '/briefing') {
       if (dueThisWeek.length > 0) {
         lines.push('\nDUE THIS WEEK:');
@@ -609,9 +656,9 @@ export async function assembleSystemContext(currentPage: string): Promise<string
   // ── Calendar Section ──
   lines.push('\n== CALENDAR ==');
   const todayStr = format(new Date(), 'EEEE, MMMM d, yyyy');
-  if (todayEvents.length > 0) {
-    lines.push(`Today (${todayStr}): ${todayEvents.length} events`);
-    for (const ev of todayEvents) {
+  if (raw.todayEvents.length > 0) {
+    lines.push(`Today (${todayStr}): ${raw.todayEvents.length} events`);
+    for (const ev of raw.todayEvents) {
       const time = ev.all_day ? 'All day' : ev.start_time ? format(parseISO(ev.start_time), 'h:mm a') : '??';
       const end = ev.end_time && !ev.all_day ? ` – ${format(parseISO(ev.end_time), 'h:mm a')}` : '';
       const loc = ev.location ? ` [${ev.location}]` : '';
@@ -621,10 +668,9 @@ export async function assembleSystemContext(currentPage: string): Promise<string
     lines.push(`Today (${todayStr}): No events`);
   }
 
-  // Week events grouped by day
-  if (weekEvents.length > 0) {
-    const byDay: Record<string, CalendarEvent[]> = {};
-    for (const ev of weekEvents) {
+  if (raw.weekEvents.length > 0) {
+    const byDay: Record<string, typeof raw.weekEvents> = {};
+    for (const ev of raw.weekEvents) {
       if (!ev.start_time) continue;
       const dayKey = format(parseISO(ev.start_time), 'EEEE, MMM d');
       if (!byDay[dayKey]) byDay[dayKey] = [];
@@ -643,10 +689,5 @@ export async function assembleSystemContext(currentPage: string): Promise<string
   lines.push(`\n== CURRENT CONTEXT ==`);
   lines.push(`User is on: ${currentPage} — ${pageDesc}`);
 
-  const context = lines.join('\n');
-
-  // Update cache
-  contextCache = { context, timestamp: Date.now(), page: currentPage };
-
-  return context;
+  return lines.join('\n');
 }

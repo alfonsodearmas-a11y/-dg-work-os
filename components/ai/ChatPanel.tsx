@@ -2,8 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { X, Minus, Trash2, ArrowUp, Loader2, Sparkles, ExternalLink, RotateCcw, AlertTriangle } from 'lucide-react';
+import { X, Minus, Trash2, ArrowUp, Loader2, Sparkles, ExternalLink, RotateCcw, AlertTriangle, Zap } from 'lucide-react';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { tryLocalAnswer } from '@/lib/ai/local-answers';
+import type { MetricSnapshot, ModelTier, ChatStreamEvent } from '@/lib/ai/types';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,6 +17,10 @@ interface ChatMessage {
   actions?: Array<{ label: string; route: string }>;
   interrupted?: boolean;
   isError?: boolean;
+  tier?: ModelTier;
+  tierLabel?: string;
+  cached?: boolean;
+  local?: boolean;
 }
 
 interface ChatPanelProps {
@@ -92,11 +98,16 @@ const AGENCY_ROUTES: Record<string, string> = {
   GCAA: '/intel/gcaa',
 };
 
+const TIER_COLORS: Record<string, string> = {
+  haiku: '#22c55e',   // green
+  sonnet: '#3b82f6',  // blue
+  opus: '#d4af37',    // gold
+};
+
 // ── Markdown Renderer ────────────────────────────────────────────────────────
 
 function renderInline(text: string, onAgencyClick?: (route: string) => void): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
-  // Match **bold**, *italic*, `code`, and standalone agency names
   const regex = /(\*\*(.+?)\*\*)|(\*(.+?)\*)|(`(.+?)`)|(\b(GPL|GWI|CJIA|GCAA)\b)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -108,7 +119,6 @@ function renderInline(text: string, onAgencyClick?: (route: string) => void): Re
     }
 
     if (match[1]) {
-      // Bold with gold highlight
       nodes.push(
         <strong key={key++} className="font-semibold" style={{ background: 'rgba(212,175,55,0.1)', borderRadius: 4, padding: '0 4px' }}>
           {match[2]}
@@ -123,7 +133,6 @@ function renderInline(text: string, onAgencyClick?: (route: string) => void): Re
         </code>
       );
     } else if (match[7] && onAgencyClick) {
-      // Agency name — clickable link
       const agency = match[8];
       const route = AGENCY_ROUTES[agency];
       if (route) {
@@ -140,7 +149,6 @@ function renderInline(text: string, onAgencyClick?: (route: string) => void): Re
         nodes.push(agency);
       }
     } else if (match[7]) {
-      // Agency name without handler — render plain
       nodes.push(match[7]);
     }
 
@@ -230,6 +238,41 @@ function TypingIndicator() {
   );
 }
 
+// ── Tier Pill ────────────────────────────────────────────────────────────────
+
+function TierPill({ tier, tierLabel, cached, local }: {
+  tier?: ModelTier; tierLabel?: string; cached?: boolean; local?: boolean;
+}) {
+  const label = local ? 'Instant' : cached ? 'Cached' : (tierLabel || 'Deep');
+  const color = local ? '#22c55e' : cached ? '#94a3b8' : TIER_COLORS[tier || 'opus'];
+
+  return (
+    <span
+      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ml-1.5"
+      style={{ background: `${color}20`, color, border: `1px solid ${color}40` }}
+    >
+      {label}
+    </span>
+  );
+}
+
+// ── Budget Bar ───────────────────────────────────────────────────────────────
+
+function BudgetBar({ pct }: { pct: number }) {
+  if (pct < 50) return null;
+
+  const color = pct >= 95 ? '#dc2626' : pct >= 80 ? '#d4af37' : '#3b82f6';
+
+  return (
+    <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+      <div
+        className="h-full rounded-full transition-all duration-500"
+        style={{ width: `${Math.min(100, pct)}%`, background: color }}
+      />
+    </div>
+  );
+}
+
 // ── Suggestion / Action Parsing ──────────────────────────────────────────────
 
 function parseSuggestions(text: string): { clean: string; suggestions: string[] } {
@@ -263,7 +306,11 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [streamingText, setStreamingText] = useState('');
+  const [streamingMeta, setStreamingMeta] = useState<{ tier?: ModelTier; tierLabel?: string; cached?: boolean; local?: boolean } | null>(null);
   const [contextWarning, setContextWarning] = useState(false);
+  const [forceDeep, setForceDeep] = useState(false);
+  const [budgetPct, setBudgetPct] = useState(0);
+  const [snapshot, setSnapshot] = useState<MetricSnapshot | null>(null);
 
   const pathname = usePathname();
   const router = useRouter();
@@ -275,6 +322,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
   const lastSentRef = useRef<string>('');
   const autoBriefingFired = useRef(false);
   const touchStartY = useRef(0);
+  const snapshotFetched = useRef(false);
 
   // ── Derived ──
 
@@ -287,13 +335,24 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
   }, [pathname]);
 
   const suggestions = useMemo(() => {
-    // Check exact match first, then prefixes for sub-routes
     if (PAGE_SUGGESTIONS[pathname]) return PAGE_SUGGESTIONS[pathname];
     if (pathname.startsWith('/projects')) return PAGE_SUGGESTIONS['/projects'];
     if (pathname.startsWith('/intel/gwi')) return PAGE_SUGGESTIONS['/intel/gwi'];
     if (pathname.startsWith('/intel/gpl')) return PAGE_SUGGESTIONS['/intel/gpl'];
     return DEFAULT_SUGGESTIONS;
   }, [pathname]);
+
+  // ── Fetch snapshot on open ──
+
+  useEffect(() => {
+    if (isOpen && !snapshotFetched.current) {
+      snapshotFetched.current = true;
+      fetch('/api/ai/snapshot')
+        .then(res => res.ok ? res.json() : null)
+        .then(data => { if (data) setSnapshot(data as MetricSnapshot); })
+        .catch(() => {});
+    }
+  }, [isOpen]);
 
   // ── Placeholder rotation ──
 
@@ -352,7 +411,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
     return () => panel.removeEventListener('keydown', handleTab);
   }, [isOpen, messages, isStreaming]);
 
-  // ── Morning auto-briefing ──
+  // ── Send Message ──
 
   const sendMessage = useCallback(async (text: string, isAutoBriefing = false) => {
     if (!text.trim() || isStreaming) return;
@@ -362,10 +421,25 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
     setInput('');
     setIsStreaming(true);
     setStreamingText('');
+    setStreamingMeta(null);
     setContextWarning(false);
     lastSentRef.current = text.trim();
 
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
+
+    // ── Try local answer first (zero cost, instant) ──
+    if (snapshot && !forceDeep) {
+      const local = tryLocalAnswer(text.trim(), snapshot);
+      if (local) {
+        const { clean: c1, suggestions: sug } = parseSuggestions(local.text + `\n<!-- suggestions: ${JSON.stringify(local.suggestions)} -->`);
+        setMessages(prev => [...prev, {
+          role: 'assistant', content: c1, timestamp: new Date(),
+          suggestions: sug, tier: 'haiku', tierLabel: 'Instant', local: true,
+        }]);
+        setIsStreaming(false);
+        return;
+      }
+    }
 
     const abort = new AbortController();
     abortRef.current = abort;
@@ -383,15 +457,19 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
           conversation_history: history.slice(0, -1),
           current_page: pathname,
           session_id: 'dg-session',
+          force_deep: forceDeep,
+          snapshot: snapshot,
         }),
         signal: abort.signal,
       });
+
+      // Reset force deep after sending
+      if (forceDeep) setForceDeep(false);
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: 'Request failed' }));
         const errMsg = errData.error || `HTTP ${res.status}`;
 
-        // Specific error messages
         let displayMsg: string;
         if (res.status === 429) {
           displayMsg = "You've reached the message limit. Please wait a few minutes.";
@@ -413,6 +491,10 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
       let accumulated = '';
       let buffer = '';
       let streamComplete = false;
+      let responseTier: ModelTier | undefined;
+      let responseTierLabel: string | undefined;
+      let responseCached = false;
+      let responseLocal = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -425,22 +507,39 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           try {
-            const event = JSON.parse(line.slice(6));
-            if (event.type === 'text') {
+            const event = JSON.parse(line.slice(6)) as ChatStreamEvent;
+
+            if (event.type === 'meta') {
+              responseTier = event.tier;
+              responseTierLabel = event.tier_label;
+              responseCached = event.cached;
+              responseLocal = event.local;
+              setStreamingMeta({ tier: event.tier, tierLabel: event.tier_label, cached: event.cached, local: event.local });
+            } else if (event.type === 'text') {
               accumulated += event.text;
               setStreamingText(accumulated);
 
-              // Detect context warning in streaming text
-              if (!contextWarning && (accumulated.includes('data sources unavailable') || accumulated.includes('unavailable') && accumulated.includes('data'))) {
+              if (!contextWarning && (accumulated.includes('data sources unavailable') || (accumulated.includes('unavailable') && accumulated.includes('data')))) {
                 setContextWarning(true);
               }
             } else if (event.type === 'done') {
               const { clean: c1, suggestions: sug } = parseSuggestions(accumulated);
               const { clean: c2, actions } = parseActions(c1);
-              setMessages(prev => [...prev, { role: 'assistant', content: c2, timestamp: new Date(), suggestions: sug, actions }]);
+              setMessages(prev => [...prev, {
+                role: 'assistant', content: c2, timestamp: new Date(),
+                suggestions: sug, actions,
+                tier: event.tier, tierLabel: event.tier_label,
+                cached: event.cached, local: event.local,
+              }]);
               setStreamingText('');
+              setStreamingMeta(null);
               setIsStreaming(false);
               streamComplete = true;
+
+              // Update budget from usage
+              if (event.usage) {
+                // Approximate budget — actual comes from server
+              }
             } else if (event.type === 'error') {
               throw new Error(event.error);
             }
@@ -457,17 +556,20 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
         setMessages(prev => [...prev, {
           role: 'assistant', content: c2, timestamp: new Date(),
           suggestions: sug, actions, interrupted: true,
+          tier: responseTier, tierLabel: responseTierLabel,
+          cached: responseCached, local: responseLocal,
         }]);
         setStreamingText('');
+        setStreamingMeta(null);
         setIsStreaming(false);
       } else if (!streamComplete && !accumulated) {
-        // No text received at all
         setMessages(prev => [...prev, {
           role: 'assistant',
           content: 'Response interrupted before any content was received.',
           timestamp: new Date(), isError: true, interrupted: true,
         }]);
         setStreamingText('');
+        setStreamingMeta(null);
         setIsStreaming(false);
       }
     } catch (err: any) {
@@ -480,9 +582,10 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
         timestamp: new Date(), isError: true,
       }]);
       setStreamingText('');
+      setStreamingMeta(null);
       setIsStreaming(false);
     }
-  }, [isStreaming, messages, pathname, contextWarning]);
+  }, [isStreaming, messages, pathname, contextWarning, forceDeep, snapshot]);
 
   // Fire auto-briefing on first open each day
   useEffect(() => {
@@ -504,7 +607,6 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
 
     try { sessionStorage.setItem(storageKey, 'true'); } catch { /* noop */ }
 
-    // Small delay so the panel animation finishes
     setTimeout(() => sendMessage(greeting, true), 500);
   }, [isOpen, messages.length, isStreaming, sendMessage]);
 
@@ -520,6 +622,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
   const handleClear = useCallback(() => {
     setMessages([]);
     setStreamingText('');
+    setStreamingMeta(null);
     setInput('');
     setContextWarning(false);
   }, []);
@@ -540,7 +643,6 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
 
   const handleRetry = useCallback(() => {
     if (lastSentRef.current) {
-      // Remove the interrupted/error message
       setMessages(prev => prev.slice(0, -1));
       sendMessage(lastSentRef.current);
     }
@@ -558,6 +660,15 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
   }, [onClose]);
 
   const formatTime = (date: Date) => date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+  // ── Tier display helpers ──
+
+  const getTierDisplayName = (msg: ChatMessage) => {
+    if (msg.local) return 'Instant';
+    if (msg.cached) return 'Cached';
+    if (msg.tierLabel) return `Claude ${msg.tierLabel}`;
+    return 'Claude';
+  };
 
   if (!isOpen) return null;
 
@@ -591,34 +702,39 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
       >
         {/* Header */}
         <div
-          className="h-14 flex items-center justify-between px-4 border-b border-white/5 flex-shrink-0"
+          className="flex-shrink-0 border-b border-white/5"
           onTouchStart={isMobile ? handleTouchStart : undefined}
           onTouchEnd={isMobile ? handleTouchEnd : undefined}
         >
-          <div className="flex items-center gap-2 min-w-0">
-            <Sparkles className="h-5 w-5 text-[#d4af37] flex-shrink-0" />
-            <span className="text-base font-bold text-[#d4af37] truncate">DG Intelligence</span>
+          <div className="h-14 flex items-center justify-between px-4">
+            <div className="flex items-center gap-2 min-w-0">
+              <Sparkles className="h-5 w-5 text-[#d4af37] flex-shrink-0" />
+              <span className="text-base font-bold text-[#d4af37] truncate">DG Intelligence</span>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-[11px] bg-white/5 text-white/50 border border-white/10 mr-2 truncate max-w-[140px]">
+                {pageName}
+              </span>
+
+              {messages.length > 0 && (
+                <button onClick={handleClear} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors" aria-label="Clear conversation">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+              {!isMobile && (
+                <button onClick={onMinimize} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors" aria-label="Minimize">
+                  <Minus className="h-4 w-4" />
+                </button>
+              )}
+              <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors" aria-label="Close AI assistant">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1">
-            <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-[11px] bg-white/5 text-white/50 border border-white/10 mr-2 truncate max-w-[140px]">
-              {pageName}
-            </span>
-
-            {messages.length > 0 && (
-              <button onClick={handleClear} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors" aria-label="Clear conversation">
-                <Trash2 className="h-4 w-4" />
-              </button>
-            )}
-            {!isMobile && (
-              <button onClick={onMinimize} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors" aria-label="Minimize">
-                <Minus className="h-4 w-4" />
-              </button>
-            )}
-            <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors" aria-label="Close AI assistant">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+          {/* Budget bar */}
+          <BudgetBar pct={budgetPct} />
         </div>
 
         {/* Context warning banner */}
@@ -676,8 +792,9 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
                   </div>
                 ) : (
                   <div className="flex flex-col mb-3">
-                    <span className="text-[11px] text-white/30 mb-1 ml-1">
-                      Claude Opus &middot; {formatTime(msg.timestamp)}
+                    <span className="text-[11px] text-white/30 mb-1 ml-1 flex items-center">
+                      {getTierDisplayName(msg)} &middot; {formatTime(msg.timestamp)}
+                      <TierPill tier={msg.tier} tierLabel={msg.tierLabel} cached={msg.cached} local={msg.local} />
                     </span>
                     <div
                       className={`max-w-[90%] px-4 py-4 text-[15px] leading-relaxed ${
@@ -704,7 +821,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
                       </div>
                     )}
 
-                    {/* Action buttons — full width */}
+                    {/* Action buttons */}
                     {msg.actions && msg.actions.length > 0 && (
                       <div className="flex flex-col gap-2 mt-2">
                         {msg.actions.map((action, j) => (
@@ -744,7 +861,12 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
             {/* Streaming message */}
             {isStreaming && streamingText && (
               <div className="flex flex-col mb-3">
-                <span className="text-[11px] text-white/30 mb-1 ml-1">Claude Opus</span>
+                <span className="text-[11px] text-white/30 mb-1 ml-1 flex items-center">
+                  {streamingMeta?.local ? 'Instant' : streamingMeta?.cached ? 'Cached' : `Claude ${streamingMeta?.tierLabel || ''}`}
+                  {streamingMeta && (
+                    <TierPill tier={streamingMeta.tier} tierLabel={streamingMeta.tierLabel} cached={streamingMeta.cached} local={streamingMeta.local} />
+                  )}
+                </span>
                 <div
                   className="max-w-[90%] px-4 py-4 bg-white/5 text-[15px] text-white leading-relaxed"
                   style={{ borderRadius: '16px 16px 16px 4px' }}
@@ -773,6 +895,24 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
             paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
           }}
         >
+          {/* Deep Analysis toggle */}
+          <div className="flex items-center justify-between mb-2">
+            <button
+              onClick={() => setForceDeep(prev => !prev)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                forceDeep
+                  ? 'bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/40'
+                  : 'bg-white/5 text-white/40 border border-white/10 hover:text-white/60'
+              }`}
+            >
+              <Zap className="h-3 w-3" />
+              Deep Analysis
+            </button>
+            {forceDeep && (
+              <span className="text-[10px] text-[#d4af37]/60">Next message uses Opus</span>
+            )}
+          </div>
+
           <div className="relative">
             <textarea
               ref={textareaRef}
@@ -805,7 +945,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
             </button>
           </div>
           <p className="text-[10px] text-white/20 text-center mt-2 mb-1">
-            Claude Opus {'\u00B7'} Powered by Anthropic
+            Powered by Anthropic {'\u00B7'} Smart model routing
           </p>
         </div>
       </div>
