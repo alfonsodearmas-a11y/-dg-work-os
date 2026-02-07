@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { CalendarEvent } from '@/lib/calendar-types';
 import { detectConflicts } from '@/lib/calendar-utils';
+import { isSameDay, startOfDay, isToday as isTodayFn, format } from 'date-fns';
 import { DayAtGlance } from './DayAtGlance';
 import { TimelineView } from './TimelineView';
 import { UpcomingThisWeek } from './UpcomingThisWeek';
@@ -24,7 +25,20 @@ export function CalendarCommandCenter({ todayEvents, weekEvents, onRefresh, cale
   const [isCreating, setIsCreating] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
 
-  const conflicts = useMemo(() => detectConflicts(todayEvents), [todayEvents]);
+  // Events for the focused day (selected or today)
+  const isViewingToday = !selectedDay || isTodayFn(selectedDay);
+  const focusedDayEvents = useMemo(() => {
+    if (isViewingToday) return todayEvents;
+    return weekEvents.filter(
+      (e) => e.start_time && isSameDay(startOfDay(new Date(e.start_time)), selectedDay!)
+    );
+  }, [isViewingToday, selectedDay, weekEvents, todayEvents]);
+
+  const focusedDayLabel = isViewingToday
+    ? 'Today'
+    : format(selectedDay!, 'EEEE');
+
+  const conflicts = useMemo(() => detectConflicts(focusedDayEvents), [focusedDayEvents]);
   const hasConflicts = conflicts.size > 0;
 
   const conflictCount = useMemo(() => {
@@ -102,12 +116,14 @@ export function CalendarCommandCenter({ todayEvents, weekEvents, onRefresh, cale
     <div className="space-y-4 md:space-y-6">
       {/* Day at a Glance */}
       <DayAtGlance
-        events={todayEvents}
+        events={focusedDayEvents}
         weekEvents={weekEvents}
         onJoinNextCall={handleJoinCall}
         onNewEvent={handleNewEvent}
         onEventClick={handleEventClick}
         calendarError={calendarError}
+        dayLabel={focusedDayLabel}
+        isToday={isViewingToday}
       />
 
       {/* Week Strip */}
@@ -134,7 +150,9 @@ export function CalendarCommandCenter({ todayEvents, weekEvents, onRefresh, cale
         <div className="lg:col-span-2">
           <div className="card-premium p-3 md:p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-[#94a3b8] uppercase tracking-wider">Timeline</h3>
+              <h3 className="text-sm font-medium text-[#94a3b8] uppercase tracking-wider">
+                {isViewingToday ? 'Timeline' : `${focusedDayLabel}\u2019s Timeline`}
+              </h3>
               <button
                 onClick={handleNewEvent}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#d4af37] text-[#0a1628] text-xs font-medium hover:bg-[#c9a432] transition-colors"
@@ -143,7 +161,7 @@ export function CalendarCommandCenter({ todayEvents, weekEvents, onRefresh, cale
                 New Event
               </button>
             </div>
-            <TimelineView events={todayEvents} onEventClick={handleEventClick} />
+            <TimelineView events={focusedDayEvents} onEventClick={handleEventClick} selectedDate={selectedDay} />
           </div>
         </div>
 

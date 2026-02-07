@@ -13,6 +13,8 @@ interface DayAtGlanceProps {
   onNewEvent?: () => void;
   onEventClick?: (event: CalendarEvent) => void;
   calendarError?: { type: string; message: string } | null;
+  dayLabel?: string;
+  isToday?: boolean;
 }
 
 const CATEGORY_COLORS: Record<EventCategory, string> = {
@@ -31,7 +33,7 @@ const CATEGORY_LABELS: Record<EventCategory, string> = {
   blocked: 'Blocked',
 };
 
-export function DayAtGlance({ events, weekEvents, onJoinNextCall, onNewEvent, onEventClick, calendarError }: DayAtGlanceProps) {
+export function DayAtGlance({ events, weekEvents, onJoinNextCall, onNewEvent, onEventClick, calendarError, dayLabel = 'Today', isToday = true }: DayAtGlanceProps) {
   const stats = useMemo(() => calculateDayStats(events), [events]);
   const nextEvent = useMemo(() => getNextEvent(events), [events]);
   const nextVideoLink = nextEvent ? getVideoLink(nextEvent) : null;
@@ -107,7 +109,7 @@ export function DayAtGlance({ events, weekEvents, onJoinNextCall, onNewEvent, on
         <div className="space-y-3">
           <h3 className="text-sm font-medium text-[#94a3b8] uppercase tracking-wider flex items-center gap-2">
             <Calendar className="h-4 w-4" />
-            Today at a Glance
+            {dayLabel} at a Glance
           </h3>
           <div>
             <p className="stat-number">{stats.total_events}</p>
@@ -167,7 +169,7 @@ export function DayAtGlance({ events, weekEvents, onJoinNextCall, onNewEvent, on
               onClick={() => onEventClick?.(nextWeekEvent)}
               className="w-full p-4 rounded-xl bg-[#0a1628]/50 border border-[#2d3a52] hover:border-[#2d3a52]/80 transition-all text-left"
             >
-              <p className="text-xs text-[#64748b] uppercase tracking-wider mb-2">No meetings today</p>
+              <p className="text-xs text-[#64748b] uppercase tracking-wider mb-2">No meetings {isToday ? 'today' : dayLabel}</p>
               <p className="text-xs text-[#94a3b8] mt-2">Next meeting:</p>
               <p className="text-sm font-medium text-white truncate mt-0.5">{nextWeekEvent.title}</p>
               {nextWeekEvent.start_time && (
@@ -189,7 +191,7 @@ export function DayAtGlance({ events, weekEvents, onJoinNextCall, onNewEvent, on
         <div className="flex flex-col justify-between gap-3">
           {events.filter(e => !e.all_day).length > 0 ? (
             <div className="p-4 rounded-xl bg-[#0a1628]/50 border border-[#2d3a52]">
-              <p className="text-xs text-[#64748b] uppercase tracking-wider mb-1">Remaining Today</p>
+              <p className="text-xs text-[#64748b] uppercase tracking-wider mb-1">Remaining {isToday ? 'Today' : dayLabel}</p>
               <p className="text-2xl font-bold text-white">{remainingToday}</p>
               <p className="text-xs text-[#64748b] mt-0.5">
                 meeting{remainingToday !== 1 ? 's' : ''} left

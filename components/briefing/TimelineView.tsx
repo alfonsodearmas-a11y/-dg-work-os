@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isToday as isTodayFn } from 'date-fns';
 import { MapPin, Video, Users, Clock } from 'lucide-react';
 import { CalendarEvent, detectEventCategory, EventCategory } from '@/lib/calendar-types';
 import { formatDuration, getEventDurationMinutes, isCurrentlyHappening, getVideoLink } from '@/lib/calendar-utils';
@@ -9,6 +9,7 @@ import { formatDuration, getEventDurationMinutes, isCurrentlyHappening, getVideo
 interface TimelineViewProps {
   events: CalendarEvent[];
   onEventClick: (event: CalendarEvent) => void;
+  selectedDate?: Date | null;
 }
 
 const TIMELINE_START = 7;
@@ -50,7 +51,7 @@ function StatusDot({ status }: { status?: string }) {
   return <span className="w-2 h-2 rounded-full bg-[#64748b] inline-block" title="Needs action" />;
 }
 
-export function TimelineView({ events, onEventClick }: TimelineViewProps) {
+export function TimelineView({ events, onEventClick, selectedDate }: TimelineViewProps) {
   const [now, setNow] = useState(new Date());
   const nowRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -77,10 +78,15 @@ export function TimelineView({ events, onEventClick }: TimelineViewProps) {
   const timedEvents = events.filter(e => e.start_time && e.end_time && !e.all_day);
   const hours = Array.from({ length: TIMELINE_END - TIMELINE_START }, (_, i) => TIMELINE_START + i);
 
+  const emptyLabel = selectedDate && !isTodayFn(selectedDate)
+    ? `No events on ${format(selectedDate, 'EEEE')}`
+    : 'No events today';
+
   const nowHour = now.getHours();
   const nowMinutes = now.getMinutes();
   const nowTop = (nowHour - TIMELINE_START) * HOUR_HEIGHT + nowMinutes;
-  const showNowMarker = nowHour >= TIMELINE_START && nowHour < TIMELINE_END;
+  const viewingToday = !selectedDate || isTodayFn(selectedDate);
+  const showNowMarker = viewingToday && nowHour >= TIMELINE_START && nowHour < TIMELINE_END;
 
   // Mobile: flat list
   if (isMobile) {
@@ -92,7 +98,7 @@ export function TimelineView({ events, onEventClick }: TimelineViewProps) {
       return (
         <div className="text-center py-12">
           <Clock className="h-12 w-12 text-[#4a5568] mx-auto mb-3" />
-          <p className="text-[#64748b]">No events today &mdash; your schedule is clear</p>
+          <p className="text-[#64748b]">{emptyLabel} &mdash; your schedule is clear</p>
         </div>
       );
     }

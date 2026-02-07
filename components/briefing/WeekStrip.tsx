@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { CalendarEvent, detectEventCategory, EventCategory } from '@/lib/calendar-types';
 import { calculateDayStats } from '@/lib/calendar-utils';
 import { format, startOfDay, addDays, isSameDay, isToday as isTodayFn } from 'date-fns';
@@ -31,7 +32,18 @@ export function WeekStrip({ weekEvents, todayEvents, onDayClick, selectedDay }: 
 
   // Week summary stats
   const weekStats = calculateDayStats(weekEvents);
-  const todayStats = calculateDayStats(todayEvents);
+
+  // Stats for the focused day (selected or today)
+  const focusedDayEvents = useMemo(() => {
+    if (!selectedDay) return todayEvents;
+    return weekEvents.filter(
+      (e) => e.start_time && isSameDay(startOfDay(new Date(e.start_time)), selectedDay)
+    );
+  }, [selectedDay, weekEvents, todayEvents]);
+  const focusedStats = calculateDayStats(focusedDayEvents);
+  const focusedLabel = selectedDay && !isTodayFn(selectedDay)
+    ? format(selectedDay, 'EEE')
+    : 'today';
 
   return (
     <div className="card-premium p-3 md:p-4">
@@ -48,22 +60,28 @@ export function WeekStrip({ weekEvents, todayEvents, onDayClick, selectedDay }: 
             .map((e) => detectEventCategory(e));
           const overflow = dayEvents.length - 3;
 
+          // Styling: selected gets gold, today (unselected) gets subtle gold, others default
+          let cellClass: string;
+          if (isSelected) {
+            cellClass = 'bg-[#d4af37]/20 border border-[#d4af37]/60 shadow-[0_0_8px_rgba(212,175,55,0.15)]';
+          } else if (isToday) {
+            cellClass = selectedDay
+              ? 'bg-[#d4af37]/8 border border-[#d4af37]/20'
+              : 'bg-[#d4af37]/20 border border-[#d4af37]/40';
+          } else {
+            cellClass = 'border border-transparent hover:bg-[#1a2744]/50';
+          }
+
           return (
             <button
               key={day.toISOString()}
               onClick={() => onDayClick(day)}
-              className={`flex-1 min-w-0 flex flex-col items-center p-1.5 md:p-2 rounded-xl transition-all ${
-                isToday
-                  ? 'bg-[#d4af37]/20 border border-[#d4af37]/40'
-                  : isSelected
-                    ? 'bg-[#1a2744] border border-[#2d3a52]'
-                    : 'hover:bg-[#1a2744]/50'
-              }`}
+              className={`flex-1 min-w-0 flex flex-col items-center p-1.5 md:p-2 rounded-xl transition-all cursor-pointer select-none active:scale-95 ${cellClass}`}
             >
               {/* Day name */}
               <span
                 className={`text-[10px] md:text-xs font-medium ${
-                  isToday ? 'text-[#d4af37]' : 'text-[#64748b]'
+                  isSelected ? 'text-[#d4af37]' : isToday ? 'text-[#d4af37]/70' : 'text-[#64748b]'
                 }`}
               >
                 {format(day, 'EEE')}
@@ -72,7 +90,7 @@ export function WeekStrip({ weekEvents, todayEvents, onDayClick, selectedDay }: 
               {/* Day number */}
               <span
                 className={`text-sm md:text-base font-bold ${
-                  isToday ? 'text-[#d4af37]' : 'text-white'
+                  isSelected ? 'text-[#d4af37]' : isToday ? 'text-[#d4af37]/70' : 'text-white'
                 }`}
               >
                 {format(day, 'd')}
@@ -95,7 +113,7 @@ export function WeekStrip({ weekEvents, todayEvents, onDayClick, selectedDay }: 
                     )}
                   </>
                 ) : (
-                  <span className="text-[8px] text-[#2d3a52]">--</span>
+                  <span className="min-h-[6px]" />
                 )}
               </div>
             </button>
@@ -107,7 +125,7 @@ export function WeekStrip({ weekEvents, todayEvents, onDayClick, selectedDay }: 
       <p className="text-xs text-[#64748b] mt-3 text-center">
         {weekStats.total_events} meeting{weekStats.total_events !== 1 ? 's' : ''} this week
         {' '}&middot; {weekStats.total_hours}h total
-        {' '}&middot; {todayStats.free_hours}h free today
+        {' '}&middot; {focusedStats.free_hours}h free {focusedLabel}
       </p>
     </div>
   );
