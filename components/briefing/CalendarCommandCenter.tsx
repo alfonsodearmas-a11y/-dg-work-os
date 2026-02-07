@@ -176,7 +176,7 @@ export function CalendarCommandCenter({ todayEvents, weekEvents, onRefresh, cale
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Timeline (2 cols) */}
         <div className="lg:col-span-2">
-          <div className="card-premium p-3 md:p-4" style={{ backdropFilter: 'none', WebkitBackdropFilter: 'none' }}>
+          <div className="card-premium p-3 md:p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-medium text-[#94a3b8] uppercase tracking-wider">
                 {isViewingToday ? 'Timeline' : `${focusedDayLabel}\u2019s Timeline`}

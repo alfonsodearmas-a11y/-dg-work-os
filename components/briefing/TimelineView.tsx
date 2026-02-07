@@ -18,7 +18,7 @@ const HOUR_HEIGHT = 60;
 const TOTAL_HEIGHT = (TIMELINE_END - TIMELINE_START) * HOUR_HEIGHT;
 
 const CATEGORY_STYLES: Record<EventCategory, { bg: string; border: string; extra?: string }> = {
-  ministry: { bg: 'bg-[#1e2d50]', border: 'border-l-[#4a5568]' },
+  ministry: { bg: 'bg-[#4a5568]/20', border: 'border-l-[#4a5568]' },
   board: { bg: 'bg-[#d4af37]/15', border: 'border-l-[#d4af37]' },
   external: { bg: 'bg-teal-500/15', border: 'border-l-teal-500' },
   personal: { bg: 'bg-[#64748b]/15', border: 'border-l-[#64748b]' },
@@ -177,7 +177,7 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
   return (
     <div>
       <div ref={containerRef} className="relative overflow-y-auto max-h-[600px] pr-2" style={{ minHeight: 400 }}>
-        <div className="relative isolate" style={{ height: TOTAL_HEIGHT }}>
+        <div className="relative" style={{ height: TOTAL_HEIGHT }}>
           {/* Hour grid lines + labels */}
           {hours.map(hour => {
             const top = (hour - TIMELINE_START) * HOUR_HEIGHT;
@@ -229,10 +229,10 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
                 onClick={() => onEventClick(event)}
                 className={`absolute left-16 right-2 rounded-lg border-l-4 ${styles.bg} ${styles.border} ${styles.extra || ''} ${
                   happening ? 'ring-2 ring-[#d4af37]/50 animate-pulse-gold' : ''
-                } transition-all hover:brightness-110 overflow-hidden text-left z-10`}
-                style={{ top, height, transform: 'translateZ(0)' }}
+                } transition-colors hover:brightness-110 text-left z-10`}
+                style={{ top, height }}
               >
-                <div className="p-2 h-full flex flex-col">
+                <div className="p-2 h-full flex flex-col overflow-hidden">
                   {/* Always show: title + time */}
                   <p className="text-xs font-medium text-white truncate">{event.title}</p>
                   <p className="text-[10px] text-[#94a3b8]">
