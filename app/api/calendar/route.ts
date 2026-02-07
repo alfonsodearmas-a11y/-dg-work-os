@@ -19,10 +19,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ events });
   } catch (error) {
     console.error('Fetch calendar events error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch events' },
-      { status: 500 }
-    );
+    // Return empty structure so the page still renders
+    return NextResponse.json({
+      events: [],
+      _error: 'Google Calendar API unavailable'
+    });
   }
 }
 

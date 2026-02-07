@@ -36,10 +36,12 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Fetch tasks error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch tasks' },
-      { status: 500 }
-    );
+    // Return empty structure so the page still renders
+    return NextResponse.json({
+      tasks: { 'To Do': [], 'In Progress': [], 'Waiting': [], 'Done': [] },
+      lastSync: new Date().toISOString(),
+      _error: 'Notion API unavailable'
+    });
   }
 }
 
