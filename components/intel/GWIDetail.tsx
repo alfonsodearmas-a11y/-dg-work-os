@@ -396,7 +396,7 @@ export function GWIDetail() {
       <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-5">
         <div className="flex items-start justify-between gap-4">
           {/* Left: Health Score Gauge */}
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-5 flex-1 min-w-0">
             {gwiHealth ? (
               <div className="flex flex-col items-center flex-shrink-0">
                 <HealthScoreTooltip score={gwiHealth.score} severity={gwiHealth.severity} breakdown={gwiHealth.breakdown} size={100} />

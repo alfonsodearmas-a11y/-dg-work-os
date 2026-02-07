@@ -156,7 +156,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
       <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-5">
         <div className="flex items-start justify-between gap-4">
           {/* Left: Health Score Gauge */}
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-5 flex-1 min-w-0">
             {insights?.overall?.health_score != null ? (
               <div className="flex flex-col items-center flex-shrink-0">
                 <HealthScoreTooltip score={insights.overall.health_score} breakdown={health?.breakdown} size={100} />
