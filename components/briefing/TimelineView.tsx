@@ -177,7 +177,7 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
   return (
     <div>
       <div ref={containerRef} className="relative overflow-y-auto max-h-[600px] pr-2" style={{ minHeight: 400 }}>
-        <div className="relative" style={{ height: TOTAL_HEIGHT }}>
+        <div className="relative isolate" style={{ height: TOTAL_HEIGHT }}>
           {/* Hour grid lines + labels */}
           {hours.map(hour => {
             const top = (hour - TIMELINE_START) * HOUR_HEIGHT;
@@ -230,7 +230,7 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
                 className={`absolute left-16 right-2 rounded-lg border-l-4 ${styles.bg} ${styles.border} ${styles.extra || ''} ${
                   happening ? 'ring-2 ring-[#d4af37]/50 animate-pulse-gold' : ''
                 } transition-all hover:brightness-110 overflow-hidden text-left z-10`}
-                style={{ top, height }}
+                style={{ top, height, transform: 'translateZ(0)' }}
               >
                 <div className="p-2 h-full flex flex-col">
                   {/* Always show: title + time */}
