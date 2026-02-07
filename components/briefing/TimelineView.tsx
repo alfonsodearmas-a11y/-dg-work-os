@@ -233,9 +233,9 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
                 style={{ top, height }}
               >
                 <div className="p-2 h-full flex flex-col overflow-hidden">
-                  {/* Always show: title + time */}
-                  <p className="text-xs font-medium text-white truncate">{event.title}</p>
-                  <p className="text-[10px] text-[#94a3b8]">
+                  {/* Always show: title + time — shrink-0 prevents flexbox from crushing these */}
+                  <p className="text-xs font-medium text-white truncate shrink-0">{event.title}</p>
+                  <p className="text-[10px] text-[#94a3b8] shrink-0">
                     {format(start, 'h:mm a')} &ndash; {format(end, 'h:mm a')}
                   </p>
 
