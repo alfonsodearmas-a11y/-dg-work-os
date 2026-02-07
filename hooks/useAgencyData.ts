@@ -447,6 +447,18 @@ const getAgencyWarningBadge = (id: string, data: any) => {
   }
 };
 
+export interface DelayedCounts {
+  gpl: number;
+  gwi: number;
+  cjia: number;
+  gcaa: number;
+  heci: number;
+  has: number;
+  marad: number;
+  mopua: number;
+  total: number;
+}
+
 export const useAgencyData = () => {
   const [rawData, setRawData] = useState<AgencyRawData>(generateAgencyData());
   const [lastUpdated, setLastUpdated] = useState(new Date());
@@ -454,6 +466,7 @@ export const useAgencyData = () => {
   const [gwiReport, setGwiReport] = useState<any>(null);
   const [gwiPrevReport, setGwiPrevReport] = useState<any>(null);
   const [gwiInsightsScore, setGwiInsightsScore] = useState<number | null>(null);
+  const [delayedCounts, setDelayedCounts] = useState<DelayedCounts | null>(null);
 
   const fetchGPLData = useCallback(async (date?: string) => {
     try {
@@ -516,13 +529,24 @@ export const useAgencyData = () => {
     }
   }, []);
 
+  const fetchDelayedCounts = useCallback(async (): Promise<DelayedCounts | null> => {
+    try {
+      const res = await fetch('/api/projects/delayed-counts');
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  }, []);
+
   const refresh = useCallback(async () => {
     setIsLoading(true);
 
-    const [gplData, gwiData, insightsScore] = await Promise.all([
+    const [gplData, gwiData, insightsScore, delayed] = await Promise.all([
       fetchGPLData(),
       fetchGWIReport(),
       fetchGWIInsightsScore(),
+      fetchDelayedCounts(),
     ]);
     const mockData = generateAgencyData();
 
@@ -531,6 +555,7 @@ export const useAgencyData = () => {
       setGwiPrevReport(gwiData.previous);
     }
     setGwiInsightsScore(insightsScore);
+    if (delayed) setDelayedCounts(delayed);
 
     setRawData({
       ...mockData,
@@ -539,7 +564,7 @@ export const useAgencyData = () => {
 
     setLastUpdated(new Date());
     setIsLoading(false);
-  }, [fetchGPLData, fetchGWIReport, fetchGWIInsightsScore]);
+  }, [fetchGPLData, fetchGWIReport, fetchGWIInsightsScore, fetchDelayedCounts]);
 
   useEffect(() => {
     refresh();
@@ -556,15 +581,31 @@ export const useAgencyData = () => {
       : id === 'gcaa' ? computeGCAAHealth(rawData.gcaa)
       : null;
 
+    // Build grid metrics and append delayed projects count
+    let gridMetrics = id === 'gwi' ? buildGWIGridMetrics(gwiReport, gwiPrevReport)
+      : id === 'gpl' ? buildGPLGridMetrics(rawData.gpl)
+      : id === 'cjia' ? buildCJIAGridMetrics(rawData.cjia)
+      : id === 'gcaa' ? buildGCAAGridMetrics(rawData.gcaa)
+      : undefined;
+
+    if (gridMetrics && delayedCounts) {
+      const count = delayedCounts[id as keyof DelayedCounts] as number ?? 0;
+      gridMetrics = [
+        ...gridMetrics,
+        {
+          label: 'Delayed Projects',
+          value: String(count),
+          badge: count > 0 ? `⚠ ${count} overdue` : '0 delayed ✓',
+          badgeColor: count > 0 ? 'red' as const : 'green' as const,
+        },
+      ];
+    }
+
     return {
       ...config,
       status: getAgencyStatus(id, data),
       metrics: getAgencyMetrics(id, data),
-      gridMetrics: id === 'gwi' ? buildGWIGridMetrics(gwiReport, gwiPrevReport)
-        : id === 'gpl' ? buildGPLGridMetrics(rawData.gpl)
-        : id === 'cjia' ? buildCJIAGridMetrics(rawData.cjia)
-        : id === 'gcaa' ? buildGCAAGridMetrics(rawData.gcaa)
-        : undefined,
+      gridMetrics,
       healthScore: health?.score,
       healthLabel: health?.label,
       healthSeverity: health?.severity,
