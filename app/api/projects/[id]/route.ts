@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/db';
+import { getProjectById } from '@/lib/project-queries';
 
 export async function GET(
   request: NextRequest,
@@ -7,27 +7,15 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const project = await getProjectById(id);
 
-    const { data, error } = await supabaseAdmin
-      .from('projects')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error) {
-      console.error('Project fetch error:', error);
-      return NextResponse.json(
-        { error: 'Project not found' },
-        { status: 404 }
-      );
+    if (!project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(project);
   } catch (error) {
     console.error('Project detail error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch project' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch project' }, { status: 500 });
   }
 }

@@ -3,49 +3,52 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Building2, Calendar, DollarSign, Clock, MapPin, User, FileText, AlertTriangle, TrendingUp, CheckCircle } from 'lucide-react';
-import { format, addMonths, differenceInDays, isPast } from 'date-fns';
+import {
+  ArrowLeft, Building2, Calendar, DollarSign, Clock,
+  MapPin, User, FileText, AlertTriangle, TrendingUp,
+  CheckCircle, Camera,
+} from 'lucide-react';
 
-const AGENCY_INFO: Record<string, string> = {
-  'GPL': 'Guyana Power & Light',
-  'GWI': 'Guyana Water Inc.',
-  'HECI': 'Hinterland Electrification Company Inc.',
-  'CJIA': 'Cheddi Jagan International Airport',
-  'MARAD': 'Maritime Administration Department',
-  'GCAA': 'Guyana Civil Aviation Authority',
-  'MOPUA': 'Ministry of Public Works',
-  'HAS': 'Harbour & Aviation Services',
+const AGENCY_NAMES: Record<string, string> = {
+  GPL: 'Guyana Power & Light',
+  GWI: 'Guyana Water Inc.',
+  HECI: 'Hinterland Electrification Company Inc.',
+  CJIA: 'Cheddi Jagan International Airport',
+  MARAD: 'Maritime Administration Department',
+  GCAA: 'Guyana Civil Aviation Authority',
+  MOPUA: 'Ministry of Public Works',
+  HAS: 'Harbour & Aviation Services',
 };
 
-const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  'COMMENCED': { bg: 'bg-[#d4af37]/20', text: 'text-[#f4d03f]', label: 'In Progress' },
-  'DELAYED': { bg: 'bg-red-500/20', text: 'text-red-400', label: 'Delayed' },
-  'COMPLETED': { bg: 'bg-emerald-500/20', text: 'text-emerald-400', label: 'Completed' },
-  'CANCELLED': { bg: 'bg-[#64748b]/20', text: 'text-[#94a3b8]', label: 'Cancelled' },
-  'ROLLOVER': { bg: 'bg-amber-500/20', text: 'text-amber-400', label: 'Rollover' },
+const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
+  Complete: { bg: 'bg-emerald-500/20', text: 'text-emerald-400' },
+  Delayed: { bg: 'bg-red-500/20', text: 'text-red-400' },
+  'In Progress': { bg: 'bg-blue-500/20', text: 'text-blue-400' },
+  'Not Started': { bg: 'bg-[#64748b]/20', text: 'text-[#94a3b8]' },
 };
 
-function formatCurrency(value: number | null): string {
-  if (!value) return '-';
-  return `$${value.toLocaleString()}`;
+function fmtCurrency(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || value === '-') return '-';
+  const num = typeof value === 'string' ? parseFloat(value.replace(/[$,]/g, '')) : Number(value);
+  if (isNaN(num)) return '-';
+  const abs = Math.abs(num);
+  if (abs >= 1e9) return `$${(num / 1e9).toFixed(1)}B`;
+  if (abs >= 1e6) return `$${(num / 1e6).toFixed(1)}M`;
+  if (abs >= 1e3) return `$${(num / 1e3).toFixed(1)}K`;
+  return `$${num.toLocaleString()}`;
 }
 
-function formatDate(dateStr: string | null): string {
-  if (!dateStr || dateStr === '1970-01-01') return 'Not set';
-  try {
-    return format(new Date(dateStr), 'MMMM d, yyyy');
-  } catch {
-    return 'Invalid date';
-  }
+function fmtDate(iso: string | null): string {
+  if (!iso) return 'Not set';
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d.getTime())) return 'Not set';
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
-function calculateEndDate(startDate: string | null, durationMonths: number | null): Date | null {
-  if (!startDate || startDate === '1970-01-01' || !durationMonths) return null;
-  try {
-    return addMonths(new Date(startDate), durationMonths);
-  } catch {
-    return null;
-  }
+function fmtRegion(code: string | null): string {
+  if (!code) return 'Not specified';
+  const n = parseInt(code, 10);
+  return isNaN(n) ? code : `Region ${n}`;
 }
 
 export default function ProjectDetailPage() {
@@ -55,28 +58,17 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchProject();
-  }, [projectId]);
-
-  async function fetchProject() {
     setLoading(true);
-    try {
-      const res = await fetch(`/api/projects/${projectId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setProject(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch project:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
+    fetch(`/api/projects/${projectId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setProject(d))
+      .finally(() => setLoading(false));
+  }, [projectId]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -92,233 +84,145 @@ export default function ProjectDetailPage() {
     );
   }
 
-  const statusStyle = STATUS_STYLES[project.project_status] || STATUS_STYLES['COMMENCED'];
-  const agencyName = AGENCY_INFO[project.sub_agency] || project.sub_agency;
-
-  const endDate = project.expected_end_date
-    ? new Date(project.expected_end_date)
-    : calculateEndDate(project.agreement_start_date, project.duration_months);
-
-  const isOverdue = endDate && isPast(endDate) && project.completion_percent < 100;
-  const daysRemaining = endDate ? differenceInDays(endDate, new Date()) : null;
-
-  const spendPercent = project.allocated_balance && project.total_expenditure
-    ? (project.total_expenditure / project.allocated_balance) * 100
-    : null;
+  const ss = STATUS_STYLES[project.status] || STATUS_STYLES['Not Started'];
+  const isDelayed = project.status === 'Delayed';
+  const pct = project.completion_pct || 0;
+  const progressColor = pct >= 80 ? 'bg-emerald-500' : pct >= 40 ? 'bg-amber-500' : pct > 0 ? 'bg-red-500' : 'bg-[#2d3a52]';
 
   return (
     <div className="space-y-8 max-w-6xl">
       {/* Header */}
-      <div className="flex items-start space-x-4">
+      <div className="flex items-start gap-4">
         <Link
-          href={project.sub_agency ? `/projects/agency/${project.sub_agency}` : '/projects'}
+          href="/projects"
           className="p-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] transition-colors mt-1"
         >
           <ArrowLeft className="h-5 w-5 text-[#94a3b8]" />
         </Link>
         <div className="flex-1">
           <div className="flex items-center flex-wrap gap-2 mb-3">
-            <Link href={`/projects/agency/${project.sub_agency}`}>
-              <span className="px-3 py-1.5 rounded-lg text-sm font-bold bg-gradient-to-r from-[#d4af37] to-[#b8860b] text-[#0a1628] hover:shadow-lg hover:shadow-[#d4af37]/20 transition-shadow">
-                {project.sub_agency}
-              </span>
-            </Link>
-            <span className={`px-3 py-1.5 rounded-lg text-sm font-medium ${statusStyle.bg} ${statusStyle.text}`}>
-              {statusStyle.label}
+            <span className="px-3 py-1.5 rounded-lg text-sm font-bold bg-gradient-to-r from-[#d4af37] to-[#b8860b] text-[#0a1628]">
+              {project.sub_agency || 'MOPUA'}
             </span>
-            {isOverdue && (
-              <span className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500/20 text-red-400 flex items-center">
-                <AlertTriangle className="h-4 w-4 mr-1" />
-                Overdue
+            <span className={`px-3 py-1.5 rounded-lg text-sm font-medium ${ss.bg} ${ss.text}`}>
+              {project.status}
+            </span>
+            {isDelayed && project.days_overdue > 0 && (
+              <span className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500/20 text-red-400 flex items-center gap-1">
+                <AlertTriangle className="h-4 w-4" />
+                {project.days_overdue} days overdue
+              </span>
+            )}
+            {project.has_images > 0 && (
+              <span className="px-2 py-1 rounded-lg text-xs text-[#64748b] flex items-center gap-1">
+                <Camera className="h-3.5 w-3.5" /> {project.has_images} images
               </span>
             )}
           </div>
           <h1 className="text-3xl font-bold text-white">{project.project_name}</h1>
-          <p className="text-[#64748b] font-mono mt-1">{project.project_reference}</p>
+          <p className="text-[#64748b] font-mono text-sm mt-1">{project.project_id}</p>
         </div>
       </div>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="card-premium p-6">
-          <div className="flex items-center space-x-3 mb-4">
+          <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
               <TrendingUp className="h-5 w-5 text-[#d4af37]" />
             </div>
             <span className="text-[#64748b] text-sm">Completion</span>
           </div>
-          <p className="stat-number-lg">{project.completion_percent || 0}%</p>
+          <p className="stat-number-lg">{pct}%</p>
           <div className="mt-3 w-full bg-[#2d3a52] rounded-full h-3">
-            <div
-              className={`h-3 rounded-full ${project.project_status === 'DELAYED' ? 'bg-red-500' : 'progress-gold'}`}
-              style={{ width: `${Math.min(project.completion_percent || 0, 100)}%` }}
-            />
+            <div className={`h-3 rounded-full ${progressColor}`} style={{ width: `${Math.min(pct, 100)}%` }} />
           </div>
         </div>
 
         <div className="card-premium p-6">
-          <div className="flex items-center space-x-3 mb-4">
+          <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
               <DollarSign className="h-5 w-5 text-[#d4af37]" />
             </div>
             <span className="text-[#64748b] text-sm">Contract Value</span>
           </div>
-          <p className="stat-number-lg">{formatCurrency(project.contract_value)}</p>
+          <p className="stat-number-lg text-[#d4af37]">{fmtCurrency(project.contract_value)}</p>
         </div>
 
         <div className="card-premium p-6">
-          <div className="flex items-center space-x-3 mb-4">
+          <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
-              <Clock className="h-5 w-5 text-[#d4af37]" />
+              <MapPin className="h-5 w-5 text-[#d4af37]" />
             </div>
-            <span className="text-[#64748b] text-sm">Duration</span>
+            <span className="text-[#64748b] text-sm">Region</span>
           </div>
-          <p className="stat-number">{project.duration_months || '-'}</p>
-          <p className="text-[#64748b] text-sm">months</p>
+          <p className="stat-number">{fmtRegion(project.region)}</p>
         </div>
 
         <div className="card-premium p-6">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${daysRemaining && daysRemaining < 0 ? 'bg-red-500/20' : 'bg-[#d4af37]/20'}`}>
-              <Calendar className={`h-5 w-5 ${daysRemaining && daysRemaining < 0 ? 'text-red-400' : 'text-[#d4af37]'}`} />
+          <div className="flex items-center gap-3 mb-4">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDelayed ? 'bg-red-500/20' : 'bg-[#d4af37]/20'}`}>
+              <Calendar className={`h-5 w-5 ${isDelayed ? 'text-red-400' : 'text-[#d4af37]'}`} />
             </div>
-            <span className="text-[#64748b] text-sm">{daysRemaining && daysRemaining < 0 ? 'Overdue' : 'Remaining'}</span>
+            <span className="text-[#64748b] text-sm">{isDelayed ? 'Overdue' : 'End Date'}</span>
           </div>
-          <p className={`stat-number ${daysRemaining && daysRemaining < 0 ? 'text-red-400' : ''}`}>
-            {daysRemaining !== null ? Math.abs(daysRemaining) : '-'}
-          </p>
-          <p className="text-[#64748b] text-sm">days</p>
+          {isDelayed && project.days_overdue > 0 ? (
+            <>
+              <p className="stat-number text-red-400">{project.days_overdue}</p>
+              <p className="text-[#64748b] text-sm">days overdue</p>
+            </>
+          ) : (
+            <p className="stat-number">{fmtDate(project.project_end_date)}</p>
+          )}
         </div>
       </div>
 
-      {/* Details Grid */}
+      {/* Details */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Project Information */}
         <div className="card-premium p-6">
-          <div className="flex items-center space-x-2 mb-6">
+          <div className="flex items-center gap-2 mb-6">
             <FileText className="h-5 w-5 text-[#d4af37]" />
             <h2 className="text-lg font-semibold text-white">Project Information</h2>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-4 text-sm">
             <div>
-              <p className="text-[#64748b] text-sm">Project Name</p>
+              <p className="text-[#64748b]">Project Name</p>
               <p className="text-white font-medium mt-1">{project.project_name}</p>
             </div>
             <div>
-              <p className="text-[#64748b] text-sm">Reference</p>
-              <p className="text-white font-mono mt-1">{project.project_reference}</p>
+              <p className="text-[#64748b]">Project ID</p>
+              <p className="text-white font-mono mt-1">{project.project_id}</p>
             </div>
             <div>
-              <p className="text-[#64748b] text-sm">Agency</p>
-              <p className="text-white font-medium mt-1">{agencyName}</p>
+              <p className="text-[#64748b]">Agency</p>
+              <p className="text-white font-medium mt-1">{AGENCY_NAMES[project.sub_agency] || project.sub_agency || 'MOPUA'}</p>
             </div>
             <div>
-              <p className="text-[#64748b] text-sm">Region</p>
-              <p className="text-white font-medium mt-1">{project.region || 'Not specified'}</p>
+              <p className="text-[#64748b]">Region</p>
+              <p className="text-white font-medium mt-1">{fmtRegion(project.region)}</p>
             </div>
             <div>
-              <p className="text-[#64748b] text-sm">Status</p>
-              <span className={`inline-flex px-3 py-1 rounded-lg text-sm font-medium mt-1 ${statusStyle.bg} ${statusStyle.text}`}>
-                {statusStyle.label}
-              </span>
+              <p className="text-[#64748b]">End Date</p>
+              <p className={`font-medium mt-1 ${isDelayed ? 'text-red-400' : 'text-white'}`}>
+                {fmtDate(project.project_end_date)}
+                {isDelayed && ' (Overdue)'}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Contractor */}
         <div className="card-premium p-6">
-          <div className="flex items-center space-x-2 mb-6">
+          <div className="flex items-center gap-2 mb-6">
             <User className="h-5 w-5 text-[#d4af37]" />
             <h2 className="text-lg font-semibold text-white">Contractor</h2>
           </div>
-          <div className="space-y-4">
-            <div>
-              <p className="text-[#64748b] text-sm">Contractor Name</p>
-              <p className="text-white text-xl font-semibold mt-1">{project.contractor || 'Not assigned'}</p>
-            </div>
-          </div>
+          <p className="text-white text-xl font-semibold">{project.contractor || 'Not assigned'}</p>
         </div>
-
-        {/* Timeline */}
-        <div className="card-premium p-6">
-          <div className="flex items-center space-x-2 mb-6">
-            <Calendar className="h-5 w-5 text-[#d4af37]" />
-            <h2 className="text-lg font-semibold text-white">Timeline</h2>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <p className="text-[#64748b] text-sm">Contract Awarded</p>
-              <p className="text-white font-medium mt-1">{formatDate(project.contract_awarded_date)}</p>
-            </div>
-            <div>
-              <p className="text-[#64748b] text-sm">Start Date</p>
-              <p className="text-white font-medium mt-1">{formatDate(project.agreement_start_date)}</p>
-            </div>
-            <div>
-              <p className="text-[#64748b] text-sm">Expected End Date</p>
-              <p className={`font-medium mt-1 ${isOverdue ? 'text-red-400' : 'text-white'}`}>
-                {endDate ? format(endDate, 'MMMM d, yyyy') : 'Not set'}
-                {isOverdue && ' (Overdue)'}
-              </p>
-            </div>
-            <div>
-              <p className="text-[#64748b] text-sm">Duration</p>
-              <p className="text-white font-medium mt-1">{project.duration_months ? `${project.duration_months} months` : 'Not specified'}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Financial */}
-        <div className="card-premium p-6">
-          <div className="flex items-center space-x-2 mb-6">
-            <DollarSign className="h-5 w-5 text-[#d4af37]" />
-            <h2 className="text-lg font-semibold text-white">Financial</h2>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <p className="text-[#64748b] text-sm">Contract Value</p>
-              <p className="text-[#d4af37] text-xl font-bold mt-1">{formatCurrency(project.contract_value)}</p>
-            </div>
-            <div>
-              <p className="text-[#64748b] text-sm">Allocated Balance</p>
-              <p className="text-white font-medium mt-1">{formatCurrency(project.allocated_balance)}</p>
-            </div>
-            <div>
-              <p className="text-[#64748b] text-sm">Total Expenditure</p>
-              <p className="text-white font-medium mt-1">{formatCurrency(project.total_expenditure)}</p>
-            </div>
-            {spendPercent !== null && (
-              <div>
-                <p className="text-[#64748b] text-sm">Spend vs Allocation</p>
-                <div className="flex items-center space-x-3 mt-2">
-                  <div className="flex-1 bg-[#2d3a52] rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full ${spendPercent > project.completion_percent ? 'bg-orange-500' : 'bg-emerald-500'}`}
-                      style={{ width: `${Math.min(spendPercent, 100)}%` }}
-                    />
-                  </div>
-                  <span className="text-white font-medium text-sm">{spendPercent.toFixed(0)}%</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Remarks */}
-      <div className="card-premium p-6">
-        <div className="flex items-center space-x-2 mb-4">
-          <FileText className="h-5 w-5 text-[#d4af37]" />
-          <h2 className="text-lg font-semibold text-white">Remarks</h2>
-        </div>
-        <p className="text-[#94a3b8] whitespace-pre-wrap">
-          {project.remarks || 'No remarks available for this project.'}
-        </p>
       </div>
 
       {/* Metadata */}
       <div className="text-sm text-[#64748b] text-center">
-        Last updated: {formatDate(project.last_updated)}
+        Last updated: {fmtDate(project.updated_at?.split('T')[0])}
       </div>
     </div>
   );

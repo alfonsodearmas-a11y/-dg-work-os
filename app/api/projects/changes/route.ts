@@ -1,15 +1,17 @@
 import { NextResponse } from 'next/server';
-import { getLatestChanges } from '@/lib/project-queries';
+import { supabaseAdmin } from '@/lib/db';
 
 export async function GET() {
   try {
-    const changes = await getLatestChanges();
-    return NextResponse.json(changes || { message: 'No recent changes' });
+    const { data } = await supabaseAdmin
+      .from('project_uploads')
+      .select('*')
+      .order('uploaded_at', { ascending: false })
+      .limit(10);
+
+    return NextResponse.json(data || []);
   } catch (error) {
     console.error('Changes error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch changes' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch changes' }, { status: 500 });
   }
 }

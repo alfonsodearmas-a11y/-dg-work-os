@@ -2,56 +2,55 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, AlertTriangle, Clock, DollarSign, TrendingUp, ChevronRight } from 'lucide-react';
-import { format, addMonths, differenceInDays } from 'date-fns';
+import { ArrowLeft, AlertTriangle, TrendingUp, ChevronRight } from 'lucide-react';
+
+function fmtCurrency(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || value === '-') return '-';
+  const num = typeof value === 'string' ? parseFloat(value.replace(/[$,]/g, '')) : Number(value);
+  if (isNaN(num)) return '-';
+  const abs = Math.abs(num);
+  if (abs >= 1e9) return `$${(num / 1e9).toFixed(1)}B`;
+  if (abs >= 1e6) return `$${(num / 1e6).toFixed(1)}M`;
+  if (abs >= 1e3) return `$${(num / 1e3).toFixed(1)}K`;
+  return `$${num.toLocaleString()}`;
+}
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return '-';
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d.getTime())) return '-';
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
 
 export default function DelayedProjectsPage() {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchDelayed() {
-      try {
-        const res = await fetch('/api/projects/delayed');
-        const data = await res.json();
-        setProjects(data);
-      } catch (error) {
-        console.error('Failed to fetch delayed projects:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchDelayed();
+    fetch('/api/projects/delayed')
+      .then(r => r.json())
+      .then(d => setProjects(d || []))
+      .finally(() => setLoading(false));
   }, []);
-
-  function formatCurrency(value: number | null): string {
-    if (!value) return '-';
-    if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-    if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
-    return `$${value.toLocaleString()}`;
-  }
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start space-x-4">
-        <Link
-          href="/projects"
-          className="p-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] transition-colors mt-1"
-        >
+      <div className="flex items-start gap-4">
+        <Link href="/projects" className="p-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] transition-colors mt-1">
           <ArrowLeft className="h-5 w-5 text-[#94a3b8]" />
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-white flex items-center">
-            <AlertTriangle className="h-8 w-8 mr-3 text-red-400" />
+          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+            <AlertTriangle className="h-8 w-8 text-red-400" />
             Delayed Projects
           </h1>
-          <p className="text-[#64748b] mt-1">{projects.length} projects with DELAYED status</p>
+          <p className="text-[#64748b] mt-1">{projects.length} projects past their deadline</p>
         </div>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-24">
-          <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
         </div>
       ) : projects.length === 0 ? (
         <div className="card-premium p-12 text-center">
@@ -62,46 +61,34 @@ export default function DelayedProjectsPage() {
           <p className="text-[#64748b] text-sm mt-1">All projects are on track</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {projects.map((project) => (
-            <Link
-              key={project.id}
-              href={`/projects/${project.id}`}
-              className="card-premium p-6 block hover:border-[#d4af37]/50 transition-all"
-            >
+        <div className="space-y-3">
+          {projects.map((p: any) => (
+            <Link key={p.id} href={`/projects/${p.id}`} className="card-premium p-5 block hover:border-[#d4af37]/50 transition-all">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-3 mb-2">
+                  <div className="flex items-center gap-3 mb-2">
                     <span className="px-3 py-1 rounded-lg text-sm font-bold bg-gradient-to-r from-[#d4af37] to-[#b8860b] text-[#0a1628]">
-                      {project.sub_agency}
+                      {p.sub_agency || 'MOPUA'}
                     </span>
                     <span className="px-3 py-1 rounded-lg text-sm font-medium bg-red-500/20 text-red-400">
-                      DELAYED
+                      {p.days_overdue} days overdue
                     </span>
-                    <span className="text-[#64748b] text-sm font-mono">{project.project_reference}</span>
                   </div>
-                  <h3 className="text-lg font-semibold text-white">{project.project_name}</h3>
-                  <p className="text-[#94a3b8] mt-1">{project.contractor || 'No contractor assigned'}</p>
+                  <h3 className="text-lg font-semibold text-white">{p.project_name}</h3>
+                  <p className="text-[#94a3b8] mt-1">{p.contractor || 'No contractor assigned'}</p>
                 </div>
                 <div className="text-right ml-4">
-                  <p className="text-xl font-bold text-[#d4af37]">{formatCurrency(project.contract_value)}</p>
-                  <div className="flex items-center justify-end space-x-2 mt-2">
+                  <p className="text-xl font-bold text-[#d4af37]">{fmtCurrency(p.contract_value)}</p>
+                  <div className="flex items-center justify-end gap-2 mt-2">
                     <div className="w-20 bg-[#2d3a52] rounded-full h-2">
-                      <div
-                        className="bg-red-500 h-2 rounded-full"
-                        style={{ width: `${Math.min(project.completion_percent || 0, 100)}%` }}
-                      />
+                      <div className="bg-red-500 h-2 rounded-full" style={{ width: `${Math.min(p.completion_pct || 0, 100)}%` }} />
                     </div>
-                    <span className="text-sm font-medium text-red-400">{project.completion_percent || 0}%</span>
+                    <span className="text-sm font-medium text-red-400">{p.completion_pct || 0}%</span>
                   </div>
+                  <p className="text-[#64748b] text-xs mt-1">Due: {fmtDate(p.project_end_date)}</p>
                 </div>
-                <ChevronRight className="h-5 w-5 text-[#64748b] ml-4 flex-shrink-0" />
+                <ChevronRight className="h-5 w-5 text-[#64748b] ml-4 shrink-0" />
               </div>
-              {project.remarks && (
-                <p className="mt-4 pt-4 border-t border-[#2d3a52] text-[#94a3b8] text-sm line-clamp-2">
-                  {project.remarks}
-                </p>
-              )}
             </Link>
           ))}
         </div>

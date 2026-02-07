@@ -204,6 +204,12 @@ export function formatContractorName(name: string | null | undefined): string {
 export function formatRegion(region: string | null | undefined): string {
   if (!region) return '';
 
+  // Handle bare numbers: "09" → "Region 9", "4" → "Region 4"
+  const stripped = region.trim();
+  if (/^\d{1,2}$/.test(stripped)) {
+    return `Region ${parseInt(stripped, 10)}`;
+  }
+
   let formatted = toTitleCase(region);
 
   // Standardize "Region X" format
