@@ -18,7 +18,7 @@ const HOUR_HEIGHT = 60;
 const TOTAL_HEIGHT = (TIMELINE_END - TIMELINE_START) * HOUR_HEIGHT;
 
 const CATEGORY_STYLES: Record<EventCategory, { bg: string; border: string; extra?: string }> = {
-  ministry: { bg: 'bg-[#1a2744]', border: 'border-l-[#4a5568]' },
+  ministry: { bg: 'bg-[#1e2d50]', border: 'border-l-[#4a5568]' },
   board: { bg: 'bg-[#d4af37]/15', border: 'border-l-[#d4af37]' },
   external: { bg: 'bg-teal-500/15', border: 'border-l-teal-500' },
   personal: { bg: 'bg-[#64748b]/15', border: 'border-l-[#64748b]' },
