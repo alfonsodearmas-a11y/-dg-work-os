@@ -389,12 +389,22 @@ h1 { letter-spacing: -0.03em; }
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1rem;
+  min-height: 48px;
   border-radius: 8px;
   transition: all 0.2s ease;
 }
 
 .collapsible-header:hover {
   background: rgba(212, 175, 55, 0.05);
+}
+
+/* Scrollbar Hide Utility */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 .collapsible-content {
@@ -494,4 +504,234 @@ h1 { letter-spacing: -0.03em; }
     rgba(100, 116, 139, 0.1) 4px,
     rgba(100, 116, 139, 0.1) 8px
   );
+}
+
+/* ==========================================
+   MOBILE RESPONSIVE FOUNDATION
+   ========================================== */
+
+/* Prevent horizontal scroll globally */
+html, body {
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Smooth scrolling */
+* { scroll-behavior: smooth; }
+
+/* Remove tap highlight on mobile */
+* { -webkit-tap-highlight-color: transparent; }
+
+/* Touch targets: Apple recommends 44px minimum */
+@media (max-width: 768px) {
+  button, a, [role="button"], .clickable {
+    min-height: 44px;
+  }
+
+  /* Fix iOS input zoom */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Safe area insets for notch devices */
+  body {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Touch active feedback for interactive elements */
+@media (max-width: 768px) {
+  .touch-active:active {
+    transform: scale(0.97);
+    opacity: 0.9;
+    transition: transform 0.1s ease, opacity 0.1s ease;
+  }
+}
+
+/* Mobile card list item (replaces table rows on mobile) */
+.mobile-card {
+  background: rgba(26, 39, 68, 0.6);
+  border: 1px solid rgba(45, 58, 82, 0.5);
+  border-radius: 12px;
+  padding: 12px;
+  transition: all 0.15s ease;
+}
+
+.mobile-card:active {
+  transform: scale(0.98);
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+/* Bottom sheet */
+.bottom-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1100;
+}
+
+.bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 80vh;
+  background: linear-gradient(135deg, #1a2744 0%, #0a1628 100%);
+  border-top: 1px solid rgba(45, 58, 82, 0.6);
+  border-radius: 16px 16px 0 0;
+  z-index: 1101;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.bottom-sheet.open {
+  transform: translateY(0);
+}
+
+.bottom-sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(100, 116, 139, 0.5);
+  margin: 8px auto 16px;
+}
+
+/* Horizontal scroll snap for card carousels */
+.scroll-snap-x {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  gap: 12px;
+  padding: 4px;
+}
+
+.scroll-snap-x::-webkit-scrollbar {
+  display: none;
+}
+
+.scroll-snap-x > * {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* Multi-line text truncation */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Skeleton loading animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, rgba(26, 39, 68, 0.6) 25%, rgba(45, 58, 82, 0.4) 50%, rgba(26, 39, 68, 0.6) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* Bottom nav styles (mobile only) */
+@media (max-width: 768px) {
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(64px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: linear-gradient(180deg, #0a1628 0%, #0d1b30 100%);
+    border-top: 1px solid rgba(45, 58, 82, 0.5);
+    z-index: 45;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+  }
+
+  .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 0;
+    min-width: 56px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .bottom-nav-item.active {
+    color: #d4af37;
+  }
+
+  .bottom-nav-item svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* Page content padding to account for bottom nav */
+  .page-content-mobile {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (min-width: 769px) {
+  .bottom-nav {
+    display: none;
+  }
+}
+
+/* Mobile header adjustments */
+@media (max-width: 768px) {
+  .card-premium:hover {
+    transform: none;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .agency-card:hover {
+    transform: none;
+  }
+
+  /* Disable desktop hover lift on mobile */
+  .card-premium, .agency-card {
+    transition: border-color 0.2s ease;
+  }
+}
+
+/* Slide up animation for mobile bottom sheets */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+/* Pull-to-refresh spinner */
+@keyframes ptr-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ptr-spinner {
+  animation: ptr-spin 0.8s linear infinite;
 }

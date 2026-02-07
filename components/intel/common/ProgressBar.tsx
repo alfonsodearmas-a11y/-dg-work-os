@@ -19,7 +19,7 @@ export function ProgressBar({
   size = 'md',
   colorMode = 'auto',
 }: ProgressBarProps) {
-  const percentage = Math.min((value / max) * 100, 100);
+  const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0;
 
   const getColor = () => {
     if (colorMode !== 'auto') {

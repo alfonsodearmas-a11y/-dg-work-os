@@ -11,20 +11,20 @@ export default function CJIAIntelPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         <Link
           href="/intel"
-          className="p-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] transition-colors"
+          className="p-2.5 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] transition-colors touch-active shrink-0"
         >
           <ArrowLeft className="h-5 w-5 text-[#94a3b8]" />
         </Link>
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 shadow-lg">
-            <Plane className="text-white" size={22} />
+        <div className="flex items-center gap-2 md:gap-3 min-w-0">
+          <div className="p-2 md:p-2.5 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 shadow-lg shrink-0">
+            <Plane className="text-white" size={18} />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">CJIA Deep Dive</h1>
-            <p className="text-[#64748b] text-sm">Cheddi Jagan International Airport — Operations & Passenger Analytics</p>
+          <div className="min-w-0">
+            <h1 className="text-lg md:text-2xl font-bold text-white truncate">CJIA Deep Dive</h1>
+            <p className="text-[#64748b] text-xs md:text-sm truncate">CJIA Airport — Operations</p>
           </div>
         </div>
       </div>

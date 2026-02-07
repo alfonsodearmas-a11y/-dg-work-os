@@ -52,8 +52,8 @@ export function DayAtGlance({ events, weekEvents, onJoinNextCall }: DayAtGlanceP
   }, [stats]);
 
   return (
-    <div className="card-premium p-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="card-premium p-4 md:p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Left: Stats */}
         <div className="space-y-4">
           <h3 className="text-sm font-medium text-[#94a3b8] uppercase tracking-wider flex items-center gap-2">
@@ -163,7 +163,7 @@ export function DayAtGlance({ events, weekEvents, onJoinNextCall }: DayAtGlanceP
       </div>
 
       {/* Bottom strip */}
-      <div className="mt-4 pt-3 border-t border-[#2d3a52]/50 flex items-center gap-4 text-xs text-[#64748b]">
+      <div className="mt-3 md:mt-4 pt-3 border-t border-[#2d3a52]/50 flex items-center gap-3 md:gap-4 text-xs text-[#64748b]">
         <span>{weekMeetings} meetings this week</span>
         <span className="text-[#2d3a52]">&bull;</span>
         <span>{weekHours}h total</span>

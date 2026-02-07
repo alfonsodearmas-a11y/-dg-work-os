@@ -61,11 +61,11 @@ export function StatusBar({ agencies }: StatusBarProps) {
         </div>
 
         {/* Status indicators */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3 flex-wrap">
           {agencies.map(agency => (
             <div
               key={agency.id}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1a2744]/80"
+              className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 rounded-lg bg-[#1a2744]/80"
               title={`${agency.title}: ${agency.status?.text || 'Unknown'}`}
             >
               <div

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Plane, TrendingUp, TrendingDown, Package, Star, Calendar,
   Upload, RefreshCw, Loader2, AlertTriangle, Clock, Shield,
@@ -11,6 +11,8 @@ import { InsightCard, type InsightCardData } from '@/components/ui/InsightCard';
 import { HealthScoreTooltip } from '@/components/ui/HealthScoreTooltip';
 import { HealthBreakdownSection } from '@/components/ui/HealthBreakdownSection';
 import { computeCJIAHealth } from '@/lib/agency-health';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import type { CJIAData } from '@/data/mockData';
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -78,9 +80,9 @@ function KPICard({ title, value, subtitle, status = 'neutral', badge }: {
   }[status];
 
   return (
-    <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-5">
+    <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-5">
       <p className="text-[#94a3b8] text-[15px] mb-2">{title}</p>
-      <p className={`text-[32px] font-bold leading-tight ${valueColor}`}>{value}</p>
+      <p className={`text-xl md:text-[32px] font-bold leading-tight ${valueColor}`}>{value}</p>
       {badge && <div className="mt-2">{badge}</div>}
       {subtitle && <p className="text-[#64748b] text-sm mt-1">{subtitle}</p>}
     </div>
@@ -194,6 +196,29 @@ export function CJIADetail({ data }: CJIADetailProps) {
     { id: 'projects', label: 'Projects' },
   ];
 
+  // Swipe gesture for mobile tab navigation
+  const isMobile = useIsMobile();
+
+  const handleSwipeLeft = useCallback(() => {
+    setActiveTab(prev => {
+      const idx = tabs.findIndex(t => t.id === prev);
+      return idx < tabs.length - 1 ? tabs[idx + 1].id : prev;
+    });
+  }, [tabs]);
+
+  const handleSwipeRight = useCallback(() => {
+    setActiveTab(prev => {
+      const idx = tabs.findIndex(t => t.id === prev);
+      return idx > 0 ? tabs[idx - 1].id : prev;
+    });
+  }, [tabs]);
+
+  const swipeRef = useSwipeGesture<HTMLDivElement>({
+    onSwipeLeft: handleSwipeLeft,
+    onSwipeRight: handleSwipeRight,
+    enabled: isMobile,
+  });
+
   // Arrival/departure ratio for current month
   const arrivalPercent = metrics && metrics.currentTotal > 0
     ? Math.round((metrics.currentArrivals / metrics.currentTotal) * 100)
@@ -214,10 +239,10 @@ export function CJIADetail({ data }: CJIADetailProps) {
   return (
     <div className="space-y-4">
       {/* ═══════════════════ TOP SECTION ═══════════════════ */}
-      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-5">
-        <div className="flex items-start justify-between gap-4">
+      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-5">
+        <div className="flex flex-col md:flex-row items-start justify-between gap-4">
           {/* Left: Health Score Gauge */}
-          <div className="flex items-center gap-5 flex-1 min-w-0">
+          <div className="flex flex-col md:flex-row items-center gap-5 flex-1 min-w-0">
             {insights?.overall?.health_score != null ? (
               <div className="flex flex-col items-center flex-shrink-0">
                 <HealthScoreTooltip score={insights.overall.health_score} breakdown={health?.breakdown} size={100} />
@@ -328,7 +353,7 @@ export function CJIADetail({ data }: CJIADetailProps) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 px-4 py-2.5 rounded-lg text-base font-medium transition-all whitespace-nowrap ${
+              className={`flex-1 flex-shrink-0 px-4 py-2.5 rounded-lg text-base font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'bg-[#d4af37] text-[#0a1628] shadow-lg shadow-[#d4af37]/20'
                   : 'text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-[#2d3a52]'
@@ -341,7 +366,7 @@ export function CJIADetail({ data }: CJIADetailProps) {
       </div>
 
       {/* ═══════════════════ TAB CONTENT ═══════════════════ */}
-      <div className="min-h-[400px]">
+      <div ref={swipeRef} className="min-h-[400px]">
 
         {/* ────────── TAB 1: OPERATIONS ────────── */}
         {activeTab === 'operations' && (
@@ -411,7 +436,7 @@ export function CJIADetail({ data }: CJIADetailProps) {
             {metrics ? (
               <>
                 {/* Hero Card - Current MTD */}
-                <div className="bg-gradient-to-br from-[#1a2744] to-[#1a2744]/80 rounded-2xl p-5 sm:p-6 border border-[#2d3a52]">
+                <div className="bg-gradient-to-br from-[#1a2744] to-[#1a2744]/80 rounded-2xl p-3 md:p-5 lg:p-6 border border-[#2d3a52]">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <div className="p-2 rounded-lg bg-[#d4af37]/10">
@@ -431,7 +456,7 @@ export function CJIADetail({ data }: CJIADetailProps) {
                   </div>
 
                   <div className="mb-5">
-                    <p className="text-4xl sm:text-5xl font-bold text-[#d4af37] tracking-tight">
+                    <p className="text-2xl md:text-4xl lg:text-5xl font-bold text-[#d4af37] tracking-tight">
                       {metrics.currentTotal.toLocaleString()}
                     </p>
                     <p className="text-[#94a3b8] text-sm mt-1">passengers (MTD)</p>
@@ -461,7 +486,7 @@ export function CJIADetail({ data }: CJIADetailProps) {
                 </div>
 
                 {/* 2025 Annual Summary */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   <div className="bg-[#1a2744] rounded-xl p-3 sm:p-4 border border-[#2d3a52] text-center">
                     <p className="text-[#64748b] text-[10px] sm:text-xs mb-1">2025 Arrivals</p>
                     <p className="text-lg sm:text-xl font-bold text-teal-400">{formatNumber(metrics.annual2025.arrivals)}</p>
@@ -481,7 +506,7 @@ export function CJIADetail({ data }: CJIADetailProps) {
                   <div className="space-y-2">
                     {metrics.sortedMonths.map((month) => {
                       const isPeak = month.month === metrics.peakMonth.month;
-                      const barWidth = (month.total / metrics.maxTotal) * 100;
+                      const barWidth = metrics.maxTotal > 0 ? (month.total / metrics.maxTotal) * 100 : 0;
                       return (
                         <div key={month.month} className="group">
                           <div className="flex items-center gap-3">
@@ -527,8 +552,8 @@ export function CJIADetail({ data }: CJIADetailProps) {
                   <CollapsibleSection title="Year-over-Year Comparison (Jan 1-26)" icon={TrendingUp} defaultOpen={false}>
                     <div className="space-y-2">
                       {data.historicalComparison.slice().reverse().map((year) => {
-                        const maxYearTotal = Math.max(...data.historicalComparison.map((y) => y.total));
-                        const barWidth = (year.total / maxYearTotal) * 100;
+                        const maxYearTotal = Math.max(...data.historicalComparison.map((y) => y.total), 1);
+                        const barWidth = maxYearTotal > 0 ? (year.total / maxYearTotal) * 100 : 0;
                         const isCurrentYear = year.year === '2026';
                         return (
                           <div key={year.year} className="flex items-center gap-3">
@@ -557,7 +582,7 @@ export function CJIADetail({ data }: CJIADetailProps) {
                 )}
               </>
             ) : (
-              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-12 text-center">
+              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-6 md:p-12 text-center">
                 <p className="text-[#64748b] text-base">No passenger data available. Upload CJIA reports to populate.</p>
               </div>
             )}
@@ -579,7 +604,7 @@ export function CJIADetail({ data }: CJIADetailProps) {
           <div className="space-y-4">
             <h3 className="text-[#f1f5f9] font-medium text-[22px]">Revenue & Financial</h3>
 
-            <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-12 text-center">
+            <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-6 md:p-12 text-center">
               <div className="w-16 h-16 rounded-2xl bg-[#2d3a52] flex items-center justify-center mx-auto mb-4">
                 <Upload className="w-8 h-8 text-[#64748b]" />
               </div>
@@ -606,7 +631,7 @@ export function CJIADetail({ data }: CJIADetailProps) {
           <div className="space-y-4">
             <h3 className="text-[#f1f5f9] font-medium text-[22px]">Infrastructure Projects</h3>
 
-            <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-12 text-center">
+            <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-6 md:p-12 text-center">
               <div className="w-16 h-16 rounded-2xl bg-[#2d3a52] flex items-center justify-center mx-auto mb-4">
                 <Upload className="w-8 h-8 text-[#64748b]" />
               </div>

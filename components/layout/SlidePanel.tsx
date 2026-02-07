@@ -53,12 +53,12 @@ export function SlidePanel({ isOpen, onClose, title, subtitle, icon: Icon, accen
         }`}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-[#1a2744]/95 backdrop-blur-sm border-b border-[#2d3a52] px-6 py-4 z-10">
+        <div className="sticky top-0 bg-[#1a2744]/95 backdrop-blur-sm border-b border-[#2d3a52] px-4 md:px-6 py-3 md:py-4 z-10">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 md:gap-4 min-w-0">
               <button
                 onClick={onClose}
-                className="p-2 -ml-2 rounded-lg hover:bg-[#2d3a52] text-[#94a3b8] hover:text-white transition-colors lg:hidden"
+                className="p-2.5 -ml-2 rounded-lg hover:bg-[#2d3a52] text-[#94a3b8] hover:text-white transition-colors lg:hidden touch-active"
               >
                 <ArrowLeft size={20} />
               </button>
@@ -82,7 +82,7 @@ export function SlidePanel({ isOpen, onClose, title, subtitle, icon: Icon, accen
         </div>
 
         {/* Content */}
-        <div className="h-[calc(100%-73px)] overflow-y-auto p-6">
+        <div className="h-[calc(100%-73px)] overflow-y-auto p-3 md:p-6 pb-24 md:pb-6">
           {children}
         </div>
       </div>

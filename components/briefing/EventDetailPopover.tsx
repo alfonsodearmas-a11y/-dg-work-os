@@ -76,9 +76,9 @@ export function EventDetailPopover({
       <div className="slide-panel-backdrop" onClick={onClose} />
 
       {/* Panel */}
-      <div className="fixed top-0 right-0 bottom-0 w-full max-w-[400px] bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border-l border-[#2d3a52] shadow-2xl z-50 animate-slide-in-right overflow-y-auto">
+      <div className="fixed top-0 right-0 bottom-0 w-full sm:max-w-[400px] bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border-l border-[#2d3a52] shadow-2xl z-50 animate-slide-in-right overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-[#1a2744]/95 backdrop-blur-sm border-b border-[#2d3a52] p-4 z-10">
+        <div className="sticky top-0 bg-[#1a2744]/95 backdrop-blur-sm border-b border-[#2d3a52] p-3 md:p-4 z-10">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-semibold text-white">{event.title}</h2>
@@ -102,7 +102,7 @@ export function EventDetailPopover({
           </div>
         </div>
 
-        <div className="p-4 space-y-5">
+        <div className="p-3 md:p-4 space-y-4 md:space-y-5 pb-24 md:pb-4">
           {/* Conflict Warning */}
           {conflictingEvents && conflictingEvents.length > 0 && (
             <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
@@ -220,7 +220,7 @@ export function EventDetailPopover({
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-[#1a2744]/95 backdrop-blur-sm border-t border-[#2d3a52] p-4 flex items-center justify-between">
+        <div className="sticky bottom-0 bg-[#1a2744]/95 backdrop-blur-sm border-t border-[#2d3a52] p-3 md:p-4 flex items-center justify-between" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
           <div className="flex gap-2">
             <button
               onClick={() => onEdit(event)}

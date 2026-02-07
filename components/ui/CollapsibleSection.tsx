@@ -30,7 +30,7 @@ export function CollapsibleSection({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="collapsible-header w-full"
+        className="collapsible-header w-full min-h-[48px]"
       >
         <div className="flex items-center gap-2.5 min-w-0">
           {Icon && <Icon size={18} className="text-[#d4af37] shrink-0" />}

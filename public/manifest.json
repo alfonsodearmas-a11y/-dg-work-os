@@ -1,0 +1,22 @@
+{
+  "name": "DG Work OS",
+  "short_name": "DG OS",
+  "description": "Executive Work OS for the Director General",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a1628",
+  "theme_color": "#0a1628",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/ministry-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/ministry-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

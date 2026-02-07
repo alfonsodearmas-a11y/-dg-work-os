@@ -141,51 +141,51 @@ export function CalendarView() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h2 className="text-2xl font-bold text-white">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 md:gap-4 min-w-0">
+          <h2 className="text-lg md:text-2xl font-bold text-white truncate">
             {format(currentMonth, 'MMMM yyyy')}
           </h2>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
             <button
               onClick={handlePrevMonth}
-              className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors"
+              className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors touch-active"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
             <button
               onClick={handleToday}
-              className="px-3 py-1.5 rounded-lg text-sm text-[#94a3b8] hover:text-white hover:bg-[#1a2744] transition-colors"
+              className="px-2 md:px-3 py-1.5 rounded-lg text-xs md:text-sm text-[#94a3b8] hover:text-white hover:bg-[#1a2744] transition-colors touch-active"
             >
               Today
             </button>
             <button
               onClick={handleNextMonth}
-              className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors"
+              className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors touch-active"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => {
               setSyncing(true);
               fetchEvents();
             }}
             disabled={syncing}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] text-[#94a3b8] hover:border-[#3d4a62] transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 p-2 md:px-3 md:py-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] text-[#94a3b8] hover:border-[#3d4a62] transition-colors disabled:opacity-50 touch-active"
           >
             <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-            Sync
+            <span className="hidden md:inline">Sync</span>
           </button>
           <button
             onClick={handleNewEvent}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#d4af37] text-[#0a1628] font-medium hover:bg-[#c9a432] transition-colors"
+            className="flex items-center gap-1 md:gap-2 px-3 md:px-4 py-2 rounded-lg bg-[#d4af37] text-[#0a1628] font-medium hover:bg-[#c9a432] transition-colors touch-active"
           >
             <Plus className="h-4 w-4" />
-            New Event
+            <span className="hidden md:inline">New Event</span>
           </button>
         </div>
       </div>
@@ -199,12 +199,21 @@ export function CalendarView() {
         <div className="rounded-xl border border-[#2d3a52] overflow-hidden">
           {/* Weekday Headers */}
           <div className="grid grid-cols-7 bg-[#1a2744]">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+            {[
+              { short: 'S', full: 'Sun' },
+              { short: 'M', full: 'Mon' },
+              { short: 'T', full: 'Tue' },
+              { short: 'W', full: 'Wed' },
+              { short: 'T', full: 'Thu' },
+              { short: 'F', full: 'Fri' },
+              { short: 'S', full: 'Sat' },
+            ].map((day, i) => (
               <div
-                key={day}
-                className="px-2 py-3 text-center text-sm font-medium text-[#64748b] border-b border-[#2d3a52]"
+                key={i}
+                className="px-1 md:px-2 py-2 md:py-3 text-center text-xs md:text-sm font-medium text-[#64748b] border-b border-[#2d3a52]"
               >
-                {day}
+                <span className="md:hidden">{day.short}</span>
+                <span className="hidden md:inline">{day.full}</span>
               </div>
             ))}
           </div>
@@ -220,14 +229,14 @@ export function CalendarView() {
                 <div
                   key={day.toISOString()}
                   onClick={() => handleDayClick(day)}
-                  className={`min-h-[120px] p-2 border-b border-r border-[#2d3a52] cursor-pointer transition-colors hover:bg-[#1a2744]/50 ${
+                  className={`min-h-[72px] md:min-h-[120px] p-1 md:p-2 border-b border-r border-[#2d3a52] cursor-pointer transition-colors hover:bg-[#1a2744]/50 touch-active ${
                     !isCurrentMonth ? 'bg-[#0a1628]/50' : 'bg-[#0f1d32]'
                   } ${index % 7 === 6 ? 'border-r-0' : ''}`}
                 >
                   {/* Day Number */}
-                  <div className="flex justify-end mb-1">
+                  <div className="flex justify-end mb-0.5 md:mb-1">
                     <span
-                      className={`w-7 h-7 flex items-center justify-center rounded-full text-sm ${
+                      className={`w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full text-xs md:text-sm ${
                         isCurrentDay
                           ? 'bg-[#d4af37] text-[#0a1628] font-bold'
                           : isCurrentMonth
@@ -240,21 +249,39 @@ export function CalendarView() {
                   </div>
 
                   {/* Events */}
-                  <div className="space-y-1">
-                    {dayEvents.slice(0, 3).map((event) => (
+                  <div className="space-y-0.5 md:space-y-1">
+                    {dayEvents.slice(0, 2).map((event) => (
                       <div
                         key={event.google_id}
                         onClick={(e) => handleEventClick(event, e)}
-                        className="group px-2 py-1 rounded text-xs truncate bg-[#d4af37]/20 text-[#d4af37] hover:bg-[#d4af37]/30 transition-colors cursor-pointer"
+                        className="group px-1 md:px-2 py-0.5 md:py-1 rounded text-[10px] md:text-xs truncate bg-[#d4af37]/20 text-[#d4af37] hover:bg-[#d4af37]/30 transition-colors cursor-pointer"
                       >
-                        <span className="font-medium">{formatEventTime(event)}</span>
-                        <span className="ml-1">{event.title}</span>
+                        <span className="font-medium hidden md:inline">{formatEventTime(event)}</span>
+                        <span className="md:ml-1">{event.title}</span>
                       </div>
                     ))}
-                    {dayEvents.length > 3 && (
-                      <div className="px-2 text-xs text-[#64748b]">
-                        +{dayEvents.length - 3} more
-                      </div>
+                    {/* Show 3rd event on desktop only */}
+                    {dayEvents.length > 2 && (
+                      <>
+                        {dayEvents[2] && (
+                          <div
+                            key={dayEvents[2].google_id}
+                            onClick={(e) => handleEventClick(dayEvents[2], e)}
+                            className="hidden md:block group px-2 py-1 rounded text-xs truncate bg-[#d4af37]/20 text-[#d4af37] hover:bg-[#d4af37]/30 transition-colors cursor-pointer"
+                          >
+                            <span className="font-medium">{formatEventTime(dayEvents[2])}</span>
+                            <span className="ml-1">{dayEvents[2].title}</span>
+                          </div>
+                        )}
+                        <div className={`px-1 md:px-2 text-[10px] md:text-xs text-[#64748b] ${dayEvents.length > 3 ? '' : 'md:hidden'}`}>
+                          +{dayEvents.length - 2} more
+                        </div>
+                        {dayEvents.length > 3 && (
+                          <div className="hidden md:block px-2 text-xs text-[#64748b]">
+                            +{dayEvents.length - 3} more
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -265,8 +292,8 @@ export function CalendarView() {
       )}
 
       {/* Upcoming Events Sidebar */}
-      <div className="mt-6">
-        <h3 className="text-lg font-semibold text-white mb-3">Upcoming Events</h3>
+      <div className="mt-4 md:mt-6">
+        <h3 className="text-base md:text-lg font-semibold text-white mb-2 md:mb-3">Upcoming Events</h3>
         <div className="space-y-2">
           {events
             .filter((e) => e.start_time && parseISO(e.start_time) >= new Date())

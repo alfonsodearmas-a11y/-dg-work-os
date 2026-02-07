@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import {
   DollarSign, Receipt, Users, ShieldAlert, ShoppingCart, Package,
   Upload, RefreshCw, Calendar, ChevronDown, AlertTriangle, FileText,
@@ -162,9 +164,9 @@ function KPICard({ title, value, badge, status = 'neutral' }: KPICardProps) {
   }[status];
 
   return (
-    <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-5">
-      <p className="text-[#94a3b8] text-[15px] mb-2">{title}</p>
-      <p className={`text-[32px] font-bold leading-tight ${valueColor}`}>{value}</p>
+    <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-5">
+      <p className="text-[#94a3b8] text-[13px] md:text-[15px] mb-2">{title}</p>
+      <p className={`text-xl md:text-[32px] font-bold leading-tight ${valueColor}`}>{value}</p>
       {badge && <div className="mt-2">{badge}</div>}
     </div>
   );
@@ -346,6 +348,26 @@ export function GWIDetail() {
     { id: 'procurement', label: 'Procurement' },
   ];
 
+  // Swipe gesture for mobile tab navigation
+  const isMobile = useIsMobile();
+  const handleSwipeLeft = useCallback(() => {
+    setActiveTab(prev => {
+      const idx = tabs.findIndex(t => t.id === prev);
+      return idx < tabs.length - 1 ? tabs[idx + 1].id : prev;
+    });
+  }, [tabs]);
+  const handleSwipeRight = useCallback(() => {
+    setActiveTab(prev => {
+      const idx = tabs.findIndex(t => t.id === prev);
+      return idx > 0 ? tabs[idx - 1].id : prev;
+    });
+  }, [tabs]);
+  const swipeRef = useSwipeGesture<HTMLDivElement>({
+    onSwipeLeft: handleSwipeLeft,
+    onSwipeRight: handleSwipeRight,
+    enabled: isMobile,
+  });
+
   // Loading state
   if (loading && !report) {
     return (
@@ -361,7 +383,7 @@ export function GWIDetail() {
   // No data state
   if (!report) {
     return (
-      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-12 text-center">
+      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-6 md:p-12 text-center">
         <div className="w-16 h-16 rounded-2xl bg-[#2d3a52] flex items-center justify-center mx-auto mb-4">
           <Upload className="w-8 h-8 text-[#64748b]" />
         </div>
@@ -393,8 +415,8 @@ export function GWIDetail() {
   return (
     <div className="space-y-4">
       {/* ═══════════════════ TOP SECTION ═══════════════════ */}
-      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-5">
-        <div className="flex items-start justify-between gap-4">
+      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-5">
+        <div className="flex flex-col md:flex-row items-start justify-between gap-4">
           {/* Left: Health Score Gauge */}
           <div className="flex items-center gap-5 flex-1 min-w-0">
             {gwiHealth ? (
@@ -417,7 +439,7 @@ export function GWIDetail() {
               {insights?.overall?.headline ? (
                 <>
                   <p className="text-[10px] uppercase tracking-widest text-[#d4af37] font-semibold mb-1">AI Analysis</p>
-                  <p className="text-[20px] font-bold text-[#f1f5f9] leading-snug">
+                  <p className="text-base md:text-[20px] font-bold text-[#f1f5f9] leading-snug">
                     {insights.overall.headline}
                   </p>
                   {insights.overall.summary && (
@@ -431,7 +453,7 @@ export function GWIDetail() {
           </div>
 
           {/* Right: Controls */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
             {availableMonths.length > 0 && (
               <div className="flex items-center gap-1.5">
                 <Calendar className="w-4 h-4 text-[#64748b]" />
@@ -509,13 +531,13 @@ export function GWIDetail() {
       </div>
 
       {/* ═══════════════════ TAB BAR ═══════════════════ */}
-      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-1.5 overflow-x-auto scrollbar-hide">
+      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-1.5 overflow-x-auto scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <div className="flex gap-1">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 px-4 py-2.5 rounded-lg text-base font-medium transition-all whitespace-nowrap ${
+              className={`flex-1 flex-shrink-0 px-4 py-2.5 rounded-lg text-sm md:text-base font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'bg-[#d4af37] text-[#0a1628] shadow-lg shadow-[#d4af37]/20'
                   : 'text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-[#2d3a52]'
@@ -528,13 +550,13 @@ export function GWIDetail() {
       </div>
 
       {/* ═══════════════════ TAB CONTENT ═══════════════════ */}
-      <div className="min-h-[400px]">
+      <div ref={swipeRef} className="min-h-[400px]">
 
         {/* ────────── TAB 1: FINANCIAL OVERVIEW ────────── */}
         {activeTab === 'financial' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-[#f1f5f9] font-medium text-[22px]">Financial Overview</h3>
+              <h3 className="text-[#f1f5f9] font-medium text-lg md:text-[22px]">Financial Overview</h3>
               <ScheduleBadge frequency="Monthly" lastUpdated={report.report_month} />
             </div>
 
@@ -579,17 +601,17 @@ export function GWIDetail() {
               defaultOpen={false}
             >
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-[#0a1628] rounded-lg p-4 border border-[#2d3a52]">
+                <div className="bg-[#0a1628] rounded-lg p-3 md:p-4 border border-[#2d3a52]">
                   <p className="text-[#64748b] text-sm mb-1">Tariff Revenue</p>
-                  <p className="text-xl font-bold text-[#f1f5f9]">{formatGYD(fin.tariff_revenue)}</p>
+                  <p className="text-lg md:text-xl font-bold text-[#f1f5f9]">{formatGYD(fin.tariff_revenue)}</p>
                 </div>
-                <div className="bg-[#0a1628] rounded-lg p-4 border border-[#2d3a52]">
+                <div className="bg-[#0a1628] rounded-lg p-3 md:p-4 border border-[#2d3a52]">
                   <p className="text-[#64748b] text-sm mb-1">Other Operating Revenue</p>
-                  <p className="text-xl font-bold text-[#f1f5f9]">{formatGYD(fin.other_operating_revenue)}</p>
+                  <p className="text-lg md:text-xl font-bold text-[#f1f5f9]">{formatGYD(fin.other_operating_revenue)}</p>
                 </div>
-                <div className="bg-[#0a1628] rounded-lg p-4 border border-[#2d3a52]">
+                <div className="bg-[#0a1628] rounded-lg p-3 md:p-4 border border-[#2d3a52]">
                   <p className="text-[#64748b] text-sm mb-1">Non-Operating Revenue</p>
-                  <p className="text-xl font-bold text-[#f1f5f9]">{formatGYD(fin.non_operating_revenue)}</p>
+                  <p className="text-lg md:text-xl font-bold text-[#f1f5f9]">{formatGYD(fin.non_operating_revenue)}</p>
                 </div>
               </div>
             </CollapsibleSection>
@@ -661,7 +683,7 @@ export function GWIDetail() {
         {activeTab === 'collections' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-[#f1f5f9] font-medium text-[22px]">Collections & Billing</h3>
+              <h3 className="text-[#f1f5f9] font-medium text-lg md:text-[22px]">Collections & Billing</h3>
               <ScheduleBadge frequency="Monthly" lastUpdated={report.report_month} />
             </div>
 
@@ -702,7 +724,7 @@ export function GWIDetail() {
               icon={DollarSign}
               defaultOpen={false}
             >
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 {[
                   { label: 'Region 1', value: coll.region_1_collections },
                   { label: 'Region 2', value: coll.region_2_collections },
@@ -783,7 +805,7 @@ export function GWIDetail() {
         {activeTab === 'customer_service' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-[#f1f5f9] font-medium text-[22px]">Customer Service</h3>
+              <h3 className="text-[#f1f5f9] font-medium text-lg md:text-[22px]">Customer Service</h3>
               <ScheduleBadge frequency="Monthly" lastUpdated={report.report_month} />
             </div>
 
@@ -904,7 +926,7 @@ export function GWIDetail() {
         {activeTab === 'procurement' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-[#f1f5f9] font-medium text-[22px]">Procurement</h3>
+              <h3 className="text-[#f1f5f9] font-medium text-lg md:text-[22px]">Procurement</h3>
               <ScheduleBadge frequency="Monthly" lastUpdated={report.report_month} />
             </div>
 

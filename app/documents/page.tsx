@@ -81,75 +81,75 @@ export default function DocumentsPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Document Vault</h1>
-          <p className="text-[#64748b] mt-1">AI-powered document analysis and search</p>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-3xl font-bold text-white">Document Vault</h1>
+          <p className="text-[#64748b] mt-1 text-xs md:text-sm">AI-powered document analysis and search</p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-2 md:gap-3 shrink-0">
           <button
             onClick={() => fetchDocuments()}
-            className="btn-navy flex items-center space-x-2"
+            className="btn-navy flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2"
           >
             <RefreshCw className="h-4 w-4" />
-            <span>Refresh</span>
+            <span className="hidden md:inline">Refresh</span>
           </button>
           <button
             onClick={() => setShowUpload(!showUpload)}
-            className="btn-gold flex items-center space-x-2"
+            className="btn-gold flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2"
           >
             <Upload className="h-4 w-4" />
-            <span>Upload Document</span>
+            <span className="hidden md:inline">Upload</span>
           </button>
         </div>
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="card-premium p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
-              <FileText className="h-6 w-6 text-[#d4af37]" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div className="card-premium p-4 md:p-6">
+          <div className="flex items-center justify-between mb-2 md:mb-4">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
+              <FileText className="h-5 w-5 md:h-6 md:w-6 text-[#d4af37]" />
             </div>
           </div>
-          <p className="stat-number">{documents.length}</p>
-          <p className="text-[#64748b] text-sm mt-1">Total Documents</p>
+          <p className="text-2xl md:text-[2.5rem] font-semibold text-[#d4af37] leading-none">{documents.length}</p>
+          <p className="text-[#64748b] text-xs md:text-sm mt-1">Total Documents</p>
         </div>
 
-        <div className="card-premium p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
-              <Building2 className="h-6 w-6 text-[#d4af37]" />
+        <div className="card-premium p-4 md:p-6">
+          <div className="flex items-center justify-between mb-2 md:mb-4">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
+              <Building2 className="h-5 w-5 md:h-6 md:w-6 text-[#d4af37]" />
             </div>
           </div>
-          <p className="stat-number">{Object.keys(byAgency).length}</p>
-          <p className="text-[#64748b] text-sm mt-1">Agencies</p>
+          <p className="text-2xl md:text-[2.5rem] font-semibold text-[#d4af37] leading-none">{Object.keys(byAgency).length}</p>
+          <p className="text-[#64748b] text-xs md:text-sm mt-1">Agencies</p>
         </div>
 
-        <div className="card-premium p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
-              <FolderOpen className="h-6 w-6 text-[#d4af37]" />
+        <div className="card-premium p-4 md:p-6">
+          <div className="flex items-center justify-between mb-2 md:mb-4">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
+              <FolderOpen className="h-5 w-5 md:h-6 md:w-6 text-[#d4af37]" />
             </div>
           </div>
-          <p className="stat-number">{Object.keys(byType).length}</p>
-          <p className="text-[#64748b] text-sm mt-1">Document Types</p>
+          <p className="text-2xl md:text-[2.5rem] font-semibold text-[#d4af37] leading-none">{Object.keys(byType).length}</p>
+          <p className="text-[#64748b] text-xs md:text-sm mt-1">Document Types</p>
         </div>
 
-        <div className="card-premium p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-              <Search className="h-6 w-6 text-emerald-400" />
+        <div className="card-premium p-4 md:p-6">
+          <div className="flex items-center justify-between mb-2 md:mb-4">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+              <Search className="h-5 w-5 md:h-6 md:w-6 text-emerald-400" />
             </div>
           </div>
-          <p className="stat-number text-emerald-400">AI</p>
-          <p className="text-[#64748b] text-sm mt-1">Search Enabled</p>
+          <p className="text-2xl md:text-[2.5rem] font-semibold text-emerald-400 leading-none">AI</p>
+          <p className="text-[#64748b] text-xs md:text-sm mt-1">Search Enabled</p>
         </div>
       </div>
 
       {/* Upload Zone */}
       {showUpload && (
-        <div className="card-premium p-6">
+        <div className="card-premium p-4 md:p-6">
           <UploadZone onUploadComplete={() => {
             // Keep the upload zone visible so the user sees the success message.
             // Refetch immediately (will show completed docs), then poll once
@@ -161,16 +161,16 @@ export default function DocumentsPage() {
       )}
 
       {/* Search */}
-      <div className="card-premium p-6">
+      <div className="card-premium p-4 md:p-6">
         <DocumentSearch onSearch={handleSearch} />
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Left Column - Documents */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 md:space-y-6">
           {/* Recent Uploads */}
-          <div className="card-premium p-6">
+          <div className="card-premium p-4 md:p-6">
             <h2 className="text-lg font-semibold text-white flex items-center mb-4">
               <FileText className="h-5 w-5 mr-2 text-[#d4af37]" />
               Recent Uploads

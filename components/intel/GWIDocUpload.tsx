@@ -155,12 +155,12 @@ export function GWIDocUpload({ reportPeriod, onClose, onSaved }: GWIDocUploadPro
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#0a1628] rounded-2xl border border-[#2d3a52] w-full max-w-3xl max-h-[85vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-4">
+      <div className="bg-[#0a1628] rounded-t-2xl md:rounded-2xl border border-[#2d3a52] w-full md:max-w-3xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#2d3a52]">
+        <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-[#2d3a52]">
           <div>
-            <h2 className="text-[22px] font-bold text-white">Upload GWI Reports</h2>
+            <h2 className="text-lg md:text-[22px] font-bold text-white">Upload GWI Reports</h2>
             <p className="text-[#64748b] text-sm mt-0.5">
               Upload .docx reports for {new Date(`${reportPeriod}-01`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </p>
@@ -171,7 +171,7 @@ export function GWIDocUpload({ reportPeriod, onClose, onSaved }: GWIDocUploadPro
         </div>
 
         {/* Upload Zones */}
-        <div className="p-6 space-y-4">
+        <div className="p-4 md:p-6 space-y-4">
           {UPLOAD_ZONES.map(zone => {
             const state = zones[zone.key];
             return (
@@ -189,10 +189,10 @@ export function GWIDocUpload({ reportPeriod, onClose, onSaved }: GWIDocUploadPro
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-[#2d3a52] flex justify-end">
+        <div className="px-4 md:px-6 py-4 border-t border-[#2d3a52] flex justify-end">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 bg-[#2d3a52] hover:bg-[#3d4a62] text-white rounded-lg text-[15px] font-medium transition-colors"
+            className="w-full md:w-auto px-6 py-2.5 bg-[#2d3a52] hover:bg-[#3d4a62] text-white rounded-lg text-[15px] font-medium transition-colors"
           >
             Done
           </button>

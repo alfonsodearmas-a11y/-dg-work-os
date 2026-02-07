@@ -7,6 +7,9 @@ import { TaskEditModal } from './TaskEditModal';
 import { CalendarCommandCenter } from './CalendarCommandCenter';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { LoadingSkeleton } from '@/components/intel/common/LoadingSkeleton';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { PullToRefreshIndicator } from '@/components/ui/PullToRefreshIndicator';
 
 interface Task {
   notion_id: string;
@@ -51,6 +54,7 @@ export function BriefingDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     fetchBriefing();
@@ -79,6 +83,11 @@ export function BriefingDashboard() {
     fetchBriefing();
   };
 
+  const { isRefreshing, pullDistance, handlers: pullHandlers } = usePullToRefresh({
+    onRefresh: fetchBriefing,
+    enabled: isMobile,
+  });
+
   if (loading && !briefing) {
     return <LoadingSkeleton type="briefing" />;
   }
@@ -98,7 +107,9 @@ export function BriefingDashboard() {
   if (!briefing) return null;
 
   return (
-    <div className="space-y-8 relative">
+    <div className="space-y-8 relative" {...pullHandlers}>
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
+
       {/* Ministry crest watermark */}
       <div className="pointer-events-none fixed inset-0 flex items-center justify-center z-0" aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -115,18 +126,18 @@ export function BriefingDashboard() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Daily Briefing</h1>
-          <p className="text-[#64748b] mt-1">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-3xl font-bold text-white">Daily Briefing</h1>
+          <p className="text-[#64748b] mt-1 text-xs md:text-sm">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
         </div>
         <button
           onClick={fetchBriefing}
           disabled={loading}
-          className="btn-navy flex items-center space-x-2 disabled:opacity-50"
+          className="btn-navy flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2 disabled:opacity-50 shrink-0"
         >
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
+          <span className="hidden md:inline">{loading ? 'Refreshing...' : 'Refresh'}</span>
         </button>
       </div>
 
@@ -138,52 +149,52 @@ export function BriefingDashboard() {
       />
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="card-premium p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
-              <CheckSquare className="h-6 w-6 text-[#d4af37]" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div className="card-premium p-4 md:p-6">
+          <div className="flex items-center justify-between mb-2 md:mb-4">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
+              <CheckSquare className="h-5 w-5 md:h-6 md:w-6 text-[#d4af37]" />
             </div>
           </div>
-          <p className="stat-number">{briefing.summary.total_tasks}</p>
-          <p className="text-[#64748b] text-sm mt-1">Open Tasks</p>
+          <p className="text-2xl md:text-[2.5rem] font-semibold text-[#d4af37] leading-none">{briefing.summary.total_tasks}</p>
+          <p className="text-[#64748b] text-xs md:text-sm mt-1">Open Tasks</p>
         </div>
 
-        <div className="card-premium p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
-              <Clock className="h-6 w-6 text-[#d4af37]" />
+        <div className="card-premium p-4 md:p-6">
+          <div className="flex items-center justify-between mb-2 md:mb-4">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
+              <Clock className="h-5 w-5 md:h-6 md:w-6 text-[#d4af37]" />
             </div>
           </div>
-          <p className="stat-number">{briefing.summary.due_today_count}</p>
-          <p className="text-[#64748b] text-sm mt-1">Due Today</p>
+          <p className="text-2xl md:text-[2.5rem] font-semibold text-[#d4af37] leading-none">{briefing.summary.due_today_count}</p>
+          <p className="text-[#64748b] text-xs md:text-sm mt-1">Due Today</p>
         </div>
 
-        <div className="card-premium p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center">
-              <AlertTriangle className="h-6 w-6 text-red-400" />
+        <div className="card-premium p-4 md:p-6">
+          <div className="flex items-center justify-between mb-2 md:mb-4">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-red-500/20 flex items-center justify-center">
+              <AlertTriangle className="h-5 w-5 md:h-6 md:w-6 text-red-400" />
             </div>
           </div>
-          <p className="stat-number text-red-400">{briefing.summary.overdue_count}</p>
-          <p className="text-[#64748b] text-sm mt-1">Overdue</p>
+          <p className="text-2xl md:text-[2.5rem] font-semibold text-red-400 leading-none">{briefing.summary.overdue_count}</p>
+          <p className="text-[#64748b] text-xs md:text-sm mt-1">Overdue</p>
         </div>
 
-        <div className="card-premium p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-              <Calendar className="h-6 w-6 text-emerald-400" />
+        <div className="card-premium p-4 md:p-6">
+          <div className="flex items-center justify-between mb-2 md:mb-4">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+              <Calendar className="h-5 w-5 md:h-6 md:w-6 text-emerald-400" />
             </div>
           </div>
-          <p className="stat-number text-emerald-400">{briefing.summary.meetings_today}</p>
-          <p className="text-[#64748b] text-sm mt-1">Meetings Today</p>
+          <p className="text-2xl md:text-[2.5rem] font-semibold text-emerald-400 leading-none">{briefing.summary.meetings_today}</p>
+          <p className="text-[#64748b] text-xs md:text-sm mt-1">Meetings Today</p>
         </div>
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Left Column - Tasks */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 md:space-y-6">
           {/* Overdue */}
           {briefing.overdue.length > 0 && (
             <CollapsibleSection title="Overdue" badge={{ text: String(briefing.overdue.length), variant: 'danger' }} icon={AlertTriangle} defaultOpen={true}>
@@ -221,9 +232,9 @@ export function BriefingDashboard() {
         </div>
 
         {/* Right Column - Summaries */}
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           {/* By Agency */}
-          <div className="card-premium p-6">
+          <div className="card-premium p-4 md:p-6">
             <h2 className="text-lg font-semibold text-white mb-4">By Agency</h2>
             <RoleSummary data={briefing.by_agency} />
           </div>

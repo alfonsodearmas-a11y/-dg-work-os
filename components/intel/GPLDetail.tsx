@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend,
@@ -119,7 +121,7 @@ function KpiSummaryCard({ name, data, icon: Icon, unit, inverseGood = false, tar
   const atTarget = target != null && data.value >= target;
 
   return (
-    <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-5">
+    <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-5">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="w-10 h-10 rounded-lg bg-[#2d3a52] flex items-center justify-center">
@@ -134,7 +136,7 @@ function KpiSummaryCard({ name, data, icon: Icon, unit, inverseGood = false, tar
           </div>
         )}
       </div>
-      <p className={`text-3xl font-bold ${target != null ? (atTarget ? 'text-emerald-400' : 'text-red-400') : 'text-[#f1f5f9]'}`}>
+      <p className={`text-2xl md:text-3xl font-bold ${target != null ? (atTarget ? 'text-emerald-400' : 'text-red-400') : 'text-[#f1f5f9]'}`}>
         {typeof data.value === 'number' ? (unit === '%' ? data.value.toFixed(1) : Math.round(data.value).toLocaleString()) : data.value}{unit}
       </p>
       {data.previousValue !== null && (
@@ -171,9 +173,9 @@ function ForecastMetricCard({ title, value, unit = '', isDate = false, trend = '
   }
 
   return (
-    <div className={`bg-[#1a2744] rounded-xl border border-[#2d3a52] border-l-4 ${trendStyles[trend]} p-5`}>
+    <div className={`bg-[#1a2744] rounded-xl border border-[#2d3a52] border-l-4 ${trendStyles[trend]} p-3 md:p-5`}>
       <p className="text-[#64748b] text-[15px] mb-1">{title}</p>
-      <p className="text-2xl font-bold text-[#f1f5f9]">{displayValue}</p>
+      <p className="text-xl md:text-2xl font-bold text-[#f1f5f9]">{displayValue}</p>
     </div>
   );
 }
@@ -185,6 +187,30 @@ function ForecastMetricCard({ title, value, unit = '', isDate = false, trend = '
 export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
   // Tab state
   const [activeTab, setActiveTab] = useState<string>('overview');
+
+  // Swipe gesture for mobile tab navigation
+  const isMobile = useIsMobile();
+  const tabIds = ['overview', 'stations', 'trends', 'forecast'];
+
+  const handleSwipeLeft = useCallback(() => {
+    setActiveTab(prev => {
+      const idx = tabIds.indexOf(prev);
+      return idx < tabIds.length - 1 ? tabIds[idx + 1] : prev;
+    });
+  }, []);
+
+  const handleSwipeRight = useCallback(() => {
+    setActiveTab(prev => {
+      const idx = tabIds.indexOf(prev);
+      return idx > 0 ? tabIds[idx - 1] : prev;
+    });
+  }, []);
+
+  const swipeRef = useSwipeGesture<HTMLDivElement>({
+    onSwipeLeft: handleSwipeLeft,
+    onSwipeRight: handleSwipeRight,
+    enabled: isMobile,
+  });
 
   // Station filter state (for Station Health tab)
   const [stationFilter, setStationFilter] = useState<string>('all');
@@ -417,7 +443,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
       totalDerated: Math.round(totalDerated * 10) / 10,
       totalAvailable: Math.round(totalAvailable * 10) / 10,
       totalOffline: Math.round((totalDerated - totalAvailable) * 10) / 10,
-      availability: Math.round((totalAvailable / totalDerated) * 1000) / 10,
+      availability: totalDerated > 0 ? Math.round((totalAvailable / totalDerated) * 1000) / 10 : 0,
       totalUnits,
       totalSolar,
       totalDBIS: Math.round(totalDBIS * 10) / 10,
@@ -431,7 +457,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
 
   if (!summary) {
     return (
-      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-12 text-center">
+      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-6 md:p-12 text-center">
         <div className="w-16 h-16 rounded-2xl bg-[#2d3a52] flex items-center justify-center mx-auto mb-4">
           <Upload className="w-8 h-8 text-[#64748b]" />
         </div>
@@ -639,7 +665,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
   return (
     <div className="space-y-4">
       {/* PERSISTENT KPI STRIP */}
-      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-4">
+      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-4">
         <div className="flex items-start justify-between mb-3 gap-4">
           <div className="flex items-start gap-4 flex-1 min-w-0">
             {/* Health Score Gauge with Tooltip */}
@@ -718,20 +744,20 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {/* Available Capacity */}
-          <div className="flex items-center gap-3 p-4 bg-[#0a1628] rounded-lg border-l-4 border-emerald-500">
+          <div className="flex items-center gap-3 p-2.5 md:p-4 bg-[#0a1628] rounded-lg border-l-4 border-emerald-500">
             <div>
               <p className="text-[#64748b] text-[15px]">Available Capacity</p>
-              <p className="text-2xl font-bold text-[#f1f5f9]">{summary.totalAvailable}<span className="text-base font-normal text-[#64748b]"> / {summary.totalDerated} MW</span></p>
+              <p className="text-xl md:text-2xl font-bold text-[#f1f5f9]">{summary.totalAvailable}<span className="text-sm md:text-base font-normal text-[#64748b]"> / {summary.totalDerated} MW</span></p>
             </div>
           </div>
 
           {/* Reserve Margin */}
-          <div className={`flex items-center gap-3 p-4 bg-[#0a1628] rounded-lg border-l-4 ${
+          <div className={`flex items-center gap-3 p-2.5 md:p-4 bg-[#0a1628] rounded-lg border-l-4 ${
             reserveMargin < 10 ? 'border-red-500' : reserveMargin < 15 ? 'border-amber-500' : 'border-emerald-500'
           }`}>
             <div>
               <p className="text-[#64748b] text-[15px]">Reserve Margin</p>
-              <p className={`text-2xl font-bold ${
+              <p className={`text-xl md:text-2xl font-bold ${
                 reserveMargin < 10 ? 'text-red-400' : reserveMargin < 15 ? 'text-amber-400' : 'text-emerald-400'
               }`}>{reserveMargin.toFixed(1)}%</p>
               <p className="text-[#64748b] text-xs">{reserveMargin < 15 ? 'Below 15% safe threshold' : 'Adequate'}</p>
@@ -739,21 +765,21 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
           </div>
 
           {/* Offline Capacity */}
-          <div className={`flex items-center gap-3 p-4 bg-[#0a1628] rounded-lg border-l-4 ${
+          <div className={`flex items-center gap-3 p-2.5 md:p-4 bg-[#0a1628] rounded-lg border-l-4 ${
             summary.offline.length > 0 ? 'border-red-500' : 'border-[#2d3a52]'
           }`}>
             <div>
               <p className="text-[#64748b] text-[15px]">Offline Capacity</p>
-              <p className="text-2xl font-bold text-red-400">{summary.totalOffline} MW</p>
+              <p className="text-xl md:text-2xl font-bold text-red-400">{summary.totalOffline} MW</p>
               <p className="text-[#64748b] text-xs">{summary.offline.length} stations offline</p>
             </div>
           </div>
 
           {/* Peak Demand */}
-          <div className="flex items-center gap-3 p-4 bg-[#0a1628] rounded-lg border-l-4 border-purple-500">
+          <div className="flex items-center gap-3 p-2.5 md:p-4 bg-[#0a1628] rounded-lg border-l-4 border-purple-500">
             <div>
               <p className="text-[#64748b] text-[15px]">Peak Demand (Evening)</p>
-              <p className="text-2xl font-bold text-purple-400">{eveningPeak || '-'} MW</p>
+              <p className="text-xl md:text-2xl font-bold text-purple-400">{eveningPeak || '-'} MW</p>
               <p className="text-[#64748b] text-xs">{data.peakDemandDate || '-'}</p>
             </div>
           </div>
@@ -767,7 +793,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 px-4 py-2.5 rounded-lg text-base font-medium transition-all whitespace-nowrap ${
+              className={`flex-1 flex-shrink-0 px-4 py-2.5 rounded-lg text-base font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'bg-[#d4af37] text-[#0a1628] shadow-lg shadow-[#d4af37]/20'
                   : 'text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-[#2d3a52]'
@@ -780,7 +806,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
       </div>
 
       {/* TAB CONTENT */}
-      <div className="min-h-[400px]">
+      <div ref={swipeRef} className="min-h-[400px]">
 
         {/* ===================== TAB 1: SYSTEM OVERVIEW ===================== */}
         {activeTab === 'overview' && (
@@ -843,7 +869,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
               {/* Station Grid */}
               <div className="lg:col-span-2 space-y-3">
                 {/* Summary line — always visible */}
-                <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-4">
+                <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-4">
                   <h3 className="text-[#f1f5f9] font-medium text-lg mb-2">Fleet at a Glance</h3>
                   <p className="text-[#94a3b8] text-[15px]">
                     {summary.operational.length} operational, {summary.degraded.length} degraded, {summary.offline.length} offline
@@ -888,7 +914,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
               </div>
 
               {/* Utilization Donut */}
-              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-4">
+              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-4">
                 <h3 className="text-[#f1f5f9] font-medium text-lg mb-2">Capacity Utilization</h3>
                 <div className="h-48 relative">
                   <ResponsiveContainer width="100%" height="100%">
@@ -915,7 +941,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center">
-                      <p className="text-3xl font-bold text-[#f1f5f9]">{summary.availability}%</p>
+                      <p className="text-2xl md:text-3xl font-bold text-[#f1f5f9]">{summary.availability}%</p>
                       <p className="text-[#64748b] text-sm">Fleet</p>
                     </div>
                   </div>
@@ -1019,14 +1045,14 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                 <div className="space-y-3">
                   {/* HEADLINE — full text, never truncated */}
                   {headline && (
-                    <div className="bg-gradient-to-r from-[#1a2744] to-[#2d3a52]/80 rounded-xl border border-[#d4af37]/20 p-5">
+                    <div className="bg-gradient-to-r from-[#1a2744] to-[#2d3a52]/80 rounded-xl border border-[#d4af37]/20 p-3 md:p-5">
                       <div className="flex items-start gap-3">
                         <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center shrink-0 mt-0.5">
                           <Activity className="w-5 h-5 text-white" />
                         </div>
                         <div className="min-w-0">
                           <p className="text-[10px] uppercase tracking-widest text-[#d4af37] font-semibold mb-1.5">AI Executive Briefing</p>
-                          <p className="text-[20px] font-bold text-[#f1f5f9] leading-snug">{headline}</p>
+                          <p className="text-base md:text-[20px] font-bold text-[#f1f5f9] leading-snug">{headline}</p>
                         </div>
                       </div>
                     </div>
@@ -1116,7 +1142,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                         : station.status === 'degraded'
                           ? 'border-amber-500/30'
                           : 'border-[#2d3a52]'
-                    } p-5`}
+                    } p-3 md:p-5`}
                   >
                     {/* Header: station name + status badge */}
                     <div className="flex items-center justify-between mb-3">
@@ -1133,7 +1159,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
 
                     {/* MW values — always visible */}
                     <div className="flex items-baseline gap-1 mb-3">
-                      <span className="text-3xl font-bold text-[#f1f5f9]">{station.available}</span>
+                      <span className="text-2xl md:text-3xl font-bold text-[#f1f5f9]">{station.available}</span>
                       <span className="text-[#64748b] text-base">/ {station.derated} MW</span>
                     </div>
 
@@ -1151,7 +1177,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                     {/* Units + % — always visible */}
                     <div className="flex items-center justify-between text-[15px] text-[#64748b]">
                       <span>{station.units} units</span>
-                      <span>{station.availability.toFixed(0)}% available</span>
+                      <span>{(station.availability ?? 0).toFixed(0)}% available</span>
                     </div>
                   </div>
                 );
@@ -1208,9 +1234,9 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                   >
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {/* Peak Demand Trends */}
-                    <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-4">
+                    <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-4">
                       <h4 className="text-[#f1f5f9] font-medium text-lg mb-4">Peak Demand Trends</h4>
-                      <div className="h-72">
+                      <div className="h-72 overflow-x-auto">
                         <ResponsiveContainer width="100%" height="100%">
                           <AreaChart data={kpiData.trends}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#2d3a52" />
@@ -1248,9 +1274,9 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                     </div>
 
                     {/* Collection Rate - Bar Chart (Fixed legibility) */}
-                    <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-4">
+                    <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-4">
                       <h4 className="text-[#f1f5f9] font-medium text-lg mb-4">Collection Rate Performance</h4>
-                      <div className="h-80">
+                      <div className="h-80 overflow-x-auto">
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={kpiData.trends} margin={{ top: 25, right: 20, left: 10, bottom: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#2d3a52" />
@@ -1325,9 +1351,9 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
         {activeTab === 'forecast' && (
           <div className="space-y-4">
             {/* Header with cache info + Regenerate */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-[#f1f5f9] font-medium text-[22px]">Predictive Analytics</h3>
+                <h3 className="text-[#f1f5f9] font-medium text-xl md:text-[22px]">Predictive Analytics</h3>
                 {enhancedForecast?.metadata?.generated_at && (
                   <p className="text-[#64748b] text-sm mt-0.5">
                     Last generated: {new Date(enhancedForecast.metadata.generated_at).toLocaleString()}
@@ -1359,7 +1385,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
               <>
                 {/* AI Briefing Headline */}
                 {enhancedForecast.briefing?.headline && (
-                  <div className="bg-gradient-to-r from-[#1a2744] to-[#243049] rounded-xl border border-[#d4af37]/30 p-4">
+                  <div className="bg-gradient-to-r from-[#1a2744] to-[#243049] rounded-xl border border-[#d4af37]/30 p-3 md:p-4">
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 rounded-lg bg-[#d4af37]/20 flex items-center justify-center flex-shrink-0">
                         <Zap className="w-5 h-5 text-[#d4af37]" />
@@ -1407,8 +1433,8 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                 })()}
 
                 {/* 3-Scenario Trajectory Chart */}
-                <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-4">
-                  <div className="flex items-center justify-between mb-4">
+                <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-2">
                     <h4 className="text-[#f1f5f9] font-medium text-lg">Demand Forecast — 3 Scenarios (24 months)</h4>
                     <div className="flex items-center gap-4 text-xs text-[#64748b]">
                       <span className="flex items-center gap-1.5">
@@ -1422,7 +1448,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                       </span>
                     </div>
                   </div>
-                  <div className="h-80">
+                  <div className="h-80 overflow-x-auto">
                     <ResponsiveContainer width="100%" height="100%">
                       {(() => {
                         const cons = enhancedForecast.scenarios?.conservative?.monthly_projections || [];
@@ -1592,7 +1618,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                     {Object.keys(enhancedForecast.seasonal_factors || {}).length > 0 && (
                       <div className="bg-[#0a1628] rounded-lg p-4 border border-[#2d3a52]">
                         <p className="text-blue-400 text-sm font-medium mb-3">Seasonal Demand Factors</p>
-                        <div className="h-48">
+                        <div className="h-48 overflow-x-auto">
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart
                               data={Object.entries(enhancedForecast.seasonal_factors).map(([month, factor]) => ({
@@ -1688,7 +1714,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
               </>
             ) : (
               /* Fallback: No enhanced forecast available */
-              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-8 text-center">
+              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-4 md:p-8 text-center">
                 <Activity className="w-10 h-10 text-[#64748b] mx-auto mb-3" />
                 <h4 className="text-[#f1f5f9] font-medium text-lg mb-2">Forecast Unavailable</h4>
                 <p className="text-[#64748b] text-[15px] max-w-md mx-auto mb-4">

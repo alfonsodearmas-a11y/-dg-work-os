@@ -6,36 +6,28 @@ import { KanbanBoard } from '@/components/tasks/KanbanBoard';
 
 export default function TasksPage() {
   return (
-    <main className="min-h-screen bg-[#0a1628]">
-      {/* Header */}
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-[#0a1628]/80 border-b border-[#1a2744]">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link
-                href="/"
-                className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Link>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
-                  <CheckSquare className="h-5 w-5 text-[#d4af37]" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-white">Task Board</h1>
-                  <p className="text-sm text-[#64748b]">Synced with Notion</p>
-                </div>
-              </div>
-            </div>
+    <div className="space-y-4 md:space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center gap-3 md:gap-4">
+        <Link
+          href="/"
+          className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors touch-active"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
+            <CheckSquare className="h-4 w-4 md:h-5 md:w-5 text-[#d4af37]" />
+          </div>
+          <div>
+            <h1 className="text-lg md:text-xl font-bold text-white">Task Board</h1>
+            <p className="text-xs md:text-sm text-[#64748b]">Synced with Notion</p>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        <KanbanBoard />
-      </div>
-    </main>
+      <KanbanBoard />
+    </div>
   );
 }

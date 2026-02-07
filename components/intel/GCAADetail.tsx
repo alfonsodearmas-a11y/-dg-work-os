@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import {
   Shield, FileCheck, AlertTriangle, Clock, Upload, RefreshCw,
   Loader2, BarChart3, Plane,
@@ -61,11 +63,11 @@ function KPICard({ title, value, unit, subtitle, status = 'neutral', children }:
   }[status];
 
   return (
-    <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-5">
+    <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-5">
       <p className="text-[#94a3b8] text-sm mb-2">{title}</p>
       <div className="flex items-end gap-2 mb-1">
-        <span className={`text-3xl font-bold ${valueColor}`}>{value}</span>
-        {unit && <span className="text-[#94a3b8] text-lg mb-1">{unit}</span>}
+        <span className={`text-2xl md:text-3xl font-bold ${valueColor}`}>{value}</span>
+        {unit && <span className="text-[#94a3b8] text-base md:text-lg mb-1">{unit}</span>}
       </div>
       {subtitle && <p className="text-[#64748b] text-sm">{subtitle}</p>}
       {children}
@@ -138,6 +140,26 @@ export function GCAADetail({ data }: GCAADetailProps) {
     { id: 'safety', label: 'Safety' },
   ];
 
+  // Swipe gesture for mobile tab navigation
+  const isMobile = useIsMobile();
+  const handleSwipeLeft = useCallback(() => {
+    setActiveTab(prev => {
+      const idx = tabs.findIndex(t => t.id === prev);
+      return idx < tabs.length - 1 ? tabs[idx + 1].id : prev;
+    });
+  }, [tabs]);
+  const handleSwipeRight = useCallback(() => {
+    setActiveTab(prev => {
+      const idx = tabs.findIndex(t => t.id === prev);
+      return idx > 0 ? tabs[idx - 1].id : prev;
+    });
+  }, [tabs]);
+  const swipeRef = useSwipeGesture<HTMLDivElement>({
+    onSwipeLeft: handleSwipeLeft,
+    onSwipeRight: handleSwipeRight,
+    enabled: isMobile,
+  });
+
   // Loading without any data
   if (!data && insightsLoading) {
     return (
@@ -153,10 +175,10 @@ export function GCAADetail({ data }: GCAADetailProps) {
   return (
     <div className="space-y-4">
       {/* ═══════════════════ TOP SECTION ═══════════════════ */}
-      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-5">
+      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-5">
         <div className="flex items-start justify-between gap-4">
           {/* Left: Health Score Gauge */}
-          <div className="flex items-center gap-5 flex-1 min-w-0">
+          <div className="flex items-center gap-3 md:gap-5 flex-1 min-w-0">
             {insights?.overall?.health_score != null ? (
               <div className="flex flex-col items-center flex-shrink-0">
                 <HealthScoreTooltip score={insights.overall.health_score} breakdown={health?.breakdown} size={100} />
@@ -180,7 +202,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
               {insights?.overall?.headline ? (
                 <>
                   <p className="text-[10px] uppercase tracking-widest text-[#d4af37] font-semibold mb-1">AI Analysis</p>
-                  <p className="text-[20px] font-bold text-[#f1f5f9] leading-snug">
+                  <p className="text-base md:text-[20px] font-bold text-[#f1f5f9] leading-snug">
                     {insights.overall.headline}
                   </p>
                   {insights.overall.summary && (
@@ -189,7 +211,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
                 </>
               ) : health ? (
                 <div>
-                  <p className="text-[20px] font-bold text-[#f1f5f9] leading-snug">
+                  <p className="text-base md:text-[20px] font-bold text-[#f1f5f9] leading-snug">
                     GCAA — {health.label}
                   </p>
                   <p className="text-[#94a3b8] text-[15px] mt-1">Guyana Civil Aviation Authority — Regulatory Dashboard</p>
@@ -204,7 +226,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={() => {/* Upload placeholder */}}
-              className="px-3 py-1.5 bg-[#2d3a52] hover:bg-[#3d4a62] text-[#94a3b8] rounded-lg text-sm flex items-center gap-1.5 transition-colors"
+              className="px-3 py-1.5 min-h-[44px] bg-[#2d3a52] hover:bg-[#3d4a62] text-[#94a3b8] rounded-lg text-sm flex items-center gap-1.5 transition-colors"
             >
               <Upload className="w-4 h-4" />
               Upload
@@ -213,7 +235,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
               <button
                 onClick={handleRegenerate}
                 disabled={regenerating}
-                className="px-3 py-1.5 bg-[#2d3a52] hover:bg-[#3d4a62] text-[#94a3b8] rounded-lg text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                className="px-3 py-1.5 min-h-[44px] bg-[#2d3a52] hover:bg-[#3d4a62] text-[#94a3b8] rounded-lg text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={`w-4 h-4 ${regenerating ? 'animate-spin' : ''}`} />
               </button>
@@ -265,7 +287,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 px-4 py-2.5 rounded-lg text-base font-medium transition-all whitespace-nowrap ${
+              className={`flex-1 flex-shrink-0 px-4 py-2.5 min-h-[44px] rounded-lg text-sm md:text-base font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'bg-[#d4af37] text-[#0a1628] shadow-lg shadow-[#d4af37]/20'
                   : 'text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-[#2d3a52]'
@@ -278,18 +300,18 @@ export function GCAADetail({ data }: GCAADetailProps) {
       </div>
 
       {/* ═══════════════════ TAB CONTENT ═══════════════════ */}
-      <div className="min-h-[400px]">
+      <div ref={swipeRef} className="min-h-[400px]">
 
         {/* ────────── TAB 1: COMPLIANCE ────────── */}
         {activeTab === 'compliance' && (
           <div className="space-y-4">
-            <h3 className="text-[#f1f5f9] font-medium text-[22px]">Regulatory Compliance</h3>
+            <h3 className="text-[#f1f5f9] font-medium text-lg md:text-[22px]">Regulatory Compliance</h3>
 
             {data ? (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Compliance Rate Radial */}
-                  <div className="bg-[#1a2744] rounded-xl p-5 border border-[#2d3a52]">
+                  <div className="bg-[#1a2744] rounded-xl p-3 md:p-5 border border-[#2d3a52]">
                     <h4 className="text-[#94a3b8] text-sm mb-4">Compliance Audit Rate</h4>
                     <div className="flex flex-col items-center">
                       <div className="relative w-32 h-32">
@@ -304,7 +326,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
                           />
                         </svg>
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <span className={`text-2xl font-bold ${data.complianceRate >= 90 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                          <span className={`text-xl md:text-2xl font-bold ${data.complianceRate >= 90 ? 'text-emerald-400' : 'text-amber-400'}`}>
                             {data.complianceRate?.toFixed(1)}%
                           </span>
                         </div>
@@ -323,7 +345,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
                 </div>
               </>
             ) : (
-              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-12 text-center">
+              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-6 md:p-12 text-center">
                 <p className="text-[#64748b] text-base">No compliance data available. Upload GCAA reports to populate.</p>
               </div>
             )}
@@ -343,7 +365,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
         {/* ────────── TAB 2: INSPECTIONS ────────── */}
         {activeTab === 'inspections' && (
           <div className="space-y-4">
-            <h3 className="text-[#f1f5f9] font-medium text-[22px]">Inspection Program</h3>
+            <h3 className="text-[#f1f5f9] font-medium text-lg md:text-[22px]">Inspection Program</h3>
 
             {data ? (
               <>
@@ -385,7 +407,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
                 )}
               </>
             ) : (
-              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-12 text-center">
+              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-6 md:p-12 text-center">
                 <p className="text-[#64748b] text-base">No inspection data available. Upload GCAA reports to populate.</p>
               </div>
             )}
@@ -405,7 +427,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
         {/* ────────── TAB 3: REGISTRATIONS ────────── */}
         {activeTab === 'registrations' && (
           <div className="space-y-4">
-            <h3 className="text-[#f1f5f9] font-medium text-[22px]">Aircraft Registrations</h3>
+            <h3 className="text-[#f1f5f9] font-medium text-lg md:text-[22px]">Aircraft Registrations</h3>
 
             {data ? (
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
@@ -427,7 +449,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
                 />
               </div>
             ) : (
-              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-12 text-center">
+              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-6 md:p-12 text-center">
                 <p className="text-[#64748b] text-base">No registration data available. Upload GCAA reports to populate.</p>
               </div>
             )}
@@ -447,7 +469,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
         {/* ────────── TAB 4: SAFETY ────────── */}
         {activeTab === 'safety' && (
           <div className="space-y-4">
-            <h3 className="text-[#f1f5f9] font-medium text-[22px]">Safety & Incidents</h3>
+            <h3 className="text-[#f1f5f9] font-medium text-lg md:text-[22px]">Safety & Incidents</h3>
 
             {data ? (
               <div className="grid grid-cols-2 gap-4">
@@ -465,7 +487,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
                 />
               </div>
             ) : (
-              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-12 text-center">
+              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-6 md:p-12 text-center">
                 <p className="text-[#64748b] text-base">No safety data available. Upload GCAA reports to populate.</p>
               </div>
             )}

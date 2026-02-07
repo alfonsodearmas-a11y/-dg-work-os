@@ -59,7 +59,7 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate, onDelete }: T
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -67,9 +67,9 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate, onDelete }: T
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg rounded-2xl bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border border-[#2d3a52] shadow-2xl">
+      <div className="relative w-full max-w-lg rounded-t-2xl md:rounded-2xl bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border border-[#2d3a52] shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up md:animate-fade-in" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#2d3a52]">
+        <div className="flex items-center justify-between p-3 md:p-4 border-b border-[#2d3a52]">
           <h2 className="text-lg font-semibold text-white">Edit Task</h2>
           <div className="flex items-center gap-2">
             <a
@@ -90,7 +90,7 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate, onDelete }: T
         </div>
 
         {/* Content */}
-        <div className="p-4 space-y-4">
+        <div className="p-3 md:p-4 space-y-3 md:space-y-4">
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-[#94a3b8] mb-1.5">
@@ -207,7 +207,7 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate, onDelete }: T
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-[#2d3a52]">
+        <div className="flex items-center justify-between p-3 md:p-4 border-t border-[#2d3a52]">
           <button
             onClick={handleDelete}
             disabled={deleting}

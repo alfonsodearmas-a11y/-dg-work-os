@@ -40,25 +40,25 @@ export default function IntelPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
-            <Radio className="h-5 w-5 text-[#d4af37]" />
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0">
+          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-[#d4af37]/20 flex items-center justify-center shrink-0">
+            <Radio className="h-4 w-4 md:h-5 md:w-5 text-[#d4af37]" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">Agency Intel</h1>
-            <p className="text-[#64748b] text-sm">
-              Last updated: {lastUpdated.toLocaleTimeString()}
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-white">Agency Intel</h1>
+            <p className="text-[#64748b] text-xs md:text-sm truncate">
+              Updated: {lastUpdated.toLocaleTimeString()}
             </p>
           </div>
         </div>
         <button
           onClick={refresh}
           disabled={isLoading}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] hover:text-white transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] hover:text-white transition-colors disabled:opacity-50 shrink-0 touch-active"
         >
           <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          <span className="text-sm">Refresh</span>
+          <span className="text-sm hidden md:inline">Refresh</span>
         </button>
       </div>
 

@@ -87,9 +87,10 @@ export function Sidebar() {
           </Link>
           <button
             onClick={() => setMobileOpen(false)}
-            className="md:hidden p-1.5 rounded-lg hover:bg-[#2d3a52]/50 text-[#64748b] hover:text-white transition-colors"
+            className="md:hidden p-2.5 rounded-lg hover:bg-[#2d3a52]/50 text-[#64748b] hover:text-white transition-colors touch-active"
+            aria-label="Close menu"
           >
-            <X size={18} />
+            <X size={20} />
           </button>
         </div>
 

@@ -447,8 +447,8 @@ export function GPLForecastDashboard() {
                   {sortedStations.slice(0, 10).map((station: any, idx: number) => (
                     <tr key={idx} className="hover:bg-[#2d3a52]/50">
                       <td className="px-4 py-3 text-sm font-medium text-white">{station.station}</td>
-                      <td className="px-4 py-3 text-sm text-right text-[#94a3b8]">{parseFloat(station.uptime_pct).toFixed(1)}%</td>
-                      <td className="px-4 py-3 text-sm text-right text-[#94a3b8]">{parseFloat(station.avg_utilization_pct).toFixed(1)}%</td>
+                      <td className="px-4 py-3 text-sm text-right text-[#94a3b8]">{(parseFloat(station.uptime_pct) || 0).toFixed(1)}%</td>
+                      <td className="px-4 py-3 text-sm text-right text-[#94a3b8]">{(parseFloat(station.avg_utilization_pct) || 0).toFixed(1)}%</td>
                       <td className="px-4 py-3 text-sm text-right text-[#94a3b8]">{station.online_units}/{station.total_units}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
