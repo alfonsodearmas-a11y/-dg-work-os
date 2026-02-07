@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { X, Minus, Trash2, ArrowUp, Loader2, Sparkles, ExternalLink } from 'lucide-react';
+import { X, Minus, Trash2, ArrowUp, Loader2, Sparkles, ExternalLink, RotateCcw, AlertTriangle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -13,6 +13,8 @@ interface ChatMessage {
   timestamp: Date;
   suggestions?: string[];
   actions?: Array<{ label: string; route: string }>;
+  interrupted?: boolean;
+  isError?: boolean;
 }
 
 interface ChatPanelProps {
@@ -23,7 +25,7 @@ interface ChatPanelProps {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const INITIAL_SUGGESTIONS = [
+const DEFAULT_SUGGESTIONS = [
   { emoji: '\u{1F4CA}', text: 'What needs my attention today?' },
   { emoji: '\u{26A0}\u{FE0F}', text: 'Show me all critical issues' },
   { emoji: '\u{1F4C8}', text: 'Compare agency health scores' },
@@ -31,6 +33,33 @@ const INITIAL_SUGGESTIONS = [
   { emoji: '\u{1F4B0}', text: 'Financial overview across agencies' },
   { emoji: '\u{1F4CB}', text: 'My overdue tasks' },
 ];
+
+const PAGE_SUGGESTIONS: Record<string, Array<{ emoji: string; text: string }>> = {
+  '/intel/gwi': [
+    { emoji: '\u{1F4CA}', text: "Summarize GWI's financial performance" },
+    { emoji: '\u{1F4B0}', text: 'Why are only 46% of customers paying on time?' },
+    { emoji: '\u{1F4C8}', text: "What's driving the 190% procurement spike?" },
+    { emoji: '\u{2705}', text: "Is GWI's complaint resolution improving?" },
+  ],
+  '/intel/gpl': [
+    { emoji: '\u{26A1}', text: 'Which stations need attention?' },
+    { emoji: '\u{1F50B}', text: 'Is reserve margin adequate?' },
+    { emoji: '\u{1F4C9}', text: 'Analyze system loss trends' },
+    { emoji: '\u{1F3D7}\u{FE0F}', text: 'GPL infrastructure project status' },
+  ],
+  '/projects': [
+    { emoji: '\u{26A0}\u{FE0F}', text: 'Which delayed projects are most critical?' },
+    { emoji: '\u{1F5FA}\u{FE0F}', text: 'Summarize projects by region' },
+    { emoji: '\u{1F4B0}', text: "What's the total delayed project value?" },
+    { emoji: '\u{1F4CA}', text: 'Compare agency project execution' },
+  ],
+  '/': [
+    { emoji: '\u{2600}\u{FE0F}', text: 'What needs my attention today?' },
+    { emoji: '\u{1F4C5}', text: "Summarize this week's schedule" },
+    { emoji: '\u{23F0}', text: 'What tasks are overdue?' },
+    { emoji: '\u{1F4CB}', text: 'Brief me on all agencies' },
+  ],
+};
 
 const PLACEHOLDERS = [
   'Ask about any agency, project, metric...',
@@ -56,18 +85,24 @@ const PAGE_NAMES: Record<string, string> = {
   '/tasks': 'Tasks',
 };
 
+const AGENCY_ROUTES: Record<string, string> = {
+  GPL: '/intel/gpl',
+  GWI: '/intel/gwi',
+  CJIA: '/intel/cjia',
+  GCAA: '/intel/gcaa',
+};
+
 // ── Markdown Renderer ────────────────────────────────────────────────────────
 
-function renderInline(text: string): React.ReactNode[] {
+function renderInline(text: string, onAgencyClick?: (route: string) => void): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
-  // Match **bold**, *italic*, `code`, and plain text
-  const regex = /(\*\*(.+?)\*\*)|(\*(.+?)\*)|(`(.+?)`)/g;
+  // Match **bold**, *italic*, `code`, and standalone agency names
+  const regex = /(\*\*(.+?)\*\*)|(\*(.+?)\*)|(`(.+?)`)|(\b(GPL|GWI|CJIA|GCAA)\b)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
   let key = 0;
 
   while ((match = regex.exec(text)) !== null) {
-    // Text before match
     if (match.index > lastIndex) {
       nodes.push(text.slice(lastIndex, match.index));
     }
@@ -80,21 +115,38 @@ function renderInline(text: string): React.ReactNode[] {
         </strong>
       );
     } else if (match[3]) {
-      // Italic
       nodes.push(<em key={key++} className="italic text-white/80">{match[4]}</em>);
     } else if (match[5]) {
-      // Inline code
       nodes.push(
         <code key={key++} className="px-1.5 py-0.5 rounded bg-white/10 text-[#d4af37] text-[13px] font-mono">
           {match[6]}
         </code>
       );
+    } else if (match[7] && onAgencyClick) {
+      // Agency name — clickable link
+      const agency = match[8];
+      const route = AGENCY_ROUTES[agency];
+      if (route) {
+        nodes.push(
+          <button
+            key={key++}
+            onClick={(e) => { e.stopPropagation(); onAgencyClick(route); }}
+            className="text-[#d4af37] hover:underline decoration-[#d4af37]/40 underline-offset-2 font-medium cursor-pointer"
+          >
+            {agency}
+          </button>
+        );
+      } else {
+        nodes.push(agency);
+      }
+    } else if (match[7]) {
+      // Agency name without handler — render plain
+      nodes.push(match[7]);
     }
 
     lastIndex = match.index + match[0].length;
   }
 
-  // Remaining text
   if (lastIndex < text.length) {
     nodes.push(text.slice(lastIndex));
   }
@@ -102,7 +154,7 @@ function renderInline(text: string): React.ReactNode[] {
   return nodes;
 }
 
-function MarkdownContent({ text }: { text: string }) {
+function MarkdownContent({ text, onAgencyClick }: { text: string; onAgencyClick?: (route: string) => void }) {
   const blocks = text.split('\n');
   const elements: React.ReactNode[] = [];
   let listItems: React.ReactNode[] = [];
@@ -125,48 +177,38 @@ function MarkdownContent({ text }: { text: string }) {
   for (const line of blocks) {
     const trimmed = line.trim();
 
-    // Empty line
-    if (!trimmed) {
-      flushList();
-      continue;
-    }
+    if (!trimmed) { flushList(); continue; }
 
-    // Unordered list
     const ulMatch = trimmed.match(/^[-*]\s+(.+)$/);
     if (ulMatch) {
       if (listType !== 'ul') flushList();
       listType = 'ul';
-      listItems.push(<li key={key++} className="text-white/90">{renderInline(ulMatch[1])}</li>);
+      listItems.push(<li key={key++} className="text-white/90">{renderInline(ulMatch[1], onAgencyClick)}</li>);
       continue;
     }
 
-    // Ordered list
     const olMatch = trimmed.match(/^\d+\.\s+(.+)$/);
     if (olMatch) {
       if (listType !== 'ol') flushList();
       listType = 'ol';
-      listItems.push(<li key={key++} className="text-white/90">{renderInline(olMatch[1])}</li>);
+      listItems.push(<li key={key++} className="text-white/90">{renderInline(olMatch[1], onAgencyClick)}</li>);
       continue;
     }
 
-    // Not a list item — flush any pending list
     flushList();
 
-    // Headers
     if (trimmed.startsWith('### ')) {
-      elements.push(<h4 key={key++} className="text-sm font-semibold text-[#d4af37] mt-3 mb-1">{renderInline(trimmed.slice(4))}</h4>);
+      elements.push(<h4 key={key++} className="text-sm font-semibold text-[#d4af37] mt-3 mb-1">{renderInline(trimmed.slice(4), onAgencyClick)}</h4>);
     } else if (trimmed.startsWith('## ')) {
-      elements.push(<h3 key={key++} className="text-base font-semibold text-[#d4af37] mt-3 mb-1">{renderInline(trimmed.slice(3))}</h3>);
+      elements.push(<h3 key={key++} className="text-base font-semibold text-[#d4af37] mt-3 mb-1">{renderInline(trimmed.slice(3), onAgencyClick)}</h3>);
     } else if (trimmed.startsWith('# ')) {
-      elements.push(<h2 key={key++} className="text-lg font-bold text-[#d4af37] mt-3 mb-1">{renderInline(trimmed.slice(2))}</h2>);
+      elements.push(<h2 key={key++} className="text-lg font-bold text-[#d4af37] mt-3 mb-1">{renderInline(trimmed.slice(2), onAgencyClick)}</h2>);
     } else {
-      // Regular paragraph line
-      elements.push(<p key={key++} className="my-1 leading-relaxed">{renderInline(trimmed)}</p>);
+      elements.push(<p key={key++} className="my-1 leading-relaxed">{renderInline(trimmed, onAgencyClick)}</p>);
     }
   }
 
   flushList();
-
   return <div className="space-y-0.5">{elements}</div>;
 }
 
@@ -180,10 +222,7 @@ function TypingIndicator() {
           <span
             key={i}
             className="w-2 h-2 rounded-full bg-[#d4af37]"
-            style={{
-              animation: 'chatBounce 1.4s ease-in-out infinite',
-              animationDelay: `${i * 0.15}s`,
-            }}
+            style={{ animation: 'chatBounce 1.4s ease-in-out infinite', animationDelay: `${i * 0.15}s` }}
           />
         ))}
       </div>
@@ -196,31 +235,23 @@ function TypingIndicator() {
 function parseSuggestions(text: string): { clean: string; suggestions: string[] } {
   const match = text.match(/<!--\s*suggestions:\s*(\[[\s\S]*?\])\s*-->/);
   if (!match) return { clean: text, suggestions: [] };
-
   try {
     const suggestions = JSON.parse(match[1]) as string[];
-    const clean = text.replace(match[0], '').trim();
-    return { clean, suggestions };
-  } catch {
-    return { clean: text, suggestions: [] };
-  }
+    return { clean: text.replace(match[0], '').trim(), suggestions };
+  } catch { return { clean: text, suggestions: [] }; }
 }
 
 function parseActions(text: string): { clean: string; actions: Array<{ label: string; route: string }> } {
   const actions: Array<{ label: string; route: string }> = [];
   let clean = text;
-
   const regex = /<!--\s*action:\s*(\{[^}]*?\})\s*-->/g;
   let match: RegExpExecArray | null;
-
   while ((match = regex.exec(text)) !== null) {
     try {
-      const action = JSON.parse(match[1]) as { label: string; route: string };
-      actions.push(action);
+      actions.push(JSON.parse(match[1]));
       clean = clean.replace(match[0], '');
-    } catch { /* skip malformed */ }
+    } catch { /* skip */ }
   }
-
   return { clean: clean.trim(), actions };
 }
 
@@ -232,20 +263,22 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [streamingText, setStreamingText] = useState('');
+  const [contextWarning, setContextWarning] = useState(false);
 
   const pathname = usePathname();
   const router = useRouter();
   const isMobile = useIsMobile();
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const headerRef = useRef<HTMLDivElement>(null);
-
-  // Swipe-to-close for mobile
+  const lastSentRef = useRef<string>('');
+  const autoBriefingFired = useRef(false);
   const touchStartY = useRef(0);
 
+  // ── Derived ──
+
   const pageName = useMemo(() => {
-    // Try exact match, then prefix match for dynamic routes
     if (PAGE_NAMES[pathname]) return PAGE_NAMES[pathname];
     if (pathname.startsWith('/projects/')) return 'Project Detail';
     if (pathname.startsWith('/documents/')) return 'Document';
@@ -253,27 +286,38 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
     return 'DG Work OS';
   }, [pathname]);
 
-  // Rotate placeholder
+  const suggestions = useMemo(() => {
+    // Check exact match first, then prefixes for sub-routes
+    if (PAGE_SUGGESTIONS[pathname]) return PAGE_SUGGESTIONS[pathname];
+    if (pathname.startsWith('/projects')) return PAGE_SUGGESTIONS['/projects'];
+    if (pathname.startsWith('/intel/gwi')) return PAGE_SUGGESTIONS['/intel/gwi'];
+    if (pathname.startsWith('/intel/gpl')) return PAGE_SUGGESTIONS['/intel/gpl'];
+    return DEFAULT_SUGGESTIONS;
+  }, [pathname]);
+
+  // ── Placeholder rotation ──
+
   useEffect(() => {
-    const timer = setInterval(() => {
-      setPlaceholderIdx(prev => (prev + 1) % PLACEHOLDERS.length);
-    }, 5000);
+    const timer = setInterval(() => setPlaceholderIdx(prev => (prev + 1) % PLACEHOLDERS.length), 5000);
     return () => clearInterval(timer);
   }, []);
 
-  // Auto-scroll to bottom
+  // ── Auto-scroll ──
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingText]);
 
-  // Focus textarea when panel opens
+  // ── Focus textarea on open ──
+
   useEffect(() => {
     if (isOpen && !isMobile) {
       setTimeout(() => textareaRef.current?.focus(), 350);
     }
   }, [isOpen, isMobile]);
 
-  // Prevent body scroll when panel is open on mobile
+  // ── Body scroll lock (mobile) ──
+
   useEffect(() => {
     if (isMobile && isOpen) {
       document.body.style.overflow = 'hidden';
@@ -281,23 +325,36 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
     }
   }, [isMobile, isOpen]);
 
-  // Auto-grow textarea
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
-    const el = e.target;
-    el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
-  }, []);
+  // ── Focus trap ──
 
-  // Clear conversation
-  const handleClear = useCallback(() => {
-    setMessages([]);
-    setStreamingText('');
-    setInput('');
-  }, []);
+  useEffect(() => {
+    if (!isOpen || !panelRef.current) return;
 
-  // Send message
-  const sendMessage = useCallback(async (text: string) => {
+    const panel = panelRef.current;
+    const focusable = panel.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
+
+    panel.addEventListener('keydown', handleTab);
+    return () => panel.removeEventListener('keydown', handleTab);
+  }, [isOpen, messages, isStreaming]);
+
+  // ── Morning auto-briefing ──
+
+  const sendMessage = useCallback(async (text: string, isAutoBriefing = false) => {
     if (!text.trim() || isStreaming) return;
 
     const userMessage: ChatMessage = { role: 'user', content: text.trim(), timestamp: new Date() };
@@ -305,11 +362,10 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
     setInput('');
     setIsStreaming(true);
     setStreamingText('');
+    setContextWarning(false);
+    lastSentRef.current = text.trim();
 
-    // Reset textarea height
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
     const abort = new AbortController();
     abortRef.current = abort;
@@ -324,7 +380,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text.trim(),
-          conversation_history: history.slice(0, -1), // exclude the current user message
+          conversation_history: history.slice(0, -1),
           current_page: pathname,
           session_id: 'dg-session',
         }),
@@ -333,7 +389,21 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: 'Request failed' }));
-        throw new Error(errData.error || `HTTP ${res.status}`);
+        const errMsg = errData.error || `HTTP ${res.status}`;
+
+        // Specific error messages
+        let displayMsg: string;
+        if (res.status === 429) {
+          displayMsg = "You've reached the message limit. Please wait a few minutes.";
+        } else if (errMsg.includes('API') || errMsg.includes('key') || errMsg.includes('ANTHROPIC')) {
+          displayMsg = 'AI service unavailable \u2014 check Anthropic API key in settings.';
+        } else {
+          displayMsg = `I couldn't process that request. ${errMsg}`;
+        }
+
+        setMessages(prev => [...prev, { role: 'assistant', content: displayMsg, timestamp: new Date(), isError: true }]);
+        setIsStreaming(false);
+        return;
       }
 
       if (!res.body) throw new Error('No response stream');
@@ -342,6 +412,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
       const decoder = new TextDecoder();
       let accumulated = '';
       let buffer = '';
+      let streamComplete = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -353,30 +424,23 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
 
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
-          const jsonStr = line.slice(6);
-
           try {
-            const event = JSON.parse(jsonStr);
-
+            const event = JSON.parse(line.slice(6));
             if (event.type === 'text') {
               accumulated += event.text;
               setStreamingText(accumulated);
+
+              // Detect context warning in streaming text
+              if (!contextWarning && (accumulated.includes('data sources unavailable') || accumulated.includes('unavailable') && accumulated.includes('data'))) {
+                setContextWarning(true);
+              }
             } else if (event.type === 'done') {
-              // Parse suggestions and actions from accumulated text
-              const { clean: c1, suggestions } = parseSuggestions(accumulated);
+              const { clean: c1, suggestions: sug } = parseSuggestions(accumulated);
               const { clean: c2, actions } = parseActions(c1);
-
-              const assistantMessage: ChatMessage = {
-                role: 'assistant',
-                content: c2,
-                timestamp: new Date(),
-                suggestions,
-                actions,
-              };
-
-              setMessages(prev => [...prev, assistantMessage]);
+              setMessages(prev => [...prev, { role: 'assistant', content: c2, timestamp: new Date(), suggestions: sug, actions }]);
               setStreamingText('');
               setIsStreaming(false);
+              streamComplete = true;
             } else if (event.type === 'error') {
               throw new Error(event.error);
             }
@@ -386,17 +450,22 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
         }
       }
 
-      // If stream ended without a 'done' event
-      if (accumulated && isStreaming) {
-        const { clean: c1, suggestions } = parseSuggestions(accumulated);
+      // Stream ended without 'done' — interrupted
+      if (!streamComplete && accumulated) {
+        const { clean: c1, suggestions: sug } = parseSuggestions(accumulated);
         const { clean: c2, actions } = parseActions(c1);
-
+        setMessages(prev => [...prev, {
+          role: 'assistant', content: c2, timestamp: new Date(),
+          suggestions: sug, actions, interrupted: true,
+        }]);
+        setStreamingText('');
+        setIsStreaming(false);
+      } else if (!streamComplete && !accumulated) {
+        // No text received at all
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: c2,
-          timestamp: new Date(),
-          suggestions,
-          actions,
+          content: 'Response interrupted before any content was received.',
+          timestamp: new Date(), isError: true, interrupted: true,
         }]);
         setStreamingText('');
         setIsStreaming(false);
@@ -407,15 +476,54 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
 
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: `I encountered an error: ${err.message}. Please try again.`,
-        timestamp: new Date(),
+        content: `I couldn't process that request. ${err.message}`,
+        timestamp: new Date(), isError: true,
       }]);
       setStreamingText('');
       setIsStreaming(false);
     }
-  }, [isStreaming, messages, pathname]);
+  }, [isStreaming, messages, pathname, contextWarning]);
 
-  // Keyboard: Enter sends, Shift+Enter newline
+  // Fire auto-briefing on first open each day
+  useEffect(() => {
+    if (!isOpen || autoBriefingFired.current || messages.length > 0 || isStreaming) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const storageKey = `ai-briefing-${today}`;
+
+    try {
+      if (sessionStorage.getItem(storageKey)) return;
+    } catch { return; }
+
+    autoBriefingFired.current = true;
+
+    const hour = new Date().getHours();
+    const greeting = hour < 12
+      ? 'Good morning. What needs my attention today?'
+      : 'What needs my attention right now?';
+
+    try { sessionStorage.setItem(storageKey, 'true'); } catch { /* noop */ }
+
+    // Small delay so the panel animation finishes
+    setTimeout(() => sendMessage(greeting, true), 500);
+  }, [isOpen, messages.length, isStreaming, sendMessage]);
+
+  // ── Handlers ──
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    const el = e.target;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+  }, []);
+
+  const handleClear = useCallback(() => {
+    setMessages([]);
+    setStreamingText('');
+    setInput('');
+    setContextWarning(false);
+  }, []);
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -423,31 +531,33 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
     }
   }, [input, sendMessage]);
 
-  // Handle chip click
-  const handleChipClick = useCallback((text: string) => {
-    sendMessage(text);
-  }, [sendMessage]);
+  const handleChipClick = useCallback((text: string) => sendMessage(text), [sendMessage]);
 
-  // Handle action click
   const handleActionClick = useCallback((route: string) => {
     router.push(route);
     onClose();
   }, [router, onClose]);
 
-  // Mobile swipe-to-close
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
-  }, []);
+  const handleRetry = useCallback(() => {
+    if (lastSentRef.current) {
+      // Remove the interrupted/error message
+      setMessages(prev => prev.slice(0, -1));
+      sendMessage(lastSentRef.current);
+    }
+  }, [sendMessage]);
 
+  const handleAgencyClick = useCallback((route: string) => {
+    router.push(route);
+    onClose();
+  }, [router, onClose]);
+
+  // Mobile swipe-to-close
+  const handleTouchStart = useCallback((e: React.TouchEvent) => { touchStartY.current = e.touches[0].clientY; }, []);
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
-    if (deltaY > 80) onClose();
+    if (e.changedTouches[0].clientY - touchStartY.current > 80) onClose();
   }, [onClose]);
 
-  // Time formatter
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  };
+  const formatTime = (date: Date) => date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
   if (!isOpen) return null;
 
@@ -456,14 +566,19 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
       {/* Backdrop (desktop only) */}
       {!isMobile && (
         <div
-          className="fixed inset-0 bg-black/30 z-[9998] transition-opacity duration-300"
+          className="fixed inset-0 bg-black/30 z-[9998]"
           style={{ animation: 'chatFadeIn 300ms ease-out' }}
           onClick={onClose}
+          aria-hidden="true"
         />
       )}
 
       {/* Panel */}
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-label="AI Assistant"
+        aria-modal="true"
         className={`fixed z-[9999] bg-[#0b1829] flex flex-col ${
           isMobile
             ? 'inset-0 rounded-t-2xl'
@@ -476,7 +591,6 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
       >
         {/* Header */}
         <div
-          ref={headerRef}
           className="h-14 flex items-center justify-between px-4 border-b border-white/5 flex-shrink-0"
           onTouchStart={isMobile ? handleTouchStart : undefined}
           onTouchEnd={isMobile ? handleTouchEnd : undefined}
@@ -487,39 +601,53 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
           </div>
 
           <div className="flex items-center gap-1">
-            {/* Context badge */}
             <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-[11px] bg-white/5 text-white/50 border border-white/10 mr-2 truncate max-w-[140px]">
               {pageName}
             </span>
 
             {messages.length > 0 && (
-              <button onClick={handleClear} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors" title="Clear conversation">
+              <button onClick={handleClear} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors" aria-label="Clear conversation">
                 <Trash2 className="h-4 w-4" />
               </button>
             )}
             {!isMobile && (
-              <button onClick={onMinimize} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors" title="Minimize">
+              <button onClick={onMinimize} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors" aria-label="Minimize">
                 <Minus className="h-4 w-4" />
               </button>
             )}
-            <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors" title="Close">
+            <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors" aria-label="Close AI assistant">
               <X className="h-5 w-5" />
             </button>
           </div>
         </div>
 
+        {/* Context warning banner */}
+        {contextWarning && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-xs text-amber-400/80">
+            <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+            Some data sources unavailable — response may be incomplete
+          </div>
+        )}
+
         {/* Chat Area */}
-        <div className="flex-1 overflow-y-auto px-4 py-4" style={{ overscrollBehavior: 'contain' }}>
+        <div
+          className="flex-1 overflow-y-auto px-4 py-4"
+          style={{ overscrollBehavior: 'contain' }}
+          role="log"
+          aria-live="polite"
+          aria-label="Chat messages"
+        >
           <div className="flex flex-col justify-end min-h-full">
             {/* Welcome Screen */}
             {messages.length === 0 && !isStreaming && (
               <div className="flex flex-col items-center justify-center flex-1 py-8">
                 <span className="text-5xl mb-4" role="img" aria-label="sparkle">{'\u2728'}</span>
                 <p className="text-lg text-white/70 mb-6 text-center">What would you like to know?</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-sm">
-                  {INITIAL_SUGGESTIONS.map(s => (
+                <div className={`grid gap-2 w-full max-w-sm ${suggestions.length > 4 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+                  {suggestions.map(s => (
                     <button
                       key={s.text}
+                      role="button"
                       onClick={() => handleChipClick(s.text)}
                       className="flex items-center gap-2 px-4 py-3 rounded-2xl border border-[#d4af37]/30 text-sm text-white/80 hover:bg-[#d4af37]/10 hover:border-[#d4af37]/50 transition-all text-left min-h-[48px]"
                     >
@@ -535,7 +663,6 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
             {messages.map((msg, i) => (
               <div key={i}>
                 {msg.role === 'user' ? (
-                  // User message
                   <div className="flex justify-end mb-3">
                     <div
                       className="max-w-[85%] px-4 py-3 text-[15px] text-[#0a1628] leading-relaxed"
@@ -548,29 +675,47 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
                     </div>
                   </div>
                 ) : (
-                  // AI message
                   <div className="flex flex-col mb-3">
                     <span className="text-[11px] text-white/30 mb-1 ml-1">
                       Claude Opus &middot; {formatTime(msg.timestamp)}
                     </span>
                     <div
-                      className="max-w-[90%] px-4 py-4 bg-white/5 text-[15px] text-white leading-relaxed"
+                      className={`max-w-[90%] px-4 py-4 text-[15px] leading-relaxed ${
+                        msg.isError
+                          ? 'bg-red-500/10 text-red-300 border border-red-500/20'
+                          : 'bg-white/5 text-white'
+                      }`}
                       style={{ borderRadius: '16px 16px 16px 4px' }}
                     >
-                      <MarkdownContent text={msg.content} />
+                      <MarkdownContent text={msg.content} onAgencyClick={handleAgencyClick} />
                     </div>
 
-                    {/* Action buttons */}
+                    {/* Interrupted indicator + Retry */}
+                    {msg.interrupted && (
+                      <div className="flex items-center gap-2 mt-2 ml-1">
+                        <span className="text-xs text-amber-400/70">Response interrupted</span>
+                        <button
+                          onClick={handleRetry}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37] text-xs font-medium hover:bg-[#d4af37]/20 transition-colors"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          Retry
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Action buttons — full width */}
                     {msg.actions && msg.actions.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2 ml-1">
+                      <div className="flex flex-col gap-2 mt-2">
                         {msg.actions.map((action, j) => (
                           <button
                             key={j}
+                            role="button"
                             onClick={() => handleActionClick(action.route)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#d4af37]/40 text-[#d4af37] text-xs font-medium hover:bg-[#d4af37]/10 transition-colors"
+                            className="flex items-center justify-center gap-2 w-full h-11 rounded-lg border border-[#d4af37]/40 text-[#d4af37] text-sm font-medium hover:bg-[#d4af37]/10 transition-colors"
                           >
-                            <ExternalLink className="h-3 w-3" />
                             {action.label}
+                            <ExternalLink className="h-3.5 w-3.5" />
                           </button>
                         ))}
                       </div>
@@ -582,6 +727,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
                         {msg.suggestions.map((s, j) => (
                           <button
                             key={j}
+                            role="button"
                             onClick={() => handleChipClick(s)}
                             className="flex-shrink-0 px-3 py-2 rounded-2xl border border-[#d4af37]/30 text-xs text-white/70 hover:bg-[#d4af37]/10 hover:border-[#d4af37]/50 transition-all whitespace-nowrap min-h-[36px]"
                           >
@@ -603,7 +749,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
                   className="max-w-[90%] px-4 py-4 bg-white/5 text-[15px] text-white leading-relaxed"
                   style={{ borderRadius: '16px 16px 16px 4px' }}
                 >
-                  <MarkdownContent text={streamingText} />
+                  <MarkdownContent text={streamingText} onAgencyClick={handleAgencyClick} />
                   <span
                     className="inline-block w-0.5 h-4 bg-[#d4af37] ml-0.5 align-middle"
                     style={{ animation: 'chatCursorBlink 1s ease-in-out infinite' }}
@@ -612,7 +758,6 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
               </div>
             )}
 
-            {/* Typing indicator (before any text arrives) */}
             {isStreaming && !streamingText && <TypingIndicator />}
 
             <div ref={chatEndRef} />
@@ -637,13 +782,14 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
               placeholder={PLACEHOLDERS[placeholderIdx]}
               disabled={isStreaming}
               rows={1}
+              aria-label="Ask the AI assistant"
               className="w-full min-h-[44px] max-h-[120px] resize-none rounded-xl bg-white/5 border border-white/10 focus:border-[#d4af37]/50 focus:outline-none text-white text-[15px] placeholder:text-white/30 px-4 py-3 pr-12 transition-colors disabled:opacity-50"
-              style={{ fontSize: '16px' /* prevents iOS zoom */ }}
+              style={{ fontSize: '16px' }}
             />
-            {/* Send button */}
             <button
               onClick={() => sendMessage(input)}
               disabled={!input.trim() || isStreaming}
+              aria-label="Send message"
               className={`absolute right-2 bottom-2 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${
                 input.trim() && !isStreaming
                   ? 'opacity-100 scale-100'
@@ -658,7 +804,6 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
               )}
             </button>
           </div>
-          {/* Rate limit note */}
           <p className="text-[10px] text-white/20 text-center mt-2 mb-1">
             Claude Opus {'\u00B7'} Powered by Anthropic
           </p>
