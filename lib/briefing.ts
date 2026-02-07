@@ -43,12 +43,23 @@ interface Briefing {
 }
 
 export async function generateBriefing(): Promise<Briefing> {
-  const [tasks, todayEvents, weekEvents, tomorrowEvents] = await Promise.all([
+  // Fetch independently — don't let one failing service break the whole briefing
+  const [tasksResult, todayResult, weekResult, tomorrowResult] = await Promise.allSettled([
     fetchTasks(),
     fetchTodayEvents(),
     fetchWeekEvents(),
     fetchTomorrowEvents()
   ]);
+
+  const tasks = tasksResult.status === 'fulfilled' ? tasksResult.value : [];
+  const todayEvents = todayResult.status === 'fulfilled' ? todayResult.value : [];
+  const weekEvents = weekResult.status === 'fulfilled' ? weekResult.value : [];
+  const tomorrowEvents = tomorrowResult.status === 'fulfilled' ? tomorrowResult.value : [];
+
+  if (tasksResult.status === 'rejected') console.error('Notion tasks fetch failed:', tasksResult.reason);
+  if (todayResult.status === 'rejected') console.error('Calendar today fetch failed:', todayResult.reason);
+  if (weekResult.status === 'rejected') console.error('Calendar week fetch failed:', weekResult.reason);
+  if (tomorrowResult.status === 'rejected') console.error('Calendar tomorrow fetch failed:', tomorrowResult.reason);
 
   const now = new Date();
   const weekFromNow = addDays(now, 7);
