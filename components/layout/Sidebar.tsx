@@ -82,8 +82,8 @@ export function Sidebar() {
           <Link href="/" className="flex items-center gap-3" onClick={handleNavClick}>
             <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-[#d4af37]/40 shadow-lg shadow-[#d4af37]/10 shrink-0">
               <Image
-                src="/ministry-logo.png"
-                alt="Ministry of Public Utilities and Aviation"
+                src="/app-icon.png"
+                alt="DG Work OS"
                 width={48}
                 height={48}
                 priority

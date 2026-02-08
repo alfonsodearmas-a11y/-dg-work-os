@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <!-- Background: radial gradient for subtle depth -->
+    <radialGradient id="bg" cx="50%" cy="42%" r="70%">
+      <stop offset="0%" stop-color="#152240"/>
+      <stop offset="100%" stop-color="#0a1628"/>
+    </radialGradient>
+
+    <!-- Primary gold: brightest metallic gradient (command tile) -->
+    <linearGradient id="gold-pri" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f7dc6f"/>
+      <stop offset="35%" stop-color="#d4af37"/>
+      <stop offset="70%" stop-color="#c5a028"/>
+      <stop offset="100%" stop-color="#b8960c"/>
+    </linearGradient>
+
+    <!-- Secondary gold: slightly muted -->
+    <linearGradient id="gold-sec" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e8c84a"/>
+      <stop offset="45%" stop-color="#c9a430"/>
+      <stop offset="100%" stop-color="#a58820"/>
+    </linearGradient>
+
+    <!-- Tertiary gold: deepest, most muted -->
+    <linearGradient id="gold-ter" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#d4b840"/>
+      <stop offset="50%" stop-color="#b89828"/>
+      <stop offset="100%" stop-color="#8a7018"/>
+    </linearGradient>
+
+    <!-- Drop shadow for tile depth -->
+    <filter id="ds" x="-8%" y="-4%" width="116%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+
+    <!-- Ambient gold glow behind the entire grid -->
+    <filter id="glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="28" result="blur"/>
+      <feColorMatrix in="blur" type="matrix"
+        values="0 0 0 0 0.83
+                0 0 0 0 0.69
+                0 0 0 0 0.22
+                0 0 0 0.1 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <!-- Asymmetric dashboard grid — 4 tiles suggesting a command center layout -->
+  <!-- Grid bounds: 520x520 centered (252..772 on each axis), 28px gap -->
+  <g filter="url(#glow)">
+    <!-- Top-left: PRIMARY command tile (largest, brightest) -->
+    <rect x="252" y="252" width="310" height="240" rx="32"
+          fill="url(#gold-pri)" filter="url(#ds)"/>
+
+    <!-- Top-right: Secondary tile -->
+    <rect x="590" y="252" width="182" height="240" rx="28"
+          fill="url(#gold-sec)" filter="url(#ds)" opacity="0.82"/>
+
+    <!-- Bottom-left: Secondary tile -->
+    <rect x="252" y="520" width="182" height="252" rx="28"
+          fill="url(#gold-sec)" filter="url(#ds)" opacity="0.82"/>
+
+    <!-- Bottom-right: Tertiary tile (medium, depth layer) -->
+    <rect x="462" y="520" width="310" height="252" rx="32"
+          fill="url(#gold-ter)" filter="url(#ds)" opacity="0.65"/>
+  </g>
+</svg>

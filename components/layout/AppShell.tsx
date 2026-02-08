@@ -7,6 +7,11 @@ import { MobileMenuButton } from './MobileMenuButton';
 import { BottomNav } from './BottomNav';
 import { HeaderDate } from './HeaderDate';
 import { ChatButton } from '@/components/ai/ChatButton';
+import { NotificationProvider } from '@/components/notifications/NotificationProvider';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { NotificationPanel } from '@/components/notifications/NotificationPanel';
+import { NotificationToast } from '@/components/notifications/NotificationToast';
+import { PushPromptBanner } from '@/components/notifications/PushPromptBanner';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -19,6 +24,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
+    <NotificationProvider>
       <div className="min-h-screen flex">
         {/* Sidebar */}
         <Sidebar />
@@ -32,7 +38,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <MobileMenuButton />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/ministry-logo.png"
+                  src="/app-icon.png"
                   alt=""
                   className="w-7 h-7 rounded-full ring-1 ring-[#d4af37]/30 hidden sm:block"
                 />
@@ -46,6 +52,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </div>
               <div className="flex items-center space-x-3 md:space-x-4">
                 <HeaderDate />
+                <NotificationBell />
                 <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center flex-shrink-0">
                   <span className="text-[#0a1628] font-bold text-xs md:text-sm">AD</span>
                 </div>
@@ -65,6 +72,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* AI Chat Button (every page except login) */}
       <ChatButton />
+
+      {/* Notification overlays */}
+      <NotificationPanel />
+      <NotificationToast />
+      <PushPromptBanner />
+    </NotificationProvider>
     </SidebarProvider>
   );
 }
