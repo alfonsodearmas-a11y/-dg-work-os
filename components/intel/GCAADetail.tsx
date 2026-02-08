@@ -133,12 +133,12 @@ export function GCAADetail({ data }: GCAADetailProps) {
   // Health score from mock data
   const health = useMemo(() => data ? computeGCAAHealth(data) : null, [data]);
 
-  const tabs = [
-    { id: 'compliance', label: 'Compliance' },
-    { id: 'inspections', label: 'Inspections' },
-    { id: 'registrations', label: 'Registrations' },
-    { id: 'safety', label: 'Safety' },
-  ];
+  const tabs = useMemo(() => [
+    { id: 'compliance', label: 'Comply', fullLabel: 'Compliance' },
+    { id: 'inspections', label: 'Inspect', fullLabel: 'Inspections' },
+    { id: 'registrations', label: 'Registry', fullLabel: 'Registrations' },
+    { id: 'safety', label: 'Safety', fullLabel: 'Safety' },
+  ], []);
 
   // Swipe gesture for mobile tab navigation
   const isMobile = useIsMobile();
@@ -176,20 +176,16 @@ export function GCAADetail({ data }: GCAADetailProps) {
     <div className="space-y-4">
       {/* ═══════════════════ TOP SECTION ═══════════════════ */}
       <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-5">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           {/* Left: Health Score Gauge */}
-          <div className="flex items-center gap-3 md:gap-5 flex-1 min-w-0">
+          <div className="flex items-center gap-3 md:gap-5 w-full md:flex-1 md:min-w-0">
             {insights?.overall?.health_score != null ? (
-              <div className="flex flex-col items-center flex-shrink-0">
+              <div className="flex-shrink-0">
                 <HealthScoreTooltip score={insights.overall.health_score} breakdown={health?.breakdown} size={100} />
-                {health && (
-                  <HealthBreakdownSection breakdown={health.breakdown} score={health.score} label={health.label} severity={health.severity} />
-                )}
               </div>
             ) : health ? (
-              <div className="flex flex-col items-center flex-shrink-0">
+              <div className="flex-shrink-0">
                 <HealthScoreTooltip score={health.score} severity={health.severity} breakdown={health.breakdown} size={100} />
-                <HealthBreakdownSection breakdown={health.breakdown} score={health.score} label={health.label} severity={health.severity} />
               </div>
             ) : insightsLoading ? (
               <div className="w-20 h-20 md:w-[100px] md:h-[100px] flex items-center justify-center">
@@ -202,11 +198,11 @@ export function GCAADetail({ data }: GCAADetailProps) {
               {insights?.overall?.headline ? (
                 <>
                   <p className="text-[10px] uppercase tracking-widest text-[#d4af37] font-semibold mb-1">AI Analysis</p>
-                  <p className="text-base md:text-[20px] font-bold text-[#f1f5f9] leading-snug">
+                  <p className="text-base md:text-[20px] font-bold text-[#f1f5f9] leading-snug line-clamp-3 md:line-clamp-none">
                     {insights.overall.headline}
                   </p>
                   {insights.overall.summary && (
-                    <p className="text-[#94a3b8] text-[15px] mt-1 leading-relaxed">{insights.overall.summary}</p>
+                    <p className="text-[#94a3b8] text-[15px] mt-1 leading-relaxed line-clamp-2 md:line-clamp-none">{insights.overall.summary}</p>
                   )}
                 </>
               ) : health ? (
@@ -242,6 +238,11 @@ export function GCAADetail({ data }: GCAADetailProps) {
             )}
           </div>
         </div>
+
+        {/* Health Breakdown — full-width below the header row */}
+        {health && (
+          <HealthBreakdownSection breakdown={health.breakdown} score={health.score} label={health.label} severity={health.severity} />
+        )}
 
         {/* Cross-Cutting Issues */}
         {insights?.cross_cutting && (insights.cross_cutting.issues.length > 0 || insights.cross_cutting.opportunities.length > 0) && (
@@ -281,19 +282,20 @@ export function GCAADetail({ data }: GCAADetailProps) {
       </div>
 
       {/* ═══════════════════ TAB BAR ═══════════════════ */}
-      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-1.5 overflow-x-auto scrollbar-hide">
+      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-1.5">
         <div className="flex gap-1">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex-shrink-0 px-2.5 md:px-4 py-2 md:py-2.5 min-h-[44px] rounded-lg text-sm md:text-base font-medium transition-all whitespace-nowrap ${
+              className={`flex-1 px-2 md:px-4 py-2 md:py-2.5 min-h-[44px] rounded-lg text-xs md:text-base font-medium transition-all ${
                 activeTab === tab.id
                   ? 'bg-[#d4af37] text-[#0a1628] shadow-lg shadow-[#d4af37]/20'
                   : 'text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-[#2d3a52]'
               }`}
             >
-              {tab.label}
+              <span className="md:hidden">{tab.label}</span>
+              <span className="hidden md:inline">{tab.fullLabel}</span>
             </button>
           ))}
         </div>

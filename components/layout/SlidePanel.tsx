@@ -48,12 +48,12 @@ export function SlidePanel({ isOpen, onClose, title, subtitle, icon: Icon, accen
 
       {/* Panel */}
       <div
-        className={`fixed top-0 right-0 h-full w-full sm:w-[600px] lg:w-[700px] bg-[#0a1628] border-l border-[#2d3a52] z-50 transform transition-transform duration-300 ease-out ${
+        className={`fixed inset-y-0 right-0 w-full sm:w-[600px] lg:w-[700px] bg-[#0a1628] border-l border-[#2d3a52] z-50 flex flex-col transform transition-transform duration-300 ease-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-[#1a2744]/95 backdrop-blur-sm border-b border-[#2d3a52] px-4 md:px-6 py-3 md:py-4 z-10">
+        <div className="flex-shrink-0 bg-[#1a2744]/95 backdrop-blur-sm border-b border-[#2d3a52] px-4 md:px-6 py-3 md:py-4 z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 md:gap-4 min-w-0">
               <button
@@ -81,8 +81,8 @@ export function SlidePanel({ isOpen, onClose, title, subtitle, icon: Icon, accen
           </div>
         </div>
 
-        {/* Content */}
-        <div className="h-[calc(100%-73px)] overflow-y-auto overflow-x-hidden p-3 md:p-6 pb-24 md:pb-6">
+        {/* Content — flex-1 + min-h-0 ensures proper overflow scrolling regardless of header height */}
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 md:p-6 pb-24 md:pb-6" style={{ WebkitOverflowScrolling: 'touch' }}>
           {children}
         </div>
       </div>

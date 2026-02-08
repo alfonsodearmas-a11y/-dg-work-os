@@ -654,20 +654,20 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
     offline: 'bg-red-500/[0.15] border-red-500/30 text-red-400'
   } as Record<string, string>)[status] || 'bg-[#64748b]/[0.15] border-[#64748b]/30 text-[#94a3b8]';
 
-  // Tab definitions
-  const tabs = [
-    { id: 'overview', label: 'System Overview' },
-    { id: 'stations', label: 'Station Health' },
-    { id: 'trends', label: 'Trends & KPIs' },
-    { id: 'forecast', label: 'Forecast' }
-  ];
+  // Tab definitions — memoized to prevent unnecessary re-renders
+  const tabs = useMemo(() => [
+    { id: 'overview', label: 'Overview', fullLabel: 'System Overview' },
+    { id: 'stations', label: 'Stations', fullLabel: 'Station Health' },
+    { id: 'trends', label: 'KPIs', fullLabel: 'Trends & KPIs' },
+    { id: 'forecast', label: 'Forecast', fullLabel: 'Forecast' },
+  ], []);
 
   return (
     <div className="space-y-4">
       {/* PERSISTENT KPI STRIP */}
       <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-4">
-        <div className="flex items-start justify-between mb-3 gap-4">
-          <div className="flex items-start gap-4 flex-1 min-w-0">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-3 gap-4">
+          <div className="flex items-start gap-4 w-full md:flex-1 md:min-w-0">
             {/* Health Score Gauge with Tooltip */}
             {gplHealth && (
               <div className="flex flex-col items-center flex-shrink-0">
@@ -685,12 +685,6 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                 }`}>
                   {gplHealth.label}
                 </span>
-                <HealthBreakdownSection
-                  breakdown={gplHealth.breakdown}
-                  score={gplHealth.score}
-                  label={gplHealth.label}
-                  severity={gplHealth.severity}
-                />
               </div>
             )}
             {/* AI Headline */}
@@ -742,6 +736,16 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
           </div>
         </div>
 
+        {/* Health Breakdown — full-width below the header row */}
+        {gplHealth && (
+          <HealthBreakdownSection
+            breakdown={gplHealth.breakdown}
+            score={gplHealth.score}
+            label={gplHealth.label}
+            severity={gplHealth.severity}
+          />
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Available Capacity */}
           <div className="flex items-center gap-3 p-2.5 md:p-4 bg-[#0a1628] rounded-lg border-l-4 border-emerald-500">
@@ -787,19 +791,20 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
       </div>
 
       {/* TAB BAR */}
-      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-1.5 overflow-x-auto scrollbar-hide">
+      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-1.5">
         <div className="flex gap-1">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex-shrink-0 px-2.5 md:px-4 py-2 md:py-2.5 rounded-lg text-sm md:text-base font-medium transition-all whitespace-nowrap ${
+              className={`flex-1 px-2 md:px-4 py-2 md:py-2.5 rounded-lg text-xs md:text-base font-medium transition-all ${
                 activeTab === tab.id
                   ? 'bg-[#d4af37] text-[#0a1628] shadow-lg shadow-[#d4af37]/20'
                   : 'text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-[#2d3a52]'
               }`}
             >
-              {tab.label}
+              <span className="md:hidden">{tab.label}</span>
+              <span className="hidden md:inline">{tab.fullLabel}</span>
             </button>
           ))}
         </div>

@@ -241,6 +241,7 @@ export function GWIDetail() {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [regenerating, setRegenerating] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Compute health score with breakdown
   const gwiHealth = useMemo(
@@ -250,31 +251,41 @@ export function GWIDetail() {
 
   // Fetch report data
   useEffect(() => {
+    let cancelled = false;
     async function fetchReport() {
       setLoading(true);
+      setFetchError(null);
       try {
         const url = selectedMonth
           ? `/api/gwi/report/${selectedMonth}`
           : '/api/gwi/report/latest';
         const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
+        if (cancelled) return;
         if (json.success && json.data) {
           setReport(json.data);
           if (!selectedMonth && json.data.report_month) {
             setSelectedMonth(json.data.report_month);
           }
+        } else {
+          setReport(null);
         }
       } catch (err) {
+        if (cancelled) return;
         console.error('Failed to fetch GWI report:', err);
+        setFetchError(err instanceof Error ? err.message : 'Failed to load report');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     fetchReport();
+    return () => { cancelled = true; };
   }, [selectedMonth]);
 
   // Fetch insights
   useEffect(() => {
+    let cancelled = false;
     async function fetchInsights() {
       setInsightsLoading(true);
       try {
@@ -282,27 +293,31 @@ export function GWIDetail() {
           ? `/api/gwi/insights/${selectedMonth}`
           : '/api/gwi/insights/latest';
         const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
+        if (cancelled) return;
         if (json.success && json.data) {
           setInsights(json.data);
         } else {
           setInsights(null);
         }
       } catch (err) {
+        if (cancelled) return;
         console.error('Failed to fetch GWI insights:', err);
       } finally {
-        setInsightsLoading(false);
+        if (!cancelled) setInsightsLoading(false);
       }
     }
     fetchInsights();
+    return () => { cancelled = true; };
   }, [selectedMonth]);
 
   // Fetch available months (all distinct report_month values)
   useEffect(() => {
     async function fetchMonths() {
       try {
-        // We use latest + check if more exist
         const res = await fetch('/api/gwi/report/latest');
+        if (!res.ok) return;
         const json = await res.json();
         if (json.success && json.data?.report_month) {
           setAvailableMonths([json.data.report_month]);
@@ -341,12 +356,13 @@ export function GWIDetail() {
   const cs = report?.customer_service_data || {} as CustomerServiceData;
   const proc = report?.procurement_data || {} as ProcurementData;
 
-  const tabs = [
-    { id: 'financial', label: 'Financial Overview' },
-    { id: 'collections', label: 'Collections & Billing' },
-    { id: 'customer_service', label: 'Customer Service' },
-    { id: 'procurement', label: 'Procurement' },
-  ];
+  // Tabs — memoized to prevent re-render cascades in swipe handlers
+  const tabs = useMemo(() => [
+    { id: 'financial', label: 'Financial', fullLabel: 'Financial Overview' },
+    { id: 'collections', label: 'Collections', fullLabel: 'Collections & Billing' },
+    { id: 'customer_service', label: 'Service', fullLabel: 'Customer Service' },
+    { id: 'procurement', label: 'Procurement', fullLabel: 'Procurement' },
+  ], []);
 
   // Swipe gesture for mobile tab navigation
   const isMobile = useIsMobile();
@@ -376,6 +392,25 @@ export function GWIDetail() {
           <Loader2 className="w-8 h-8 text-[#d4af37] animate-spin" />
           <p className="text-[#94a3b8] text-[15px]">Loading GWI data...</p>
         </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (fetchError && !report) {
+    return (
+      <div className="bg-[#1a2744] rounded-xl border border-red-500/30 p-6 md:p-12 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-red-500/15 flex items-center justify-center mx-auto mb-4">
+          <AlertTriangle className="w-8 h-8 text-red-400" />
+        </div>
+        <h3 className="text-[#f1f5f9] text-lg font-semibold mb-2">Failed to Load GWI Data</h3>
+        <p className="text-[#64748b] text-base mb-6 max-w-md mx-auto">{fetchError}</p>
+        <button
+          onClick={() => setSelectedMonth('')}
+          className="px-6 py-3 bg-[#d4af37] text-[#0a1628] rounded-lg font-medium hover:bg-[#c5a030] transition-colors"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -416,16 +451,15 @@ export function GWIDetail() {
     <div className="space-y-4">
       {/* ═══════════════════ TOP SECTION ═══════════════════ */}
       <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-5">
-        <div className="flex flex-col md:flex-row items-start justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           {/* Left: Health Score Gauge */}
-          <div className="flex items-center gap-5 flex-1 min-w-0">
+          <div className="flex items-center gap-5 w-full md:flex-1 md:min-w-0">
             {gwiHealth ? (
-              <div className="flex flex-col items-center flex-shrink-0">
+              <div className="flex-shrink-0">
                 <HealthScoreTooltip score={gwiHealth.score} severity={gwiHealth.severity} breakdown={gwiHealth.breakdown} size={100} />
-                <HealthBreakdownSection breakdown={gwiHealth.breakdown} score={gwiHealth.score} label={gwiHealth.label} severity={gwiHealth.severity} />
               </div>
             ) : insights?.overall?.health_score != null ? (
-              <div className="flex flex-col items-center flex-shrink-0">
+              <div className="flex-shrink-0">
                 <HealthScoreTooltip score={insights.overall.health_score} size={100} />
               </div>
             ) : insightsLoading ? (
@@ -439,11 +473,11 @@ export function GWIDetail() {
               {insights?.overall?.headline ? (
                 <>
                   <p className="text-[10px] uppercase tracking-widest text-[#d4af37] font-semibold mb-1">AI Analysis</p>
-                  <p className="text-base md:text-[20px] font-bold text-[#f1f5f9] leading-snug">
+                  <p className="text-base md:text-[20px] font-bold text-[#f1f5f9] leading-snug line-clamp-3 md:line-clamp-none">
                     {insights.overall.headline}
                   </p>
                   {insights.overall.summary && (
-                    <p className="text-[#94a3b8] text-[15px] mt-1 leading-relaxed">{insights.overall.summary}</p>
+                    <p className="text-[#94a3b8] text-[15px] mt-1 leading-relaxed line-clamp-2 md:line-clamp-none">{insights.overall.summary}</p>
                   )}
                 </>
               ) : (
@@ -489,6 +523,11 @@ export function GWIDetail() {
           </div>
         </div>
 
+        {/* Health Breakdown — full-width below the header row so it doesn't inflate gauge column width */}
+        {gwiHealth && (
+          <HealthBreakdownSection breakdown={gwiHealth.breakdown} score={gwiHealth.score} label={gwiHealth.label} severity={gwiHealth.severity} />
+        )}
+
         {/* Cross-Cutting Issues */}
         {insights?.cross_cutting && (insights.cross_cutting.issues.length > 0 || insights.cross_cutting.opportunities.length > 0) && (
           <div className="mt-4">
@@ -531,19 +570,20 @@ export function GWIDetail() {
       </div>
 
       {/* ═══════════════════ TAB BAR ═══════════════════ */}
-      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-1.5 overflow-x-auto scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-1.5">
         <div className="flex gap-1">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex-shrink-0 px-2.5 md:px-4 py-2 md:py-2.5 rounded-lg text-sm md:text-base font-medium transition-all whitespace-nowrap ${
+              className={`flex-1 px-2 md:px-4 py-2 md:py-2.5 rounded-lg text-xs md:text-base font-medium transition-all ${
                 activeTab === tab.id
                   ? 'bg-[#d4af37] text-[#0a1628] shadow-lg shadow-[#d4af37]/20'
                   : 'text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-[#2d3a52]'
               }`}
             >
-              {tab.label}
+              <span className="md:hidden">{tab.label}</span>
+              <span className="hidden md:inline">{tab.fullLabel}</span>
             </button>
           ))}
         </div>
