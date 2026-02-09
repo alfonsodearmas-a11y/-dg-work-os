@@ -45,8 +45,12 @@ export async function middleware(request: NextRequest) {
   }
 
   const authCookie = request.cookies.get('dg-auth')?.value;
+  const isApiRoute = pathname.startsWith('/api/');
 
   if (!authCookie) {
+    if (isApiRoute) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
@@ -54,6 +58,9 @@ export async function middleware(request: NextRequest) {
   const expectedToken = await sha256Hex(accessCode + '_dg_work_os');
 
   if (authCookie !== expectedToken) {
+    if (isApiRoute) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const response = NextResponse.redirect(new URL('/login', request.url));
     response.cookies.set('dg-auth', '', { maxAge: 0, path: '/' });
     return response;
