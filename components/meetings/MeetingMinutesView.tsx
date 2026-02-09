@@ -291,10 +291,11 @@ export function MeetingMinutesView({ meeting }: { meeting: MeetingData }) {
       {currentMeeting.status === 'skipped' && (
         <div className="card-premium p-5 text-center">
           <SkipForward className="h-8 w-8 text-[#64748b] mx-auto mb-2" />
-          <p className="text-[#64748b]">This meeting was skipped — the transcript was too short or empty.</p>
-          <button onClick={handleRegenerate} disabled={regenerating} className="btn-navy inline-flex items-center gap-2 px-4 py-2 mt-3">
-            {regenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            Re-fetch & Process
+          <p className="text-[#64748b]">
+            {currentMeeting.error_message || 'This meeting was skipped — the transcript was too short or empty.'}
+          </p>
+          <button onClick={handleRegenerate} disabled={regenerating} className="btn-gold inline-flex items-center gap-2 px-4 py-2 mt-3">
+            {regenerating ? <><Loader2 className="h-4 w-4 animate-spin" /> Re-fetching...</> : <><RefreshCw className="h-4 w-4" /> Re-fetch & Process</>}
           </button>
         </div>
       )}

@@ -211,7 +211,25 @@ export async function processOneMeeting(minutesId: string): Promise<MeetingMinut
 
   try {
     // Fetch transcript from Notion
-    const transcript = await fetchPageBlocks(row.notion_meeting_id);
+    let transcript: string;
+    try {
+      transcript = await fetchPageBlocks(row.notion_meeting_id);
+    } catch (fetchError: any) {
+      const errorMsg = `Transcript fetch error: ${fetchError.message || 'Unknown error'}`;
+      console.error(`[meeting-minutes] ${errorMsg} for meeting "${row.title}" (${minutesId})`);
+      const { data } = await supabaseAdmin
+        .from('meeting_minutes')
+        .update({
+          status: 'failed',
+          error_message: errorMsg,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', minutesId)
+        .select()
+        .single();
+      return data as MeetingMinutes;
+    }
+
     const blockCount = transcript.split('\n').filter(l => l.trim()).length;
 
     // Update transcript
@@ -221,12 +239,18 @@ export async function processOneMeeting(minutesId: string): Promise<MeetingMinut
       .eq('id', minutesId);
 
     // Skip if transcript is too short
-    if (!transcript || transcript.trim().length < 50) {
+    const trimmedLength = transcript.trim().length;
+    const wordCount = transcript.trim().split(/\s+/).filter(Boolean).length;
+    if (!transcript || trimmedLength < 50) {
+      const reason = !transcript || trimmedLength === 0
+        ? 'No transcript found on Notion page'
+        : `Transcript too short (${wordCount} word${wordCount !== 1 ? 's' : ''}, ${trimmedLength} chars)`;
+      console.warn(`[meeting-minutes] Skipping "${row.title}" (${minutesId}): ${reason}. Preview: "${transcript.trim().slice(0, 200)}"`);
       const { data } = await supabaseAdmin
         .from('meeting_minutes')
         .update({
           status: 'skipped',
-          error_message: 'Transcript too short or empty',
+          error_message: reason,
           updated_at: new Date().toISOString(),
         })
         .eq('id', minutesId)
@@ -304,18 +328,36 @@ export async function regenerateMinutes(minutesId: string): Promise<MeetingMinut
   const row = await getMinutesById(minutesId);
   if (!row) throw new Error('Meeting minutes row not found');
 
-  // If no transcript stored, re-fetch from Notion
-  let transcript = row.raw_transcript;
-  if (!transcript) {
+  // Always re-fetch transcript from Notion (the whole point of "Re-fetch & Process")
+  let transcript: string;
+  try {
     transcript = await fetchPageBlocks(row.notion_meeting_id);
-    await supabaseAdmin
+  } catch (fetchError: any) {
+    const errorMsg = `Transcript fetch error: ${fetchError.message || 'Unknown error'}`;
+    console.error(`[meeting-minutes] ${errorMsg} for meeting "${row.title}" (${minutesId})`);
+    const { data } = await supabaseAdmin
       .from('meeting_minutes')
       .update({
-        raw_transcript: transcript,
-        transcript_block_count: transcript.split('\n').filter(l => l.trim()).length,
+        status: 'failed',
+        error_message: errorMsg,
+        updated_at: new Date().toISOString(),
       })
-      .eq('id', minutesId);
+      .eq('id', minutesId)
+      .select()
+      .single();
+    return data as MeetingMinutes;
   }
+
+  const blockCount = transcript.split('\n').filter(l => l.trim()).length;
+
+  // Save the freshly fetched transcript
+  await supabaseAdmin
+    .from('meeting_minutes')
+    .update({
+      raw_transcript: transcript,
+      transcript_block_count: blockCount,
+    })
+    .eq('id', minutesId);
 
   // Set processing
   await supabaseAdmin
@@ -324,12 +366,18 @@ export async function regenerateMinutes(minutesId: string): Promise<MeetingMinut
     .eq('id', minutesId);
 
   try {
-    if (!transcript || transcript.trim().length < 50) {
+    const trimmedLength = transcript.trim().length;
+    const wordCount = transcript.trim().split(/\s+/).filter(Boolean).length;
+    if (!transcript || trimmedLength < 50) {
+      const reason = !transcript || trimmedLength === 0
+        ? 'No transcript found on Notion page'
+        : `Transcript too short (${wordCount} word${wordCount !== 1 ? 's' : ''}, ${trimmedLength} chars)`;
+      console.warn(`[meeting-minutes] Skipping "${row.title}" (${minutesId}): ${reason}. Preview: "${transcript.trim().slice(0, 200)}"`);
       const { data } = await supabaseAdmin
         .from('meeting_minutes')
         .update({
           status: 'skipped',
-          error_message: 'Transcript too short or empty',
+          error_message: reason,
           updated_at: new Date().toISOString(),
         })
         .eq('id', minutesId)
