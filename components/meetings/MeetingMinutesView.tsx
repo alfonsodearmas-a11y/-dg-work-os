@@ -21,6 +21,8 @@ import {
   ListTodo,
   ExternalLink,
   RotateCcw,
+  ClipboardPaste,
+  Send,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
@@ -126,6 +128,9 @@ export function MeetingMinutesView({ meeting }: { meeting: MeetingData }) {
   const [creatingTasks, setCreatingTasks] = useState(false);
   const [retryingTasks, setRetryingTasks] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
+  const [showPasteForm, setShowPasteForm] = useState(false);
+  const [manualTranscript, setManualTranscript] = useState('');
+  const [submittingManual, setSubmittingManual] = useState(false);
   const [currentMeeting, setCurrentMeeting] = useState(meeting);
 
   const config = STATUS_CONFIG[currentMeeting.status] || STATUS_CONFIG.pending;
@@ -172,6 +177,25 @@ export function MeetingMinutesView({ meeting }: { meeting: MeetingData }) {
       setEditText(updated.minutes_markdown || '');
     } catch { /* silent */ }
     setRegenerating(false);
+  }
+
+  async function handleManualTranscript() {
+    if (!manualTranscript.trim()) return;
+    setSubmittingManual(true);
+    try {
+      const res = await fetch(`/api/meetings/${currentMeeting.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'process_manual', transcript: manualTranscript }),
+      });
+      if (!res.ok) throw new Error('Processing failed');
+      const updated = await res.json();
+      setCurrentMeeting(updated);
+      setEditText(updated.minutes_markdown || '');
+      setShowPasteForm(false);
+      setManualTranscript('');
+    } catch { /* stay in form */ }
+    setSubmittingManual(false);
   }
 
   async function handleProcess() {
@@ -289,14 +313,52 @@ export function MeetingMinutesView({ meeting }: { meeting: MeetingData }) {
 
       {/* ── Skipped notice ── */}
       {currentMeeting.status === 'skipped' && (
-        <div className="card-premium p-5 text-center">
-          <SkipForward className="h-8 w-8 text-[#64748b] mx-auto mb-2" />
-          <p className="text-[#64748b]">
-            {currentMeeting.error_message || 'This meeting was skipped — the transcript was too short or empty.'}
-          </p>
-          <button onClick={handleRegenerate} disabled={regenerating} className="btn-gold inline-flex items-center gap-2 px-4 py-2 mt-3">
-            {regenerating ? <><Loader2 className="h-4 w-4 animate-spin" /> Re-fetching...</> : <><RefreshCw className="h-4 w-4" /> Re-fetch & Process</>}
-          </button>
+        <div className="card-premium p-5">
+          <div className="text-center">
+            <SkipForward className="h-8 w-8 text-[#64748b] mx-auto mb-2" />
+            <p className="text-[#64748b]">
+              {currentMeeting.error_message || 'This meeting was skipped — the transcript was too short or empty.'}
+            </p>
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <button onClick={handleRegenerate} disabled={regenerating} className="btn-navy inline-flex items-center gap-2 px-4 py-2">
+                {regenerating ? <><Loader2 className="h-4 w-4 animate-spin" /> Re-fetching...</> : <><RefreshCw className="h-4 w-4" /> Re-fetch</>}
+              </button>
+              <button onClick={() => setShowPasteForm(!showPasteForm)} className="btn-gold inline-flex items-center gap-2 px-4 py-2">
+                <ClipboardPaste className="h-4 w-4" /> Paste Transcript
+              </button>
+            </div>
+          </div>
+
+          {showPasteForm && (
+            <div className="mt-4 pt-4 border-t border-[#2d3a52]">
+              <p className="text-sm text-[#94a3b8] mb-2">
+                Paste the meeting transcript below, then click Process. Copy it from the Notion page or your recording tool.
+              </p>
+              <textarea
+                value={manualTranscript}
+                onChange={e => setManualTranscript(e.target.value)}
+                placeholder="Paste meeting transcript here..."
+                className="w-full bg-[#0a1628] border border-[#2d3a52] rounded-lg p-4 text-sm text-[#c8d1df] font-mono leading-relaxed focus:border-[#d4af37] focus:outline-none min-h-[200px] resize-y"
+              />
+              <div className="flex items-center justify-between mt-3">
+                <span className="text-xs text-[#64748b]">
+                  {manualTranscript.trim() ? `${manualTranscript.trim().split(/\s+/).length} words` : 'No text yet'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => { setShowPasteForm(false); setManualTranscript(''); }} className="btn-navy text-sm px-3 py-1.5">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleManualTranscript}
+                    disabled={submittingManual || !manualTranscript.trim()}
+                    className="btn-gold text-sm px-4 py-1.5 inline-flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {submittingManual ? <><Loader2 className="h-4 w-4 animate-spin" /> Processing...</> : <><Send className="h-4 w-4" /> Process</>}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

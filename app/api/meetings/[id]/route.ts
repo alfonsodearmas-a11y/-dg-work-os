@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMinutesById, updateMinutes, processOneMeeting } from '@/lib/meeting-minutes';
+import { getMinutesById, updateMinutes, processOneMeeting, processWithManualTranscript } from '@/lib/meeting-minutes';
 import { createTasksFromActionItems, getActionItemsWithStatus, retryFailedActionItems } from '@/lib/meeting-tasks';
 
 export async function GET(
@@ -42,6 +42,17 @@ export async function PATCH(
     if (body.action === 'process') {
       const result = await processOneMeeting(id);
       // Also create tasks if processing succeeded
+      if (result.status === 'completed') {
+        try {
+          await createTasksFromActionItems(id);
+        } catch { /* task creation is best-effort */ }
+      }
+      const linkedItems = await getActionItemsWithStatus(id);
+      return NextResponse.json({ ...result, linked_action_items: linkedItems });
+    }
+
+    if (body.action === 'process_manual' && body.transcript) {
+      const result = await processWithManualTranscript(id, body.transcript);
       if (result.status === 'completed') {
         try {
           await createTasksFromActionItems(id);

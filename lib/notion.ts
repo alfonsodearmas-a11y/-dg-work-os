@@ -289,9 +289,12 @@ function blockToText(block: any): string {
   }
 }
 
-// Fetch all blocks (page body) from a Notion page and convert to plain text
-export async function fetchPageBlocks(pageId: string): Promise<string> {
+// Fetch all blocks (page body) from a Notion page and convert to plain text.
+// Returns { text, unsupportedTypes } — unsupportedTypes lists block types that
+// had children we couldn't access (e.g. Notion's "transcription" blocks).
+export async function fetchPageBlocks(pageId: string, _depth = 0): Promise<{ text: string; unsupportedTypes: string[] }> {
   const lines: string[] = [];
+  const unsupportedTypes: string[] = [];
   let cursor: string | undefined = undefined;
 
   do {
@@ -308,14 +311,22 @@ export async function fetchPageBlocks(pageId: string): Promise<string> {
       // Recursively fetch children if the block has them
       if (block.has_children && block.type !== 'child_page' && block.type !== 'child_database') {
         try {
-          const childText = await fetchPageBlocks(block.id);
-          if (childText) {
-            // Indent child content
-            const indented = childText.split('\n').map((l: string) => `  ${l}`).join('\n');
+          const child = await fetchPageBlocks(block.id, _depth + 1);
+          if (child.text) {
+            const indented = child.text.split('\n').map((l: string) => `  ${l}`).join('\n');
             lines.push(indented);
           }
-        } catch {
-          // Skip inaccessible children
+          unsupportedTypes.push(...child.unsupportedTypes);
+        } catch (err: any) {
+          // Notion API returns specific errors for unsupported block types
+          const msg: string = err?.message || '';
+          const typeMatch = msg.match(/Block type (\w+) is not supported/);
+          if (typeMatch) {
+            unsupportedTypes.push(typeMatch[1]);
+            console.warn(`[notion] Block type "${typeMatch[1]}" is not supported via the API (block ${block.id})`);
+          } else {
+            console.warn(`[notion] Failed to fetch children of block ${block.id} (type: ${block.type}): ${msg}`);
+          }
         }
       }
     }
@@ -323,5 +334,5 @@ export async function fetchPageBlocks(pageId: string): Promise<string> {
     cursor = response.has_more ? response.next_cursor : undefined;
   } while (cursor);
 
-  return lines.join('\n');
+  return { text: lines.join('\n'), unsupportedTypes };
 }
