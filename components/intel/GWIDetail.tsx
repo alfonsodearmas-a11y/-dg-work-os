@@ -245,8 +245,8 @@ export function GWIDetail() {
 
   // Compute health score with breakdown
   const gwiHealth = useMemo(
-    () => report ? computeGWIHealth(report, insights?.overall?.health_score) : null,
-    [report, insights]
+    () => report ? computeGWIHealth(report) : null,
+    [report]
   );
 
   // Fetch report data

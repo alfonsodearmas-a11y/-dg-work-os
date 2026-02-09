@@ -466,7 +466,6 @@ export const useAgencyData = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [gwiReport, setGwiReport] = useState<any>(null);
   const [gwiPrevReport, setGwiPrevReport] = useState<any>(null);
-  const [gwiInsightsScore, setGwiInsightsScore] = useState<number | null>(null);
   const [delayedCounts, setDelayedCounts] = useState<DelayedCounts | null>(null);
 
   const fetchGPLData = useCallback(async (date?: string) => {
@@ -513,15 +512,6 @@ export const useAgencyData = () => {
     }
   }, []);
 
-  const fetchGWIInsightsScore = useCallback(async (): Promise<number | null> => {
-    try {
-      const result = await fetchWithOffline<any>('/api/gwi/insights/latest', 'agency-data', 'gwi-insights');
-      return result.data?.data?.overall?.health_score ?? null;
-    } catch {
-      return null;
-    }
-  }, []);
-
   const fetchDelayedCounts = useCallback(async (): Promise<DelayedCounts | null> => {
     try {
       const result = await fetchWithOffline<DelayedCounts>('/api/projects/delayed-counts', 'projects', 'delayed-counts');
@@ -534,10 +524,9 @@ export const useAgencyData = () => {
   const refresh = useCallback(async () => {
     setIsLoading(true);
 
-    const [gplData, gwiData, insightsScore, delayed] = await Promise.all([
+    const [gplData, gwiData, delayed] = await Promise.all([
       fetchGPLData(),
       fetchGWIReport(),
-      fetchGWIInsightsScore(),
       fetchDelayedCounts(),
     ]);
     const mockData = generateAgencyData();
@@ -546,7 +535,6 @@ export const useAgencyData = () => {
       setGwiReport(gwiData.current);
       setGwiPrevReport(gwiData.previous);
     }
-    setGwiInsightsScore(insightsScore);
     if (delayed) setDelayedCounts(delayed);
 
     setRawData({
@@ -556,7 +544,7 @@ export const useAgencyData = () => {
 
     setLastUpdated(new Date());
     setIsLoading(false);
-  }, [fetchGPLData, fetchGWIReport, fetchGWIInsightsScore, fetchDelayedCounts]);
+  }, [fetchGPLData, fetchGWIReport, fetchDelayedCounts]);
 
   useEffect(() => {
     refresh();
@@ -568,7 +556,7 @@ export const useAgencyData = () => {
 
     // Compute health score
     const health = id === 'gpl' ? computeGPLHealth(rawData.gpl)
-      : id === 'gwi' ? computeGWIHealth(gwiReport, gwiInsightsScore)
+      : id === 'gwi' ? computeGWIHealth(gwiReport)
       : id === 'cjia' ? computeCJIAHealth(rawData.cjia)
       : id === 'gcaa' ? computeGCAAHealth(rawData.gcaa)
       : null;
