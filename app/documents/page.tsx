@@ -37,8 +37,13 @@ export default function DocumentsPage() {
       if (filters?.type) params.set('type', filters.type);
 
       const res = await fetch(`/api/documents?${params}`);
-      const data = await res.json();
-      setDocuments(data);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Request failed: ${res.status}`);
+      }
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : [];
+      setDocuments(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to fetch documents:', error);
     } finally {

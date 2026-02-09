@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json(data);
+    return NextResponse.json(data ?? []);
   } catch (error) {
     console.error('Documents list error:', error);
     return NextResponse.json(
