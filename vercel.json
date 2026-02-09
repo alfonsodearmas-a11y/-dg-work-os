@@ -10,6 +10,10 @@
     {
       "path": "/api/ai/precompute-daily",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/notifications/generate",
+      "schedule": "0 8 * * *"
     }
   ]
 }

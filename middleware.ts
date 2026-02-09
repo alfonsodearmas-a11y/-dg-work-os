@@ -3,11 +3,14 @@ import { NextRequest, NextResponse } from 'next/server';
 const PUBLIC_PATHS = [
   '/login',
   '/api/auth/gate',
+  '/api/push/',
+  '/api/notifications/generate',
   '/_next',
   '/favicon.ico',
   '/ministry-logo.png',
   '/manifest.json',
   '/icons',
+  '/serwist',
 ];
 
 function isPublicPath(pathname: string): boolean {

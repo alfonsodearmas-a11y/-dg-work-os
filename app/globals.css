@@ -415,6 +415,12 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   z-index: 49;
 }
 
+/* Slide panel container: use dvh with vh fallback for iOS Safari */
+.slide-panel-container {
+  height: 100vh;
+  height: 100dvh;
+}
+
 /* Collapsible Section */
 .collapsible-header {
   cursor: pointer;
@@ -471,6 +477,20 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 .animate-slide-in-right {
   animation: slideInRight 0.3s ease forwards;
+}
+
+/* Bell shake for notification badge */
+@keyframes bellShake {
+  0%, 100% { transform: rotate(0deg); }
+  15% { transform: rotate(12deg); }
+  30% { transform: rotate(-10deg); }
+  45% { transform: rotate(8deg); }
+  60% { transform: rotate(-6deg); }
+  75% { transform: rotate(3deg); }
+}
+
+.animate-bell-shake {
+  animation: bellShake 0.6s ease-in-out;
 }
 
 /* Status indicator */

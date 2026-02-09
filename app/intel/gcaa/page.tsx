@@ -4,6 +4,7 @@ import { ArrowLeft, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { useAgencyData } from '@/hooks/useAgencyData';
 import { GCAADetail } from '@/components/intel/GCAADetail';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 export default function GCAAIntelPage() {
   const { rawData, isLoading } = useAgencyData();
@@ -30,13 +31,15 @@ export default function GCAAIntelPage() {
       </div>
 
       {/* Self-managing GCAA Detail (mock data as fallback) */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-24">
-          <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : (
-        <GCAADetail data={rawData.gcaa} />
-      )}
+      <ErrorBoundary fallbackTitle="Failed to load GCAA dashboard">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-24">
+            <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <GCAADetail data={rawData.gcaa} />
+        )}
+      </ErrorBoundary>
     </div>
   );
 }

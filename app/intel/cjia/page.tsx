@@ -4,6 +4,7 @@ import { ArrowLeft, Plane } from 'lucide-react';
 import Link from 'next/link';
 import { useAgencyData } from '@/hooks/useAgencyData';
 import { CJIADetail } from '@/components/intel/CJIADetail';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 export default function CJIAIntelPage() {
   const { rawData, isLoading } = useAgencyData();
@@ -30,13 +31,15 @@ export default function CJIAIntelPage() {
       </div>
 
       {/* Self-managing CJIA Detail (mock data as fallback) */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-24">
-          <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : (
-        <CJIADetail data={rawData.cjia} />
-      )}
+      <ErrorBoundary fallbackTitle="Failed to load CJIA dashboard">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-24">
+            <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <CJIADetail data={rawData.cjia} />
+        )}
+      </ErrorBoundary>
     </div>
   );
 }

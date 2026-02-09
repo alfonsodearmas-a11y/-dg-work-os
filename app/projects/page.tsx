@@ -381,13 +381,13 @@ function AgencyProjectList({
                   <span className={`inline-block w-2 h-2 rounded-full ${dot}`} title={p.status} />
                 </td>
                 <td className="px-2 py-2">
-                  <span className="text-white block max-w-[260px] truncate" title={p.project_name || ''}>
-                    {(p.project_name || '').length > 50 ? (p.project_name || '').slice(0, 50) + '...' : p.project_name || '-'}
+                  <span className="text-white block max-w-[300px] line-clamp-2" title={p.project_name || ''}>
+                    {p.project_name || '-'}
                   </span>
                 </td>
                 <td className="px-2 py-2">
-                  <span className="text-[#94a3b8] block max-w-[140px] truncate" title={p.contractor || ''}>
-                    {(p.contractor || '').length > 25 ? (p.contractor || '').slice(0, 25) + '...' : p.contractor || '-'}
+                  <span className="text-[#94a3b8] block max-w-[180px] line-clamp-2" title={p.contractor || ''}>
+                    {p.contractor || '-'}
                   </span>
                 </td>
                 <td className="px-2 py-2 text-right">
@@ -438,9 +438,9 @@ function MobileProjectCard({ project, onExpand, isExpanded }: { project: Project
           <span className="text-[#d4af37] text-xs font-medium px-2 py-0.5 rounded bg-[#d4af37]/10">{project.sub_agency}</span>
         )}
       </div>
-      <p className="text-white font-medium text-sm line-clamp-2 mb-2">{project.project_name || '-'}</p>
+      <p className="text-white font-medium text-sm mb-2">{project.project_name || '-'}</p>
       <div className="flex items-center justify-between text-xs mb-2">
-        <span className="text-[#94a3b8] truncate mr-2">{project.contractor || '-'}</span>
+        <span className="text-[#94a3b8] mr-2">{project.contractor || '-'}</span>
         <span className="text-[#94a3b8]">{fmtRegion(project.region)}</span>
       </div>
       <div className="flex items-center justify-between text-xs mb-2">
@@ -1203,7 +1203,7 @@ export default function ProjectsPage() {
                               <Badge variant={ss.variant}>{ss.label}</Badge>
                             </td>
                             <td className="px-4 py-3">
-                              <span className="text-white line-clamp-2 max-w-[320px]" title={p.project_name || ''}>
+                              <span className="text-white line-clamp-2 max-w-[400px]" title={p.project_name || ''}>
                                 {p.project_name || '-'}
                               </span>
                             </td>
@@ -1212,7 +1212,7 @@ export default function ProjectsPage() {
                             </td>
                             <td className="px-4 py-3 text-[#94a3b8]">{fmtRegion(p.region)}</td>
                             <td className="px-4 py-3">
-                              <span className="text-[#94a3b8] line-clamp-2 max-w-[200px]" title={p.contractor || ''}>
+                              <span className="text-[#94a3b8] line-clamp-2 max-w-[240px]" title={p.contractor || ''}>
                                 {p.contractor || '-'}
                               </span>
                             </td>

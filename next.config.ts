@@ -5,6 +5,13 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  async rewrites() {
+    return [
+      // Serve SW at root for iOS push compatibility
+      { source: '/sw.js', destination: '/serwist/sw.js' },
+      { source: '/sw.js.map', destination: '/serwist/sw.js.map' },
+    ];
+  },
   async headers() {
     return [
       {
@@ -12,6 +19,14 @@ const nextConfig: NextConfig = {
         headers: [
           { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
           { key: 'Content-Type', value: 'application/javascript' },
+        ],
+      },
+      {
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'Content-Type', value: 'application/javascript' },
+          { key: 'Service-Worker-Allowed', value: '/' },
         ],
       },
     ];

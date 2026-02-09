@@ -10,7 +10,7 @@ const PWAProvider = dynamic(
 
 export function PWAWrapper({ children }: { children: React.ReactNode }) {
   return (
-    <SerwistProvider swUrl="/serwist/sw.js">
+    <SerwistProvider swUrl="/sw.js">
       <PWAProvider>{children}</PWAProvider>
     </SerwistProvider>
   );

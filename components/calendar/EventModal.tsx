@@ -219,17 +219,24 @@ export function EventModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-[60] flex flex-col md:items-center md:justify-center md:p-4">
+      {/* Backdrop — fixed to cover entire viewport including behind header/nav */}
       <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/80"
+        style={{ zIndex: -1 }}
         onClick={onClose}
       />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-lg rounded-t-2xl md:rounded-2xl bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border border-[#2d3a52] shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up md:animate-fade-in" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      {/* Modal — full screen on mobile, centered card on desktop */}
+      <div
+        className="relative w-full md:max-w-lg bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border-t md:border border-[#2d3a52] shadow-2xl flex flex-col mt-auto md:mt-0 md:rounded-2xl animate-slide-up md:animate-fade-in"
+        style={{
+          maxHeight: 'min(100dvh, 100vh)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+      >
         {/* Header */}
-        <div className="sticky top-0 flex items-center justify-between p-3 md:p-4 border-b border-[#2d3a52] bg-[#1a2744]/95 backdrop-blur-sm z-10">
+        <div className="flex-shrink-0 flex items-center justify-between p-3 md:p-4 border-b border-[#2d3a52] bg-[#1a2744]/95 backdrop-blur-sm rounded-t-2xl md:rounded-t-2xl">
           <h2 className="text-lg font-semibold text-white">
             {isNew ? 'New Event' : 'Edit Event'}
           </h2>
@@ -241,8 +248,8 @@ export function EventModal({
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-4 space-y-4">
+        {/* Scrollable Content */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4" style={{ WebkitOverflowScrolling: 'touch' }}>
           {/* Error Banner */}
           {error && (
             <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-2">
@@ -498,7 +505,7 @@ export function EventModal({
 
         {/* Footer */}
         {!showQuickCreate && (
-          <div className="sticky bottom-0 flex items-center justify-between p-3 md:p-4 border-t border-[#2d3a52] bg-[#1a2744]/95 backdrop-blur-sm">
+          <div className="flex-shrink-0 flex items-center justify-between p-3 md:p-4 border-t border-[#2d3a52] bg-[#1a2744]">
             {!isNew && onDelete ? (
               <button
                 onClick={handleDelete}

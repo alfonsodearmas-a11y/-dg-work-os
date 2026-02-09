@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Settings, Cpu, Zap, Database, TrendingDown } from 'lucide-react';
+import { NotificationPreferences } from '@/components/notifications/NotificationPreferences';
+import { PushNotificationSettings } from '@/components/notifications/PushNotificationSettings';
 
 interface DailyUsage {
   date: string;
@@ -217,6 +219,8 @@ export default function AdminPage() {
 
       <div className="space-y-6">
         <AIUsageSection />
+        <NotificationPreferences />
+        <PushNotificationSettings />
 
         <div className="card-premium p-8 text-center">
           <p className="text-[#64748b]">User management & data entry coming soon</p>

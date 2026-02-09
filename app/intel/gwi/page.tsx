@@ -3,6 +3,7 @@
 import { ArrowLeft, Droplets } from 'lucide-react';
 import Link from 'next/link';
 import { GWIDetail } from '@/components/intel/GWIDetail';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 export default function GWIIntelPage() {
   return (
@@ -27,7 +28,9 @@ export default function GWIIntelPage() {
       </div>
 
       {/* Self-managing GWI Detail */}
-      <GWIDetail />
+      <ErrorBoundary fallbackTitle="Failed to load GWI dashboard">
+        <GWIDetail />
+      </ErrorBoundary>
     </div>
   );
 }

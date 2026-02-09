@@ -4,6 +4,7 @@ import { ArrowLeft, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useAgencyData } from '@/hooks/useAgencyData';
 import { GPLDetail } from '@/components/intel/GPLDetail';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 export default function GPLIntelPage() {
   const { rawData, isLoading, loadGPLByDate } = useAgencyData();
@@ -30,13 +31,15 @@ export default function GPLIntelPage() {
       </div>
 
       {/* Content */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-24">
-          <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : (
-        <GPLDetail data={rawData.gpl} onLoadDate={loadGPLByDate} />
-      )}
+      <ErrorBoundary fallbackTitle="Failed to load GPL dashboard">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-24">
+            <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <GPLDetail data={rawData.gpl} onLoadDate={loadGPLByDate} />
+        )}
+      </ErrorBoundary>
     </div>
   );
 }
