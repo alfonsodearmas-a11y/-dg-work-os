@@ -236,7 +236,6 @@ export const generateAgencyData = (): AgencyRawData => ({
       { name: 'DP4', units: 3, derated: 26.10, available: 26.10 },
       { name: 'DP5', units: 5, derated: 46.50, available: 37.20 },
       { name: 'COL', units: 17, derated: 28.90, available: 21.76 },
-      { name: 'Onverwagt', units: 10, derated: 17.70, available: 2.90 },
       { name: 'GOE', units: 1, derated: 5.70, available: 3.00 },
       { name: 'PS1', units: 2, derated: 36.00, available: 36.00 },
       { name: 'PS2', units: 4, derated: 72.00, available: 51.00 },

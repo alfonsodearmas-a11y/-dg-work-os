@@ -47,7 +47,7 @@ function normalizeStationName(name: any): string | null {
     'sei': 'SEI', 'skeldon': 'Skeldon', 'canefield': 'Canefield',
     'garden of eden': 'Garden of Eden', 'goe': 'GOE', 'versailles': 'Versailles',
     'vreed-en-hoop': 'Vreed-en-Hoop', 'vreed en hoop': 'Vreed-en-Hoop',
-    'onverwagt': 'Onverwagt', 'anna regina': 'Anna Regina', 'triumph': 'Triumph',
+    'anna regina': 'Anna Regina', 'triumph': 'Triumph',
     'leguan': 'Leguan', 'wakenaam': 'Wakenaam', 'bartica': 'Bartica', 'linden': 'Linden',
     'col': 'COL', 'dp1': 'DP1', 'dp2': 'DP2', 'dp3': 'DP3', 'dp4': 'DP4', 'dp5': 'DP5',
     'power ship 1': 'Power Ship 1', 'power ship 2': 'Power Ship 2',

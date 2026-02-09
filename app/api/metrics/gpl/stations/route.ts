@@ -9,7 +9,6 @@ const GPL_STATIONS = [
   { code: 'DP4', name: 'Demerara Power 4', type: 'fossil' },
   { code: 'DP5', name: 'Demerara Power 5', type: 'fossil' },
   { code: 'COL', name: 'Columbia', type: 'fossil' },
-  { code: 'ONVERWAGT', name: 'Onverwagt', type: 'fossil' },
   { code: 'GOE', name: 'Garden of Eden', type: 'fossil' },
   { code: 'PS1', name: 'Power Station 1', type: 'fossil' },
   { code: 'PS2', name: 'Power Station 2', type: 'fossil' },

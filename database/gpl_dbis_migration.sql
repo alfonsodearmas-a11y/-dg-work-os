@@ -29,10 +29,9 @@ INSERT INTO gpl_power_stations (station_code, station_name, station_type, displa
     ('DP4', 'Demerara Power 4', 'fossil', 6),
     ('DP5', 'Demerara Power 5', 'fossil', 7),
     ('COL', 'Columbia', 'fossil', 8),
-    ('ONVERWAGT', 'Onverwagt', 'fossil', 9),
-    ('GOE', 'Garden of Eden', 'fossil', 10),
-    ('PS1', 'Power Station 1', 'fossil', 11),
-    ('PS2', 'Power Station 2', 'fossil', 12),
+    ('GOE', 'Garden of Eden', 'fossil', 9),
+    ('PS1', 'Power Station 1', 'fossil', 10),
+    ('PS2', 'Power Station 2', 'fossil', 11),
     ('HAMPSHIRE', 'Hampshire Solar', 'solar', 13),
     ('PROSPECT', 'Prospect Solar', 'solar', 14),
     ('TRAFALGAR', 'Trafalgar Solar', 'solar', 15)

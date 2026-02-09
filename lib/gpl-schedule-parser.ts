@@ -28,7 +28,6 @@ const CONFIG = {
   STATIONS: [
     { name: 'SEI', startRow: 5, endRow: 7 },
     { name: 'Canefield', startRow: 8, endRow: 13 },
-    { name: 'Onverwagt', startRow: 14, endRow: 23 },
     { name: 'GOE', startRow: 24, endRow: 24 },
     { name: 'DP1', startRow: 25, endRow: 28 },
     { name: 'DP2', startRow: 29, endRow: 32 },
