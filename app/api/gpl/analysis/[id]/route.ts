@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { generateGPLBriefing } from '@/lib/ai-analysis';
 
+const EXCLUDED_STATIONS = ['onverwagt'];
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -65,12 +67,16 @@ export async function GET(
       );
     }
 
-    // Build context from stored raw data
+    // Build context from stored raw data, filtering out excluded stations
     const schedule = rawData.schedule;
     const summaries = rawData.generationStatus?.summaries || {};
     const scheduleSummary = schedule?.summary || {};
-    const stations = schedule?.stations || [];
-    const units = schedule?.units || [];
+    const stations = (schedule?.stations || []).filter(
+      (s: any) => !EXCLUDED_STATIONS.includes((s.station || '').toLowerCase())
+    );
+    const units = (schedule?.units || []).filter(
+      (u: any) => !EXCLUDED_STATIONS.includes((u.station || '').toLowerCase())
+    );
 
     const onlineCount = units.filter((u: any) => u.status === 'online').length;
     const offlineCount = units.filter((u: any) => u.status === 'offline').length;
@@ -184,12 +190,16 @@ export async function POST(
       );
     }
 
-    // Build context from stored raw data
+    // Build context from stored raw data, filtering out excluded stations
     const schedule = rawData.schedule;
     const summaries = rawData.generationStatus?.summaries || {};
     const scheduleSummary = schedule?.summary || {};
-    const stations = schedule?.stations || [];
-    const units = schedule?.units || [];
+    const stations = (schedule?.stations || []).filter(
+      (s: any) => !EXCLUDED_STATIONS.includes((s.station || '').toLowerCase())
+    );
+    const units = (schedule?.units || []).filter(
+      (u: any) => !EXCLUDED_STATIONS.includes((u.station || '').toLowerCase())
+    );
 
     const onlineCount = units.filter((u: any) => u.status === 'online').length;
     const offlineCount = units.filter((u: any) => u.status === 'offline').length;

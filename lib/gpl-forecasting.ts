@@ -8,6 +8,12 @@
 import { supabaseAdmin } from './db';
 
 // ---------------------------------------------------------------------------
+// Excluded stations (permanently decommissioned)
+// ---------------------------------------------------------------------------
+
+const EXCLUDED_STATIONS = ['onverwagt'];
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -269,7 +275,9 @@ async function getStationData(daysBack: number = 90): Promise<StationRow[]> {
     .order('station', { ascending: true });
 
   if (error) throw error;
-  return data as StationRow[];
+  return (data as StationRow[]).filter(
+    row => !EXCLUDED_STATIONS.includes(row.station.toLowerCase())
+  );
 }
 
 /**
@@ -299,7 +307,9 @@ async function getUnitData(daysBack: number = 90): Promise<UnitRow[]> {
     .order('unit_number', { ascending: true });
 
   if (error) throw error;
-  return data as UnitRow[];
+  return (data as UnitRow[]).filter(
+    row => !EXCLUDED_STATIONS.includes(row.station.toLowerCase())
+  );
 }
 
 // ---------------------------------------------------------------------------
