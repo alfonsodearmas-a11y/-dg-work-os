@@ -390,21 +390,22 @@ export function getSectorDetail(sector: string) {
   // Get unique agency codes in this sector
   const agencyCodes = [...new Set(allocs.map(a => a.agency_code as string))];
 
-  // Capital projects for all agencies in this sector
+  // Capital projects for this sector (filter by sector to avoid cross-contamination
+  // when an agency like '34' has projects in multiple sectors)
   const projects = agencyCodes.length > 0
     ? db.prepare(`
         SELECT * FROM capital_project_profiles
-        WHERE ${agencyCodes.map(() => 'agency_code = ?').join(' OR ')}
+        WHERE sector = ? AND (${agencyCodes.map(() => 'agency_code = ?').join(' OR ')})
         ORDER BY budget_2026 DESC
-      `).all(...agencyCodes) as Record<string, unknown>[]
+      `).all(sector, ...agencyCodes) as Record<string, unknown>[]
     : [];
 
-  // Performance indicators for all agencies in this sector
+  // Performance indicators for this sector
   const indicators = agencyCodes.length > 0
     ? db.prepare(`
         SELECT * FROM performance_indicators
-        WHERE ${agencyCodes.map(() => 'agency_code = ?').join(' OR ')}
-      `).all(...agencyCodes) as Record<string, unknown>[]
+        WHERE sector = ? AND (${agencyCodes.map(() => 'agency_code = ?').join(' OR ')})
+      `).all(sector, ...agencyCodes) as Record<string, unknown>[]
     : [];
 
   // Documents for all agencies in this sector
