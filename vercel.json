@@ -14,6 +14,14 @@
     {
       "path": "/api/notifications/generate",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/tm/cron/overdue",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/tm/cron/reminders",
+      "schedule": "0 12 * * *"
     }
   ]
 }

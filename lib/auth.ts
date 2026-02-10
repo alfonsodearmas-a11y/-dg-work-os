@@ -14,6 +14,77 @@ export interface AuthUser {
   mustChangePassword: boolean;
 }
 
+// ── Role helpers ────────────────────────────────────────────────────────────
+
+export function isDG(user: AuthUser): boolean {
+  return user.role === 'director' || user.role === 'admin';
+}
+
+export function isCEO(user: AuthUser): boolean {
+  return user.role === 'ceo';
+}
+
+export function canAccessTask(user: AuthUser, task: { assignee_id: string; agency: string }): boolean {
+  if (isDG(user)) return true;
+  if (user.id === task.assignee_id) return true;
+  if (isCEO(user) && user.agency === task.agency) return true;
+  return false;
+}
+
+// ── Cookie-based auth (for task management pages) ───────────────────────────
+
+export async function authenticateFromCookie(request: NextRequest): Promise<AuthUser> {
+  const token = request.cookies.get('tm-token')?.value;
+
+  if (!token) {
+    throw new AuthError('Authentication required', 401, 'AUTH_REQUIRED');
+  }
+
+  let decoded: any;
+  try {
+    decoded = jwt.verify(token, JWT_SECRET);
+  } catch (err: any) {
+    if (err.name === 'TokenExpiredError') {
+      throw new AuthError('Token expired', 401, 'TOKEN_EXPIRED');
+    }
+    throw new AuthError('Invalid token', 401, 'INVALID_TOKEN');
+  }
+
+  const result = await query(
+    `SELECT id, username, email, full_name, role, agency, is_active, must_change_password
+     FROM users WHERE id = $1`,
+    [decoded.userId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new AuthError('User not found', 401, 'USER_NOT_FOUND');
+  }
+
+  const user = result.rows[0];
+  if (!user.is_active) {
+    throw new AuthError('Account is deactivated', 401, 'ACCOUNT_DEACTIVATED');
+  }
+
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    fullName: user.full_name,
+    role: user.role,
+    agency: user.agency,
+    mustChangePassword: user.must_change_password,
+  };
+}
+
+/** Authenticate from either Bearer header OR tm-token cookie */
+export async function authenticateAny(request: NextRequest): Promise<AuthUser> {
+  const authHeader = request.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    return authenticateRequest(request);
+  }
+  return authenticateFromCookie(request);
+}
+
 export class AuthError extends Error {
   status: number;
   code: string;

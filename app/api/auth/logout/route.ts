@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { query } from '@/lib/db-pg';
-import { authenticateRequest, AuthError } from '@/lib/auth';
+import { authenticateAny, AuthError } from '@/lib/auth';
 import { auditService } from '@/lib/audit';
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await authenticateRequest(request);
+    const user = await authenticateAny(request);
     const body = await request.json().catch(() => ({}));
 
     if (body.refreshToken) {
@@ -15,10 +15,16 @@ export async function POST(request: NextRequest) {
     }
 
     await auditService.log({ userId: user.id, action: 'LOGOUT', entityType: 'users', entityId: user.id, request });
-    return NextResponse.json({ success: true, message: 'Logged out successfully' });
+
+    const response = NextResponse.json({ success: true, message: 'Logged out successfully' });
+    response.cookies.set('tm-token', '', { maxAge: 0, path: '/' });
+    return response;
   } catch (error: any) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ success: false, error: error.message }, { status: error.status });
+      // Even if auth fails, clear the cookie
+      const response = NextResponse.json({ success: false, error: error.message }, { status: error.status });
+      response.cookies.set('tm-token', '', { maxAge: 0, path: '/' });
+      return response;
     }
     return NextResponse.json({ success: false, error: 'Logout failed' }, { status: 500 });
   }

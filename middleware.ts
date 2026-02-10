@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const PUBLIC_PATHS = [
   '/login',
-  '/api/auth/gate',
+  '/api/auth/',
   '/api/push/',
   '/api/notifications/generate',
   '/api/webhooks/',
@@ -14,8 +14,18 @@ const PUBLIC_PATHS = [
   '/serwist',
 ];
 
+// Routes that require JWT (tm-token cookie) instead of access code
+const JWT_PROTECTED_PREFIXES = [
+  '/dashboard',
+  '/api/tm/',
+];
+
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(p => pathname.startsWith(p));
+}
+
+function isJwtProtected(pathname: string): boolean {
+  return JWT_PROTECTED_PREFIXES.some(p => pathname.startsWith(p));
 }
 
 function isStaticAsset(pathname: string): boolean {
@@ -30,6 +40,18 @@ async function sha256Hex(input: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+/** Lightweight JWT decode for edge runtime (no verification — that happens in route handlers) */
+function decodeJwtPayload(token: string): { userId?: string; exp?: number } | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -38,6 +60,33 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // ── JWT-protected routes (/dashboard/*, /api/tm/*) ────────────────────
+  if (isJwtProtected(pathname)) {
+    const tmToken = request.cookies.get('tm-token')?.value;
+    const isApiRoute = pathname.startsWith('/api/');
+
+    if (!tmToken) {
+      if (isApiRoute) {
+        return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      }
+      return NextResponse.redirect(new URL('/login?mode=user', request.url));
+    }
+
+    // Basic expiry check in middleware (full verify in route handlers)
+    const payload = decodeJwtPayload(tmToken);
+    if (!payload || (payload.exp && payload.exp * 1000 < Date.now())) {
+      if (isApiRoute) {
+        return NextResponse.json({ error: 'Token expired' }, { status: 401 });
+      }
+      const response = NextResponse.redirect(new URL('/login?mode=user', request.url));
+      response.cookies.set('tm-token', '', { maxAge: 0, path: '/' });
+      return response;
+    }
+
+    return NextResponse.next();
+  }
+
+  // ── Access-code-protected routes (DG app pages) ───────────────────────
   const accessCode = process.env.APP_ACCESS_CODE;
 
   // If no access code is configured, skip auth (development)

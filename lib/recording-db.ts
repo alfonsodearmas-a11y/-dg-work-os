@@ -2,11 +2,14 @@
 
 import { supabaseAdmin } from '@/lib/db';
 import { createTask } from '@/lib/notion';
+import { createTask as createPgTask } from '@/lib/task-queries';
+import { query } from '@/lib/db-pg';
 import type { RecordingAnalysis, RecordingActionItem } from '@/lib/recording-processor';
+import type { TaskPriority } from '@/lib/task-queries';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export type RecordingStatus = 'uploading' | 'transcribing' | 'transcribed' | 'processing' | 'completed' | 'failed';
+export type RecordingStatus = 'recording' | 'uploading' | 'transcribing' | 'transcribed' | 'processing' | 'completed' | 'failed';
 export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'pushed_to_notion';
 
 export interface MeetingRecording {
@@ -15,10 +18,9 @@ export interface MeetingRecording {
   meeting_date: string | null;
   attendees: string[];
   notes: string | null;
-  audio_file_path: string | null;
-  audio_filename: string | null;
-  audio_mime_type: string | null;
-  audio_file_size: number | null;
+  duration_seconds: number | null;
+  recorded_at: string | null;
+  agency: string | null;
   scriberr_id: string | null;
   raw_transcript: string | null;
   speaker_labels: { name: string; start: number; end: number; text: string }[];
@@ -41,6 +43,7 @@ export interface DraftActionItem {
   deadline: string | null;
   priority: 'high' | 'medium' | 'low';
   agency: string | null;
+  context: string | null;
   review_status: ReviewStatus;
   reviewer_note: string | null;
   notion_task_id: string | null;
@@ -66,6 +69,11 @@ function mapPriority(p: string): 'High' | 'Medium' | 'Low' {
   return map[p?.toLowerCase()] || 'Medium';
 }
 
+function mapPriorityToPg(p: string): TaskPriority {
+  const map: Record<string, TaskPriority> = { high: 'high', medium: 'medium', low: 'low', critical: 'critical' };
+  return map[p?.toLowerCase()] || 'medium';
+}
+
 // ── Recordings CRUD ────────────────────────────────────────────────────────
 
 export async function createRecording(params: {
@@ -73,10 +81,9 @@ export async function createRecording(params: {
   meeting_date?: string | null;
   attendees?: string[];
   notes?: string | null;
-  audio_file_path?: string | null;
-  audio_filename?: string | null;
-  audio_mime_type?: string | null;
-  audio_file_size?: number | null;
+  duration_seconds?: number | null;
+  recorded_at?: string | null;
+  agency?: string | null;
   scriberr_id?: string | null;
   status?: RecordingStatus;
 }): Promise<MeetingRecording> {
@@ -87,10 +94,9 @@ export async function createRecording(params: {
       meeting_date: params.meeting_date || null,
       attendees: params.attendees || [],
       notes: params.notes || null,
-      audio_file_path: params.audio_file_path || null,
-      audio_filename: params.audio_filename || null,
-      audio_mime_type: params.audio_mime_type || null,
-      audio_file_size: params.audio_file_size || null,
+      duration_seconds: params.duration_seconds || null,
+      recorded_at: params.recorded_at || null,
+      agency: params.agency || null,
       scriberr_id: params.scriberr_id || null,
       status: params.status || 'uploading',
     })
@@ -201,6 +207,7 @@ export async function createDraftActionItems(
     deadline: item.deadline || null,
     priority: item.priority || 'medium',
     agency: item.agency || null,
+    context: item.context || null,
     review_status: 'pending',
   }));
 
@@ -239,7 +246,7 @@ export async function updateDraftActionItem(
   return data as DraftActionItem;
 }
 
-export async function approveDraftItem(id: string): Promise<DraftActionItem> {
+export async function approveDraftItem(id: string, userId?: string): Promise<DraftActionItem> {
   // Fetch the item
   const { data: item, error: fetchErr } = await supabaseAdmin
     .from('draft_action_items')
@@ -270,6 +277,44 @@ export async function approveDraftItem(id: string): Promise<DraftActionItem> {
       priority: mapPriority(item.priority),
       description: descLines.join('\n'),
     });
+
+    // Also create task in PostgreSQL DB
+    try {
+      const mappedAgency = mapAgency(item.agency);
+      if (mappedAgency) {
+        // Look up CEO assignee for this agency
+        const ceoResult = await query(
+          `SELECT id FROM users WHERE agency = $1 AND role = 'ceo' AND is_active = true LIMIT 1`,
+          [mappedAgency]
+        );
+
+        if (ceoResult.rows.length > 0) {
+          const assigneeId = ceoResult.rows[0].id;
+          const creatorId = userId || assigneeId; // Use approver userId if available, otherwise use assignee
+
+          await createPgTask(
+            {
+              title: item.title,
+              description: `From meeting recording: ${item.recording_id}\n\n${item.description || item.title}`,
+              priority: mapPriorityToPg(item.priority),
+              agency: mappedAgency,
+              assignee_id: assigneeId,
+              due_date: item.deadline || null,
+              source_recording_id: item.recording_id,
+            },
+            creatorId
+          );
+          console.log(`[PG Task] Created task for action item ${id} in agency ${mappedAgency}`);
+        } else {
+          console.warn(`[PG Task] No active CEO found for agency ${mappedAgency}, skipping PG task creation`);
+        }
+      } else {
+        console.warn(`[PG Task] No valid agency for action item ${id}, skipping PG task creation`);
+      }
+    } catch (pgErr: any) {
+      console.error(`[PG Task] Failed to create PostgreSQL task for action item ${id}:`, pgErr.message);
+      // Don't throw - allow the approval to succeed even if PG task creation fails
+    }
 
     // Update with success
     const { data: updated, error: updateErr } = await supabaseAdmin
@@ -311,7 +356,7 @@ export async function rejectDraftItem(id: string, note?: string): Promise<DraftA
   });
 }
 
-export async function bulkApproveItems(ids: string[]): Promise<{
+export async function bulkApproveItems(ids: string[], userId?: string): Promise<{
   approved: number;
   failed: number;
   errors: string[];
@@ -320,7 +365,7 @@ export async function bulkApproveItems(ids: string[]): Promise<{
 
   for (const id of ids) {
     try {
-      const item = await approveDraftItem(id);
+      const item = await approveDraftItem(id, userId);
       if (item.review_status === 'pushed_to_notion') {
         result.approved++;
       } else {

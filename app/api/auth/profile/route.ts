@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateRequest, AuthError } from '@/lib/auth';
+import { authenticateAny, AuthError } from '@/lib/auth';
 import { query } from '@/lib/db-pg';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await authenticateRequest(request);
+    const user = await authenticateAny(request);
     const result = await query(
       'SELECT id, username, email, full_name, role, agency, last_login, created_at FROM users WHERE id = $1',
       [user.id]

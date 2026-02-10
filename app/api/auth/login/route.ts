@@ -66,14 +66,29 @@ export async function POST(request: NextRequest) {
 
     await auditService.log({ userId: user.id, action: 'LOGIN', entityType: 'users', entityId: user.id, request });
 
-    return NextResponse.json({
+    // Determine redirect based on role
+    const redirectTo = ['director', 'admin'].includes(user.role) ? '/admin/tasks' : '/dashboard';
+
+    const response = NextResponse.json({
       success: true,
       data: {
         accessToken,
         refreshToken,
+        redirectTo,
         user: { id: user.id, username: user.username, email: user.email, fullName: user.full_name, role: user.role, agency: user.agency, mustChangePassword: user.must_change_password },
       },
     });
+
+    // Set httpOnly cookie for task management pages
+    response.cookies.set('tm-token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 8 * 60 * 60, // 8 hours
+    });
+
+    return response;
   } catch (error: any) {
     console.error('[auth/login] Error:', error.message);
     return NextResponse.json({ success: false, error: 'Login failed' }, { status: 500 });

@@ -19,6 +19,8 @@ import {
   LogOut,
   X,
   Mic,
+  Target,
+  Users,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -41,7 +43,9 @@ const agencies = [
 ];
 
 const adminItems = [
-  { href: '/admin', label: 'Settings & Users', icon: Settings },
+  { href: '/admin/tasks', label: 'Command Center', icon: Target },
+  { href: '/admin/people', label: 'People', icon: Users },
+  { href: '/admin', label: 'Settings', icon: Settings },
 ];
 
 export function Sidebar() {
@@ -55,11 +59,13 @@ export function Sidebar() {
     router.push('/login');
   };
 
+  const allNavItems = [...mainNavItems, ...adminItems];
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
+    if (href === '/admin') return pathname === '/admin';
     if (!pathname.startsWith(href)) return false;
     // Check that no more-specific sibling nav item also matches
-    return !mainNavItems.some(
+    return !allNavItems.some(
       item => item.href !== href && item.href.startsWith(href) && pathname.startsWith(item.href),
     );
   };
