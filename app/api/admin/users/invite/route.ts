@@ -33,13 +33,20 @@ export async function POST(request: NextRequest) {
       [username, email, passwordHash, full_name, role, agency]
     );
 
-    // Send invite email
-    const emailData = userInviteEmail(full_name, tempPassword);
-    sendTaskEmail(email, emailData.subject, emailData.html).catch(err => {
+    // Send invite email (track success/failure)
+    let emailSent = false;
+    try {
+      const emailData = userInviteEmail(full_name, tempPassword);
+      await sendTaskEmail(email, emailData.subject, emailData.html);
+      emailSent = true;
+    } catch (err) {
       console.error('[invite] Failed to send invite email:', err);
-    });
+    }
 
-    return NextResponse.json({ success: true, data: result.rows[0] }, { status: 201 });
+    return NextResponse.json({
+      success: true,
+      data: { ...result.rows[0], tempPassword, emailSent },
+    }, { status: 201 });
   } catch (error: any) {
     if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
     console.error('[admin/invite] Error:', error.message);
