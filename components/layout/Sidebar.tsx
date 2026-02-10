@@ -21,6 +21,7 @@ import {
   Mic,
   Target,
   Users,
+  DollarSign,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -30,6 +31,7 @@ const mainNavItems = [
   { href: '/', label: 'Daily Briefing', icon: LayoutDashboard },
   { href: '/intel', label: 'Agency Intel', icon: Activity },
   { href: '/projects', label: 'Projects', icon: FolderKanban },
+  { href: '/budget', label: 'Budget 2026', icon: DollarSign },
   { href: '/meetings', label: 'Meetings', icon: BookOpen },
   { href: '/meetings/recordings', label: 'Recordings', icon: Mic },
   { href: '/documents', label: 'Documents', icon: FileText },

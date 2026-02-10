@@ -1627,6 +1627,213 @@ html, body {
   }
 }
 
+/* ============================================================================
+   AI BRIEF CONTENT — Budget Defence Briefs
+   ============================================================================ */
+
+.ai-brief-content {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #94a3b8;
+}
+
+.ai-section {
+  margin-bottom: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(45, 58, 82, 0.5);
+  overflow: hidden;
+}
+
+.ai-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(26, 39, 68, 0.6);
+  border-bottom: 1px solid rgba(45, 58, 82, 0.4);
+}
+
+.ai-section-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f8fafc;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.ai-section-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.ai-section-body {
+  padding: 12px 16px;
+}
+
+.ai-section-body ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+}
+
+.ai-section-body li {
+  position: relative;
+  padding-left: 16px;
+  margin-bottom: 6px;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.ai-section-body li::before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  color: #d4af37;
+}
+
+.ai-section-body strong {
+  color: #e2e8f0;
+}
+
+.ai-section-body em {
+  color: #d4af37;
+  font-style: italic;
+}
+
+.ai-section-body br {
+  display: block;
+  margin-bottom: 4px;
+  content: '';
+}
+
+/* Section type accents */
+.ai-section-executive {
+  border-color: rgba(212, 175, 55, 0.3);
+}
+
+.ai-section-executive .ai-section-header {
+  background: rgba(212, 175, 55, 0.08);
+  border-bottom-color: rgba(212, 175, 55, 0.2);
+}
+
+.ai-section-executive .ai-section-header h3 {
+  color: #d4af37;
+}
+
+.ai-section-numbers .ai-section-header {
+  background: rgba(59, 130, 246, 0.06);
+  border-bottom-color: rgba(59, 130, 246, 0.15);
+}
+
+.ai-section-qa .ai-section-header {
+  background: rgba(168, 85, 247, 0.06);
+  border-bottom-color: rgba(168, 85, 247, 0.15);
+}
+
+.ai-section-justifications .ai-section-header {
+  background: rgba(5, 150, 105, 0.06);
+  border-bottom-color: rgba(5, 150, 105, 0.15);
+}
+
+.ai-section-intro {
+  border: none;
+  padding: 0 0 8px;
+}
+
+/* Money amounts */
+.ai-money {
+  color: #d4af37;
+  font-family: var(--font-mono), 'JetBrains Mono', monospace;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* Page references */
+.ai-ref {
+  color: #60a5fa;
+  font-family: var(--font-mono), 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 1px 5px;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 4px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* Q&A pairs */
+.ai-qa-pair {
+  margin-bottom: 12px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(45, 58, 82, 0.4);
+}
+
+.ai-qa-q {
+  padding: 10px 14px;
+  background: rgba(168, 85, 247, 0.06);
+  color: #e2e8f0;
+  font-weight: 500;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(45, 58, 82, 0.3);
+}
+
+.ai-qa-q::before {
+  content: 'Q: ';
+  color: #a855f7;
+  font-weight: 700;
+}
+
+.ai-qa-a {
+  padding: 10px 14px;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.ai-qa-a::before {
+  content: 'A: ';
+  color: #059669;
+  font-weight: 700;
+}
+
+/* Tables in AI briefs */
+.ai-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 8px 0;
+  font-size: 13px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(45, 58, 82, 0.5);
+}
+
+.ai-table th {
+  background: rgba(26, 39, 68, 0.8);
+  color: #d4af37;
+  font-weight: 600;
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ai-table td {
+  padding: 8px 12px;
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(45, 58, 82, 0.3);
+}
+
+.ai-table tr:last-child td {
+  border-bottom: none;
+}
+
+.ai-table tr:nth-child(even) td {
+  background: rgba(10, 22, 40, 0.3);
+}
+
 /* Reduce motion for accessibility */
 @media (prefers-reduced-motion: reduce) {
   .login-aurora-band,

@@ -47,7 +47,7 @@ export default function RootLayout({
         <link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" href="/splash/splash-1170x2532.png" />
         <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" href="/splash/splash-750x1334.png" />
       </head>
-      <body className={`${outfit.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+      <body suppressHydrationWarning className={`${outfit.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         <PWAWrapper>
           <AppShell>{children}</AppShell>
         </PWAWrapper>
