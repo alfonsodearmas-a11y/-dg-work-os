@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Calendar,
   Users,
@@ -18,6 +19,7 @@ import {
   Send,
   RefreshCw,
   Mic,
+  Trash2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { DraftActionItemCard, type DraftActionItemData } from './DraftActionItemCard';
@@ -84,6 +86,7 @@ function formatDuration(seconds: number | null): string {
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function RecordingDetailView({ recording: initialRecording, actionItems: initialActionItems }: Props) {
+  const router = useRouter();
   const [recording, setRecording] = useState(initialRecording);
   const [actionItems, setActionItems] = useState(initialActionItems);
   const [showTranscript, setShowTranscript] = useState(false);
@@ -97,6 +100,10 @@ export function RecordingDetailView({ recording: initialRecording, actionItems: 
   const [manualTranscript, setManualTranscript] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [retrying, setRetrying] = useState(false);
+
+  // Delete
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const config = STATUS_CONFIG[recording.status] || STATUS_CONFIG.uploading;
   const StatusIcon = config.icon;
@@ -175,8 +182,46 @@ export function RecordingDetailView({ recording: initialRecording, actionItems: 
     setRetrying(false);
   }
 
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/meetings/recordings/${recording.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Delete failed');
+      router.push('/meetings/recordings');
+    } catch { /* silent */ }
+    setDeleting(false);
+  }
+
   return (
     <div className="space-y-6">
+      {/* ── Delete Confirmation Modal ── */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="card-premium p-6 max-w-sm w-full space-y-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-6 w-6 text-red-400" />
+              <h3 className="text-white font-semibold">Delete Recording?</h3>
+            </div>
+            <p className="text-[#94a3b8] text-sm">
+              This will permanently delete <strong className="text-white">{recording.title}</strong> and all its action items. This cannot be undone.
+            </p>
+            <div className="flex items-center gap-2 justify-end">
+              <button onClick={() => setShowDeleteConfirm(false)} disabled={deleting} className="btn-navy px-4 py-2 text-sm">
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-4 py-2 text-sm rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
+              >
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Header Card ── */}
       <div className="card-premium p-5">
         <div className="flex items-start justify-between gap-3 mb-4">
@@ -205,10 +250,19 @@ export function RecordingDetailView({ recording: initialRecording, actionItems: 
               )}
             </div>
           </div>
-          <Badge variant={config.variant}>
-            <StatusIcon className={`h-3 w-3 mr-1 ${isAnimating ? 'animate-spin' : ''}`} />
-            {config.label}
-          </Badge>
+          <div className="flex items-center gap-2 shrink-0">
+            <Badge variant={config.variant}>
+              <StatusIcon className={`h-3 w-3 mr-1 ${isAnimating ? 'animate-spin' : ''}`} />
+              {config.label}
+            </Badge>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="p-1.5 rounded-lg text-[#64748b] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              title="Delete recording"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {recording.attendees && recording.attendees.length > 0 && (

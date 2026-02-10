@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRecordingById, updateRecordingStatus, updateRecording, createDraftActionItems, getDraftActionItems } from '@/lib/recording-db';
+import { getRecordingById, updateRecordingStatus, updateRecording, createDraftActionItems, getDraftActionItems, deleteRecording } from '@/lib/recording-db';
 import { processRecordingTranscript } from '@/lib/recording-processor';
 
 export async function GET(
@@ -76,6 +76,24 @@ export async function PATCH(
     }
 
     return NextResponse.json({ error: 'No valid action or fields provided' }, { status: 400 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await params;
+    const recording = await getRecordingById(id);
+    if (!recording) {
+      return NextResponse.json({ error: 'Recording not found' }, { status: 404 });
+    }
+
+    await deleteRecording(id);
+    return NextResponse.json({ ok: true });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

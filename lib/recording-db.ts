@@ -349,6 +349,16 @@ export async function approveDraftItem(id: string, userId?: string): Promise<Dra
   }
 }
 
+export async function deleteRecording(id: string): Promise<void> {
+  // Draft action items are cascade-deleted via FK
+  const { error } = await supabaseAdmin
+    .from('meeting_recordings')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw new Error(`Failed to delete recording: ${error.message}`);
+}
+
 export async function rejectDraftItem(id: string, note?: string): Promise<DraftActionItem> {
   return updateDraftActionItem(id, {
     review_status: 'rejected',
