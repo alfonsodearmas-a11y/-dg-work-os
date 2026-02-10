@@ -67,6 +67,14 @@ export async function middleware(request: NextRequest) {
     const tmToken = request.cookies.get('tm-token')?.value;
     const isApiRoute = pathname.startsWith('/api/');
 
+    // For API routes, also allow dg-auth access code (DG uses authenticateAny in handlers)
+    if (!tmToken && isApiRoute) {
+      const dgAuth = request.cookies.get('dg-auth')?.value;
+      if (dgAuth) {
+        return NextResponse.next();
+      }
+    }
+
     if (!tmToken) {
       if (isApiRoute) {
         return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
