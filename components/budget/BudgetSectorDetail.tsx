@@ -235,9 +235,9 @@ export function BudgetSectorDetail({ sector }: { sector: string }) {
                 <div className="flex flex-wrap gap-3 text-xs">
                   <span className="text-[#64748b]">Total Cost: <span className="text-white font-mono">G${((p.total_project_cost as number) / 1000).toFixed(2)}M</span></span>
                   <span className="text-[#64748b]">2026: <span className="text-[#d4af37] font-mono font-bold">G${((p.budget_2026 as number) / 1000).toFixed(2)}M</span></span>
-                  {p.region && <span className="text-[#64748b]">Region: <span className="text-white">{p.region as string}</span></span>}
+                  {!!p.region && <span className="text-[#64748b]">Region: <span className="text-white">{p.region as string}</span></span>}
                 </div>
-                {p.benefits && (
+                {!!p.benefits && (
                   <p className="text-[#64748b] text-[10px] italic">Benefits: {p.benefits as string}</p>
                 )}
               </div>

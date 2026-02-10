@@ -3,7 +3,8 @@
   "regions": ["iad1"],
   "functions": {
     "app/api/**": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "data/**"
     }
   },
   "crons": [
