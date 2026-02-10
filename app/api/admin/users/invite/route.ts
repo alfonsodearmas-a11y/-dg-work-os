@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
 import { authenticateAny, authorizeRoles, AuthError } from '@/lib/auth';
 import { query } from '@/lib/db-pg';
+import { createInviteToken } from '@/lib/invite-tokens';
 import { sendTaskEmail } from '@/lib/task-notifications';
-import { userInviteEmail } from '@/lib/task-email-templates';
+import { accountSetupEmail } from '@/lib/task-email-templates';
+
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,12 +23,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'A user with this email already exists' }, { status: 409 });
     }
 
-    // Generate temp password and unique username
-    const tempPassword = crypto.randomBytes(6).toString('base64url');
-    const passwordHash = await bcrypt.hash(tempPassword, 12);
+    // Generate unique username from email
     const baseUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '_');
-
-    // Find a unique username — append _2, _3, etc. if needed
     let username = baseUsername;
     const existingUsernames = await query(
       `SELECT username FROM users WHERE username = $1 OR username LIKE $2`,
@@ -42,16 +39,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Create user with status='invited', no password
     const result = await query(
-      `INSERT INTO users (username, email, password_hash, full_name, role, agency, must_change_password)
-       VALUES ($1, $2, $3, $4, $5, $6, true) RETURNING id, username, email, full_name, role, agency`,
-      [username, email, passwordHash, full_name, role, agency]
+      `INSERT INTO users (username, email, password_hash, full_name, role, agency, is_active, status)
+       VALUES ($1, $2, NULL, $3, $4, $5, true, 'invited')
+       RETURNING id, username, email, full_name, role, agency, status`,
+      [username, email, full_name, role, agency]
     );
 
-    // Send invite email (track success/failure)
+    const newUser = result.rows[0];
+
+    // Generate invite token (7-day expiry)
+    const rawToken = await createInviteToken(newUser.id, 'invite', 7 * 24);
+    const setupUrl = `${BASE_URL}/setup?token=${rawToken}`;
+
+    // Send setup email
     let emailSent = false;
     try {
-      const emailData = userInviteEmail(full_name, tempPassword);
+      const emailData = accountSetupEmail(full_name, role, agency, setupUrl);
       await sendTaskEmail(email, emailData.subject, emailData.html);
       emailSent = true;
     } catch (err) {
@@ -60,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: { ...result.rows[0], tempPassword, emailSent },
+      data: { ...newUser, emailSent },
     }, { status: 201 });
   } catch (error: any) {
     if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });

@@ -123,17 +123,41 @@ export function taskReminderEmail(userName: string, task: { id: string; title: s
   };
 }
 
-export function userInviteEmail(userName: string, tempPassword: string) {
+export function accountSetupEmail(name: string, role: string, agency: string, setupUrl: string) {
+  const ROLE_LABELS: Record<string, string> = {
+    ceo: 'CEO / Agency Head',
+    supervisor: 'Supervisor',
+    data_entry: 'Data Entry',
+    admin: 'Admin',
+    director: 'Director General',
+  };
   return {
-    subject: 'You\'ve been invited to DG Work OS',
+    subject: "You've been invited to DG Work OS",
     html: wrap(`
-      <h2 style="color: #1e293b; margin-top: 0;">Welcome, ${userName}!</h2>
-      <p style="color: #475569;">You've been invited to the Director General's Work OS. Use the credentials below to sign in:</p>
+      <h2 style="color: #1e293b; margin-top: 0;">Welcome, ${name}!</h2>
+      <p style="color: #475569;">The Director General has invited you to the DG Work OS platform.</p>
       <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
-        <p style="margin: 4px 0; color: #475569;">Temporary password: <code style="background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-weight: 600;">${tempPassword}</code></p>
+        <table style="width: 100%; font-size: 13px; color: #475569;">
+          <tr><td style="padding: 4px 0; width: 80px;">Role</td><td style="font-weight: 600;">${ROLE_LABELS[role] || role}</td></tr>
+          <tr><td style="padding: 4px 0;">Agency</td><td style="font-weight: 600;">${agency.toUpperCase()}</td></tr>
+        </table>
       </div>
-      <p style="color: #475569;">You will be asked to change your password on first login.</p>
-      <a href="${BASE_URL}/login?mode=user" style="display: inline-block; background: #d4af37; color: #0a1628; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 8px;">Sign In</a>
+      <p style="color: #475569;">Click the button below to set your password and activate your account. This link expires in 7 days.</p>
+      <a href="${setupUrl}" style="display: inline-block; background: #d4af37; color: #0a1628; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 8px;">Set Up Your Account</a>
+      <p style="color: #94a3b8; font-size: 12px; margin-top: 16px;">If the button doesn't work, copy this link into your browser:<br/><span style="color: #64748b; word-break: break-all;">${setupUrl}</span></p>
+    `),
+  };
+}
+
+export function passwordResetEmail(name: string, resetUrl: string) {
+  return {
+    subject: 'Reset your DG Work OS password',
+    html: wrap(`
+      <h2 style="color: #1e293b; margin-top: 0;">Hello, ${name}</h2>
+      <p style="color: #475569;">A password reset was requested for your DG Work OS account. Click the button below to set a new password.</p>
+      <p style="color: #475569;">This link expires in 1 hour.</p>
+      <a href="${resetUrl}" style="display: inline-block; background: #d4af37; color: #0a1628; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 8px;">Reset Password</a>
+      <p style="color: #94a3b8; font-size: 12px; margin-top: 16px;">If you didn't request this, you can safely ignore this email.<br/>If the button doesn't work, copy this link into your browser:<br/><span style="color: #64748b; word-break: break-all;">${resetUrl}</span></p>
     `),
   };
 }

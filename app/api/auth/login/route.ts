@@ -20,10 +20,15 @@ export async function POST(request: NextRequest) {
     const { username, password } = await request.json();
 
     if (!username || !password) {
-      return NextResponse.json({ success: false, error: 'Username and password are required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Email and password are required' }, { status: 400 });
     }
 
-    const result = await query('SELECT * FROM users WHERE username = $1', [username.toLowerCase()]);
+    // Support login by email OR username
+    const loginValue = username.trim().toLowerCase();
+    const result = await query(
+      'SELECT * FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $1',
+      [loginValue]
+    );
     if (result.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Invalid credentials' }, { status: 401 });
     }
@@ -36,8 +41,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: `Account locked. Try again in ${remainingMinutes} minutes`, code: 'ACCOUNT_LOCKED' }, { status: 423 });
     }
 
-    if (!user.is_active) {
-      return NextResponse.json({ success: false, error: 'Account is deactivated' }, { status: 401 });
+    // Check status-based restrictions
+    if (user.status === 'invited' || !user.password_hash) {
+      return NextResponse.json({
+        success: false,
+        error: "Your account hasn't been set up yet. Check your email for the invite link.",
+        code: 'ACCOUNT_INVITED',
+      }, { status: 401 });
+    }
+
+    if (user.status === 'disabled' || !user.is_active) {
+      return NextResponse.json({
+        success: false,
+        error: 'Your account has been disabled. Contact the Director General.',
+        code: 'ACCOUNT_DISABLED',
+      }, { status: 401 });
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password_hash);

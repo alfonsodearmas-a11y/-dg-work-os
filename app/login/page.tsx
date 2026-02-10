@@ -276,9 +276,9 @@ export default function LoginPage() {
                 type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Username or email"
+                placeholder="Email address"
                 className="login-input"
-                autoComplete="username"
+                autoComplete="email"
                 disabled={success}
               />
             </div>
@@ -301,6 +301,12 @@ export default function LoginPage() {
         )}
 
         {error && <p className="login-error">{error}</p>}
+
+        {mode === 'user' && !success && (
+          <p className="text-center text-[10px] text-white/30 -mt-1">
+            Forgot password? Contact the Director General to reset it.
+          </p>
+        )}
 
         {/* Button */}
         <button
