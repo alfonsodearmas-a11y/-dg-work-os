@@ -90,31 +90,118 @@ const DOCUMENT_LINKS: Record<string, Record<string, DocLink[]>> = {
   },
   HECI: {
     'Hinterland Electrification': [
-      { doc: 'HECI Strategic Plan 2026-2030.pptx', label: 'Strategic Plan 2026-2030', tag: 'strategic-plan' },
-      { doc: 'BRIEF ON HINTERLAND UTILITIES-1.docx', label: 'Hinterland Utilities Brief: 7 companies', tag: 'utilities-brief' },
-      { doc: 'All Companies - Subsidy for2026.xls', label: 'Subsidy Allocations 2026: G$7.5B', tag: 'subsidy-table' },
+      { doc: 'HECI Strategic Plan 2026-2030.pptx', label: 'Strategic Plan 2026-2030: Community targets, satellite companies, solar expansion', tag: 'strategic-plan' },
+      { doc: 'BRIEF ON HINTERLAND UTILITIES-1.docx', label: 'Hinterland Utilities Brief: 7 companies — staff, consumers, tariffs, capacity, financials', tag: 'utilities-brief' },
+      { doc: 'All Companies - Subsidy for2026.xls', label: 'Subsidy Allocations 2026: G$7.5B across 7 power companies + KUI + HECI admin', tag: 'subsidy-table' },
     ],
     Subsidy: [
-      { doc: 'All Companies - Subsidy for2026.xls', label: 'Subsidy Allocations: Company-by-company breakdown', tag: 'subsidy-table' },
-      { doc: 'BRIEF ON HINTERLAND UTILITIES-1.docx', label: 'Hinterland Utilities Brief', tag: 'utilities-brief' },
-      { doc: 'HECI Strategic Plan 2026-2030.pptx', label: 'Strategic Plan', tag: 'strategic-plan' },
-      { doc: 'HECI - Appendix T - 2026 & 2025.xlsx', label: 'HECI Appendix T: G$95M admin budget', tag: 'appendix-t' },
+      { doc: 'All Companies - Subsidy for2026.xls', label: 'Subsidy Allocations: Company-by-company breakdown — LINMINE G$4.8B, Lethem G$662M, KUI G$999M', tag: 'subsidy-table' },
+      { doc: 'BRIEF ON HINTERLAND UTILITIES-1.docx', label: 'Hinterland Utilities Brief: Operational context for each subsidy recipient', tag: 'utilities-brief' },
+      { doc: 'HECI Strategic Plan 2026-2030.pptx', label: 'Strategic Plan: Mission, performance indicators, budget context', tag: 'strategic-plan' },
+      { doc: 'HECI - Appendix T - 2026 & 2025.xlsx', label: 'HECI Appendix T: G$95M admin budget — employment G$72M, recurrent G$23M', tag: 'appendix-t' },
+    ],
+    Employment: [
+      { doc: 'HECI - Appendix T - 2026 & 2025.xlsx', label: 'HECI Appendix T: Employment costs G$72M (9 contracted staff), recurrent charges', tag: 'appendix-t' },
+    ],
+    Capital: [
+      { doc: 'HECI Strategic Plan 2026-2030.pptx', label: 'Strategic Plan: Capital programme scope — 8 satellite companies', tag: 'strategic-plan' },
     ],
     _general: [
-      { doc: 'HECI Strategic Plan 2026-2030.pptx', label: 'HECI Strategic Plan 2026-2030', tag: 'strategic-plan' },
-      { doc: 'All Companies - Subsidy for2026.xls', label: '2026 Subsidy Allocations', tag: 'subsidy-table' },
-      { doc: 'BRIEF ON HINTERLAND UTILITIES-1.docx', label: 'Brief on Hinterland Utilities', tag: 'utilities-brief' },
-      { doc: 'HECI - Appendix T - 2026 & 2025.xlsx', label: 'HECI Appendix T', tag: 'appendix-t' },
+      { doc: 'HECI Strategic Plan 2026-2030.pptx', label: 'HECI Strategic Plan 2026-2030: Full presentation', tag: 'strategic-plan' },
+      { doc: 'All Companies - Subsidy for2026.xls', label: '2026 Subsidy Allocations: All 9 companies under HECI — G$7.5B total', tag: 'subsidy-table' },
+      { doc: 'BRIEF ON HINTERLAND UTILITIES-1.docx', label: 'Brief on Hinterland Utilities: Operational profiles for all 7 power companies + KUI', tag: 'utilities-brief' },
+      { doc: 'HECI - Appendix T - 2026 & 2025.xlsx', label: 'HECI Appendix T: Statutory body financial summary 2025/2026', tag: 'appendix-t' },
+    ],
+  },
+  KUI: {
+    Subsidy: [
+      { doc: 'KUI - Appendix T - 2026 & 2025.xlsx', label: 'KUI Appendix T: G$999M budget — fuel G$426M, employment G$339M, 119 staff', tag: 'appendix-t' },
+      { doc: 'All Companies - Subsidy for2026.xls', label: 'Subsidy Allocations: KUI G$998.9M for fuel & admin costs', tag: 'subsidy-table' },
+      { doc: 'BRIEF ON HINTERLAND UTILITIES-1.docx', label: 'Utilities Brief: KUI — 1,266 consumers, 893kW peak, electricity + water + sanitation', tag: 'utilities-brief' },
+    ],
+    Employment: [
+      { doc: 'KUI - Appendix T - 2026 & 2025.xlsx', label: 'KUI Appendix T: Employment G$339M — wages G$224M, overhead G$115M, 119 contracted staff', tag: 'appendix-t' },
+    ],
+    Capital: [
+      { doc: 'KUI - Appendix T - 2026 & 2025.xlsx', label: 'KUI Appendix T: Full financial summary — revenue, expenditure breakdown', tag: 'appendix-t' },
+    ],
+    _general: [
+      { doc: 'KUI - Appendix T - 2026 & 2025.xlsx', label: 'KUI Appendix T: Statutory body financial summary 2025/2026 — G$999M budget', tag: 'appendix-t' },
+      { doc: 'BRIEF ON HINTERLAND UTILITIES-1.docx', label: 'Utilities Brief: Kwakwani Utilities — electricity, water & sanitation for 1,266 consumers', tag: 'utilities-brief' },
+      { doc: 'All Companies - Subsidy for2026.xls', label: '2026 Subsidy Table: KUI allocation G$998.9M', tag: 'subsidy-table' },
+    ],
+  },
+  LINMINE: {
+    Subsidy: [
+      { doc: 'All Companies - Subsidy for2026.xls', label: 'Subsidy Allocations: LINMINE G$4.81B — largest hinterland fuel subvention', tag: 'subsidy-table' },
+      { doc: 'BRIEF ON HINTERLAND UTILITIES-1.docx', label: 'Utilities Brief: LINMINE — 13,699 consumers, 14.1MW peak, 70 staff, BOSAI PPA', tag: 'utilities-brief' },
+    ],
+    _general: [
+      { doc: 'All Companies - Subsidy for2026.xls', label: '2026 Subsidy Table: LINMINE G$4.81B fuel subvention', tag: 'subsidy-table' },
+      { doc: 'BRIEF ON HINTERLAND UTILITIES-1.docx', label: 'Utilities Brief: Linden Electricity — 13,699 consumers, power via BOSAI PPA', tag: 'utilities-brief' },
+    ],
+  },
+  LPC: {
+    _general: [
+      { doc: 'All Companies - Subsidy for2026.xls', label: '2026 Subsidy Table: Lethem Power G$662.5M fuel subvention', tag: 'subsidy-table' },
+      { doc: 'BRIEF ON HINTERLAND UTILITIES-1.docx', label: 'Utilities Brief: Lethem Power — 1,891 consumers, 2,520kW peak, 101 staff', tag: 'utilities-brief' },
+    ],
+  },
+  MABARUMA: {
+    _general: [
+      { doc: 'All Companies - Subsidy for2026.xls', label: '2026 Subsidy Table: Mabaruma Power G$545M fuel subvention (+139%)', tag: 'subsidy-table' },
+      { doc: 'BRIEF ON HINTERLAND UTILITIES-1.docx', label: 'Utilities Brief: Mabaruma Power — 1,364 consumers, 1,062kW peak, 17 staff', tag: 'utilities-brief' },
+    ],
+  },
+  MAHDIA: {
+    _general: [
+      { doc: 'All Companies - Subsidy for2026.xls', label: '2026 Subsidy Table: Mahdia Power G$158.6M fuel subvention', tag: 'subsidy-table' },
+      { doc: 'BRIEF ON HINTERLAND UTILITIES-1.docx', label: 'Utilities Brief: Mahdia Power — 823 consumers, 630kW peak, 31 staff', tag: 'utilities-brief' },
+    ],
+  },
+  PKAITUMA: {
+    _general: [
+      { doc: 'All Companies - Subsidy for2026.xls', label: '2026 Subsidy Table: Port Kaituma Power G$105.3M fuel subvention', tag: 'subsidy-table' },
+      { doc: 'BRIEF ON HINTERLAND UTILITIES-1.docx', label: 'Utilities Brief: Port Kaituma Power — 1,070 consumers, 762kW peak, 23 staff', tag: 'utilities-brief' },
+    ],
+  },
+  MRIDGE: {
+    _general: [
+      { doc: 'All Companies - Subsidy for2026.xls', label: '2026 Subsidy Table: Matthew\'s Ridge Power G$75M fuel subvention (+53%)', tag: 'subsidy-table' },
+      { doc: 'BRIEF ON HINTERLAND UTILITIES-1.docx', label: 'Utilities Brief: Matthew\'s Ridge Power — 172 consumers, 165kW peak, 6 staff', tag: 'utilities-brief' },
+    ],
+  },
+  MORUCA: {
+    _general: [
+      { doc: 'All Companies - Subsidy for2026.xls', label: '2026 Subsidy Table: Moruca Power G$60M fuel subvention (+150%)', tag: 'subsidy-table' },
     ],
   },
   MARAD: {
     Dredging: [
-      { doc: 'DG MARAD BUDGET BRIEF FOR MINISTER.docx', label: 'DG Budget Brief: Vessel traffic +67%, port development', tag: 'dg-brief' },
-      { doc: 'BUDGET 2026- Write Current Budget with edits-3.docx', label: 'Current Budget Write-Up', tag: 'budget-writeup' },
+      { doc: 'DG MARAD BUDGET BRIEF FOR MINISTER.docx', label: 'DG Budget Brief: Vessel traffic +67%, port development, dredging programme', tag: 'dg-brief' },
+      { doc: 'BUDGET 2026- Write Current Budget with edits-3.docx', label: 'Current Budget Write-Up: MARAD overview, capital grants, infrastructure maintenance', tag: 'budget-writeup' },
+    ],
+    Navigational: [
+      { doc: 'DG MARAD BUDGET BRIEF FOR MINISTER.docx', label: 'DG Budget Brief: G$800M for concrete leading beacons & vessel traffic service', tag: 'dg-brief' },
+      { doc: 'BUDGET 2026- Write Current Budget with edits-3.docx', label: 'Current Budget Write-Up: Capital revenue from Central Govt for project execution', tag: 'budget-writeup' },
+    ],
+    Employment: [
+      { doc: 'BUDGET 2026- Write Current Budget with edits-3.docx', label: 'Current Budget Write-Up: Employment costs, training, education subventions', tag: 'budget-writeup' },
+    ],
+    Revenue: [
+      { doc: 'BUDGET 2026- Write Current Budget with edits-3.docx', label: 'Current Budget Write-Up: Revenue from fees, dues, charges & admin services', tag: 'budget-writeup' },
+      { doc: 'DG MARAD BUDGET BRIEF FOR MINISTER.docx', label: 'DG Budget Brief: Marine traffic growth, port construction applications', tag: 'dg-brief' },
+    ],
+    Capital: [
+      { doc: 'DG MARAD BUDGET BRIEF FOR MINISTER.docx', label: 'DG Budget Brief: Capital programme — dredging, beacons, vessel traffic service', tag: 'dg-brief' },
+      { doc: 'BUDGET 2026- Write Current Budget with edits-3.docx', label: 'Current Budget Write-Up: Capital grants from Central Govt, infrastructure maintenance', tag: 'budget-writeup' },
+    ],
+    Maintenance: [
+      { doc: 'BUDGET 2026- Write Current Budget with edits-3.docx', label: 'Current Budget Write-Up: Aged vessel repairs, maintenance costs from current revenue', tag: 'budget-writeup' },
     ],
     _general: [
-      { doc: 'DG MARAD BUDGET BRIEF FOR MINISTER.docx', label: 'DG MARAD Budget Brief for Minister', tag: 'dg-brief' },
-      { doc: 'BUDGET 2026- Write Current Budget with edits-3.docx', label: 'MARAD Current Budget Write-Up', tag: 'budget-writeup' },
+      { doc: 'DG MARAD BUDGET BRIEF FOR MINISTER.docx', label: 'DG MARAD Budget Brief for Minister — Feb 2026', tag: 'dg-brief' },
+      { doc: 'BUDGET 2026- Write Current Budget with edits-3.docx', label: 'MARAD Current Budget Write-Up: Overview, revenue, expenditure projections 2026', tag: 'budget-writeup' },
     ],
   },
 };
@@ -172,6 +259,100 @@ export interface BudgetAllocation {
   budget_2026_fmt: string;
   source: string;
   linked_docs: DocLink[];
+}
+
+// ── GPL Disaggregated Detail ──
+
+function fmtGplAmount(val: number | null | undefined): string {
+  if (val === null || val === undefined || val === 0) return '—';
+  const sign = val < 0 ? '-' : '';
+  const v = Math.abs(val) / 1000; // GPL tables are in G$ not G$'000
+  if (v >= 1_000_000) return `${sign}G$${(v / 1_000_000).toFixed(2)}B`;
+  if (v >= 1_000) return `${sign}G$${(v / 1_000).toFixed(2)}M`;
+  if (v >= 1) return `${sign}G$${v.toFixed(0)}K`;
+  return `${sign}G$${Math.abs(val).toLocaleString()}`;
+}
+
+export function getGplDetail() {
+  const db = getBudgetDb();
+
+  // Capital projects
+  const capitalProjects = db.prepare("SELECT * FROM gpl_capital_projects ORDER BY project_number").all() as Record<string, unknown>[];
+  for (const cp of capitalProjects) {
+    cp.project_cost_usd_fmt = cp.project_cost_usd ? `US$${((cp.project_cost_usd as number) / 1e6).toFixed(1)}M` : '—';
+    cp.project_cost_gyd_fmt = cp.project_cost_gyd ? `G$${((cp.project_cost_gyd as number) / 1e9).toFixed(2)}B` : '—';
+  }
+
+  // P&L
+  const pnl = db.prepare("SELECT * FROM gpl_financials WHERE statement_type='pnl' ORDER BY id").all() as Record<string, unknown>[];
+  for (const r of pnl) {
+    for (const k of ['budget_2026', 'projection_2025', 'budget_2025', 'actual_2024']) {
+      (r as Record<string, unknown>)[`${k}_fmt`] = r[k] ? fmtAmount(r[k] as number) : '—';
+    }
+  }
+
+  // Detailed P&L
+  const pnlDetailed = db.prepare("SELECT * FROM gpl_financials WHERE statement_type='pnl_detailed' ORDER BY id").all() as Record<string, unknown>[];
+  for (const r of pnlDetailed) {
+    for (const k of ['budget_2026', 'projection_2025', 'actual_2024']) {
+      (r as Record<string, unknown>)[`${k}_fmt`] = r[k] ? fmtAmount(r[k] as number) : '—';
+    }
+  }
+
+  // Cash budget
+  const cashBudget = db.prepare("SELECT * FROM gpl_financials WHERE statement_type='cash_budget' ORDER BY id").all() as Record<string, unknown>[];
+  for (const r of cashBudget) {
+    for (const k of ['budget_2026', 'projection_2025', 'actual_2024']) {
+      (r as Record<string, unknown>)[`${k}_fmt`] = r[k] ? fmtAmount(r[k] as number) : '—';
+    }
+  }
+
+  // Balance sheet
+  const balanceSheet = db.prepare("SELECT * FROM gpl_financials WHERE statement_type='balance_sheet' ORDER BY id").all() as Record<string, unknown>[];
+  for (const r of balanceSheet) {
+    for (const k of ['budget_2026', 'projection_2025', 'actual_2024']) {
+      (r as Record<string, unknown>)[`${k}_fmt`] = r[k] ? fmtAmount(r[k] as number) : '—';
+    }
+  }
+
+  // Capital summary
+  const capitalSummary = db.prepare("SELECT * FROM gpl_financials WHERE statement_type='capital' ORDER BY id").all() as Record<string, unknown>[];
+  for (const r of capitalSummary) {
+    for (const k of ['budget_2026', 'projection_2025', 'actual_2024']) {
+      (r as Record<string, unknown>)[`${k}_fmt`] = r[k] ? fmtAmount(r[k] as number) : '—';
+    }
+  }
+
+  // Employment
+  const employment = db.prepare("SELECT * FROM gpl_employment ORDER BY id").all() as Record<string, unknown>[];
+  for (const r of employment) {
+    for (const k of ['budget_2026', 'estimate_2025', 'variance']) {
+      (r as Record<string, unknown>)[`${k}_fmt`] = r[k] ? fmtGplAmount(r[k] as number) : '—';
+    }
+  }
+
+  // Generation plan
+  const generation = db.prepare("SELECT * FROM gpl_generation ORDER BY id").all() as Record<string, unknown>[];
+
+  // Admin expenses
+  const adminExpenses = db.prepare("SELECT * FROM gpl_admin_expenses ORDER BY id").all() as Record<string, unknown>[];
+  for (const r of adminExpenses) {
+    for (const k of ['budget_2026', 'actual_2025', 'change_amount']) {
+      (r as Record<string, unknown>)[`${k}_fmt`] = r[k] ? fmtGplAmount(r[k] as number) : '—';
+    }
+  }
+
+  return {
+    capital_projects: capitalProjects,
+    pnl,
+    pnl_detailed: pnlDetailed,
+    cash_budget: cashBudget,
+    balance_sheet: balanceSheet,
+    capital_summary: capitalSummary,
+    employment,
+    generation,
+    admin_expenses: adminExpenses,
+  };
 }
 
 export function getSectorDetail(sector: string) {
@@ -241,6 +422,9 @@ export function getSectorDetail(sector: string) {
     ? db.prepare("SELECT * FROM gpl_loans").all() as Record<string, unknown>[]
     : [];
 
+  // GPL disaggregated detail if energy sector
+  const gplDetail = sector === 'energy' ? getGplDetail() : null;
+
   return {
     sector,
     agency_codes: agencyCodes,
@@ -249,6 +433,7 @@ export function getSectorDetail(sector: string) {
     indicators,
     documents: docRows,
     loans,
+    gpl_detail: gplDetail,
   };
 }
 
@@ -357,6 +542,9 @@ export function getAgencyDetail(code: string) {
     FROM agency_documents WHERE agency = ? GROUP BY document_name ORDER BY document_name
   `).all(codeUpper) as { document_name: string; chunk_count: number; first_snippet: string }[];
 
+  // GPL disaggregated detail
+  const gplDetail = codeUpper === 'GPL' ? getGplDetail() : null;
+
   return {
     agency: agencyInfo || null,
     allocations,
@@ -364,6 +552,7 @@ export function getAgencyDetail(code: string) {
     indicators,
     loans,
     documents: docRows,
+    gpl_detail: gplDetail,
   };
 }
 
@@ -458,7 +647,35 @@ Notes: ${alloc.notes || 'None'}`);
     sections.push(`## PERFORMANCE INDICATORS\n${indText}`);
   }
 
-  // 5. Other allocations for context
+  // 5. GPL disaggregated data (if GPL)
+  if (agencyCode === 'GPL') {
+    try {
+      const gpl = getGplDetail();
+      // Capital projects summary
+      if (gpl.capital_projects.length > 0) {
+        const cpText = gpl.capital_projects.map(cp =>
+          `- Project #${cp.project_number}: ${cp.project_name} | Contractor: ${cp.contractor} | Cost: ${cp.project_cost_gyd_fmt} | Status: ${cp.is_rollover ? 'Rollover' : 'New'}`
+        ).join('\n');
+        sections.push(`### GPL Capital Projects (Disaggregated)\n${cpText}`);
+      }
+      // P&L summary
+      if (gpl.pnl.length > 0) {
+        const pnlText = gpl.pnl.slice(0, 15).map(row =>
+          `- ${row.item}: 2024 Actual=${row.actual_2024_fmt ?? '—'} | 2025 Proj=${row.projection_2025_fmt ?? '—'} | 2026 Budget=${row.budget_2026_fmt ?? '—'}`
+        ).join('\n');
+        sections.push(`### GPL Profit & Loss Summary\n${pnlText}`);
+      }
+      // Employment
+      if (gpl.employment.length > 0) {
+        const empText = gpl.employment.slice(0, 10).map(row =>
+          `- ${row.category}: 2025 Est=${row.estimate_2025_fmt ?? '—'} | 2026 Budget=${row.budget_2026_fmt ?? '—'}`
+        ).join('\n');
+        sections.push(`### GPL Employment Costs\n${empText}`);
+      }
+    } catch { /* ignore if tables missing */ }
+  }
+
+  // 6. Other allocations for context
   const otherAllocs = db.prepare(`
     SELECT line_item, expenditure_type, budget_2026, actual_2024, budget_2025, revised_2025
     FROM budget_allocations WHERE agency_code = ? AND line_item NOT LIKE ?

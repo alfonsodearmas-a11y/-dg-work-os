@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Sparkles, FileText, ChevronDown, ChevronRight, Loader2, BarChart3, Landmark, BookOpen } from 'lucide-react';
+import { Sparkles, FileText, ChevronDown, ChevronRight, Loader2, BarChart3, Landmark, BookOpen, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { BudgetAIBrief } from './BudgetAIBrief';
 
@@ -25,6 +25,18 @@ interface Allocation {
   programme: string;
 }
 
+interface GplDetail {
+  capital_projects: Record<string, unknown>[];
+  pnl: Record<string, unknown>[];
+  pnl_detailed: Record<string, unknown>[];
+  cash_budget: Record<string, unknown>[];
+  balance_sheet: Record<string, unknown>[];
+  capital_summary: Record<string, unknown>[];
+  employment: Record<string, unknown>[];
+  generation: Record<string, unknown>[];
+  admin_expenses: Record<string, unknown>[];
+}
+
 interface SectorData {
   sector: string;
   agency_codes: string[];
@@ -33,6 +45,7 @@ interface SectorData {
   indicators: Record<string, unknown>[];
   documents: { agency: string; document_name: string; chunk_count: number; first_snippet: string }[];
   loans: Record<string, unknown>[];
+  gpl_detail: GplDetail | null;
 }
 
 const SECTOR_META: Record<string, { label: string; icon: string; color: string }> = {
@@ -45,9 +58,10 @@ const SECTOR_META: Record<string, { label: string; icon: string; color: string }
 export function BudgetSectorDetail({ sector }: { sector: string }) {
   const [data, setData] = useState<SectorData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'allocations' | 'projects' | 'documents' | 'kpis'>('allocations');
+  const [activeTab, setActiveTab] = useState<'allocations' | 'projects' | 'documents' | 'kpis' | 'gpl'>('allocations');
   const [aiTarget, setAiTarget] = useState<Allocation | null>(null);
   const [expandedAgencies, setExpandedAgencies] = useState<Set<string>>(new Set());
+  const [gplSubTab, setGplSubTab] = useState<'pnl' | 'employment' | 'generation' | 'capex' | 'admin'>('pnl');
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -111,19 +125,20 @@ export function BudgetSectorDetail({ sector }: { sector: string }) {
     { key: 'projects' as const, label: 'Projects', count: data.projects.length, icon: Landmark },
     { key: 'documents' as const, label: 'Documents', count: data.documents.length, icon: FileText },
     { key: 'kpis' as const, label: 'KPIs', count: data.indicators.length, icon: BookOpen },
+    ...(data.gpl_detail ? [{ key: 'gpl' as const, label: 'GPL Detail', count: data.gpl_detail.pnl.length + data.gpl_detail.employment.length, icon: Zap }] : []),
   ];
 
   return (
     <div className="space-y-4">
       {/* Tabs */}
-      <div className="flex gap-1 bg-[#0a1628] rounded-xl p-1">
+      <div className="flex gap-1 bg-[#0a1628] rounded-xl p-1 overflow-x-auto">
         {tabs.map(tab => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-medium transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                 activeTab === tab.key
                   ? 'bg-[#d4af37]/20 text-[#d4af37]'
                   : 'text-[#64748b] hover:text-white'
@@ -320,12 +335,217 @@ export function BudgetSectorDetail({ sector }: { sector: string }) {
         </div>
       )}
 
+      {/* GPL Detail Tab */}
+      {activeTab === 'gpl' && data.gpl_detail && (
+        <GplDetailPanel gpl={data.gpl_detail} subTab={gplSubTab} onSubTabChange={setGplSubTab} />
+      )}
+
       {/* AI Analysis Panel */}
       {aiTarget && (
         <BudgetAIBrief
           allocation={aiTarget}
           onClose={() => setAiTarget(null)}
         />
+      )}
+    </div>
+  );
+}
+
+// ── GPL Detail Panel ──
+
+function GplDetailPanel({
+  gpl,
+  subTab,
+  onSubTabChange,
+}: {
+  gpl: GplDetail;
+  subTab: string;
+  onSubTabChange: (tab: 'pnl' | 'employment' | 'generation' | 'capex' | 'admin') => void;
+}) {
+  const subTabs = [
+    { key: 'pnl' as const, label: 'P&L' },
+    { key: 'employment' as const, label: 'Employment' },
+    { key: 'generation' as const, label: 'Generation' },
+    { key: 'capex' as const, label: 'Capital Projects' },
+    { key: 'admin' as const, label: 'Admin Expenses' },
+  ];
+
+  return (
+    <div className="space-y-3">
+      {/* Sub-tabs */}
+      <div className="flex gap-1 overflow-x-auto pb-1">
+        {subTabs.map(t => (
+          <button
+            key={t.key}
+            onClick={() => onSubTabChange(t.key)}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition-colors ${
+              subTab === t.key
+                ? 'bg-[#ef4444]/20 text-[#ef4444] border border-[#ef4444]/30'
+                : 'text-[#64748b] hover:text-white bg-[#0a1628]/60'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* P&L */}
+      {subTab === 'pnl' && (
+        <div className="space-y-1">
+          <p className="text-[#64748b] text-[10px] font-semibold uppercase tracking-wider pb-1">GPL Profit & Loss Statement</p>
+          {gpl.pnl.map((row, i) => (
+            <div key={i} className={`bg-[#0a1628]/40 rounded-lg p-2.5 ${(row.item as string || '').includes('Total') || (row.item as string || '').includes('Net') ? 'border-l-2 border-[#ef4444]' : ''}`}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className={`text-sm ${(row.item as string || '').includes('Total') || (row.item as string || '').includes('Net') ? 'text-white font-semibold' : 'text-[#94a3b8]'}`}>
+                    {row.category && row.category !== row.item ? <span className="text-[#64748b] text-[10px] mr-2">{row.category as string}</span> : null}
+                    {row.item as string}
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-2 mt-1.5 text-[10px]">
+                <div>
+                  <p className="text-[#64748b]">2024 Act</p>
+                  <p className="text-white font-mono">{(row.actual_2024_fmt as string) || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-[#64748b]">2025 Proj</p>
+                  <p className="text-white font-mono">{(row.projection_2025_fmt as string) || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-[#64748b]">2025 Bud</p>
+                  <p className="text-white font-mono">{(row.budget_2025_fmt as string) || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-[#64748b]">2026 Bud</p>
+                  <p className="text-[#d4af37] font-mono font-bold">{(row.budget_2026_fmt as string) || '—'}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Employment */}
+      {subTab === 'employment' && (
+        <div className="space-y-1">
+          <p className="text-[#64748b] text-[10px] font-semibold uppercase tracking-wider pb-1">GPL Employment Costs (G$)</p>
+          {gpl.employment.map((row, i) => (
+            <div key={i} className="bg-[#0a1628]/40 rounded-lg p-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[#94a3b8] text-sm">{row.category as string}</p>
+                {!!row.pct_of_total && <span className="text-[#64748b] text-[10px] font-mono shrink-0">{row.pct_of_total as number}%</span>}
+              </div>
+              <div className="grid grid-cols-3 gap-2 mt-1.5 text-[10px]">
+                <div>
+                  <p className="text-[#64748b]">2025 Est</p>
+                  <p className="text-white font-mono">{(row.estimate_2025_fmt as string) || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-[#64748b]">2026 Bud</p>
+                  <p className="text-[#d4af37] font-mono font-bold">{(row.budget_2026_fmt as string) || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-[#64748b]">Variance</p>
+                  <p className={`font-mono ${(row.variance as number) > 0 ? 'text-green-400' : (row.variance as number) < 0 ? 'text-red-400' : 'text-white'}`}>
+                    {(row.variance_fmt as string) || '—'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Generation Plan */}
+      {subTab === 'generation' && (
+        <div className="space-y-1">
+          <p className="text-[#64748b] text-[10px] font-semibold uppercase tracking-wider pb-1">GPL 2026 Generation Plan (MWh)</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[11px]">
+              <thead>
+                <tr className="text-[#64748b] text-[10px] uppercase tracking-wider">
+                  <th className="text-left py-2 px-2">Month</th>
+                  <th className="text-right py-2 px-2">Thermal</th>
+                  <th className="text-right py-2 px-2">Solar</th>
+                  <th className="text-right py-2 px-2">Wind</th>
+                  <th className="text-right py-2 px-2">Total</th>
+                  <th className="text-right py-2 px-2">Thermal %</th>
+                  <th className="text-right py-2 px-2">Solar %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {gpl.generation.map((row, i) => (
+                  <tr key={i} className="border-t border-[#2d3a52]/30">
+                    <td className="py-1.5 px-2 text-white font-medium">{row.month as string}</td>
+                    <td className="py-1.5 px-2 text-right text-[#94a3b8] font-mono">{((row.thermal_mwh as number) || 0).toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right text-green-400 font-mono">{((row.solar_mwh as number) || 0).toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right text-cyan-400 font-mono">{((row.wind_mwh as number) || 0).toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right text-white font-mono font-bold">{((row.total_mwh as number) || 0).toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right text-[#64748b] font-mono">{row.thermal_pct as number}%</td>
+                    <td className="py-1.5 px-2 text-right text-green-400 font-mono">{row.solar_pct as number}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Capital Projects */}
+      {subTab === 'capex' && (
+        <div className="space-y-2">
+          <p className="text-[#64748b] text-[10px] font-semibold uppercase tracking-wider pb-1">GPL Capital Projects (Disaggregated)</p>
+          {gpl.capital_projects.map((cp, i) => (
+            <div key={i} className="glass-card p-3 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-white font-semibold text-sm">#{cp.project_number as number}: {cp.project_name as string}</p>
+                  <p className="text-[#64748b] text-[10px]">Contractor: {cp.contractor as string}</p>
+                </div>
+                <Badge variant={cp.is_rollover ? 'default' : 'gold'}>
+                  {cp.is_rollover ? 'Rollover' : 'New'}
+                </Badge>
+              </div>
+              <div className="flex flex-wrap gap-3 text-xs">
+                <span className="text-[#64748b]">USD: <span className="text-white font-mono">{cp.project_cost_usd_fmt as string}</span></span>
+                <span className="text-[#64748b]">GYD: <span className="text-[#d4af37] font-mono font-bold">{cp.project_cost_gyd_fmt as string}</span></span>
+              </div>
+              {!!cp.scope && <p className="text-[#94a3b8] text-[11px]">{cp.scope as string}</p>}
+              {!!cp.benefits && <p className="text-[#64748b] text-[10px] italic">Benefits: {cp.benefits as string}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Admin Expenses */}
+      {subTab === 'admin' && (
+        <div className="space-y-1">
+          <p className="text-[#64748b] text-[10px] font-semibold uppercase tracking-wider pb-1">GPL Administrative Expenses (G$)</p>
+          {gpl.admin_expenses.map((row, i) => (
+            <div key={i} className="bg-[#0a1628]/40 rounded-lg p-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[#94a3b8] text-sm">{row.category as string}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mt-1.5 text-[10px]">
+                <div>
+                  <p className="text-[#64748b]">2025 Act</p>
+                  <p className="text-white font-mono">{(row.actual_2025_fmt as string) || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-[#64748b]">2026 Bud</p>
+                  <p className="text-[#d4af37] font-mono font-bold">{(row.budget_2026_fmt as string) || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-[#64748b]">Change</p>
+                  <p className={`font-mono ${(row.change_amount as number) > 0 ? 'text-green-400' : (row.change_amount as number) < 0 ? 'text-red-400' : 'text-white'}`}>
+                    {(row.change_amount_fmt as string) || '—'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
