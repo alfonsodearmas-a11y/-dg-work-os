@@ -64,7 +64,7 @@ export async function PATCH(
     }
 
     // Generic field update (title, notes, etc.)
-    const allowedFields = ['title', 'meeting_date', 'attendees', 'notes'];
+    const allowedFields = ['title', 'meeting_date', 'attendees', 'notes', 'agency', 'duration_seconds', 'recorded_at'];
     const updates: Record<string, unknown> = {};
     for (const field of allowedFields) {
       if (body[field] !== undefined) updates[field] = body[field];

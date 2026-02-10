@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/db';
 import { createRecording, updateRecordingStatus, createDraftActionItems } from '@/lib/recording-db';
 import { uploadAudio } from '@/lib/scriberr';
 import { processRecordingTranscript } from '@/lib/recording-processor';
@@ -19,6 +18,10 @@ export async function POST(request: NextRequest) {
     const notes = formData.get('notes') as string | null;
     const transcript = formData.get('transcript') as string | null;
     const audioFile = formData.get('audio') as File | null;
+    const agency = formData.get('agency') as string | null;
+    const durationStr = formData.get('duration_seconds') as string | null;
+    const durationSeconds = durationStr ? parseInt(durationStr, 10) || null : null;
+    const recordedAt = formData.get('recorded_at') as string | null;
 
     // Manual transcript path (no audio)
     if (transcript && !audioFile) {
@@ -27,6 +30,9 @@ export async function POST(request: NextRequest) {
         meeting_date: meetingDate,
         attendees,
         notes,
+        agency,
+        duration_seconds: durationSeconds,
+        recorded_at: recordedAt,
         status: 'processing',
       });
 
@@ -41,22 +47,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ id: recording.id, status: 'processing' });
     }
 
-    // Audio upload path
+    // Audio upload path — no storage, pipe to Scriberr then discard
     if (!audioFile) {
       return NextResponse.json({ error: 'Either audio file or transcript is required' }, { status: 400 });
     }
 
     const buffer = Buffer.from(await audioFile.arrayBuffer());
-    const filename = `${Date.now()}-${audioFile.name}`;
 
-    // Upload to Supabase Storage
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from('recordings')
-      .upload(filename, buffer, { contentType: audioFile.type });
-
-    if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
-
-    // Try Scriberr
+    // Try Scriberr — audio is transient, not stored
     let scriberrId: string | null = null;
     let initialStatus: 'transcribing' | 'uploading' = 'uploading';
 
@@ -65,7 +63,7 @@ export async function POST(request: NextRequest) {
       scriberrId = result.id;
       initialStatus = 'transcribing';
     } catch (scriberrErr: any) {
-      console.warn('[upload] Scriberr unavailable, audio stored for manual transcript:', scriberrErr.message);
+      console.warn('[upload] Scriberr unavailable, audio discarded. Paste transcript manually:', scriberrErr.message);
     }
 
     const recording = await createRecording({
@@ -73,10 +71,9 @@ export async function POST(request: NextRequest) {
       meeting_date: meetingDate,
       attendees,
       notes,
-      audio_file_path: filename,
-      audio_filename: audioFile.name,
-      audio_mime_type: audioFile.type,
-      audio_file_size: audioFile.size,
+      agency,
+      duration_seconds: durationSeconds,
+      recorded_at: recordedAt,
       scriberr_id: scriberrId,
       status: initialStatus,
     });

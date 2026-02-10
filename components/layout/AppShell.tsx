@@ -12,6 +12,8 @@ import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { NotificationPanel } from '@/components/notifications/NotificationPanel';
 import { NotificationToast } from '@/components/notifications/NotificationToast';
 import { PushPromptBanner } from '@/components/notifications/PushPromptBanner';
+import { RecordingProvider } from '@/components/recording/RecordingProvider';
+import { RecordingIndicator } from '@/components/recording/RecordingIndicator';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -24,6 +26,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
+    <RecordingProvider>
     <NotificationProvider>
       <div className="min-h-screen flex">
         {/* Sidebar */}
@@ -51,6 +54,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span className="md:hidden text-[#d4af37] font-semibold text-sm truncate">DG Work OS</span>
               </div>
               <div className="flex items-center space-x-3 md:space-x-4">
+                <RecordingIndicator />
                 <HeaderDate />
                 <NotificationBell />
                 <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center flex-shrink-0">
@@ -78,6 +82,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <NotificationToast />
       <PushPromptBanner />
     </NotificationProvider>
+    </RecordingProvider>
     </SidebarProvider>
   );
 }

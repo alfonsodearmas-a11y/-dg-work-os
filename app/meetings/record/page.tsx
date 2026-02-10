@@ -18,10 +18,10 @@ export default function RecordPage() {
         <div>
           <h1 className="text-xl md:text-3xl font-bold text-white flex items-center gap-3">
             <Mic className="h-7 w-7 text-[#d4af37]" />
-            Upload / Record
+            Record Meeting
           </h1>
           <p className="text-[#64748b] mt-1 text-xs md:text-sm">
-            Upload audio, record from your mic, or paste a transcript for AI analysis
+            Record a meeting live, or paste a transcript for AI analysis
           </p>
         </div>
       </div>

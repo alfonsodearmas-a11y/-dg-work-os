@@ -233,7 +233,7 @@ export async function getDraftActionItems(recordingId: string): Promise<DraftAct
 
 export async function updateDraftActionItem(
   id: string,
-  fields: Partial<Pick<DraftActionItem, 'title' | 'description' | 'assigned_to' | 'deadline' | 'priority' | 'agency' | 'review_status' | 'reviewer_note'>>,
+  fields: Partial<Pick<DraftActionItem, 'title' | 'description' | 'assigned_to' | 'deadline' | 'priority' | 'agency' | 'context' | 'review_status' | 'reviewer_note'>>,
 ): Promise<DraftActionItem> {
   const { data, error } = await supabaseAdmin
     .from('draft_action_items')

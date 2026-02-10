@@ -9,7 +9,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
-    const allowedFields = ['title', 'description', 'assigned_to', 'deadline', 'priority', 'agency', 'reviewer_note'] as const;
+    const allowedFields = ['title', 'description', 'assigned_to', 'deadline', 'priority', 'agency', 'context', 'reviewer_note'] as const;
     const updates: Record<string, unknown> = {};
     for (const field of allowedFields) {
       if (body[field] !== undefined) updates[field] = body[field];

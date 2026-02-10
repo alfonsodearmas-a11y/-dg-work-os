@@ -26,6 +26,7 @@ export interface DraftActionItemData {
   deadline: string | null;
   priority: 'high' | 'medium' | 'low';
   agency: string | null;
+  context: string | null;
   review_status: string;
   reviewer_note: string | null;
   notion_task_id: string | null;
@@ -65,6 +66,7 @@ export function DraftActionItemCard({ item, selected, onToggleSelect, onUpdate }
   const [editDeadline, setEditDeadline] = useState(item.deadline || '');
   const [editPriority, setEditPriority] = useState(item.priority);
   const [editAgency, setEditAgency] = useState(item.agency || '');
+  const [editContext, setEditContext] = useState(item.context || '');
 
   const prio = PRIORITY_STYLES[item.priority] || PRIORITY_STYLES.medium;
   const reviewCfg = REVIEW_STATUS_CONFIG[item.review_status] || REVIEW_STATUS_CONFIG.pending;
@@ -85,6 +87,7 @@ export function DraftActionItemCard({ item, selected, onToggleSelect, onUpdate }
           deadline: editDeadline || null,
           priority: editPriority,
           agency: editAgency || null,
+          context: editContext || null,
         }),
       });
       if (!res.ok) throw new Error('Save failed');
@@ -189,6 +192,16 @@ export function DraftActionItemCard({ item, selected, onToggleSelect, onUpdate }
             </select>
           </div>
         </div>
+        <div>
+          <label className="block text-xs text-[#64748b] mb-1">Context (transcript excerpt)</label>
+          <textarea
+            value={editContext}
+            onChange={e => setEditContext(e.target.value)}
+            rows={2}
+            placeholder="Brief quote from the transcript..."
+            className="w-full bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none resize-y italic"
+          />
+        </div>
         <div className="flex items-center justify-end gap-2 pt-2">
           <button onClick={() => setEditing(false)} className="btn-navy text-xs px-3 py-1.5 flex items-center gap-1.5">
             <X className="h-3.5 w-3.5" /> Cancel
@@ -234,6 +247,12 @@ export function DraftActionItemCard({ item, selected, onToggleSelect, onUpdate }
 
       {item.description && (
         <p className="text-[#94a3b8] text-sm ml-6 mb-2">{item.description}</p>
+      )}
+
+      {item.context && (
+        <p className="text-[#64748b] text-xs ml-6 mb-2 italic border-l-2 border-[#2d3a52] pl-3">
+          &ldquo;{item.context}&rdquo;
+        </p>
       )}
 
       {item.push_error && (

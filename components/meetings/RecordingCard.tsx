@@ -19,7 +19,8 @@ export interface RecordingCardData {
   meeting_date: string | null;
   attendees: string[];
   status: string;
-  audio_filename: string | null;
+  duration_seconds: number | null;
+  agency: string | null;
   ai_tokens_used: number | null;
   analysis: { action_items?: any[] } | null;
   created_at: string;
@@ -31,6 +32,7 @@ const STATUS_CONFIG: Record<string, { variant: 'success' | 'danger' | 'info' | '
   transcribing: { variant: 'info', label: 'Transcribing...', icon: Loader2 },
   transcribed: { variant: 'info', label: 'Transcribed', icon: FileAudio },
   uploading: { variant: 'default', label: 'Uploading', icon: Clock },
+  recording: { variant: 'gold', label: 'Recording...', icon: Mic },
   failed: { variant: 'danger', label: 'Failed', icon: AlertTriangle },
 };
 
@@ -77,13 +79,20 @@ export function RecordingCard({ recording }: { recording: RecordingCardData }) {
           <span>{formatDate(recording.meeting_date || recording.created_at)}</span>
         </div>
 
-        {/* Audio filename */}
-        {recording.audio_filename && (
-          <div className="flex items-center gap-2 text-[#64748b] text-xs mb-2">
-            <FileAudio className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{recording.audio_filename}</span>
-          </div>
-        )}
+        {/* Duration + Agency */}
+        <div className="flex items-center gap-2 text-xs mb-2">
+          {recording.duration_seconds && (
+            <span className="flex items-center gap-1 text-[#64748b]">
+              <Clock className="h-3.5 w-3.5 shrink-0" />
+              {Math.floor(recording.duration_seconds / 60)}m {recording.duration_seconds % 60}s
+            </span>
+          )}
+          {recording.agency && (
+            <span className="text-[#d4af37] bg-[#d4af37]/10 px-1.5 py-0.5 rounded text-[10px] font-medium">
+              {recording.agency}
+            </span>
+          )}
+        </div>
 
         {/* Attendees */}
         {recording.attendees && recording.attendees.length > 0 && (

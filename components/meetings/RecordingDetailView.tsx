@@ -30,8 +30,9 @@ interface RecordingData {
   meeting_date: string | null;
   attendees: string[];
   notes: string | null;
-  audio_filename: string | null;
-  audio_file_size: number | null;
+  duration_seconds: number | null;
+  recorded_at: string | null;
+  agency: string | null;
   status: string;
   error_message: string | null;
   raw_transcript: string | null;
@@ -59,6 +60,7 @@ const STATUS_CONFIG: Record<string, { variant: 'success' | 'danger' | 'info' | '
   transcribing: { variant: 'info', label: 'Transcribing...', icon: Loader2 },
   transcribed: { variant: 'info', label: 'Transcribed', icon: FileAudio },
   uploading: { variant: 'default', label: 'Uploading', icon: Clock },
+  recording: { variant: 'gold', label: 'Recording...', icon: Mic },
   failed: { variant: 'danger', label: 'Failed', icon: AlertTriangle },
 };
 
@@ -71,10 +73,12 @@ function formatDate(iso: string | null): string {
   return d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-function formatFileSize(bytes: number | null): string {
-  if (!bytes) return '';
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+function formatDuration(seconds: number | null): string {
+  if (!seconds) return '';
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m === 0) return `${s}s`;
+  return `${m}m ${s}s`;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -96,7 +100,7 @@ export function RecordingDetailView({ recording: initialRecording, actionItems: 
 
   const config = STATUS_CONFIG[recording.status] || STATUS_CONFIG.uploading;
   const StatusIcon = config.icon;
-  const isAnimating = recording.status === 'processing' || recording.status === 'transcribing';
+  const isAnimating = recording.status === 'processing' || recording.status === 'transcribing' || recording.status === 'recording';
 
   const pendingItems = actionItems.filter(i => i.review_status === 'pending');
   const approvedItems = actionItems.filter(i => i.review_status === 'pushed_to_notion' || i.review_status === 'approved');
@@ -183,14 +187,18 @@ export function RecordingDetailView({ recording: initialRecording, actionItems: 
                 <Calendar className="h-4 w-4" />
                 {formatDate(recording.meeting_date || recording.created_at)}
               </span>
-              {recording.audio_filename && (
+              {recording.duration_seconds && (
                 <span className="flex items-center gap-1.5">
-                  <FileAudio className="h-4 w-4" />
-                  {recording.audio_filename}
-                  {recording.audio_file_size && ` (${formatFileSize(recording.audio_file_size)})`}
+                  <Clock className="h-4 w-4" />
+                  {formatDuration(recording.duration_seconds)}
                 </span>
               )}
-              {!recording.audio_filename && (
+              {recording.agency && (
+                <span className="text-[#d4af37] bg-[#d4af37]/10 px-2 py-0.5 rounded text-xs font-medium">
+                  {recording.agency}
+                </span>
+              )}
+              {!recording.raw_transcript && !recording.duration_seconds && (
                 <span className="text-[#d4af37] bg-[#d4af37]/10 px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1">
                   <ClipboardPaste className="h-3 w-3" /> Manual Transcript
                 </span>

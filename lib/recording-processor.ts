@@ -11,6 +11,7 @@ export interface RecordingActionItem {
   deadline: string | null;
   priority: 'high' | 'medium' | 'low';
   agency: string | null;
+  context: string | null;
 }
 
 export interface RecordingAnalysis {
@@ -49,7 +50,8 @@ Your output must be a single valid JSON object with this exact structure:
       "assigned_to": "Person name or null if unclear",
       "deadline": "YYYY-MM-DD or null if not specified",
       "priority": "high|medium|low",
-      "agency": "GPL|GWI|CJIA|GCAA|Ministry or null"
+      "agency": "GPL|GWI|CJIA|GCAA|Ministry or null",
+      "context": "Brief quote from the transcript supporting this action item, or null if unclear"
     }
   ],
   "decisions": [
@@ -67,6 +69,7 @@ Rules:
 - Distinguish between decisions (already made) and follow-ups (need further discussion)
 - Use agency codes: GPL (power), GWI (water), CJIA (airport), GCAA (aviation), Ministry
 - Set priority based on urgency and impact discussed
+- For each action item, include a brief verbatim or near-verbatim excerpt from the transcript that supports it (the "context" field). This helps the reviewer understand where the action came from.
 - Output ONLY the JSON object, no markdown fences or extra text`;
 
 // ── Process Transcript ─────────────────────────────────────────────────────
