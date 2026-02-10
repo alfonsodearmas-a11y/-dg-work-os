@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateRequest, authorizeRoles, AuthError } from '@/lib/auth';
+import { authenticateAny, authorizeRoles, AuthError } from '@/lib/auth';
 import { query } from '@/lib/db-pg';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await authenticateRequest(request);
+    const user = await authenticateAny(request);
     authorizeRoles(user, 'director', 'admin');
 
     const result = await query(
