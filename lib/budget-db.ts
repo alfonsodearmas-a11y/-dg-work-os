@@ -693,6 +693,196 @@ Notes: ${alloc.notes || 'None'}`);
   return context;
 }
 
+// ── Search ──
+
+export interface SearchResults {
+  allocations: BudgetAllocation[];
+  projects: Record<string, unknown>[];
+  indicators: Record<string, unknown>[];
+  documents: { agency: string; document_name: string; snippet: string }[];
+  loans: Record<string, unknown>[];
+  raw_pages: { volume: number; page: number; snippet: string }[];
+  total_results: number;
+}
+
+export function searchBudget(
+  q: string,
+  opts?: { sector?: string; agency?: string; programme?: string }
+): SearchResults {
+  const db = getBudgetDb();
+  const sector = opts?.sector || '';
+  const agency = opts?.agency || '';
+  const programme = opts?.programme || '';
+
+  const results: SearchResults = {
+    allocations: [],
+    projects: [],
+    indicators: [],
+    documents: [],
+    loans: [],
+    raw_pages: [],
+    total_results: 0,
+  };
+
+  // ── Budget Allocations ──
+  const allocConds: string[] = [];
+  const allocParams: (string | number)[] = [];
+
+  if (sector) {
+    allocConds.push('sector = ?');
+    allocParams.push(sector);
+  }
+  if (agency) {
+    allocConds.push('(agency_code = ? OR agency_name LIKE ?)');
+    allocParams.push(agency.toUpperCase(), `%${agency}%`);
+  }
+  if (programme) {
+    allocConds.push('(programme_number = ? OR programme LIKE ?)');
+    allocParams.push(programme, `%${programme}%`);
+  }
+  if (q) {
+    allocConds.push(`(
+      line_item LIKE ? OR agency_name LIKE ? OR programme LIKE ? OR
+      notes LIKE ? OR agency_code LIKE ? OR line_item_code LIKE ?
+    )`);
+    const qp = `%${q}%`;
+    allocParams.push(qp, qp, qp, qp, qp, qp);
+  }
+
+  const allocWhere = allocConds.length > 0 ? allocConds.join(' AND ') : '1=1';
+  const allocRows = db.prepare(`
+    SELECT sector, agency_code, agency_name, programme, programme_number,
+           line_item, line_item_code, expenditure_type,
+           actual_2024, budget_2025, revised_2025, budget_2026,
+           unit, source_volume, source_page, notes
+    FROM budget_allocations WHERE ${allocWhere}
+    ORDER BY sector, programme_number, expenditure_type, budget_2026 DESC
+  `).all(...allocParams) as Record<string, unknown>[];
+
+  results.allocations = allocRows.map(r => ({
+    sector: r.sector as string,
+    agency_code: r.agency_code as string,
+    agency_name: r.agency_name as string,
+    programme: r.programme as string,
+    programme_number: r.programme_number as string,
+    line_item: r.line_item as string,
+    line_item_code: r.line_item_code as string,
+    expenditure_type: r.expenditure_type as string,
+    actual_2024: r.actual_2024 as number,
+    budget_2025: r.budget_2025 as number,
+    revised_2025: r.revised_2025 as number,
+    budget_2026: r.budget_2026 as number,
+    source_volume: r.source_volume as number,
+    source_page: r.source_page as number,
+    notes: r.notes as string | null,
+    actual_2024_fmt: fmtAmount(r.actual_2024 as number),
+    budget_2025_fmt: fmtAmount(r.budget_2025 as number),
+    revised_2025_fmt: fmtAmount(r.revised_2025 as number),
+    budget_2026_fmt: fmtAmount(r.budget_2026 as number),
+    source: `V${r.source_volume}p${r.source_page}`,
+    linked_docs: getLinkedDocs(r.agency_code as string, r.line_item as string),
+  }));
+
+  // ── Capital Projects ──
+  const projConds: string[] = [];
+  const projParams: string[] = [];
+
+  if (sector) { projConds.push('sector = ?'); projParams.push(sector); }
+  if (agency) {
+    projConds.push('(agency_code = ? OR agency_name LIKE ?)');
+    projParams.push(agency.toUpperCase(), `%${agency}%`);
+  }
+  if (q) {
+    projConds.push(`(
+      project_title LIKE ? OR description LIKE ? OR benefits LIKE ? OR
+      agency_name LIKE ? OR foreign_source LIKE ?
+    )`);
+    const qp = `%${q}%`;
+    projParams.push(qp, qp, qp, qp, qp);
+  }
+
+  const projWhere = projConds.length > 0 ? projConds.join(' AND ') : '1=1';
+  results.projects = db.prepare(`
+    SELECT * FROM capital_project_profiles WHERE ${projWhere}
+    ORDER BY sector, budget_2026 DESC
+  `).all(...projParams) as Record<string, unknown>[];
+
+  // ── Performance Indicators ──
+  const indConds: string[] = [];
+  const indParams: string[] = [];
+
+  if (sector) { indConds.push('sector = ?'); indParams.push(sector); }
+  if (agency) {
+    indConds.push('(agency_code = ? OR programme LIKE ?)');
+    indParams.push(agency.toUpperCase(), `%${agency}%`);
+  }
+  if (q) {
+    indConds.push('(indicator LIKE ? OR programme LIKE ?)');
+    const qp = `%${q}%`;
+    indParams.push(qp, qp);
+  }
+
+  const indWhere = indConds.length > 0 ? indConds.join(' AND ') : '1=1';
+  results.indicators = db.prepare(`
+    SELECT * FROM performance_indicators WHERE ${indWhere}
+    ORDER BY sector, programme_number
+  `).all(...indParams) as Record<string, unknown>[];
+
+  // ── Agency Documents ──
+  try {
+    const docConds: string[] = [];
+    const docParams: string[] = [];
+
+    if (agency) { docConds.push('agency = ?'); docParams.push(agency.toUpperCase()); }
+    if (q) { docConds.push('text_content LIKE ?'); docParams.push(`%${q}%`); }
+
+    if (docConds.length > 0) {
+      const docWhere = docConds.join(' AND ');
+      const docRows = db.prepare(`
+        SELECT agency, document_name, SUBSTR(text_content, 1, 400) as snippet
+        FROM agency_documents WHERE ${docWhere} LIMIT 20
+      `).all(...docParams) as { agency: string; document_name: string; snippet: string }[];
+
+      results.documents = docRows;
+    }
+  } catch { /* ignore */ }
+
+  // ── GPL Loans ──
+  if ((agency && agency.toUpperCase() === 'GPL') || (q && /loan|gpl/i.test(q))) {
+    const loanConds: string[] = [];
+    const loanParams: string[] = [];
+
+    if (q && !/^gpl$/i.test(q)) {
+      loanConds.push('(loan_ref LIKE ? OR purpose LIKE ?)');
+      loanParams.push(`%${q}%`, `%${q}%`);
+    }
+
+    const loanWhere = loanConds.length > 0 ? loanConds.join(' AND ') : '1=1';
+    results.loans = db.prepare(`SELECT * FROM gpl_loans WHERE ${loanWhere}`).all(...loanParams) as Record<string, unknown>[];
+  }
+
+  // ── Raw pages fallback ──
+  const hasStructuredResults = results.allocations.length > 0 || results.projects.length > 0 || results.indicators.length > 0;
+  if (!hasStructuredResults && q) {
+    const rawRows = db.prepare(`
+      SELECT volume, page_number, SUBSTR(text_content, 1, 300) as snippet
+      FROM raw_pages WHERE text_content LIKE ? LIMIT 10
+    `).all(`%${q}%`) as { volume: number; page_number: number; snippet: string }[];
+
+    results.raw_pages = rawRows.map(r => ({
+      volume: r.volume,
+      page: r.page_number,
+      snippet: r.snippet,
+    }));
+  }
+
+  results.total_results = results.allocations.length + results.projects.length +
+    results.indicators.length + results.documents.length +
+    results.loans.length + results.raw_pages.length;
+
+  return results;
+}
+
 export function buildAskContext(question: string): string {
   const db = getBudgetDb();
   const sections: string[] = [];
