@@ -87,6 +87,22 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Access-code-protected routes (DG app pages) ───────────────────────
+
+  // For API routes: also allow through if the user has a valid JWT (tm-token cookie or Bearer header)
+  // This lets JWT-authenticated users call /api/admin/* endpoints
+  const isApiRoute = pathname.startsWith('/api/');
+  if (isApiRoute) {
+    const tmToken = request.cookies.get('tm-token')?.value;
+    const bearerToken = request.headers.get('authorization')?.startsWith('Bearer ') ? request.headers.get('authorization')!.slice(7) : null;
+    const jwtToken = tmToken || bearerToken;
+    if (jwtToken) {
+      const payload = decodeJwtPayload(jwtToken);
+      if (payload?.userId && (!payload.exp || payload.exp * 1000 > Date.now())) {
+        return NextResponse.next();
+      }
+    }
+  }
+
   const accessCode = process.env.APP_ACCESS_CODE;
 
   // If no access code is configured, skip auth (development)
@@ -95,7 +111,6 @@ export async function middleware(request: NextRequest) {
   }
 
   const authCookie = request.cookies.get('dg-auth')?.value;
-  const isApiRoute = pathname.startsWith('/api/');
 
   if (!authCookie) {
     if (isApiRoute) {
