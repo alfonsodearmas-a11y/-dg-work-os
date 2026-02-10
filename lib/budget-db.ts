@@ -805,28 +805,34 @@ export function searchBudget(
     linked_docs: getLinkedDocs(r.agency_code as string, r.line_item as string),
   }));
 
-  // ── Budget Line Items (budget_items — 50K+ auto-parsed rows) ──
-  // Search individual parsed line items across ALL agencies/volumes.
-  // Numeric codes (e.g. 6223) match via raw_line leading text.
-  // Text queries match line_item name, description, raw_line, agency.
+  // ── Budget Line Items (budget_items — Agency 34 only) ──
+  // Search Agency 34's parsed line items: current expenditure (p209-222),
+  // subsidies (p519-523), capital (p564-565), Appendix T (p768-772).
   {
     const liConds: string[] = [];
     const liParams: (string | number)[] = [];
+
+    // Agency 34 page ranges in Volume 1
+    const agency34Pages = `(
+      volume = 1 AND (
+        page_number BETWEEN 209 AND 222 OR
+        page_number BETWEEN 519 AND 523 OR
+        page_number IN (564, 565) OR
+        page_number BETWEEN 768 AND 772
+      )
+    )`;
 
     const isNumeric = q ? /^\d+$/.test(q.trim()) : false;
 
     if (q) {
       if (isNumeric) {
         // Numeric: match chart-of-accounts codes via raw_line leading text,
-        // project codes in actual_previous_year (parser quirk on capital pages),
-        // or anywhere in line_item/raw_line
+        // project codes in actual_previous_year (parser quirk on capital pages)
         liConds.push(`(
           raw_line LIKE ? OR
           CAST(actual_previous_year AS INTEGER) = ? OR
           line_item LIKE ?
         )`);
-        // Use leading match (e.g. "6223 %") to catch the code at start of raw_line,
-        // plus a contains match for codes embedded elsewhere
         liParams.push(`${q.trim()} %`, parseInt(q.trim()), `%${q}%`);
       } else {
         // Text: search line_item name, description, raw_line, and agency
@@ -835,20 +841,13 @@ export function searchBudget(
         liParams.push(qp, qp, qp, qp);
       }
     }
-    if (agency) {
-      liConds.push('(agency LIKE ?)');
-      liParams.push(`%${agency}%`);
-    }
     if (programme) {
       liConds.push('(programme_number = ? OR programme LIKE ?)');
       liParams.push(programme, `%${programme}%`);
     }
 
     if (liConds.length > 0) {
-      const liWhere = liConds.join(' AND ');
-      // For numeric queries, filter to Volume 1 (main estimates) to avoid
-      // duplicate entries from performance statement pages
-      const volumeFilter = isNumeric ? 'AND volume = 1' : '';
+      const liWhere = `${agency34Pages} AND ${liConds.join(' AND ')}`;
       const liRows = db.prepare(`
         SELECT id, volume, page_number, agency, programme, programme_number,
                line_item, description, expenditure_type,
@@ -859,27 +858,36 @@ export function searchBudget(
         AND line_item NOT LIKE 'Profile%'
         AND line_item NOT LIKE 'Figures%'
         AND line_item NOT LIKE 'Total |%'
+        AND line_item NOT LIKE 'Total %Expenditure%'
         AND line_item NOT LIKE 'CODE |%'
         AND line_item NOT LIKE 'PROGRAMME AGENCY%'
-        AND line_item NOT LIKE 'Summary%'
-        AND agency NOT LIKE 'Summary%'
         AND agency NOT LIKE '| Agency Name%'
-        AND budget_estimate > 1000
-        ${volumeFilter}
         ORDER BY budget_estimate DESC
         LIMIT 200
       `).all(...liParams) as Record<string, unknown>[];
 
-      // Deduplicate: same agency + page + line_item + budget_estimate → keep first
+      // Deduplicate: same programme + line_item + budget_estimate → keep first
+      // (parser creates duplicate rows from pipe-separated vs space-separated formats)
       const seen = new Set<string>();
       const deduped = liRows.filter(r => {
-        const key = `${r.agency}|${r.page_number}|${r.line_item}|${r.budget_estimate}`;
+        const key = `${r.programme}|${r.line_item}|${r.budget_estimate}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
       });
 
-      results.line_items = deduped.slice(0, 100).map(r => ({
+      // Separate "Summary By Programme" rows from detailed programme rows
+      // Prefer programme details over summaries
+      const details = deduped.filter(r => (r.agency as string) !== 'Summary By Programme');
+      const summaries = deduped.filter(r => (r.agency as string) === 'Summary By Programme');
+      // Only use summaries if no detail rows found for that programme+item
+      const detailKeys = new Set(details.map(r => `${r.programme}|${r.line_item}`));
+      const uniqueSummaries = summaries.filter(r => !detailKeys.has(`${r.programme}|${r.line_item}`));
+      const combined = [...details, ...uniqueSummaries].sort((a, b) =>
+        (b.budget_estimate as number) - (a.budget_estimate as number)
+      );
+
+      results.line_items = combined.slice(0, 100).map(r => ({
         id: r.id as number,
         volume: r.volume as number,
         page_number: r.page_number as number,

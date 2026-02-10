@@ -471,7 +471,7 @@ function SearchResultsView({
         <div className="space-y-2">
           <div className="flex items-center gap-2 pb-1">
             <DollarSign className="h-4 w-4 text-[#06b6d4]" />
-            <p className="text-[#06b6d4] text-xs font-semibold uppercase tracking-wider">Budget Line Items</p>
+            <p className="text-[#06b6d4] text-xs font-semibold uppercase tracking-wider">Agency 34 Line Items</p>
           </div>
           {line_items.map((item, i) => (
             <div key={i} className="glass-card p-3 space-y-2">
