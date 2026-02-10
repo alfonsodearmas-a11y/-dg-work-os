@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await query(
       'INSERT INTO refresh_tokens (user_id, token_hash, expires_at, ip_address, user_agent) VALUES ($1, $2, $3, $4, $5)',
-      [user.id, tokenHash, expiresAt, request.headers.get('x-forwarded-for'), request.headers.get('user-agent')]
+      [user.id, tokenHash, expiresAt, request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null, request.headers.get('user-agent')]
     );
 
     await auditService.log({ userId: user.id, action: 'LOGIN', entityType: 'users', entityId: user.id, request });
