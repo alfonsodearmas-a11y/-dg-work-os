@@ -18,6 +18,7 @@ import {
   ChevronDown,
   LogOut,
   X,
+  Mic,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -28,6 +29,7 @@ const mainNavItems = [
   { href: '/intel', label: 'Agency Intel', icon: Activity },
   { href: '/projects', label: 'Projects', icon: FolderKanban },
   { href: '/meetings', label: 'Meetings', icon: BookOpen },
+  { href: '/meetings/recordings', label: 'Recordings', icon: Mic },
   { href: '/documents', label: 'Documents', icon: FileText },
 ];
 
@@ -55,7 +57,11 @@ export function Sidebar() {
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
-    return pathname.startsWith(href);
+    if (!pathname.startsWith(href)) return false;
+    // Check that no more-specific sibling nav item also matches
+    return !mainNavItems.some(
+      item => item.href !== href && item.href.startsWith(href) && pathname.startsWith(item.href),
+    );
   };
 
   const handleNavClick = () => {

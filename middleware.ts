@@ -5,6 +5,7 @@ const PUBLIC_PATHS = [
   '/api/auth/gate',
   '/api/push/',
   '/api/notifications/generate',
+  '/api/webhooks/',
   '/_next',
   '/favicon.ico',
   '/ministry-logo.png',
