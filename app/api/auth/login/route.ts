@@ -9,8 +9,9 @@ const MAX_LOGIN_ATTEMPTS = parseInt(process.env.MAX_LOGIN_ATTEMPTS || '5');
 const LOCKOUT_DURATION = parseInt(process.env.LOCKOUT_DURATION_MINUTES || '30');
 
 function generateTokens(userId: string) {
-  const accessToken = jwt.sign({ userId }, process.env.JWT_SECRET || '', { expiresIn: (process.env.JWT_EXPIRES_IN || '8h') as string & jwt.SignOptions['expiresIn'] });
-  const refreshToken = jwt.sign({ userId, type: 'refresh' }, process.env.JWT_SECRET || '', { expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || '7d') as string & jwt.SignOptions['expiresIn'] });
+  const jwtSecret = process.env.JWT_SECRET || '';
+  const accessToken = jwt.sign({ userId }, jwtSecret, { expiresIn: '8h' });
+  const refreshToken = jwt.sign({ userId, type: 'refresh' }, jwtSecret, { expiresIn: '7d' });
   return { accessToken, refreshToken };
 }
 
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error: any) {
-    console.error('[auth/login] Error:', error.message, error.stack);
-    return NextResponse.json({ success: false, error: 'Login failed', detail: error.message }, { status: 500 });
+    console.error('[auth/login] Error:', error.message);
+    return NextResponse.json({ success: false, error: 'Login failed' }, { status: 500 });
   }
 }
