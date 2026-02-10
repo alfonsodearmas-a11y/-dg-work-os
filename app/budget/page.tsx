@@ -224,7 +224,7 @@ export default function BudgetPage() {
         {/* Quick search chips */}
         {!isShowingSearch && (
           <div className="flex flex-wrap gap-1.5 mt-2">
-            {['6321', 'GPL', 'GWI', 'CJIA', 'HECI', 'LINMINE', 'MARAD', '2611300', 'Lethem', 'Dredging'].map(chip => (
+            {['6223', '6321', '6116', 'GPL', 'GWI', 'CJIA', 'HECI', 'LINMINE', 'MARAD', '2611300', 'Lethem', 'Dredging'].map(chip => (
               <button
                 key={chip}
                 onClick={() => handleSearchChange(chip)}
@@ -471,7 +471,7 @@ function SearchResultsView({
         <div className="space-y-2">
           <div className="flex items-center gap-2 pb-1">
             <DollarSign className="h-4 w-4 text-[#06b6d4]" />
-            <p className="text-[#06b6d4] text-xs font-semibold uppercase tracking-wider">Budget Line Items (Agency 34)</p>
+            <p className="text-[#06b6d4] text-xs font-semibold uppercase tracking-wider">Budget Line Items</p>
           </div>
           {line_items.map((item, i) => (
             <div key={i} className="glass-card p-3 space-y-2">

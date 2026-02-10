@@ -805,34 +805,28 @@ export function searchBudget(
   }));
 
   // ── Budget Line Items (budget_items — 50K+ auto-parsed rows) ──
-  // Search individual parsed line items from all 3 volumes.
-  // Relevant Agency 34 pages: V1 p519-523 (subsidies 6321 detail),
-  // V1 p564-565 (capital expenditure), V2/V3 (performance/projects)
+  // Search individual parsed line items across ALL agencies/volumes.
+  // Numeric codes (e.g. 6223) match via raw_line leading text.
+  // Text queries match line_item name, description, raw_line, agency.
   {
     const liConds: string[] = [];
     const liParams: (string | number)[] = [];
-
-    // Pages relevant to Agency 34 / Ministry of Public Utilities & Aviation
-    const agency34Pages = `(
-      (volume = 1 AND page_number BETWEEN 519 AND 523) OR
-      (volume = 1 AND page_number IN (564, 565)) OR
-      (volume = 2 AND agency LIKE '%34%') OR
-      (volume = 3 AND (agency LIKE '%PUBLIC UTILITIES%' OR agency LIKE '%34%')) OR
-      agency LIKE '%34 - %' OR
-      agency LIKE '%Public Utilities%'
-    )`;
 
     const isNumeric = q ? /^\d+$/.test(q.trim()) : false;
 
     if (q) {
       if (isNumeric) {
-        // Numeric: match project codes in actual_previous_year (parser quirk on capital pages),
-        // or in line_item/raw_line text
+        // Numeric: match chart-of-accounts codes via raw_line leading text,
+        // project codes in actual_previous_year (parser quirk on capital pages),
+        // or anywhere in line_item/raw_line
         liConds.push(`(
+          raw_line LIKE ? OR
           CAST(actual_previous_year AS INTEGER) = ? OR
-          line_item LIKE ? OR raw_line LIKE ?
+          line_item LIKE ?
         )`);
-        liParams.push(parseInt(q.trim()), `%${q}%`, `%${q}%`);
+        // Use leading match (e.g. "6223 %") to catch the code at start of raw_line,
+        // plus a contains match for codes embedded elsewhere
+        liParams.push(`${q.trim()} %`, parseInt(q.trim()), `%${q}%`);
       } else {
         // Text: search line_item name, description, raw_line, and agency
         liConds.push('(line_item LIKE ? OR description LIKE ? OR raw_line LIKE ? OR agency LIKE ?)');
@@ -850,7 +844,10 @@ export function searchBudget(
     }
 
     if (liConds.length > 0) {
-      const liWhere = `${agency34Pages} AND ${liConds.join(' AND ')}`;
+      const liWhere = liConds.join(' AND ');
+      // For numeric queries, filter to Volume 1 (main estimates) to avoid
+      // duplicate entries from performance statement pages
+      const volumeFilter = isNumeric ? 'AND volume = 1' : '';
       const liRows = db.prepare(`
         SELECT id, volume, page_number, agency, programme, programme_number,
                line_item, description, expenditure_type,
@@ -863,12 +860,25 @@ export function searchBudget(
         AND line_item NOT LIKE 'Total |%'
         AND line_item NOT LIKE 'CODE |%'
         AND line_item NOT LIKE 'PROGRAMME AGENCY%'
+        AND line_item NOT LIKE 'Summary%'
+        AND agency NOT LIKE 'Summary%'
+        AND agency NOT LIKE '| Agency Name%'
         AND budget_estimate > 1000
+        ${volumeFilter}
         ORDER BY budget_estimate DESC
-        LIMIT 50
+        LIMIT 200
       `).all(...liParams) as Record<string, unknown>[];
 
-      results.line_items = liRows.map(r => ({
+      // Deduplicate: same agency + page + line_item + budget_estimate → keep first
+      const seen = new Set<string>();
+      const deduped = liRows.filter(r => {
+        const key = `${r.agency}|${r.page_number}|${r.line_item}|${r.budget_estimate}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      results.line_items = deduped.slice(0, 100).map(r => ({
         id: r.id as number,
         volume: r.volume as number,
         page_number: r.page_number as number,
