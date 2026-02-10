@@ -22,10 +22,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'A user with this email already exists' }, { status: 409 });
     }
 
-    // Generate temp password and username
+    // Generate temp password and unique username
     const tempPassword = crypto.randomBytes(6).toString('base64url');
     const passwordHash = await bcrypt.hash(tempPassword, 12);
-    const username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    const baseUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '_');
+
+    // Find a unique username — append _2, _3, etc. if needed
+    let username = baseUsername;
+    const existingUsernames = await query(
+      `SELECT username FROM users WHERE username = $1 OR username LIKE $2`,
+      [baseUsername, `${baseUsername}_%`]
+    );
+    if (existingUsernames.rows.length > 0) {
+      const taken = new Set(existingUsernames.rows.map((r: { username: string }) => r.username));
+      if (taken.has(baseUsername)) {
+        let suffix = 2;
+        while (taken.has(`${baseUsername}_${suffix}`)) suffix++;
+        username = `${baseUsername}_${suffix}`;
+      }
+    }
 
     const result = await query(
       `INSERT INTO users (username, email, password_hash, full_name, role, agency, must_change_password)
@@ -50,6 +65,9 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
     console.error('[admin/invite] Error:', error.message);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    if (error.code === '23505') {
+      return NextResponse.json({ success: false, error: 'A user with this email or username already exists' }, { status: 409 });
+    }
+    return NextResponse.json({ success: false, error: 'Failed to create user' }, { status: 500 });
   }
 }
