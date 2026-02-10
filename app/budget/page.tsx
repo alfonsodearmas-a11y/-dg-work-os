@@ -56,8 +56,28 @@ interface SearchAllocation {
   linked_docs: { doc: string; label: string; tag: string }[];
 }
 
+interface SearchLineItem {
+  id: number;
+  volume: number;
+  page_number: number;
+  agency: string;
+  programme: string;
+  programme_number: string;
+  line_item: string;
+  description: string;
+  expenditure_type: string;
+  actual_previous_year: number;
+  revised_current_year: number;
+  budget_estimate: number;
+  actual_previous_year_fmt: string;
+  revised_current_year_fmt: string;
+  budget_estimate_fmt: string;
+  source: string;
+}
+
 interface SearchResults {
   allocations: SearchAllocation[];
+  line_items: SearchLineItem[];
   projects: Record<string, unknown>[];
   indicators: Record<string, unknown>[];
   documents: { agency: string; document_name: string; snippet: string }[];
@@ -204,7 +224,7 @@ export default function BudgetPage() {
         {/* Quick search chips */}
         {!isShowingSearch && (
           <div className="flex flex-wrap gap-1.5 mt-2">
-            {['6321', 'GPL', 'GWI', 'CJIA', 'Subsidy', 'Capital', 'HECI', 'MARAD'].map(chip => (
+            {['6321', 'GPL', 'GWI', 'CJIA', 'HECI', 'LINMINE', 'MARAD', '2611300', 'Lethem', 'Dredging'].map(chip => (
               <button
                 key={chip}
                 onClick={() => handleSearchChange(chip)}
@@ -332,14 +352,14 @@ function SearchResultsView({
 
   if (!results) return null;
 
-  const { allocations, projects, indicators, documents, loans, raw_pages, total_results } = results;
+  const { allocations, line_items, projects, indicators, documents, loans, raw_pages, total_results } = results;
 
   if (total_results === 0) {
     return (
       <div className="card-premium p-8 text-center">
         <Search className="h-8 w-8 text-[#64748b] mx-auto mb-3" />
         <p className="text-[#94a3b8] text-sm">No results for &quot;{query}&quot;</p>
-        <p className="text-[#64748b] text-xs mt-1">Try a line item code (6321), agency (GPL, GWI), or keyword</p>
+        <p className="text-[#64748b] text-xs mt-1">Try a line item code (6321, 2611300), agency (GPL, GWI), or keyword</p>
       </div>
     );
   }
@@ -347,13 +367,14 @@ function SearchResultsView({
   return (
     <div className="space-y-4">
       {/* Results summary */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-1">
         <p className="text-[#64748b] text-xs">
           {isSearching && <Loader2 className="h-3 w-3 animate-spin inline mr-1" />}
           <span className="text-white font-semibold">{total_results}</span> result{total_results !== 1 ? 's' : ''} for &quot;{query}&quot;
         </p>
-        <div className="flex gap-1.5 text-[10px]">
+        <div className="flex flex-wrap gap-1.5 text-[10px]">
           {allocations.length > 0 && <span className="bg-[#d4af37]/10 text-[#d4af37] px-2 py-0.5 rounded-full">{allocations.length} allocations</span>}
+          {line_items.length > 0 && <span className="bg-[#06b6d4]/10 text-[#06b6d4] px-2 py-0.5 rounded-full">{line_items.length} line items</span>}
           {projects.length > 0 && <span className="bg-[#3b82f6]/10 text-[#3b82f6] px-2 py-0.5 rounded-full">{projects.length} projects</span>}
           {indicators.length > 0 && <span className="bg-[#22c55e]/10 text-[#22c55e] px-2 py-0.5 rounded-full">{indicators.length} KPIs</span>}
           {documents.length > 0 && <span className="bg-[#a78bfa]/10 text-[#a78bfa] px-2 py-0.5 rounded-full">{documents.length} docs</span>}
@@ -439,6 +460,56 @@ function SearchResultsView({
                     {item.linked_docs.length} doc{item.linked_docs.length !== 1 ? 's' : ''} linked
                   </span>
                 )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Budget Line Items (from budget_items — individual parsed rows) */}
+      {line_items.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 pb-1">
+            <DollarSign className="h-4 w-4 text-[#06b6d4]" />
+            <p className="text-[#06b6d4] text-xs font-semibold uppercase tracking-wider">Budget Line Items (Agency 34)</p>
+          </div>
+          {line_items.map((item, i) => (
+            <div key={i} className="glass-card p-3 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-white text-sm font-medium">{item.line_item}</p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    {item.programme && (
+                      <span className="text-[#06b6d4] font-mono text-[10px] bg-[#06b6d4]/10 px-1.5 py-0.5 rounded shrink-0">
+                        {item.programme}
+                      </span>
+                    )}
+                    {item.expenditure_type && (
+                      <span className="text-[#64748b] text-[10px]">{item.expenditure_type}</span>
+                    )}
+                    <span className="text-[#64748b] text-[10px]">{item.source}</span>
+                    {item.agency && (
+                      <span className="text-[#64748b] text-[10px] truncate max-w-[200px]">{item.agency}</span>
+                    )}
+                  </div>
+                </div>
+                <p className="text-[#d4af37] font-bold text-sm font-mono shrink-0">{item.budget_estimate_fmt}</p>
+              </div>
+
+              {/* 3-year trend */}
+              <div className="grid grid-cols-3 gap-2 text-[10px]">
+                <div>
+                  <p className="text-[#64748b]">2024 Act</p>
+                  <p className="text-white font-mono">{item.actual_previous_year_fmt}</p>
+                </div>
+                <div>
+                  <p className="text-[#64748b]">2025 Rev</p>
+                  <p className="text-white font-mono">{item.revised_current_year_fmt}</p>
+                </div>
+                <div>
+                  <p className="text-[#64748b]">2026 Est</p>
+                  <p className="text-[#d4af37] font-mono font-bold">{item.budget_estimate_fmt}</p>
+                </div>
               </div>
             </div>
           ))}

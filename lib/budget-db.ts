@@ -695,8 +695,28 @@ Notes: ${alloc.notes || 'None'}`);
 
 // ── Search ──
 
+export interface BudgetLineItem {
+  id: number;
+  volume: number;
+  page_number: number;
+  agency: string;
+  programme: string;
+  programme_number: string;
+  line_item: string;
+  description: string;
+  expenditure_type: string;
+  actual_previous_year: number;
+  revised_current_year: number;
+  budget_estimate: number;
+  actual_previous_year_fmt: string;
+  revised_current_year_fmt: string;
+  budget_estimate_fmt: string;
+  source: string;
+}
+
 export interface SearchResults {
   allocations: BudgetAllocation[];
+  line_items: BudgetLineItem[];
   projects: Record<string, unknown>[];
   indicators: Record<string, unknown>[];
   documents: { agency: string; document_name: string; snippet: string }[];
@@ -716,6 +736,7 @@ export function searchBudget(
 
   const results: SearchResults = {
     allocations: [],
+    line_items: [],
     projects: [],
     indicators: [],
     documents: [],
@@ -782,6 +803,91 @@ export function searchBudget(
     source: `V${r.source_volume}p${r.source_page}`,
     linked_docs: getLinkedDocs(r.agency_code as string, r.line_item as string),
   }));
+
+  // ── Budget Line Items (budget_items — 50K+ auto-parsed rows) ──
+  // Search individual parsed line items from all 3 volumes.
+  // Relevant Agency 34 pages: V1 p519-523 (subsidies 6321 detail),
+  // V1 p564-565 (capital expenditure), V2/V3 (performance/projects)
+  {
+    const liConds: string[] = [];
+    const liParams: (string | number)[] = [];
+
+    // Pages relevant to Agency 34 / Ministry of Public Utilities & Aviation
+    const agency34Pages = `(
+      (volume = 1 AND page_number BETWEEN 519 AND 523) OR
+      (volume = 1 AND page_number IN (564, 565)) OR
+      (volume = 2 AND agency LIKE '%34%') OR
+      (volume = 3 AND (agency LIKE '%PUBLIC UTILITIES%' OR agency LIKE '%34%')) OR
+      agency LIKE '%34 - %' OR
+      agency LIKE '%Public Utilities%'
+    )`;
+
+    const isNumeric = q ? /^\d+$/.test(q.trim()) : false;
+
+    if (q) {
+      if (isNumeric) {
+        // Numeric: match project codes in actual_previous_year (parser quirk on capital pages),
+        // or in line_item/raw_line text
+        liConds.push(`(
+          CAST(actual_previous_year AS INTEGER) = ? OR
+          line_item LIKE ? OR raw_line LIKE ?
+        )`);
+        liParams.push(parseInt(q.trim()), `%${q}%`, `%${q}%`);
+      } else {
+        // Text: search line_item name, description, raw_line, and agency
+        liConds.push('(line_item LIKE ? OR description LIKE ? OR raw_line LIKE ? OR agency LIKE ?)');
+        const qp = `%${q}%`;
+        liParams.push(qp, qp, qp, qp);
+      }
+    }
+    if (agency) {
+      liConds.push('(agency LIKE ?)');
+      liParams.push(`%${agency}%`);
+    }
+    if (programme) {
+      liConds.push('(programme_number = ? OR programme LIKE ?)');
+      liParams.push(programme, `%${programme}%`);
+    }
+
+    if (liConds.length > 0) {
+      const liWhere = `${agency34Pages} AND ${liConds.join(' AND ')}`;
+      const liRows = db.prepare(`
+        SELECT id, volume, page_number, agency, programme, programme_number,
+               line_item, description, expenditure_type,
+               actual_previous_year, revised_current_year, budget_estimate,
+               raw_line
+        FROM budget_items
+        WHERE ${liWhere}
+        AND line_item NOT LIKE 'Profile%'
+        AND line_item NOT LIKE 'Figures%'
+        AND line_item NOT LIKE 'Total |%'
+        AND line_item NOT LIKE 'CODE |%'
+        AND line_item NOT LIKE 'PROGRAMME AGENCY%'
+        AND budget_estimate > 1000
+        ORDER BY budget_estimate DESC
+        LIMIT 50
+      `).all(...liParams) as Record<string, unknown>[];
+
+      results.line_items = liRows.map(r => ({
+        id: r.id as number,
+        volume: r.volume as number,
+        page_number: r.page_number as number,
+        agency: r.agency as string,
+        programme: r.programme as string,
+        programme_number: r.programme_number as string,
+        line_item: r.line_item as string,
+        description: r.description as string,
+        expenditure_type: r.expenditure_type as string || 'current',
+        actual_previous_year: r.actual_previous_year as number,
+        revised_current_year: r.revised_current_year as number,
+        budget_estimate: r.budget_estimate as number,
+        actual_previous_year_fmt: fmtAmount(r.actual_previous_year as number),
+        revised_current_year_fmt: fmtAmount(r.revised_current_year as number),
+        budget_estimate_fmt: fmtAmount(r.budget_estimate as number),
+        source: `V${r.volume}p${r.page_number}`,
+      }));
+    }
+  }
 
   // ── Capital Projects ──
   const projConds: string[] = [];
@@ -861,23 +967,31 @@ export function searchBudget(
     results.loans = db.prepare(`SELECT * FROM gpl_loans WHERE ${loanWhere}`).all(...loanParams) as Record<string, unknown>[];
   }
 
-  // ── Raw pages fallback ──
-  const hasStructuredResults = results.allocations.length > 0 || results.projects.length > 0 || results.indicators.length > 0;
-  if (!hasStructuredResults && q) {
-    const rawRows = db.prepare(`
-      SELECT volume, page_number, SUBSTR(text_content, 1, 300) as snippet
-      FROM raw_pages WHERE text_content LIKE ? LIMIT 10
-    `).all(`%${q}%`) as { volume: number; page_number: number; snippet: string }[];
+  // ── Raw pages — always search for numeric codes (project/line item codes) ──
+  // For numeric queries, always include raw pages since they have the authoritative data
+  // For text queries, only use as fallback
+  if (q) {
+    const isNumeric = /^\d+$/.test(q.trim());
+    const hasStructuredResults = results.allocations.length > 0 || results.projects.length > 0 || results.indicators.length > 0 || results.line_items.length > 0;
 
-    results.raw_pages = rawRows.map(r => ({
-      volume: r.volume,
-      page: r.page_number,
-      snippet: r.snippet,
-    }));
+    if (isNumeric || !hasStructuredResults) {
+      const rawRows = db.prepare(`
+        SELECT volume, page_number, SUBSTR(text_content, 1, 400) as snippet
+        FROM raw_pages WHERE text_content LIKE ?
+        ORDER BY CASE WHEN volume = 1 THEN 0 ELSE volume END, page_number
+        LIMIT 15
+      `).all(`%${q}%`) as { volume: number; page_number: number; snippet: string }[];
+
+      results.raw_pages = rawRows.map(r => ({
+        volume: r.volume,
+        page: r.page_number,
+        snippet: r.snippet,
+      }));
+    }
   }
 
-  results.total_results = results.allocations.length + results.projects.length +
-    results.indicators.length + results.documents.length +
+  results.total_results = results.allocations.length + results.line_items.length +
+    results.projects.length + results.indicators.length + results.documents.length +
     results.loans.length + results.raw_pages.length;
 
   return results;
