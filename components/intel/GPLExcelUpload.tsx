@@ -589,8 +589,8 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
                   <span className="font-medium">Parsing Warnings</span>
                 </div>
                 <ul className="text-xs text-yellow-200 space-y-1">
-                  {warnings.map((w: string, i: number) => (
-                    <li key={i}>&#8226; {w}</li>
+                  {warnings.map((w: any, i: number) => (
+                    <li key={i}>&#8226; {typeof w === 'string' ? w : w.message || String(w.type)}</li>
                   ))}
                 </ul>
               </div>
