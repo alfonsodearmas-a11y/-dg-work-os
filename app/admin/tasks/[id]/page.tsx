@@ -131,8 +131,8 @@ export default function AdminTaskDetailPage({ params }: { params: Promise<{ id: 
 
   if (!task) return null;
 
-  const isOverdue = task.status === 'overdue' || (task.due_date && new Date(task.due_date) < new Date() && task.status !== 'verified');
-  const statusInfo = STATUS_LABELS[task.status] || STATUS_LABELS.assigned;
+  const isOverdue = task.status === 'delayed' || (task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done');
+  const statusInfo = STATUS_LABELS[task.status] || STATUS_LABELS.new;
   const agencyColor = AGENCY_COLORS[task.agency] || AGENCY_COLORS.ministry;
 
   return (
@@ -147,7 +147,7 @@ export default function AdminTaskDetailPage({ params }: { params: Promise<{ id: 
           <div className="flex flex-wrap items-center gap-2 mt-2">
             <span className={`text-xs font-semibold px-2 py-0.5 rounded border ${agencyColor}`}>{task.agency.toUpperCase()}</span>
             <span className={`text-xs px-2 py-0.5 rounded ${statusInfo.color}`}>{statusInfo.label}</span>
-            <span className={`text-xs capitalize ${task.priority === 'critical' ? 'text-red-400' : task.priority === 'high' ? 'text-orange-400' : 'text-[#64748b]'}`}>
+            <span className={`text-xs capitalize ${task.priority === 'high' ? 'text-orange-400' : 'text-[#64748b]'}`}>
               {task.priority} priority
             </span>
             {isOverdue && (
@@ -179,7 +179,7 @@ export default function AdminTaskDetailPage({ params }: { params: Promise<{ id: 
           )}
 
           {/* Rejection Reason */}
-          {task.rejection_reason && task.status === 'rejected' && (
+          {task.rejection_reason && (
             <div className="card-premium p-5 border-red-500/20">
               <h3 className="text-sm font-semibold text-red-400 mb-2">Rejection Reason</h3>
               <p className="text-sm text-white">{task.rejection_reason}</p>
@@ -223,23 +223,25 @@ export default function AdminTaskDetailPage({ params }: { params: Promise<{ id: 
         {/* Right Sidebar */}
         <div className="space-y-4">
           {/* Actions */}
-          {task.status === 'submitted' && (
+          {task.status !== 'done' && (
             <div className="card-premium p-4 space-y-2">
               <h3 className="text-xs font-semibold text-[#64748b] uppercase mb-2">Actions</h3>
               <button
-                onClick={() => updateStatus('verified')}
+                onClick={() => updateStatus('done')}
                 disabled={submitting}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
               >
-                <CheckCircle className="h-4 w-4" /> Verify Complete
+                <CheckCircle className="h-4 w-4" /> Mark Done
               </button>
-              <button
-                onClick={() => setShowRejectModal(true)}
-                disabled={submitting}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg text-sm font-medium transition-colors border border-red-500/30"
-              >
-                <XCircle className="h-4 w-4" /> Reject
-              </button>
+              {task.status !== 'delayed' && (
+                <button
+                  onClick={() => updateStatus('delayed')}
+                  disabled={submitting}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg text-sm font-medium transition-colors border border-red-500/30"
+                >
+                  <AlertTriangle className="h-4 w-4" /> Mark Delayed
+                </button>
+              )}
             </div>
           )}
 

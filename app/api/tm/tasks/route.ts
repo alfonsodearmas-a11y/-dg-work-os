@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateAny, isDG, AuthError, authorizeRoles } from '@/lib/auth';
+import { authenticateAny, AuthError } from '@/lib/auth';
 import { createTask, getTasksList } from '@/lib/task-queries';
-import { createTaskNotification, sendTaskEmail } from '@/lib/task-notifications';
-import { taskAssignedEmail } from '@/lib/task-email-templates';
-import { query } from '@/lib/db-pg';
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,7 +24,7 @@ export async function GET(request: NextRequest) {
     if (url.searchParams.get('sort_dir')) filters.sort_dir = url.searchParams.get('sort_dir');
 
     const result = await getTasksList(filters, user.id, user.role);
-    return NextResponse.json({ success: true, data: result, viewer: { role: user.role } });
+    return NextResponse.json({ success: true, data: result });
   } catch (error: any) {
     if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -37,24 +34,19 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await authenticateAny(request);
-    authorizeRoles(user, 'director', 'admin');
 
     const body = await request.json();
-    if (!body.title || !body.agency || !body.assignee_id) {
-      return NextResponse.json({ success: false, error: 'title, agency, and assignee_id are required' }, { status: 400 });
+    if (!body.title || !body.assignee_id) {
+      return NextResponse.json({ success: false, error: 'title and assignee_id are required' }, { status: 400 });
     }
 
-    const task = await createTask(body, user.id);
+    // Default agency to 'ministry' if not provided
+    const taskData = {
+      ...body,
+      agency: body.agency || 'ministry',
+    };
 
-    // Notify assignee
-    const assignee = await query('SELECT full_name, email FROM users WHERE id = $1', [task.assignee_id]);
-    if (assignee.rows.length > 0) {
-      const { full_name, email } = assignee.rows[0];
-      await createTaskNotification(task.assignee_id, 'task_assigned', task.id, `New task: ${task.title}`, `You've been assigned "${task.title}"`);
-      const emailData = taskAssignedEmail(full_name, { id: task.id, title: task.title, agency: task.agency, due_date: task.due_date, priority: task.priority });
-      sendTaskEmail(email, emailData.subject, emailData.html).catch(() => {});
-    }
-
+    const task = await createTask(taskData, user.id);
     return NextResponse.json({ success: true, data: task }, { status: 201 });
   } catch (error: any) {
     if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });

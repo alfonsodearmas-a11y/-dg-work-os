@@ -70,7 +70,7 @@ function mapPriority(p: string): 'High' | 'Medium' | 'Low' {
 }
 
 function mapPriorityToPg(p: string): TaskPriority {
-  const map: Record<string, TaskPriority> = { high: 'high', medium: 'medium', low: 'low', critical: 'critical' };
+  const map: Record<string, TaskPriority> = { high: 'high', medium: 'medium', low: 'low' };
   return map[p?.toLowerCase()] || 'medium';
 }
 

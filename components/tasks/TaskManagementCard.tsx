@@ -15,20 +15,16 @@ const AGENCY_COLORS: Record<string, string> = {
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
-  critical: 'bg-red-500',
-  high: 'bg-orange-500',
+  high: 'bg-red-500',
   medium: 'bg-yellow-500',
   low: 'bg-green-500',
 };
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  assigned: { label: 'Assigned', color: 'bg-blue-500/20 text-blue-400' },
-  acknowledged: { label: 'Acknowledged', color: 'bg-indigo-500/20 text-indigo-400' },
+  new: { label: 'New', color: 'bg-blue-500/20 text-blue-400' },
   in_progress: { label: 'In Progress', color: 'bg-yellow-500/20 text-yellow-400' },
-  submitted: { label: 'Submitted', color: 'bg-purple-500/20 text-purple-400' },
-  verified: { label: 'Verified', color: 'bg-green-500/20 text-green-400' },
-  rejected: { label: 'Rejected', color: 'bg-red-500/20 text-red-400' },
-  overdue: { label: 'Overdue', color: 'bg-red-600/20 text-red-400' },
+  delayed: { label: 'Delayed', color: 'bg-red-500/20 text-red-400' },
+  done: { label: 'Done', color: 'bg-green-500/20 text-green-400' },
 };
 
 interface TaskCardProps {
@@ -46,10 +42,10 @@ interface TaskCardProps {
 }
 
 export function TaskManagementCard({ task, onClick, compact }: TaskCardProps) {
-  const isOverdue = task.status === 'overdue' || (task.due_date && new Date(task.due_date) < new Date() && !['verified'].includes(task.status));
+  const isOverdue = task.status === 'delayed' || (task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done');
   const daysUntilDue = task.due_date ? Math.ceil((new Date(task.due_date).getTime() - Date.now()) / 86400000) : null;
   const agencyColor = AGENCY_COLORS[task.agency] || AGENCY_COLORS.ministry;
-  const statusInfo = STATUS_LABELS[task.status] || STATUS_LABELS.assigned;
+  const statusInfo = STATUS_LABELS[task.status] || STATUS_LABELS.new;
 
   return (
     <div

@@ -23,7 +23,6 @@ const AGENCIES = [
 
 const PRIORITIES = [
   { value: '', label: 'All Priorities' },
-  { value: 'critical', label: 'Critical' },
   { value: 'high', label: 'High' },
   { value: 'medium', label: 'Medium' },
   { value: 'low', label: 'Low' },
@@ -31,13 +30,10 @@ const PRIORITIES = [
 
 const STATUSES = [
   { value: '', label: 'All Statuses' },
-  { value: 'assigned', label: 'Assigned' },
-  { value: 'acknowledged', label: 'Acknowledged' },
+  { value: 'new', label: 'New' },
   { value: 'in_progress', label: 'In Progress' },
-  { value: 'submitted', label: 'Submitted' },
-  { value: 'verified', label: 'Verified' },
-  { value: 'rejected', label: 'Rejected' },
-  { value: 'overdue', label: 'Overdue' },
+  { value: 'delayed', label: 'Delayed' },
+  { value: 'done', label: 'Done' },
 ];
 
 export function TaskFilters({ onFilterChange, showAssignee, assignees }: TaskFiltersProps) {

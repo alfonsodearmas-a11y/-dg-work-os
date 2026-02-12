@@ -6,15 +6,12 @@ import type { TaskRow, TaskStatus } from './task-queries';
 
 function mapStatusToNotion(status: TaskStatus): 'To Do' | 'In Progress' | 'Done' {
   switch (status) {
-    case 'assigned':
-    case 'acknowledged':
+    case 'new':
       return 'To Do';
     case 'in_progress':
-    case 'submitted':
-    case 'rejected':
-    case 'overdue':
+    case 'delayed':
       return 'In Progress';
-    case 'verified':
+    case 'done':
       return 'Done';
     default:
       return 'To Do';
@@ -22,7 +19,7 @@ function mapStatusToNotion(status: TaskStatus): 'To Do' | 'In Progress' | 'Done'
 }
 
 function mapPriorityToNotion(p: string): 'High' | 'Medium' | 'Low' {
-  if (p === 'critical' || p === 'high') return 'High';
+  if (p === 'high') return 'High';
   if (p === 'low') return 'Low';
   return 'Medium';
 }

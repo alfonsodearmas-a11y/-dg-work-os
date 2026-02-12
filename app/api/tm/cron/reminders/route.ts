@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       `SELECT t.*, u.full_name AS assignee_name, u.email AS assignee_email
        FROM tasks t
        JOIN users u ON u.id = t.assignee_id
-       WHERE t.status NOT IN ('verified', 'overdue')
+       WHERE t.status NOT IN ('done', 'delayed')
          AND t.due_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '2 days'`
     );
 

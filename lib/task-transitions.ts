@@ -1,47 +1,21 @@
-// Shared task status transition logic — safe for client AND server import
-// No 'use client' directive: this is a pure-logic module with no React or DB deps.
+// Task status system — 4 simple statuses, any-to-any transitions.
+// Safe for client AND server import (no React, no DB).
 
-export type TaskStatus = 'assigned' | 'acknowledged' | 'in_progress' | 'submitted' | 'verified' | 'rejected' | 'overdue';
+export type TaskStatus = 'new' | 'in_progress' | 'delayed' | 'done';
 
-const CEO_TRANSITIONS: Record<string, TaskStatus[]> = {
-  assigned: ['acknowledged'],
-  acknowledged: ['in_progress'],
-  in_progress: ['submitted'],
-  rejected: ['in_progress'],
+export const ALL_STATUSES: TaskStatus[] = ['new', 'in_progress', 'delayed', 'done'];
+
+export const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string }> = {
+  new: { label: 'New', color: 'bg-blue-500' },
+  in_progress: { label: 'In Progress', color: 'bg-yellow-500' },
+  delayed: { label: 'Delayed', color: 'bg-red-500' },
+  done: { label: 'Done', color: 'bg-emerald-500' },
 };
 
-const DG_TRANSITIONS: Record<string, TaskStatus[]> = {
-  submitted: ['verified', 'rejected'],
-  // DG can reassign (handled separately)
-};
-
-export function getValidTransitions(currentStatus: TaskStatus, role: string): TaskStatus[] {
-  if (currentStatus === 'overdue' || currentStatus === 'verified') return [];
-
-  if (role === 'director' || role === 'admin') {
-    const transitions = DG_TRANSITIONS[currentStatus] || [];
-    // DG can force-assign from any status
-    if (currentStatus !== 'assigned') {
-      return [...transitions, 'assigned'];
-    }
-    return transitions;
-  }
-
-  if (role === 'ceo') {
-    return CEO_TRANSITIONS[currentStatus] || [];
-  }
-
-  return [];
+export function getValidTransitions(currentStatus: TaskStatus): TaskStatus[] {
+  return ALL_STATUSES.filter(s => s !== currentStatus);
 }
 
-export function validateTransition(currentStatus: TaskStatus, newStatus: TaskStatus, role: string): boolean {
-  if (role === 'director' || role === 'admin') {
-    // DG can also force-assign
-    if (newStatus === 'assigned') return true;
-    return DG_TRANSITIONS[currentStatus]?.includes(newStatus) ?? false;
-  }
-  if (role === 'ceo') {
-    return CEO_TRANSITIONS[currentStatus]?.includes(newStatus) ?? false;
-  }
-  return false;
+export function validateTransition(currentStatus: string, newStatus: string): boolean {
+  return ALL_STATUSES.includes(newStatus as TaskStatus) && currentStatus !== newStatus;
 }

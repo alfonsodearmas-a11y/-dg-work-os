@@ -20,9 +20,9 @@ export async function GET(request: NextRequest) {
          u.must_change_password,
          u.last_login,
          u.created_at,
-         COUNT(t.id) FILTER (WHERE t.status != 'verified') AS active_tasks,
-         COUNT(t.id) FILTER (WHERE t.status = 'overdue') AS overdue_tasks,
-         COUNT(t.id) FILTER (WHERE t.status = 'verified' AND t.verified_at >= NOW() - INTERVAL '30 days') AS completed_30d,
+         COUNT(t.id) FILTER (WHERE t.status != 'done') AS active_tasks,
+         COUNT(t.id) FILTER (WHERE t.status = 'delayed') AS overdue_tasks,
+         COUNT(t.id) FILTER (WHERE t.status = 'done' AND t.updated_at >= NOW() - INTERVAL '30 days') AS completed_30d,
          latest_invite.created_at AS invite_sent_at,
          latest_invite.expires_at AS invite_expires_at
        FROM users u

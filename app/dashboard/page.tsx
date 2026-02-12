@@ -17,11 +17,11 @@ interface Task {
 }
 
 interface Stats {
-  assigned: string;
-  acknowledged: string;
+  status_new: string;
   in_progress: string;
-  overdue: string;
-  completed_this_month: string;
+  delayed: string;
+  done: string;
+  total_active: string;
 }
 
 export default function CEODashboard() {
@@ -61,10 +61,10 @@ export default function CEODashboard() {
     setActionLoading(null);
   };
 
-  const needsAttention = tasks.filter(t => t.status === 'assigned' || t.status === 'rejected');
-  const inProgress = tasks.filter(t => t.status === 'acknowledged' || t.status === 'in_progress');
-  const overdue = tasks.filter(t => t.status === 'overdue');
-  const recentlyCompleted = tasks.filter(t => t.status === 'verified').slice(0, 5);
+  const needsAttention = tasks.filter(t => t.status === 'new');
+  const inProgress = tasks.filter(t => t.status === 'in_progress');
+  const overdue = tasks.filter(t => t.status === 'delayed');
+  const recentlyCompleted = tasks.filter(t => t.status === 'done').slice(0, 5);
 
   const greeting = (() => {
     const hour = new Date().getHours();
@@ -94,29 +94,29 @@ export default function CEODashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <SummaryCard
             label="New Tasks"
-            value={stats.assigned}
+            value={stats.status_new}
             color="text-yellow-400"
             bgColor="bg-yellow-500/10"
             icon={Bell}
           />
           <SummaryCard
             label="In Progress"
-            value={String(parseInt(stats.acknowledged || '0') + parseInt(stats.in_progress || '0'))}
+            value={stats.in_progress}
             color="text-blue-400"
             bgColor="bg-blue-500/10"
             icon={Clock}
           />
           <SummaryCard
-            label="Overdue"
-            value={stats.overdue}
+            label="Delayed"
+            value={stats.delayed}
             color="text-red-400"
             bgColor="bg-red-500/10"
             icon={AlertTriangle}
-            alert={parseInt(stats.overdue) > 0}
+            alert={parseInt(stats.delayed) > 0}
           />
           <SummaryCard
-            label="Completed"
-            value={stats.completed_this_month}
+            label="Done"
+            value={stats.done}
             color="text-green-400"
             bgColor="bg-green-500/10"
             icon={CheckCircle}
@@ -141,7 +141,7 @@ export default function CEODashboard() {
       {/* Needs Attention */}
       {needsAttention.length > 0 && (
         <div className="card-premium p-4">
-          <h3 className="text-sm font-semibold text-[#d4af37] mb-3">Needs Your Attention ({needsAttention.length})</h3>
+          <h3 className="text-sm font-semibold text-[#d4af37] mb-3">New Tasks ({needsAttention.length})</h3>
           <div className="space-y-2">
             {needsAttention.map(t => (
               <div key={t.id} className="bg-[#0f1d32] rounded-lg p-3 flex items-center justify-between gap-3">
@@ -154,32 +154,15 @@ export default function CEODashboard() {
                         Due {new Date(t.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                       </span>
                     )}
-                    {t.status === 'rejected' && (
-                      <span className="text-[10px] text-red-400">Returned</span>
-                    )}
                   </div>
-                  {t.status === 'rejected' && t.rejection_reason && (
-                    <p className="text-xs text-red-400/70 mt-1 line-clamp-1">Reason: {t.rejection_reason}</p>
-                  )}
                 </button>
-                {t.status === 'assigned' && (
-                  <button
-                    onClick={() => updateStatus(t.id, 'acknowledged')}
-                    disabled={actionLoading === t.id}
-                    className="shrink-0 px-3 py-1.5 text-xs bg-[#d4af37]/20 text-[#d4af37] rounded-lg hover:bg-[#d4af37]/30 transition-colors font-medium"
-                  >
-                    {actionLoading === t.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Acknowledge'}
-                  </button>
-                )}
-                {t.status === 'rejected' && (
-                  <button
-                    onClick={() => updateStatus(t.id, 'in_progress')}
-                    disabled={actionLoading === t.id}
-                    className="shrink-0 px-3 py-1.5 text-xs bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors font-medium"
-                  >
-                    {actionLoading === t.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Resume'}
-                  </button>
-                )}
+                <button
+                  onClick={() => updateStatus(t.id, 'in_progress')}
+                  disabled={actionLoading === t.id}
+                  className="shrink-0 px-3 py-1.5 text-xs bg-[#d4af37]/20 text-[#d4af37] rounded-lg hover:bg-[#d4af37]/30 transition-colors font-medium"
+                >
+                  {actionLoading === t.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Start'}
+                </button>
               </div>
             ))}
           </div>
@@ -241,7 +224,7 @@ function SummaryCard({ label, value, color, bgColor, icon: Icon, alert }: {
 }
 
 function TaskRow({ task, onClick }: { task: Task; onClick: () => void }) {
-  const isOverdue = task.status === 'overdue' || (task.due_date && new Date(task.due_date) < new Date() && task.status !== 'verified');
+  const isOverdue = task.status === 'delayed' || (task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done');
   const daysLeft = task.due_date ? Math.ceil((new Date(task.due_date).getTime() - Date.now()) / 86400000) : null;
 
   return (
@@ -253,7 +236,7 @@ function TaskRow({ task, onClick }: { task: Task; onClick: () => void }) {
         <p className="text-sm text-white font-medium truncate">{task.title}</p>
         <div className="flex items-center gap-2 mt-1">
           <span className="text-[10px] text-[#64748b]">{task.agency.toUpperCase()}</span>
-          <span className={`text-[10px] capitalize ${task.priority === 'critical' ? 'text-red-400' : task.priority === 'high' ? 'text-orange-400' : 'text-[#64748b]'}`}>
+          <span className={`text-[10px] capitalize ${task.priority === 'high' ? 'text-orange-400' : 'text-[#64748b]'}`}>
             {task.priority}
           </span>
         </div>

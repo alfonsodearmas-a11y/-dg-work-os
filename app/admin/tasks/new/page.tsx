@@ -17,7 +17,6 @@ const AGENCIES = [
 ];
 
 const PRIORITIES = [
-  { value: 'critical', label: 'Critical' },
   { value: 'high', label: 'High' },
   { value: 'medium', label: 'Medium' },
   { value: 'low', label: 'Low' },
@@ -49,7 +48,7 @@ export default function CreateTaskPage() {
     fetch('/api/admin/users')
       .then(r => r.json())
       .then(d => {
-        if (d.success) setUsers(d.data.filter((u: any) => u.is_active && u.role === 'ceo'));
+        if (d.success) setUsers(d.data.filter((u: any) => u.is_active));
       })
       .catch(() => {});
   }, []);
@@ -60,8 +59,8 @@ export default function CreateTaskPage() {
 
   const handleSubmit = async (e: React.FormEvent, addAnother = false) => {
     e.preventDefault();
-    if (!form.title || !form.agency || !form.assignee_id) {
-      setError('Title, agency, and assignee are required');
+    if (!form.title || !form.assignee_id) {
+      setError('Title and assignee are required');
       return;
     }
 

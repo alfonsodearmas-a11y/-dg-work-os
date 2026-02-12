@@ -116,12 +116,12 @@ export default function CEOTaskDetailPage({ params }: { params: Promise<{ id: st
 
   if (!task) return null;
 
-  const isOverdue = task.status === 'overdue' || (task.due_date && new Date(task.due_date) < new Date() && task.status !== 'verified');
-  const statusInfo = STATUS_LABELS[task.status] || STATUS_LABELS.assigned;
+  const isOverdue = task.status === 'delayed' || (task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done');
+  const statusInfo = STATUS_LABELS[task.status] || STATUS_LABELS.new;
 
   // Status-based lifecycle progress
-  const stages = ['assigned', 'acknowledged', 'in_progress', 'submitted', 'verified'];
-  const currentStageIdx = stages.indexOf(task.status === 'rejected' ? 'in_progress' : task.status === 'overdue' ? 'in_progress' : task.status);
+  const stages = ['new', 'in_progress', 'done'];
+  const currentStageIdx = stages.indexOf(task.status === 'delayed' ? 'in_progress' : task.status);
 
   return (
     <div className="space-y-6">
@@ -134,7 +134,7 @@ export default function CEOTaskDetailPage({ params }: { params: Promise<{ id: st
           <h1 className="text-xl font-bold text-white">{task.title}</h1>
           <div className="flex flex-wrap items-center gap-2 mt-2">
             <span className={`text-xs px-2 py-0.5 rounded ${statusInfo.color}`}>{statusInfo.label}</span>
-            <span className={`text-xs capitalize ${task.priority === 'critical' ? 'text-red-400' : task.priority === 'high' ? 'text-orange-400' : 'text-[#64748b]'}`}>
+            <span className={`text-xs capitalize ${task.priority === 'high' ? 'text-orange-400' : 'text-[#64748b]'}`}>
               {task.priority}
             </span>
             {isOverdue && <span className="text-xs text-red-400 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Overdue</span>}
@@ -164,9 +164,9 @@ export default function CEOTaskDetailPage({ params }: { params: Promise<{ id: st
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-4">
           {/* Rejection Notice */}
-          {task.status === 'rejected' && task.rejection_reason && (
+          {task.rejection_reason && (
             <div className="card-premium p-4 border-red-500/30 bg-red-500/5">
-              <h3 className="text-sm font-semibold text-red-400 mb-1">Returned for Revision</h3>
+              <h3 className="text-sm font-semibold text-red-400 mb-1">Note</h3>
               <p className="text-sm text-white">{task.rejection_reason}</p>
             </div>
           )}
@@ -217,56 +217,29 @@ export default function CEOTaskDetailPage({ params }: { params: Promise<{ id: st
           <div className="card-premium p-4 space-y-2">
             <h3 className="text-xs font-semibold text-[#64748b] uppercase mb-2">Actions</h3>
 
-            {task.status === 'assigned' && (
-              <button
-                onClick={() => updateStatus('acknowledged')}
-                disabled={submitting}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#d4af37] text-[#0a1628] rounded-lg text-sm font-semibold hover:bg-[#c5a030] transition-colors"
-              >
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                Acknowledge
-              </button>
-            )}
-
-            {task.status === 'acknowledged' && (
+            {task.status === 'new' && (
               <button
                 onClick={() => updateStatus('in_progress')}
                 disabled={submitting}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#d4af37] text-[#0a1628] rounded-lg text-sm font-semibold hover:bg-[#c5a030] transition-colors"
               >
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                 Start Work
               </button>
             )}
 
-            {task.status === 'in_progress' && (
+            {(task.status === 'in_progress' || task.status === 'delayed') && (
               <button
-                onClick={() => setShowSubmitModal(true)}
+                onClick={() => updateStatus('done')}
+                disabled={submitting}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
               >
-                <Send className="h-4 w-4" /> Submit for Review
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                Mark Done
               </button>
             )}
 
-            {task.status === 'rejected' && (
-              <button
-                onClick={() => updateStatus('in_progress')}
-                disabled={submitting}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-              >
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-                Resume Work
-              </button>
-            )}
-
-            {task.status === 'submitted' && (
-              <div className="text-center py-4">
-                <Clock className="h-8 w-8 text-purple-400 mx-auto mb-2" />
-                <p className="text-sm text-purple-400 font-medium">Awaiting DG Review</p>
-              </div>
-            )}
-
-            {task.status === 'verified' && (
+            {task.status === 'done' && (
               <div className="text-center py-4">
                 <CheckCircle className="h-8 w-8 text-green-400 mx-auto mb-2" />
                 <p className="text-sm text-green-400 font-medium">Completed</p>
@@ -274,7 +247,7 @@ export default function CEOTaskDetailPage({ params }: { params: Promise<{ id: st
             )}
 
             {/* Extension request button */}
-            {!['verified', 'submitted'].includes(task.status) && task.due_date && (
+            {task.status !== 'done' && task.due_date && (
               <button
                 onClick={() => setShowExtensionModal(true)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs text-[#64748b] hover:text-white border border-[#2d3a52] rounded-lg hover:bg-[#2d3a52]/30 transition-colors"
@@ -311,12 +284,12 @@ export default function CEOTaskDetailPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      {/* Submit Modal */}
+      {/* Submit Modal — kept for completion notes */}
       {showSubmitModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-[#1a2744] border border-[#2d3a52] rounded-xl w-full max-w-md p-5">
-            <h3 className="text-lg font-semibold text-white mb-3">Submit for Review</h3>
-            <p className="text-sm text-[#64748b] mb-3">Add completion notes for the Director General.</p>
+            <h3 className="text-lg font-semibold text-white mb-3">Mark as Done</h3>
+            <p className="text-sm text-[#64748b] mb-3">Add completion notes (optional).</p>
             <textarea
               value={completionNotes}
               onChange={e => setCompletionNotes(e.target.value)}
@@ -327,12 +300,12 @@ export default function CEOTaskDetailPage({ params }: { params: Promise<{ id: st
             <div className="flex justify-end gap-2 mt-4">
               <button onClick={() => setShowSubmitModal(false)} className="px-4 py-2 text-sm text-[#64748b] hover:text-white">Cancel</button>
               <button
-                onClick={() => updateStatus('submitted', { completion_notes: completionNotes })}
-                disabled={submitting || !completionNotes.trim()}
+                onClick={() => updateStatus('done', { completion_notes: completionNotes })}
+                disabled={submitting}
                 className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
               >
                 {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                Submit
+                Done
               </button>
             </div>
           </div>

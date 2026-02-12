@@ -12,8 +12,8 @@ export async function POST(request: NextRequest) {
   try {
     // Find overdue tasks
     const result = await query(
-      `UPDATE tasks SET status = 'overdue'
-       WHERE status NOT IN ('verified', 'overdue')
+      `UPDATE tasks SET status = 'delayed'
+       WHERE status NOT IN ('done', 'delayed')
          AND due_date < CURRENT_DATE
        RETURNING *`
     );
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       // Create activity
       await query(
         `INSERT INTO task_activities (task_id, action, from_value, to_value)
-         VALUES ($1, 'status_changed', $2, 'overdue')`,
+         VALUES ($1, 'status_changed', $2, 'delayed')`,
         [task.id, task.status]
       );
 

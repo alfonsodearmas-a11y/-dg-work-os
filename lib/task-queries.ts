@@ -1,12 +1,13 @@
 import { query, transaction } from './db-pg';
 import type { PoolClient } from 'pg';
-import { validateTransition, getValidTransitions, type TaskStatus } from './task-transitions';
+import { validateTransition, type TaskStatus } from './task-transitions';
 
-export { validateTransition, getValidTransitions };
+export { validateTransition };
 export type { TaskStatus };
 
 // ── Types ──────────────────────────────────────────────────────────────────
-export type TaskPriority = 'critical' | 'high' | 'medium' | 'low';
+
+export type TaskPriority = 'high' | 'medium' | 'low';
 export type TaskAction =
   | 'created' | 'status_changed' | 'priority_changed' | 'reassigned'
   | 'commented' | 'due_date_changed' | 'extension_requested'
@@ -76,8 +77,8 @@ export interface CreateTaskInput {
 export async function createTask(data: CreateTaskInput, createdById: string): Promise<TaskRow> {
   return transaction(async (client: PoolClient) => {
     const result = await client.query(
-      `INSERT INTO tasks (title, description, priority, agency, assignee_id, created_by, due_date, tags, source_meeting_id, source_recording_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO tasks (title, description, priority, agency, assignee_id, created_by, due_date, tags, status, source_meeting_id, source_recording_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'new', $9, $10)
        RETURNING *`,
       [
         data.title,
@@ -95,11 +96,10 @@ export async function createTask(data: CreateTaskInput, createdById: string): Pr
 
     const task = result.rows[0];
 
-    // Activity log
     await client.query(
       `INSERT INTO task_activities (task_id, user_id, action, to_value)
-       VALUES ($1, $2, 'created', $3)`,
-      [task.id, createdById, 'assigned']
+       VALUES ($1, $2, 'created', 'new')`,
+      [task.id, createdById]
     );
 
     return task;
@@ -125,7 +125,7 @@ export async function getTasksList(filters: TaskFilters, userId?: string, userRo
   const params: any[] = [];
   let paramIdx = 1;
 
-  // Role-based scoping
+  // Role-based scoping: CEOs only see their own tasks
   if (userRole === 'ceo' && userId) {
     conditions.push(`t.assignee_id = $${paramIdx++}`);
     params.push(userId);
@@ -177,7 +177,6 @@ export async function getTasksList(filters: TaskFilters, userId?: string, userRo
   const limit = filters.limit || 50;
   const offset = filters.offset || 0;
 
-  // Whitelist sort columns
   const validSorts = ['created_at', 'updated_at', 'due_date', 'priority', 'status', 'title'];
   const safeSort = validSorts.includes(sortBy) ? sortBy : 'created_at';
 
@@ -207,7 +206,6 @@ export async function updateTaskStatus(
   id: string,
   newStatus: TaskStatus,
   userId: string,
-  extra?: { rejection_reason?: string; completion_notes?: string; evidence?: string[] }
 ): Promise<TaskRow> {
   return transaction(async (client: PoolClient) => {
     const current = await client.query('SELECT * FROM tasks WHERE id = $1 FOR UPDATE', [id]);
@@ -216,51 +214,15 @@ export async function updateTaskStatus(
     const task = current.rows[0];
     const oldStatus = task.status;
 
-    // Build update fields
-    const sets: string[] = [`status = $1`];
-    const params: any[] = [newStatus];
-    let idx = 2;
-
-    // Lifecycle timestamps
-    if (newStatus === 'acknowledged' && !task.acknowledged_at) {
-      sets.push(`acknowledged_at = NOW()`);
-    }
-    if (newStatus === 'in_progress' && !task.started_at) {
-      sets.push(`started_at = NOW()`);
-    }
-    if (newStatus === 'submitted') {
-      sets.push(`submitted_at = NOW()`);
-      if (extra?.completion_notes) {
-        sets.push(`completion_notes = $${idx++}`);
-        params.push(extra.completion_notes);
-      }
-      if (extra?.evidence) {
-        sets.push(`evidence = $${idx++}`);
-        params.push(extra.evidence);
-      }
-    }
-    if (newStatus === 'verified') {
-      sets.push(`verified_at = NOW()`);
-    }
-    if (newStatus === 'rejected') {
-      sets.push(`rejected_at = NOW()`);
-      if (extra?.rejection_reason) {
-        sets.push(`rejection_reason = $${idx++}`);
-        params.push(extra.rejection_reason);
-      }
-    }
-
-    params.push(id);
     const result = await client.query(
-      `UPDATE tasks SET ${sets.join(', ')} WHERE id = $${idx} RETURNING *`,
-      params
+      `UPDATE tasks SET status = $1 WHERE id = $2 RETURNING *`,
+      [newStatus, id]
     );
 
-    // Activity log
     await client.query(
-      `INSERT INTO task_activities (task_id, user_id, action, from_value, to_value, comment)
-       VALUES ($1, $2, 'status_changed', $3, $4, $5)`,
-      [id, userId, oldStatus, newStatus, extra?.rejection_reason || null]
+      `INSERT INTO task_activities (task_id, user_id, action, from_value, to_value)
+       VALUES ($1, $2, 'status_changed', $3, $4)`,
+      [id, userId, oldStatus, newStatus]
     );
 
     return result.rows[0];
@@ -314,10 +276,6 @@ export async function updateTask(
     if (updates.assignee_id !== undefined && updates.assignee_id !== task.assignee_id) {
       sets.push(`assignee_id = $${idx++}`);
       params.push(updates.assignee_id);
-      sets.push(`status = 'assigned'`);
-      sets.push(`acknowledged_at = NULL`);
-      sets.push(`started_at = NULL`);
-      sets.push(`submitted_at = NULL`);
       await client.query(
         `INSERT INTO task_activities (task_id, user_id, action, from_value, to_value)
          VALUES ($1, $2, 'reassigned', $3, $4)`,
@@ -477,15 +435,11 @@ export async function getTaskStats(filters?: { agency?: string; assignee_id?: st
 
   const result = await query(
     `SELECT
-       COUNT(*) FILTER (WHERE status NOT IN ('verified')) AS total_active,
-       COUNT(*) FILTER (WHERE status = 'overdue') AS overdue,
-       COUNT(*) FILTER (WHERE status = 'submitted') AS awaiting_review,
-       COUNT(*) FILTER (WHERE status = 'verified' AND verified_at >= NOW() - INTERVAL '7 days') AS completed_this_week,
-       COUNT(*) FILTER (WHERE status = 'verified' AND verified_at >= NOW() - INTERVAL '30 days') AS completed_this_month,
-       COUNT(*) FILTER (WHERE status = 'assigned') AS assigned,
-       COUNT(*) FILTER (WHERE status = 'acknowledged') AS acknowledged,
+       COUNT(*) FILTER (WHERE status != 'done') AS total_active,
+       COUNT(*) FILTER (WHERE status = 'new') AS status_new,
        COUNT(*) FILTER (WHERE status = 'in_progress') AS in_progress,
-       COUNT(*) FILTER (WHERE status = 'rejected') AS rejected,
+       COUNT(*) FILTER (WHERE status = 'delayed') AS delayed,
+       COUNT(*) FILTER (WHERE status = 'done') AS done,
        COUNT(*) AS total
      FROM tasks ${where}`,
     params

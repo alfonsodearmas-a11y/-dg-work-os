@@ -28,8 +28,8 @@ export default function CEOTasksPage() {
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     const status = tab === 'active'
-      ? 'assigned,acknowledged,in_progress,submitted,rejected,overdue'
-      : 'verified';
+      ? 'new,in_progress,delayed'
+      : 'done';
     try {
       const res = await fetch(`/api/tm/tasks?status=${status}&limit=100`);
       const data = await res.json();
