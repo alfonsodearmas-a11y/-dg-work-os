@@ -22,6 +22,7 @@ import { TaskManagementCard, STATUS_LABELS } from './TaskManagementCard';
 import { DraggableTaskCard, DragOverlayCard } from './DraggableTaskCard';
 import { DroppableKanbanColumn } from './DroppableKanbanColumn';
 import { TaskFilters } from './TaskFilters';
+import { useAuth } from '@/lib/hooks/useAuth';
 import { getValidTransitions, validateTransition } from '@/lib/task-transitions';
 import type { TaskStatus } from '@/lib/task-transitions';
 
@@ -73,8 +74,12 @@ export function CommandCenter() {
   const [assignees, setAssignees] = useState<{ id: string; full_name: string }[]>([]);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [userRole, setUserRole] = useState('');
+  const [apiRole, setApiRole] = useState('');
   const router = useRouter();
+  const { user: authUser } = useAuth();
+
+  // Role from multiple sources: API viewer > useAuth > default 'director' (this page is DG-only)
+  const userRole = apiRole || authUser?.role || 'director';
 
   // ── Sensors ──────────────────────────────────────────────────────────────
   const pointerSensor = useSensor(PointerSensor, {
@@ -113,7 +118,7 @@ export function CommandCenter() {
       const statsData = await statsRes.json();
       if (tasksData.success) {
         setTasks(tasksData.data.tasks);
-        if (tasksData.viewer?.role) setUserRole(tasksData.viewer.role);
+        if (tasksData.viewer?.role) setApiRole(tasksData.viewer.role);
       }
       if (statsData.success) setStats(statsData.data);
     } catch (err) {

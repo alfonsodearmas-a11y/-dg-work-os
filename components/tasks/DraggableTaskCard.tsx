@@ -83,7 +83,7 @@ export function DraggableTaskCard({
         </button>
       )}
 
-      {/* Status dropdown trigger — visible on hover */}
+      {/* Status dropdown trigger — always visible when transitions exist */}
       {canTransition && (
         <div ref={dropdownRef} className="absolute top-1.5 right-1.5 z-20">
           <button
@@ -91,7 +91,7 @@ export function DraggableTaskCard({
               e.stopPropagation();
               setDropdownOpen(!dropdownOpen);
             }}
-            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-[#2d3a52] text-[#64748b] hover:text-white"
+            className="p-1 rounded hover:bg-[#2d3a52] text-[#64748b] hover:text-white transition-colors"
             aria-label="Change status"
           >
             <ChevronDown className="h-3.5 w-3.5" />
