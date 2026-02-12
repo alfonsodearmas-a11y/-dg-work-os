@@ -3,11 +3,28 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  LayoutGrid, List, ChevronRight, AlertTriangle, Clock,
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  closestCorners,
+  type DragStartEvent,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  LayoutGrid, List, AlertTriangle, Clock,
   CheckCircle, Send, Eye, XCircle, UserCheck,
+  CheckCheck, X,
 } from 'lucide-react';
-import { TaskManagementCard } from './TaskManagementCard';
+import { TaskManagementCard, STATUS_LABELS } from './TaskManagementCard';
+import { DraggableTaskCard, DragOverlayCard } from './DraggableTaskCard';
+import { DroppableKanbanColumn } from './DroppableKanbanColumn';
 import { TaskFilters } from './TaskFilters';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { getValidTransitions, validateTransition } from '@/lib/task-transitions';
+import type { TaskStatus } from '@/lib/task-transitions';
 
 interface Task {
   id: string;
@@ -31,6 +48,12 @@ interface Stats {
   completed_this_week: string;
 }
 
+interface Toast {
+  id: number;
+  type: 'success' | 'error';
+  message: string;
+}
+
 const KANBAN_COLUMNS = [
   { status: 'assigned', label: 'Assigned', icon: Send, color: 'border-blue-500/50' },
   { status: 'acknowledged', label: 'Acknowledged', icon: UserCheck, color: 'border-indigo-500/50' },
@@ -40,6 +63,8 @@ const KANBAN_COLUMNS = [
   { status: 'rejected', label: 'Rejected', icon: XCircle, color: 'border-red-500/50' },
 ];
 
+let toastCounter = 0;
+
 export function CommandCenter() {
   const [view, setView] = useState<'kanban' | 'table'>('kanban');
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -47,7 +72,36 @@ export function CommandCenter() {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [assignees, setAssignees] = useState<{ id: string; full_name: string }[]>([]);
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [toasts, setToasts] = useState<Toast[]>([]);
   const router = useRouter();
+  const { user } = useAuth();
+  const userRole = user?.role || '';
+
+  // ── Sensors ──────────────────────────────────────────────────────────────
+  const pointerSensor = useSensor(PointerSensor, {
+    activationConstraint: { distance: 8 },
+  });
+  const touchSensor = useSensor(TouchSensor, {
+    activationConstraint: { delay: 200, tolerance: 8 },
+  });
+  const sensors = useSensors(pointerSensor, touchSensor);
+
+  // ── Toast ────────────────────────────────────────────────────────────────
+  const addToast = useCallback((type: 'success' | 'error', message: string) => {
+    const id = ++toastCounter;
+    setToasts(prev => [...prev.slice(-2), { id, type, message }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
+  }, []);
+
+  // ── Data Fetching ────────────────────────────────────────────────────────
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/tm/tasks/stats');
+      const data = await res.json();
+      if (data.success) setStats(data.data);
+    } catch { /* ignore */ }
+  }, []);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -72,7 +126,6 @@ export function CommandCenter() {
   }, [fetchTasks]);
 
   useEffect(() => {
-    // Fetch assignees for filter dropdown
     fetch('/api/admin/users')
       .then(r => r.json())
       .then(d => {
@@ -83,7 +136,77 @@ export function CommandCenter() {
       .catch(() => {});
   }, []);
 
-  const getColumnTasks = (status: string) => tasks.filter(t => t.status === status);
+  // ── Status Change (shared by DnD + dropdown + table select) ─────────────
+  const handleStatusChange = useCallback(async (taskId: string, newStatus: TaskStatus) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    const oldStatus = task.status;
+
+    // Client-side validation
+    if (!validateTransition(oldStatus as TaskStatus, newStatus, userRole)) {
+      addToast('error', `Cannot move from ${oldStatus.replace('_', ' ')} to ${newStatus.replace('_', ' ')}`);
+      return;
+    }
+
+    // Optimistic update
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+
+    try {
+      const res = await fetch(`/api/tm/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+
+      if (!data.success) {
+        // Rollback
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: oldStatus } : t));
+        addToast('error', data.error || 'Failed to update status');
+        return;
+      }
+
+      addToast('success', `Moved to ${STATUS_LABELS[newStatus]?.label || newStatus}`);
+      fetchStats();
+    } catch {
+      // Rollback
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: oldStatus } : t));
+      addToast('error', 'Network error — status reverted');
+    }
+  }, [tasks, userRole, addToast, fetchStats]);
+
+  // ── DnD Handlers ─────────────────────────────────────────────────────────
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const taskData = event.active.data.current?.task as Task | undefined;
+    if (taskData) setActiveTask(taskData);
+  }, []);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    setActiveTask(null);
+    const { active, over } = event;
+    if (!over) return;
+
+    const taskId = active.id as string;
+    const targetStatus = over.id as string;
+    const currentStatus = active.data.current?.status as string;
+
+    // Dropped on same column
+    if (targetStatus === currentStatus) return;
+
+    // Only allow dropping on kanban column statuses
+    if (!KANBAN_COLUMNS.some(c => c.status === targetStatus)) return;
+
+    handleStatusChange(taskId, targetStatus as TaskStatus);
+  }, [handleStatusChange]);
+
+  const handleDragCancel = useCallback(() => {
+    setActiveTask(null);
+  }, []);
+
+  // ── Computed: valid drop targets for the active drag ─────────────────────
+  const validDropStatuses = activeTask
+    ? getValidTransitions(activeTask.status as TaskStatus, userRole)
+    : [];
 
   return (
     <div className="space-y-6">
@@ -126,13 +249,58 @@ export function CommandCenter() {
           <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
         </div>
       ) : view === 'kanban' ? (
-        <KanbanView tasks={tasks} columns={KANBAN_COLUMNS} onTaskClick={(id) => router.push(`/admin/tasks/${id}`)} />
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <KanbanViewDnd
+            tasks={tasks}
+            columns={KANBAN_COLUMNS}
+            userRole={userRole}
+            onStatusChange={handleStatusChange}
+            onNavigate={(id) => router.push(`/admin/tasks/${id}`)}
+            isDragActive={!!activeTask}
+            validDropStatuses={validDropStatuses}
+          />
+          <DragOverlay dropAnimation={null}>
+            {activeTask && <DragOverlayCard task={activeTask} compact />}
+          </DragOverlay>
+        </DndContext>
       ) : (
-        <TableView tasks={tasks} onTaskClick={(id) => router.push(`/admin/tasks/${id}`)} />
+        <TableView
+          tasks={tasks}
+          userRole={userRole}
+          onStatusChange={handleStatusChange}
+          onTaskClick={(id) => router.push(`/admin/tasks/${id}`)}
+        />
+      )}
+
+      {/* Toast container */}
+      {toasts.length > 0 && (
+        <div className="fixed bottom-4 right-4 z-[999] flex flex-col gap-2">
+          {toasts.map(toast => (
+            <div
+              key={toast.id}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg border text-xs font-medium animate-slide-up ${
+                toast.type === 'success'
+                  ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                  : 'bg-red-500/15 text-red-400 border-red-500/30'
+              }`}
+            >
+              {toast.type === 'success' ? <CheckCheck className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
+              {toast.message}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
 }
+
+// ── StatCard ────────────────────────────────────────────────────────────────
 
 function StatCard({ label, value, color, alert }: { label: string; value: string; color: string; alert?: boolean }) {
   return (
@@ -146,20 +314,30 @@ function StatCard({ label, value, color, alert }: { label: string; value: string
   );
 }
 
-function KanbanView({
+// ── KanbanViewDnd ───────────────────────────────────────────────────────────
+
+function KanbanViewDnd({
   tasks,
   columns,
-  onTaskClick,
+  userRole,
+  onStatusChange,
+  onNavigate,
+  isDragActive,
+  validDropStatuses,
 }: {
   tasks: Task[];
   columns: typeof KANBAN_COLUMNS;
-  onTaskClick: (id: string) => void;
+  userRole: string;
+  onStatusChange: (taskId: string, newStatus: TaskStatus) => void;
+  onNavigate: (id: string) => void;
+  isDragActive: boolean;
+  validDropStatuses: TaskStatus[];
 }) {
-  // Also include overdue tasks in a special section
   const overdueTasks = tasks.filter(t => t.status === 'overdue');
 
   return (
     <div className="space-y-4">
+      {/* Overdue section — static, no DnD */}
       {overdueTasks.length > 0 && (
         <div className="card-premium p-4 border-red-500/30">
           <h3 className="text-sm font-semibold text-red-400 mb-3 flex items-center gap-2">
@@ -167,34 +345,41 @@ function KanbanView({
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {overdueTasks.map(t => (
-              <TaskManagementCard key={t.id} task={t} onClick={() => onTaskClick(t.id)} />
+              <TaskManagementCard key={t.id} task={t} onClick={() => onNavigate(t.id)} />
             ))}
           </div>
         </div>
       )}
 
+      {/* Kanban columns with drop targets */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         {columns.map(col => {
           const colTasks = tasks.filter(t => t.status === col.status);
-          const Icon = col.icon;
+          const isValidDrop = validDropStatuses.includes(col.status as TaskStatus);
+
           return (
-            <div key={col.status} className={`bg-[#0f1d32] rounded-xl border-t-2 ${col.color} min-h-[300px]`}>
-              <div className="px-3 py-2.5 flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Icon className="h-3.5 w-3.5 text-[#64748b]" />
-                  <span className="text-xs font-semibold text-[#64748b] uppercase tracking-wide">{col.label}</span>
-                </div>
-                <span className="text-xs text-[#64748b] bg-[#1a2744] px-1.5 py-0.5 rounded">{colTasks.length}</span>
-              </div>
-              <div className="px-2 pb-2 space-y-2">
-                {colTasks.map(t => (
-                  <TaskManagementCard key={t.id} task={t} onClick={() => onTaskClick(t.id)} compact />
-                ))}
-                {colTasks.length === 0 && (
-                  <p className="text-center text-xs text-[#64748b]/50 py-8">No tasks</p>
-                )}
-              </div>
-            </div>
+            <DroppableKanbanColumn
+              key={col.status}
+              status={col.status}
+              label={col.label}
+              icon={col.icon}
+              borderColor={col.color}
+              count={colTasks.length}
+              isValidDrop={isValidDrop}
+              isDragActive={isDragActive}
+              isOver={false}
+            >
+              {colTasks.map(t => (
+                <DraggableTaskCard
+                  key={t.id}
+                  task={t}
+                  userRole={userRole}
+                  onStatusChange={onStatusChange}
+                  onNavigate={onNavigate}
+                  compact
+                />
+              ))}
+            </DroppableKanbanColumn>
           );
         })}
       </div>
@@ -202,9 +387,19 @@ function KanbanView({
   );
 }
 
-const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
+// ── TableView ───────────────────────────────────────────────────────────────
 
-function TableView({ tasks, onTaskClick }: { tasks: Task[]; onTaskClick: (id: string) => void }) {
+function TableView({
+  tasks,
+  userRole,
+  onStatusChange,
+  onTaskClick,
+}: {
+  tasks: Task[];
+  userRole: string;
+  onStatusChange: (taskId: string, newStatus: TaskStatus) => void;
+  onTaskClick: (id: string) => void;
+}) {
   return (
     <div className="card-premium overflow-hidden">
       <div className="overflow-x-auto">
@@ -222,6 +417,8 @@ function TableView({ tasks, onTaskClick }: { tasks: Task[]; onTaskClick: (id: st
           <tbody>
             {tasks.map(t => {
               const isOverdue = t.status === 'overdue' || (t.due_date && new Date(t.due_date) < new Date() && t.status !== 'verified');
+              const validTransitions = getValidTransitions(t.status as TaskStatus, userRole);
+
               return (
                 <tr
                   key={t.id}
@@ -234,14 +431,35 @@ function TableView({ tasks, onTaskClick }: { tasks: Task[]; onTaskClick: (id: st
                   <td className="px-4 py-3">
                     <span className="text-xs font-semibold text-[#64748b]">{t.agency.toUpperCase()}</span>
                   </td>
-                  <td className="px-4 py-3 text-[#64748b]">{t.assignee_name || '—'}</td>
+                  <td className="px-4 py-3 text-[#64748b]">{t.assignee_name || '\u2014'}</td>
                   <td className="px-4 py-3">
                     <span className={`text-xs capitalize ${t.priority === 'critical' ? 'text-red-400' : t.priority === 'high' ? 'text-orange-400' : t.priority === 'medium' ? 'text-yellow-400' : 'text-green-400'}`}>
                       {t.priority}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-xs capitalize text-[#64748b]">{t.status.replace('_', ' ')}</span>
+                    {validTransitions.length > 0 ? (
+                      <select
+                        value={t.status}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          onStatusChange(t.id, e.target.value as TaskStatus);
+                        }}
+                        className="text-xs bg-[#1a2744] border border-[#2d3a52] text-[#c8d0dc] rounded px-1.5 py-1 cursor-pointer hover:border-[#d4af37]/40 transition-colors"
+                      >
+                        <option value={t.status}>
+                          {STATUS_LABELS[t.status]?.label || t.status.replace('_', ' ')}
+                        </option>
+                        {validTransitions.map(s => (
+                          <option key={s} value={s}>
+                            {STATUS_LABELS[s]?.label || s.replace('_', ' ')}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-xs capitalize text-[#64748b]">{t.status.replace('_', ' ')}</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {t.due_date ? (
@@ -249,7 +467,7 @@ function TableView({ tasks, onTaskClick }: { tasks: Task[]; onTaskClick: (id: st
                         {new Date(t.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                       </span>
                     ) : (
-                      <span className="text-xs text-[#64748b]">—</span>
+                      <span className="text-xs text-[#64748b]">{'\u2014'}</span>
                     )}
                   </td>
                 </tr>

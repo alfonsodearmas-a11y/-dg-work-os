@@ -1,9 +1,11 @@
 import { query, transaction } from './db-pg';
 import type { PoolClient } from 'pg';
+import { validateTransition, getValidTransitions, type TaskStatus } from './task-transitions';
+
+export { validateTransition, getValidTransitions };
+export type { TaskStatus };
 
 // ── Types ──────────────────────────────────────────────────────────────────
-
-export type TaskStatus = 'assigned' | 'acknowledged' | 'in_progress' | 'submitted' | 'verified' | 'rejected' | 'overdue';
 export type TaskPriority = 'critical' | 'high' | 'medium' | 'low';
 export type TaskAction =
   | 'created' | 'status_changed' | 'priority_changed' | 'reassigned'
@@ -67,32 +69,6 @@ export interface CreateTaskInput {
   tags?: string[];
   source_meeting_id?: string;
   source_recording_id?: string;
-}
-
-// ── Status transition validation ───────────────────────────────────────────
-
-const CEO_TRANSITIONS: Record<string, TaskStatus[]> = {
-  assigned: ['acknowledged'],
-  acknowledged: ['in_progress'],
-  in_progress: ['submitted'],
-  rejected: ['in_progress'],
-};
-
-const DG_TRANSITIONS: Record<string, TaskStatus[]> = {
-  submitted: ['verified', 'rejected'],
-  // DG can reassign (handled separately)
-};
-
-export function validateTransition(currentStatus: TaskStatus, newStatus: TaskStatus, role: string): boolean {
-  if (role === 'director' || role === 'admin') {
-    // DG can also force-assign
-    if (newStatus === 'assigned') return true;
-    return DG_TRANSITIONS[currentStatus]?.includes(newStatus) ?? false;
-  }
-  if (role === 'ceo') {
-    return CEO_TRANSITIONS[currentStatus]?.includes(newStatus) ?? false;
-  }
-  return false;
 }
 
 // ── CRUD ───────────────────────────────────────────────────────────────────
