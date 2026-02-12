@@ -22,7 +22,6 @@ import { TaskManagementCard, STATUS_LABELS } from './TaskManagementCard';
 import { DraggableTaskCard, DragOverlayCard } from './DraggableTaskCard';
 import { DroppableKanbanColumn } from './DroppableKanbanColumn';
 import { TaskFilters } from './TaskFilters';
-import { useAuth } from '@/lib/hooks/useAuth';
 import { getValidTransitions, validateTransition } from '@/lib/task-transitions';
 import type { TaskStatus } from '@/lib/task-transitions';
 
@@ -74,9 +73,8 @@ export function CommandCenter() {
   const [assignees, setAssignees] = useState<{ id: string; full_name: string }[]>([]);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [userRole, setUserRole] = useState('');
   const router = useRouter();
-  const { user } = useAuth();
-  const userRole = user?.role || '';
 
   // ── Sensors ──────────────────────────────────────────────────────────────
   const pointerSensor = useSensor(PointerSensor, {
@@ -113,7 +111,10 @@ export function CommandCenter() {
       ]);
       const tasksData = await tasksRes.json();
       const statsData = await statsRes.json();
-      if (tasksData.success) setTasks(tasksData.data.tasks);
+      if (tasksData.success) {
+        setTasks(tasksData.data.tasks);
+        if (tasksData.viewer?.role) setUserRole(tasksData.viewer.role);
+      }
       if (statsData.success) setStats(statsData.data);
     } catch (err) {
       console.error('Failed to fetch tasks:', err);

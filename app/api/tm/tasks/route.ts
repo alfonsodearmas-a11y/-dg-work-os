@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     if (url.searchParams.get('sort_dir')) filters.sort_dir = url.searchParams.get('sort_dir');
 
     const result = await getTasksList(filters, user.id, user.role);
-    return NextResponse.json({ success: true, data: result });
+    return NextResponse.json({ success: true, data: result, viewer: { role: user.role } });
   } catch (error: any) {
     if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
