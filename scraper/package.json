@@ -1,0 +1,16 @@
+{
+  "name": "oversight-scraper",
+  "version": "1.0.0",
+  "description": "Playwright scraper for oversight.gov.gy project data",
+  "main": "scraper.js",
+  "scripts": {
+    "scrape": "node scraper.js",
+    "dry-run": "node scraper.js --dry-run",
+    "highlights": "node scraper.js --highlights"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.7",
+    "playwright": "^1.49.1"
+  }
+}
