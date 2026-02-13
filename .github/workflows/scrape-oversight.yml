@@ -1,0 +1,48 @@
+name: Daily Oversight Scrape
+
+on:
+  schedule:
+    # Every day at 6:00 AM UTC (2:00 AM GYT)
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install scraper dependencies
+        working-directory: scraper
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: scraper
+        run: npx playwright install --with-deps chromium
+
+      - name: Run scraper (highlights mode)
+        working-directory: scraper
+        env:
+          OVERSIGHT_USERNAME: ${{ secrets.OVERSIGHT_USERNAME }}
+          OVERSIGHT_PASSWORD: ${{ secrets.OVERSIGHT_PASSWORD }}
+          HEADLESS: 'true'
+          DELAY_MS: '2000'
+        run: node scraper.js --highlights
+
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f scraper/output/oversight-highlights-latest.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update oversight scrape data [skip ci]"
+            git push
+          fi
