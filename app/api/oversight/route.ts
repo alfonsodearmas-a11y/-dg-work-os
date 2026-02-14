@@ -74,6 +74,18 @@ export async function GET() {
     data.bondWarnings = normalizeArray(data.bondWarnings);
     data.top10 = normalizeArray(data.top10);
 
+    // Normalize agencyBreakdown field names (scraper may use totalContractValue)
+    if (Array.isArray(data.agencyBreakdown)) {
+      data.agencyBreakdown = data.agencyBreakdown.map((a: any) => ({
+        agency: a.agency || null,
+        agencyFull: a.agencyFull || null,
+        projectCount: a.projectCount ?? 0,
+        totalValue: a.totalValue ?? a.totalContractValue ?? 0,
+        totalValueDisplay: a.totalValueDisplay || formatCurrency(a.totalValue ?? a.totalContractValue ?? null),
+        avgCompletion: a.avgCompletion ?? null,
+      }));
+    }
+
     return NextResponse.json({ success: true, data });
   } catch (error: any) {
     return NextResponse.json(

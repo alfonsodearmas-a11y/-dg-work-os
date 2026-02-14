@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, Fragment } from 'react';
 import {
   Eye,
   RefreshCw,
@@ -169,6 +169,32 @@ export default function OversightPage() {
   const [data, setData] = useState<OversightData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedAgency, setExpandedAgency] = useState<string | null>(null);
+
+  // Build a map of agency → projects from all alert arrays
+  const projectsByAgency = useMemo(() => {
+    if (!data) return {};
+    const map: Record<string, { project: any; tag: string }[]> = {};
+    const seen = new Set<string>();
+
+    function addProjects(arr: any[], tag: string) {
+      for (const p of arr) {
+        const agency = p.agency || p.subAgency || '-';
+        const key = `${agency}-${p.name || p.projectName || ''}-${p.id || p.p3Id || ''}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if (!map[agency]) map[agency] = [];
+        map[agency].push({ project: p, tag });
+      }
+    }
+
+    addProjects(data.overdue, 'overdue');
+    addProjects(data.atRisk, 'at-risk');
+    addProjects(data.endingSoon, 'ending-soon');
+    addProjects(data.delayed, 'delayed');
+    addProjects(data.bondWarnings, 'bond-warning');
+    return map;
+  }, [data]);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -390,6 +416,7 @@ export default function OversightPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-[#64748b] text-xs uppercase tracking-wider">
+                <th className="text-left px-4 py-3 w-6"></th>
                 <th className="text-left px-4 py-3">Agency</th>
                 <th className="text-right px-4 py-3">Projects</th>
                 <th className="text-right px-4 py-3">Total Value</th>
@@ -397,30 +424,61 @@ export default function OversightPage() {
               </tr>
             </thead>
             <tbody>
-              {data.agencyBreakdown.map((a) => (
-                <tr key={a.agency} className="border-t border-[#2d3a52]/50 hover:bg-[#2d3a52]/20">
-                  <td className="px-4 py-3">
-                    <span className="text-white font-medium">{a.agency || '-'}</span>
-                    {a.agencyFull && a.agencyFull !== a.agency && (
-                      <span className="text-[#64748b] text-xs ml-2 hidden md:inline">{a.agencyFull}</span>
+              {data.agencyBreakdown.map((a) => {
+                const isExpanded = expandedAgency === a.agency;
+                const agencyProjects = projectsByAgency[a.agency] || [];
+                return (
+                  <Fragment key={a.agency}>
+                    <tr
+                      onClick={() => setExpandedAgency(isExpanded ? null : a.agency)}
+                      className={`border-t border-[#2d3a52]/50 hover:bg-[#2d3a52]/20 cursor-pointer transition-colors ${isExpanded ? 'bg-[#2d3a52]/30' : ''}`}
+                    >
+                      <td className="pl-4 py-3 w-6">
+                        <ChevronRight className={`h-3.5 w-3.5 text-[#64748b] transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-white font-medium">{a.agency || '-'}</span>
+                        {a.agencyFull && a.agencyFull !== a.agency && (
+                          <span className="text-[#64748b] text-xs ml-2 hidden md:inline">{a.agencyFull}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-[#94a3b8] text-right">{a.projectCount}</td>
+                      <td className="px-4 py-3 text-[#d4af37] text-right font-mono">{a.totalValueDisplay || formatCurrency(a.totalValue)}</td>
+                      <td className="px-4 py-3 text-right">
+                        {a.avgCompletion != null ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <div className="w-16 h-1.5 bg-[#2d3a52] rounded-full">
+                              <div className="h-full rounded-full bg-[#d4af37]" style={{ width: `${a.avgCompletion}%` }} />
+                            </div>
+                            <span className="text-[#94a3b8] font-mono text-xs">{a.avgCompletion}%</span>
+                          </div>
+                        ) : (
+                          <span className="text-[#64748b]">-</span>
+                        )}
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr>
+                        <td colSpan={5} className="p-0">
+                          <div className="bg-[#0a1628]/60 border-t border-[#2d3a52]/50">
+                            {agencyProjects.length > 0 ? (
+                              <div className="max-h-[400px] overflow-y-auto">
+                                {agencyProjects.map((item, i) => (
+                                  <ProjectRow key={item.project.id || item.project.p3Id || i} project={item.project} tag={item.tag} />
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="px-4 py-6 text-[#64748b] text-sm text-center">
+                                No flagged projects for this agency
+                              </p>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-[#94a3b8] text-right">{a.projectCount}</td>
-                  <td className="px-4 py-3 text-[#94a3b8] text-right font-mono">{a.totalValueDisplay || formatCurrency(a.totalValue)}</td>
-                  <td className="px-4 py-3 text-right">
-                    {a.avgCompletion != null ? (
-                      <div className="flex items-center justify-end gap-2">
-                        <div className="w-16 h-1.5 bg-[#2d3a52] rounded-full">
-                          <div className="h-full rounded-full bg-[#d4af37]" style={{ width: `${a.avgCompletion}%` }} />
-                        </div>
-                        <span className="text-[#94a3b8] font-mono text-xs">{a.avgCompletion}%</span>
-                      </div>
-                    ) : (
-                      <span className="text-[#64748b]">-</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
