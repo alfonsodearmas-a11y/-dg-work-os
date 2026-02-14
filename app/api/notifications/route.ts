@@ -14,11 +14,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const userId = searchParams.get('user_id') || 'dg';
     const unreadOnly = searchParams.get('unread_only') === 'true';
+    const category = searchParams.get('category') || undefined;
+    const actionRequiredOnly = searchParams.get('action_required') === 'true';
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
     const [notifications, unread_count] = await Promise.all([
-      getNotifications(userId, { unreadOnly, limit, offset }),
+      getNotifications(userId, { unreadOnly, category, actionRequiredOnly, limit, offset }),
       getUnreadCount(userId),
     ]);
 

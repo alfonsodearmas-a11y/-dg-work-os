@@ -1,9 +1,22 @@
 'use client';
 
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Bell, Calendar, CheckSquare, FileText } from 'lucide-react';
+import { X, Bell, Calendar, CheckSquare, FileText, Building2, BarChart3, Eye, UserCheck } from 'lucide-react';
 import { useNotifications } from './NotificationProvider';
 import type { Notification } from '@/lib/notifications';
+
+type FilterMode = 'all' | 'unread' | 'action_required';
+type CategoryFilter = string | null;
+
+const CATEGORY_PILLS = [
+  { key: null, label: 'All' },
+  { key: 'meetings', label: 'Meetings' },
+  { key: 'tasks', label: 'Tasks' },
+  { key: 'projects', label: 'Projects' },
+  { key: 'kpi', label: 'KPI' },
+  { key: 'oversight', label: 'Oversight' },
+] as const;
 
 function getTimeGroup(scheduledFor: string): string {
   const now = new Date();
@@ -36,11 +49,24 @@ function relativeTime(dateStr: string): string {
   return `${days}d ago`;
 }
 
-function NotificationIcon({ type }: { type: string }) {
-  if (type.startsWith('meeting') || type === 'meeting_minutes_ready') {
-    if (type === 'meeting_minutes_ready') return <FileText className="h-4 w-4 text-[#3b82f6]" />;
-    return <Calendar className="h-4 w-4 text-[#d4af37]" />;
-  }
+function NotificationIcon({ type, category }: { type: string; category?: string }) {
+  // Meeting types
+  if (type === 'meeting_minutes_ready') return <FileText className="h-4 w-4 text-[#3b82f6]" />;
+  if (type.startsWith('meeting')) return <Calendar className="h-4 w-4 text-[#d4af37]" />;
+
+  // Project types
+  if (category === 'projects' || type.startsWith('project_')) return <Building2 className="h-4 w-4 text-[#f59e0b]" />;
+
+  // KPI types
+  if (category === 'kpi' || type.startsWith('kpi_')) return <BarChart3 className="h-4 w-4 text-[#8b5cf6]" />;
+
+  // Oversight types
+  if (category === 'oversight' || type.startsWith('oversight_')) return <Eye className="h-4 w-4 text-[#06b6d4]" />;
+
+  // Task management bridge types
+  if (type.startsWith('tm_')) return <UserCheck className="h-4 w-4 text-[#10b981]" />;
+
+  // Default: task
   return <CheckSquare className="h-4 w-4 text-[#22c55e]" />;
 }
 
@@ -50,6 +76,14 @@ function priorityColor(priority: string): string {
     case 'high': return '#3b82f6';
     case 'medium': return '#64748b';
     default: return 'transparent';
+  }
+}
+
+function actionLabel(actionType: string | null | undefined): string {
+  switch (actionType) {
+    case 'review': return 'Review';
+    case 'acknowledge': return 'Ack';
+    default: return 'View';
   }
 }
 
@@ -69,7 +103,7 @@ function NotificationCard({ notification, onRead }: { notification: Notification
 
       {/* Icon */}
       <div className="mt-0.5 pl-2 flex-shrink-0">
-        <NotificationIcon type={notification.type} />
+        <NotificationIcon type={notification.type} category={notification.category} />
       </div>
 
       {/* Content */}
@@ -80,7 +114,14 @@ function NotificationCard({ notification, onRead }: { notification: Notification
         {notification.body && (
           <p className="text-xs text-white/40 mt-0.5 truncate">{notification.body}</p>
         )}
-        <p className="text-[10px] text-white/30 mt-1">{relativeTime(notification.scheduled_for)}</p>
+        <div className="flex items-center gap-2 mt-1">
+          <p className="text-[10px] text-white/30">{relativeTime(notification.scheduled_for)}</p>
+          {notification.action_required && (
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[#d4af37]/20 text-[#d4af37]">
+              {actionLabel(notification.action_type)}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Unread dot */}
@@ -95,13 +136,23 @@ function NotificationCard({ notification, onRead }: { notification: Notification
 
 export function NotificationPanel() {
   const router = useRouter();
-  const { notifications, isPanelOpen, closePanel, markAsRead, markAllRead, dismissAll } = useNotifications();
+  const { notifications, isPanelOpen, closePanel, markAsRead, markAllRead, dismissAll, actionRequiredCount } = useNotifications();
+  const [filter, setFilter] = useState<FilterMode>('all');
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>(null);
+
+  const filtered = useMemo(() => {
+    let result = notifications;
+    if (filter === 'unread') result = result.filter(n => !n.read_at);
+    if (filter === 'action_required') result = result.filter(n => n.action_required);
+    if (categoryFilter) result = result.filter(n => n.category === categoryFilter);
+    return result;
+  }, [notifications, filter, categoryFilter]);
 
   if (!isPanelOpen) return null;
 
   // Group notifications
   const groups = new Map<string, Notification[]>();
-  for (const n of notifications) {
+  for (const n of filtered) {
     const group = getTimeGroup(n.scheduled_for);
     if (!groups.has(group)) groups.set(group, []);
     groups.get(group)!.push(n);
@@ -125,7 +176,7 @@ export function NotificationPanel() {
         onClick={closePanel}
       />
 
-      {/* Panel — desktop: right slide, mobile: bottom sheet */}
+      {/* Panel */}
       <div className="fixed z-[52] md:top-0 md:right-0 md:bottom-0 md:w-full md:max-w-[400px] md:animate-slide-in-right bottom-0 left-0 right-0 max-h-[80vh] md:max-h-none rounded-t-2xl md:rounded-none bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border-l border-[#2d3a52]/60 shadow-[-8px_0_32px_rgba(0,0,0,0.5)] flex flex-col">
         {/* Mobile handle */}
         <div className="md:hidden flex justify-center pt-2">
@@ -152,13 +203,57 @@ export function NotificationPanel() {
           </div>
         </div>
 
+        {/* Filter pills */}
+        <div className="px-4 pt-3 pb-1 flex-shrink-0 space-y-2">
+          {/* Status filter row */}
+          <div className="flex gap-1.5">
+            {([
+              { key: 'all' as FilterMode, label: 'All' },
+              { key: 'unread' as FilterMode, label: 'Unread' },
+              { key: 'action_required' as FilterMode, label: `Action${actionRequiredCount > 0 ? ` (${actionRequiredCount})` : ''}` },
+            ]).map(f => (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                className={`text-[11px] px-2.5 py-1 rounded-full transition-colors ${
+                  filter === f.key
+                    ? 'bg-[#d4af37]/20 text-[#d4af37] font-semibold'
+                    : 'bg-white/5 text-white/40 hover:text-white/60'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          {/* Category filter row */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+            {CATEGORY_PILLS.map(c => (
+              <button
+                key={c.key ?? 'all'}
+                onClick={() => setCategoryFilter(c.key)}
+                className={`text-[11px] px-2.5 py-1 rounded-full transition-colors whitespace-nowrap ${
+                  categoryFilter === c.key
+                    ? 'bg-white/15 text-white font-semibold'
+                    : 'bg-white/5 text-white/40 hover:text-white/60'
+                }`}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Content */}
         <div className="flex-1 overflow-y-auto pb-24 md:pb-4">
-          {notifications.length === 0 ? (
+          {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Bell className="h-10 w-10 text-white/10 mb-3" />
-              <p className="text-white/40 text-sm font-medium">You&apos;re all caught up</p>
-              <p className="text-white/20 text-xs mt-1">No notifications to show</p>
+              <p className="text-white/40 text-sm font-medium">
+                {filter !== 'all' || categoryFilter ? 'No matching notifications' : "You're all caught up"}
+              </p>
+              <p className="text-white/20 text-xs mt-1">
+                {filter !== 'all' || categoryFilter ? 'Try a different filter' : 'No notifications to show'}
+              </p>
             </div>
           ) : (
             <div className="divide-y divide-[#2d3a52]/30">

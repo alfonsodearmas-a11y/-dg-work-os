@@ -118,20 +118,32 @@ export async function deleteSubscriptionByEndpoint(endpoint: string): Promise<vo
 
 // --- Push payload builders ---
 
+// Category-based emoji map
+const CATEGORY_EMOJI: Record<string, string> = {
+  meetings: '📅',
+  tasks: '✅',
+  projects: '🏗️',
+  kpi: '📊',
+  oversight: '👁️',
+  system: '⚙️',
+};
+
+// Override for specific urgent types
+const TYPE_EMOJI: Record<string, string> = {
+  meeting_minutes_ready: '📋',
+  task_overdue: '⚠️',
+  project_newly_delayed: '🚨',
+  kpi_threshold_breach: '🔴',
+  tm_task_overdue: '⚠️',
+};
+
 function buildPushPayload(notification: Notification): object {
   const { type, title, body, priority, reference_url, id } = notification;
 
-  // Emoji prefix by type
-  let pushTitle = title;
-  if (type.startsWith('meeting_reminder') || type === 'meeting_starting') {
-    pushTitle = `📅 ${title}`;
-  } else if (type === 'meeting_minutes_ready') {
-    pushTitle = `📋 ${title}`;
-  } else if (type === 'task_due_tomorrow' || type === 'task_due_today') {
-    pushTitle = `✅ ${title}`;
-  } else if (type === 'task_overdue') {
-    pushTitle = `⚠️ ${title}`;
-  }
+  const emoji = TYPE_EMOJI[type]
+    || CATEGORY_EMOJI[notification.category]
+    || '';
+  const pushTitle = emoji ? `${emoji} ${title}` : title;
 
   // Tag for notification grouping — same meeting replaces older reminder
   let tag = `dg-${type}-${notification.reference_id || id}`;
@@ -215,6 +227,15 @@ export async function sendPushForNotification(notification: Notification): Promi
   };
   const prefKey = typeToPreference[notification.type];
   if (prefKey && !prefs[prefKey]) return false;
+
+  // Category-level preference check for new notification types
+  const categoryToPreference: Record<string, keyof typeof prefs> = {
+    projects: 'projects_enabled',
+    kpi: 'kpi_enabled',
+    oversight: 'oversight_enabled',
+  };
+  const catPrefKey = categoryToPreference[notification.category];
+  if (catPrefKey && !prefs[catPrefKey]) return false;
 
   // Rate limit
   const sentCount = await getPushCountLastHour(notification.user_id);

@@ -4,6 +4,9 @@ import { fetchWeekEvents } from './google-calendar';
 
 // --- Types ---
 
+export type NotificationCategory = 'meetings' | 'tasks' | 'projects' | 'kpi' | 'oversight' | 'system';
+export type NotificationReferenceType = 'meeting' | 'task' | 'project' | 'kpi' | 'oversight' | 'document' | 'system' | null;
+
 export interface Notification {
   id: string;
   user_id: string;
@@ -12,7 +15,7 @@ export interface Notification {
   body: string;
   icon: string | null;
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  reference_type: 'meeting' | 'task' | null;
+  reference_type: NotificationReferenceType;
   reference_id: string | null;
   reference_url: string | null;
   scheduled_for: string;
@@ -21,6 +24,13 @@ export interface Notification {
   dismissed_at: string | null;
   push_sent: boolean;
   created_at: string;
+  category: NotificationCategory;
+  source_module: string;
+  action_required: boolean;
+  action_type: string | null;
+  expires_at: string | null;
+  metadata: Record<string, unknown>;
+  updated_at: string | null;
 }
 
 export interface NotificationPrefs {
@@ -30,6 +40,9 @@ export interface NotificationPrefs {
   task_due_reminders: boolean;
   task_overdue_alerts: boolean;
   meeting_minutes_ready: boolean;
+  projects_enabled: boolean;
+  kpi_enabled: boolean;
+  oversight_enabled: boolean;
   do_not_disturb: boolean;
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
@@ -39,7 +52,7 @@ export interface NotificationPrefs {
 
 export async function getNotifications(
   userId: string,
-  opts?: { unreadOnly?: boolean; limit?: number; offset?: number }
+  opts?: { unreadOnly?: boolean; category?: string; actionRequiredOnly?: boolean; limit?: number; offset?: number }
 ): Promise<Notification[]> {
   const limit = opts?.limit ?? 50;
   const offset = opts?.offset ?? 0;
@@ -55,6 +68,12 @@ export async function getNotifications(
 
   if (opts?.unreadOnly) {
     query = query.is('read_at', null);
+  }
+  if (opts?.category) {
+    query = query.eq('category', opts.category);
+  }
+  if (opts?.actionRequiredOnly) {
+    query = query.eq('action_required', true);
   }
 
   const { data, error } = await query;
@@ -131,11 +150,29 @@ async function exists(type: string, referenceId: string, scheduledFor: string): 
   return (count || 0) > 0;
 }
 
-async function insertNotification(n: Omit<Notification, 'id' | 'delivered_at' | 'read_at' | 'dismissed_at' | 'push_sent' | 'created_at'>): Promise<Notification | null> {
+type InsertNotificationInput = Omit<Notification, 'id' | 'delivered_at' | 'read_at' | 'dismissed_at' | 'push_sent' | 'created_at' | 'category' | 'source_module' | 'action_required' | 'action_type' | 'expires_at' | 'metadata' | 'updated_at'> & {
+  category?: NotificationCategory;
+  source_module?: string;
+  action_required?: boolean;
+  action_type?: string | null;
+  expires_at?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
+export async function insertNotification(n: InsertNotificationInput): Promise<Notification | null> {
   if (await exists(n.type, n.reference_id || '', n.scheduled_for)) {
     return null;
   }
-  const { data, error } = await supabaseAdmin.from('notifications').insert(n).select().single();
+  const row = {
+    ...n,
+    category: n.category ?? 'system',
+    source_module: n.source_module ?? 'system',
+    action_required: n.action_required ?? false,
+    action_type: n.action_type ?? null,
+    expires_at: n.expires_at ?? null,
+    metadata: n.metadata ?? {},
+  };
+  const { data, error } = await supabaseAdmin.from('notifications').insert(row).select().single();
   if (error) {
     console.error('Failed to insert notification:', error);
     return null;
@@ -349,25 +386,57 @@ export async function generateMinutesReadyNotifications(userId: string): Promise
 
 // --- Orchestrator ---
 
+export type GenerateResult = { count: number; notifications: Notification[] };
+
 export async function generateAll(userId: string): Promise<{
   meetings: number;
   tasks: number;
   minutes: number;
+  projects: number;
+  kpi: number;
+  oversight: number;
+  taskBridge: number;
   allNotifications: Notification[];
 }> {
-  const [meetingResult, taskResult, minutesResult] = await Promise.all([
+  // Import new generators dynamically to avoid circular deps
+  const [
+    { generateProjectNotifications },
+    { generateKpiNotifications },
+    { generateOversightNotifications },
+    { generateTaskBridgeNotifications },
+  ] = await Promise.all([
+    import('./notification-generators/projects'),
+    import('./notification-generators/kpi'),
+    import('./notification-generators/oversight'),
+    import('./notification-generators/task-bridge'),
+  ]);
+
+  const [meetingResult, taskResult, minutesResult, projectResult, kpiResult, oversightResult, taskBridgeResult] = await Promise.all([
     generateMeetingNotifications(userId),
     generateTaskNotifications(userId),
     generateMinutesReadyNotifications(userId),
+    generateProjectNotifications(userId),
+    generateKpiNotifications(userId),
+    generateOversightNotifications(userId),
+    generateTaskBridgeNotifications(userId),
   ]);
+
   return {
     meetings: meetingResult.count,
     tasks: taskResult.count,
     minutes: minutesResult.count,
+    projects: projectResult.count,
+    kpi: kpiResult.count,
+    oversight: oversightResult.count,
+    taskBridge: taskBridgeResult.count,
     allNotifications: [
       ...meetingResult.notifications,
       ...taskResult.notifications,
       ...minutesResult.notifications,
+      ...projectResult.notifications,
+      ...kpiResult.notifications,
+      ...oversightResult.notifications,
+      ...taskBridgeResult.notifications,
     ],
   };
 }
@@ -389,6 +458,9 @@ export async function getPreferences(userId: string): Promise<NotificationPrefs>
       task_due_reminders: true,
       task_overdue_alerts: true,
       meeting_minutes_ready: true,
+      projects_enabled: true,
+      kpi_enabled: true,
+      oversight_enabled: true,
       do_not_disturb: false,
       quiet_hours_start: null,
       quiet_hours_end: null,
@@ -402,6 +474,9 @@ export async function getPreferences(userId: string): Promise<NotificationPrefs>
     task_due_reminders: data.task_due_reminders,
     task_overdue_alerts: data.task_overdue_alerts,
     meeting_minutes_ready: data.meeting_minutes_ready,
+    projects_enabled: data.projects_enabled ?? true,
+    kpi_enabled: data.kpi_enabled ?? true,
+    oversight_enabled: data.oversight_enabled ?? true,
     do_not_disturb: data.do_not_disturb,
     quiet_hours_start: data.quiet_hours_start,
     quiet_hours_end: data.quiet_hours_end,

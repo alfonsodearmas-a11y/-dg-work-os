@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import type { Notification } from '@/lib/notifications';
@@ -8,6 +8,7 @@ import type { Notification } from '@/lib/notifications';
 interface NotificationContextValue {
   notifications: Notification[];
   unreadCount: number;
+  actionRequiredCount: number;
   isPanelOpen: boolean;
   openPanel: () => void;
   closePanel: () => void;
@@ -21,6 +22,7 @@ interface NotificationContextValue {
 const NotificationContext = createContext<NotificationContextValue>({
   notifications: [],
   unreadCount: 0,
+  actionRequiredCount: 0,
   isPanelOpen: false,
   openPanel: () => {},
   closePanel: () => {},
@@ -71,9 +73,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  // Initial load
+  // Compute action required count from current notifications
+  const actionRequiredCount = useMemo(
+    () => notifications.filter(n => n.action_required && !n.read_at && !n.dismissed_at).length,
+    [notifications]
+  );
+
+  // Initial load + fire-and-forget generate to ensure fresh notifications
   useEffect(() => {
     fetchNotifications();
+    // Trigger generation (safe due to dedup)
+    fetch('/api/notifications/generate', { method: 'POST' }).catch(() => {});
   }, [fetchNotifications]);
 
   // Periodic check every 60s
@@ -218,6 +228,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       value={{
         notifications,
         unreadCount,
+        actionRequiredCount,
         isPanelOpen,
         openPanel,
         closePanel,
