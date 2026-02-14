@@ -3,11 +3,12 @@ import { generateAll } from '@/lib/notifications';
 import { sendPushForNotifications } from '@/lib/push';
 
 export async function POST(request: NextRequest) {
-  // Verify cron secret for Vercel cron jobs
+  // Allow if: (1) cron secret matches, (2) no cron secret configured, or (3) has valid dg-auth cookie
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
+  const hasDgAuth = !!request.cookies.get('dg-auth')?.value;
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (cronSecret && authHeader !== `Bearer ${cronSecret}` && !hasDgAuth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

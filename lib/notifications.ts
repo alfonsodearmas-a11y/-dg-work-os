@@ -213,6 +213,8 @@ export async function generateMeetingNotifications(userId: string): Promise<{ co
           reference_id: event.google_id,
           reference_url: '/',
           scheduled_for: scheduledFor,
+          category: 'meetings',
+          source_module: 'calendar',
         });
         if (inserted) created.push(inserted);
       }
@@ -231,6 +233,8 @@ export async function generateMeetingNotifications(userId: string): Promise<{ co
           reference_id: event.google_id,
           reference_url: '/',
           scheduled_for: scheduledFor,
+          category: 'meetings',
+          source_module: 'calendar',
         });
         if (inserted) created.push(inserted);
       }
@@ -249,6 +253,8 @@ export async function generateMeetingNotifications(userId: string): Promise<{ co
           reference_id: event.google_id,
           reference_url: '/',
           scheduled_for: scheduledFor,
+          category: 'meetings',
+          source_module: 'calendar',
         });
         if (inserted) created.push(inserted);
       }
@@ -303,6 +309,8 @@ export async function generateTaskNotifications(userId: string): Promise<{ count
           reference_id: task.notion_id,
           reference_url: task.url || '/',
           scheduled_for: morningSlot,
+          category: 'tasks',
+          source_module: 'notion',
         });
         if (inserted) created.push(inserted);
       }
@@ -319,6 +327,8 @@ export async function generateTaskNotifications(userId: string): Promise<{ count
           reference_id: task.notion_id,
           reference_url: task.url || '/',
           scheduled_for: morningSlot,
+          category: 'tasks',
+          source_module: 'notion',
         });
         if (inserted) created.push(inserted);
       }
@@ -336,6 +346,8 @@ export async function generateTaskNotifications(userId: string): Promise<{ count
           reference_id: task.notion_id,
           reference_url: task.url || '/',
           scheduled_for: morningSlot,
+          category: 'tasks',
+          source_module: 'notion',
         });
         if (inserted) created.push(inserted);
       }
@@ -374,6 +386,8 @@ export async function generateMinutesReadyNotifications(userId: string): Promise
         reference_id: m.id,
         reference_url: `/meetings/${m.id}`,
         scheduled_for: m.processed_at || new Date().toISOString(),
+        category: 'meetings',
+        source_module: 'calendar',
       });
       if (inserted) created.push(inserted);
     }

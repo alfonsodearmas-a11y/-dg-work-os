@@ -82,8 +82,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   // Initial load + fire-and-forget generate to ensure fresh notifications
   useEffect(() => {
     fetchNotifications();
-    // Trigger generation (safe due to dedup)
-    fetch('/api/notifications/generate', { method: 'POST' }).catch(() => {});
+    // Trigger generation (safe due to dedup), then re-fetch to pick up any new ones
+    fetch('/api/notifications/generate', { method: 'POST' })
+      .then(res => { if (res.ok) return res.json(); })
+      .then(data => { if (data?.generated?.total > 0) fetchNotifications(); })
+      .catch(() => {});
   }, [fetchNotifications]);
 
   // Periodic check every 60s
