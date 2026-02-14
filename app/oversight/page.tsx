@@ -131,22 +131,22 @@ function ProjectRow({ project, tag }: { project: any; tag?: string }) {
   return (
     <div className="flex items-start gap-3 px-4 py-3 hover:bg-[#2d3a52]/20 transition-colors border-b border-[#2d3a52]/50 last:border-0">
       <div className="flex-1 min-w-0">
-        <p className="text-white text-sm font-medium truncate">{project.projectName || 'Unnamed'}</p>
+        <p className="text-white text-sm font-medium truncate">{project.name || 'Unnamed'}</p>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-[#64748b]">
-          <span>{project.subAgency || project.executingAgency}</span>
-          {project.region && <span>Region {project.region}</span>}
-          {project.contractValueRaw && <span>{project.contractValueRaw}</span>}
-          {project.contractors && <span>{project.contractors}</span>}
+          <span>{project.agency}</span>
+          {project.region && <span>{project.region}</span>}
+          {project.contractValueDisplay && <span>{project.contractValueDisplay}</span>}
+          {project.contractor && <span>{project.contractor}</span>}
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        {project.completionPercent != null && (
+        {project.completion != null && (
           <div className="text-right">
-            <p className="text-xs font-mono text-[#94a3b8]">{project.completionPercent}%</p>
+            <p className="text-xs font-mono text-[#94a3b8]">{project.completion}%</p>
             <div className="w-16 h-1.5 bg-[#2d3a52] rounded-full mt-1">
               <div
                 className="h-full rounded-full bg-[#d4af37]"
-                style={{ width: `${Math.min(project.completionPercent, 100)}%` }}
+                style={{ width: `${Math.min(project.completion, 100)}%` }}
               />
             </div>
           </div>
@@ -397,9 +397,14 @@ export default function OversightPage() {
             <tbody>
               {data.agencyBreakdown.map((a) => (
                 <tr key={a.agency} className="border-t border-[#2d3a52]/50 hover:bg-[#2d3a52]/20">
-                  <td className="px-4 py-3 text-white font-medium">{a.agency || '-'}</td>
+                  <td className="px-4 py-3">
+                    <span className="text-white font-medium">{a.agency || '-'}</span>
+                    {a.agencyFull && a.agencyFull !== a.agency && (
+                      <span className="text-[#64748b] text-xs ml-2 hidden md:inline">{a.agencyFull}</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-[#94a3b8] text-right">{a.projectCount}</td>
-                  <td className="px-4 py-3 text-[#94a3b8] text-right font-mono">{formatCurrency(a.totalContractValue)}</td>
+                  <td className="px-4 py-3 text-[#94a3b8] text-right font-mono">{a.totalValueDisplay || formatCurrency(a.totalValue)}</td>
                   <td className="px-4 py-3 text-right">
                     {a.avgCompletion != null ? (
                       <div className="flex items-center justify-end gap-2">
@@ -427,14 +432,14 @@ export default function OversightPage() {
         accent="bg-[#d4af37]/20 text-[#d4af37]"
       >
         {data.top10.map((p: any, i: number) => (
-          <div key={p.p3Id || i} className="flex items-center gap-3 px-4 py-3 border-b border-[#2d3a52]/50 last:border-0 hover:bg-[#2d3a52]/20">
-            <span className="text-[#d4af37] font-mono text-sm w-6 text-right shrink-0">#{i + 1}</span>
+          <div key={p.id || i} className="flex items-center gap-3 px-4 py-3 border-b border-[#2d3a52]/50 last:border-0 hover:bg-[#2d3a52]/20">
+            <span className="text-[#d4af37] font-mono text-sm w-6 text-right shrink-0">#{p.rank || i + 1}</span>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-medium truncate">{p.projectName}</p>
-              <p className="text-[#64748b] text-xs">{p.subAgency} &middot; {formatCurrency(p.contractValue)}</p>
+              <p className="text-white text-sm font-medium truncate">{p.name}</p>
+              <p className="text-[#64748b] text-xs">{p.agency} &middot; {p.contractValueDisplay || formatCurrency(p.contractValue)}</p>
             </div>
-            {p.completionPercent != null && (
-              <span className="text-[#94a3b8] font-mono text-xs shrink-0">{p.completionPercent}%</span>
+            {p.completion != null && (
+              <span className="text-[#94a3b8] font-mono text-xs shrink-0">{p.completion}%</span>
             )}
           </div>
         ))}

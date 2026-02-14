@@ -1,8 +1,19 @@
 /**
  * Highlights / analysis engine.
- * Takes scraped data and produces structured insights:
- * delayed, overdue, ending soon, at-risk, bond warnings, agency breakdown, top 10.
+ * Takes scraped data and produces structured insights with standardized project format.
+ *
+ * Standard project shape (every project in every section):
+ *   id, reference, name, agency, agencyFull, ministry, region, regionCode,
+ *   contractor, contractValue, contractValueDisplay, completion, endDate, hasImages
+ *
+ * Section-specific fields are added on top of the standard shape.
  */
+
+const {
+  standardizeProject,
+  formatCurrency,
+  formatAgency,
+} = require('./parsers');
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -29,7 +40,8 @@ function findDelayed(projects, details = []) {
     .map((p) => {
       const detail = detailMap.get(p.p3Id);
       return {
-        ...p,
+        ...standardizeProject(p),
+        status: 'Delayed',
         extensionReason: detail?.projectDetails?.extensionReason || null,
         extensionDate: detail?.projectDetails?.extensionDate || null,
       };
@@ -42,13 +54,16 @@ function findDelayed(projects, details = []) {
 function findOverdue(projects) {
   return projects.filter((p) => {
     if (!p.projectEndDate) return false;
-    const isPastDue = p.projectEndDate < TODAY;
-    const isIncomplete = (p.completionPercent || 0) < 100;
-    return isPastDue && isIncomplete;
-  }).map((p) => ({
-    ...p,
-    daysOverdue: daysBetween(p.projectEndDate, TODAY),
-  }));
+    return p.projectEndDate < TODAY && (p.completionPercent || 0) < 100;
+  }).map((p) => {
+    const days = daysBetween(p.projectEndDate, TODAY);
+    return {
+      ...standardizeProject(p),
+      status: 'Overdue',
+      daysOverdue: days,
+      daysOverdueDisplay: `${days} day${days !== 1 ? 's' : ''} overdue`,
+    };
+  });
 }
 
 /**
@@ -57,12 +72,17 @@ function findOverdue(projects) {
 function findEndingSoon(projects) {
   return projects.filter((p) => {
     if (!p.projectEndDate) return false;
-    const daysRemaining = daysBetween(TODAY, p.projectEndDate);
-    return daysRemaining >= 0 && daysRemaining <= 30;
-  }).map((p) => ({
-    ...p,
-    daysRemaining: daysBetween(TODAY, p.projectEndDate),
-  }));
+    const days = daysBetween(TODAY, p.projectEndDate);
+    return days >= 0 && days <= 30;
+  }).map((p) => {
+    const days = daysBetween(TODAY, p.projectEndDate);
+    return {
+      ...standardizeProject(p),
+      status: 'Ending Soon',
+      daysRemaining: days,
+      daysRemainingDisplay: `${days} day${days !== 1 ? 's' : ''} remaining`,
+    };
+  });
 }
 
 /**
@@ -71,14 +91,18 @@ function findEndingSoon(projects) {
 function findAtRisk(projects) {
   return projects.filter((p) => {
     if (!p.projectEndDate) return false;
-    const daysRemaining = daysBetween(TODAY, p.projectEndDate);
-    const completion = p.completionPercent || 0;
-    return completion < 50 && daysRemaining > 0 && daysRemaining < 90;
-  }).map((p) => ({
-    ...p,
-    daysRemaining: daysBetween(TODAY, p.projectEndDate),
-    risk: 'LOW_COMPLETION_NEAR_DEADLINE',
-  }));
+    const days = daysBetween(TODAY, p.projectEndDate);
+    return (p.completionPercent || 0) < 50 && days > 0 && days < 90;
+  }).map((p) => {
+    const days = daysBetween(TODAY, p.projectEndDate);
+    return {
+      ...standardizeProject(p),
+      status: 'At Risk',
+      daysRemaining: days,
+      daysRemainingDisplay: `${days} day${days !== 1 ? 's' : ''} remaining`,
+      riskReason: 'Low completion with approaching deadline',
+    };
+  });
 }
 
 /**
@@ -87,7 +111,6 @@ function findAtRisk(projects) {
 function findBondWarnings(projects, details = []) {
   const detailMap = new Map(details.map((d) => [d.p3Id, d]));
 
-  // Projects that are delayed or overdue
   const flagged = projects.filter((p) => {
     const status = (p.status || '').toUpperCase();
     const isDelayed = status === 'DELAYED';
@@ -98,16 +121,13 @@ function findBondWarnings(projects, details = []) {
   return flagged
     .filter((p) => {
       const detail = detailMap.get(p.p3Id);
-      if (!detail || !detail.bondInfo) return true; // No info = flag it
+      if (!detail || !detail.bondInfo) return true;
       return !detail.bondInfo.hasBondDocuments;
     })
     .map((p) => ({
-      p3Id: p.p3Id,
-      projectReference: p.projectReference,
-      projectName: p.projectName,
-      subAgency: p.subAgency,
-      contractValue: p.contractValue,
-      reason: 'Missing bond documents for delayed/overdue project',
+      ...standardizeProject(p),
+      status: 'Bond Warning',
+      warning: 'Missing bond documents for delayed/overdue project',
     }));
 }
 
@@ -118,36 +138,41 @@ function agencyBreakdown(projects) {
   const agencies = {};
 
   for (const p of projects) {
-    const agency = p.subAgency || 'Unknown';
-    if (!agencies[agency]) {
-      agencies[agency] = {
-        agency,
+    const code = p.subAgency || 'Unknown';
+    if (!agencies[code]) {
+      agencies[code] = {
+        code,
         count: 0,
         totalValue: 0,
         totalCompletion: 0,
         completionCount: 0,
       };
     }
-    agencies[agency].count++;
+    agencies[code].count++;
     if (p.contractValue) {
-      agencies[agency].totalValue += p.contractValue;
+      agencies[code].totalValue += p.contractValue;
     }
     if (p.completionPercent != null) {
-      agencies[agency].totalCompletion += p.completionPercent;
-      agencies[agency].completionCount++;
+      agencies[code].totalCompletion += p.completionPercent;
+      agencies[code].completionCount++;
     }
   }
 
   return Object.values(agencies)
-    .map((a) => ({
-      agency: a.agency,
-      projectCount: a.count,
-      totalContractValue: a.totalValue,
-      avgCompletion: a.completionCount > 0
+    .map((a) => {
+      const avg = a.completionCount > 0
         ? Math.round((a.totalCompletion / a.completionCount) * 10) / 10
-        : null,
-    }))
-    .sort((a, b) => b.totalContractValue - a.totalContractValue);
+        : null;
+      return {
+        agency: a.code,
+        agencyFull: formatAgency(a.code),
+        projectCount: a.count,
+        totalValue: a.totalValue,
+        totalValueDisplay: formatCurrency(a.totalValue),
+        avgCompletion: avg,
+      };
+    })
+    .sort((a, b) => b.totalValue - a.totalValue);
 }
 
 /**
@@ -158,14 +183,9 @@ function topByValue(projects, n = 10) {
     .filter((p) => p.contractValue != null)
     .sort((a, b) => b.contractValue - a.contractValue)
     .slice(0, n)
-    .map((p) => ({
-      p3Id: p.p3Id,
-      projectReference: p.projectReference,
-      projectName: p.projectName,
-      subAgency: p.subAgency,
-      contractValue: p.contractValue,
-      completionPercent: p.completionPercent,
-      projectEndDate: p.projectEndDate,
+    .map((p, i) => ({
+      rank: i + 1,
+      ...standardizeProject(p),
     }));
 }
 
