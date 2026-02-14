@@ -51,8 +51,10 @@ interface OversightData {
   bondWarnings: any[];
   agencyBreakdown: {
     agency: string;
+    agencyFull: string | null;
     projectCount: number;
-    totalContractValue: number;
+    totalValue: number;
+    totalValueDisplay: string | null;
     avgCompletion: number | null;
   }[];
   top10: any[];

@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Activity,
-  FolderKanban,
   FileText,
   BookOpen,
   Settings,
@@ -31,7 +30,6 @@ import { useSidebar } from './SidebarContext';
 const mainNavItems = [
   { href: '/', label: 'Daily Briefing', icon: LayoutDashboard },
   { href: '/intel', label: 'Agency Intel', icon: Activity },
-  { href: '/projects', label: 'Projects', icon: FolderKanban },
   { href: '/oversight', label: 'Oversight', icon: Eye },
   { href: '/budget', label: 'Budget 2026', icon: DollarSign },
   { href: '/meetings', label: 'Meetings', icon: BookOpen },
