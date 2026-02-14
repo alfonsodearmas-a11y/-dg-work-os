@@ -296,6 +296,19 @@ export async function updateTask(
   });
 }
 
+// ── Delete ──────────────────────────────────────────────────────────────────
+
+export async function deleteTask(id: string): Promise<void> {
+  await transaction(async (client: PoolClient) => {
+    await client.query('DELETE FROM task_activities WHERE task_id = $1', [id]);
+    await client.query('DELETE FROM task_comments WHERE task_id = $1', [id]);
+    await client.query('DELETE FROM deadline_extension_requests WHERE task_id = $1', [id]);
+    await client.query('DELETE FROM task_notifications WHERE task_id = $1', [id]);
+    const result = await client.query('DELETE FROM tasks WHERE id = $1 RETURNING id', [id]);
+    if (result.rows.length === 0) throw new Error('Task not found');
+  });
+}
+
 // ── Activities ─────────────────────────────────────────────────────────────
 
 export async function getTaskActivities(taskId: string) {

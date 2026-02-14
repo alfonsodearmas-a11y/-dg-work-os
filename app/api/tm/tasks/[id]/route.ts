@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateAny, canAccessTask, AuthError } from '@/lib/auth';
-import { getTask, updateTask, updateTaskStatus, validateTransition } from '@/lib/task-queries';
+import { getTask, updateTask, updateTaskStatus, validateTransition, deleteTask } from '@/lib/task-queries';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -51,6 +51,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     const updated = await updateTask(id, fieldUpdates, user.id);
     return NextResponse.json({ success: true, data: updated });
+  } catch (error: any) {
+    if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const user = await authenticateAny(request);
+    const { id } = await params;
+    const task = await getTask(id);
+    if (!task) return NextResponse.json({ success: false, error: 'Task not found' }, { status: 404 });
+    if (!canAccessTask(user, task)) return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
+
+    await deleteTask(id);
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

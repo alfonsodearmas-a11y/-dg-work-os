@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Clock, AlertTriangle, User, CheckCheck, X } from 'lucide-react';
+import { Plus, Clock, AlertTriangle, User, CheckCheck, X, Trash2 } from 'lucide-react';
 import { ALL_STATUSES, STATUS_CONFIG, type TaskStatus } from '@/lib/task-transitions';
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -215,6 +215,27 @@ export function CommandCenter() {
     }
   }, [addToast, fetchTasks]);
 
+  // ── Delete task ────────────────────────────────────────────────────────
+  const handleDelete = useCallback(async (taskId: string) => {
+    // Optimistic removal
+    const prev = tasks;
+    setTasks(t => t.filter(x => x.id !== taskId));
+
+    try {
+      const res = await fetch(`/api/tm/tasks/${taskId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!data.success) {
+        setTasks(prev);
+        addToast('error', data.error || 'Failed to delete');
+        return;
+      }
+      addToast('success', 'Task deleted');
+    } catch {
+      setTasks(prev);
+      addToast('error', 'Network error — reverted');
+    }
+  }, [tasks, addToast]);
+
   // ── Render ──────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -278,6 +299,7 @@ export function CommandCenter() {
                     key={t.id}
                     task={t}
                     onStatusChange={handleStatusChange}
+                    onDelete={handleDelete}
                     onDragStart={onDragStart}
                     onDragEnd={onDragEnd}
                     onTouchStart={onTouchStart}
@@ -324,6 +346,7 @@ export function CommandCenter() {
 function TaskCard({
   task,
   onStatusChange,
+  onDelete,
   onDragStart,
   onDragEnd,
   onTouchStart,
@@ -333,6 +356,7 @@ function TaskCard({
 }: {
   task: Task;
   onStatusChange: (id: string, status: TaskStatus) => void;
+  onDelete: (id: string) => void;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onDragEnd: (e: React.DragEvent) => void;
   onTouchStart: (e: React.TouchEvent, id: string) => void;
@@ -340,6 +364,7 @@ function TaskCard({
   onTouchEnd: () => void;
   isDragging: boolean;
 }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done';
   const dot = PRIORITY_DOT[task.priority] || PRIORITY_DOT.medium;
 
@@ -377,18 +402,47 @@ function TaskCard({
         )}
       </div>
 
-      {/* Status dropdown */}
-      <select
-        value={task.status}
-        onClick={(e) => e.stopPropagation()}
-        onMouseDown={(e) => e.stopPropagation()}
-        onChange={(e) => onStatusChange(task.id, e.target.value as TaskStatus)}
-        className="w-full text-xs bg-[#0a1628] border border-[#2d3a52] text-[#c8d0dc] rounded px-2 py-1 cursor-pointer hover:border-[#d4af37]/40 transition-colors"
-      >
-        {ALL_STATUSES.map(s => (
-          <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
-        ))}
-      </select>
+      {/* Status dropdown + delete */}
+      <div className="flex items-center gap-1">
+        <select
+          value={task.status}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onChange={(e) => onStatusChange(task.id, e.target.value as TaskStatus)}
+          className="flex-1 text-xs bg-[#0a1628] border border-[#2d3a52] text-[#c8d0dc] rounded px-2 py-1 cursor-pointer hover:border-[#d4af37]/40 transition-colors"
+        >
+          {ALL_STATUSES.map(s => (
+            <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
+          ))}
+        </select>
+        {confirmDelete ? (
+          <div className="flex items-center gap-0.5" onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}>
+            <button
+              onClick={() => { onDelete(task.id); setConfirmDelete(false); }}
+              className="p-1 rounded text-red-400 bg-red-500/15 hover:bg-red-500/30 transition-colors text-[10px] font-medium"
+              title="Confirm delete"
+            >
+              Yes
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="p-1 rounded text-[#64748b] hover:text-white transition-colors text-[10px]"
+              title="Cancel"
+            >
+              No
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="p-1 rounded text-[#64748b] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            title="Delete task"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
