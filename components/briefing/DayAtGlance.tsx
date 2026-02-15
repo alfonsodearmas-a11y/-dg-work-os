@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { format, parseISO, differenceInMinutes, isAfter, isBefore } from 'date-fns';
-import { Calendar, Clock, Video, MapPin, Plus, AlertTriangle } from 'lucide-react';
+import { Calendar, Clock, Video, MapPin, Plus, AlertTriangle, RefreshCcw } from 'lucide-react';
 import { CalendarEvent, detectEventCategory, EventCategory } from '@/lib/calendar-types';
 import { calculateDayStats, getNextEvent, getVideoLink } from '@/lib/calendar-utils';
 
@@ -89,18 +89,45 @@ export function DayAtGlance({ events, weekEvents, onJoinNextCall, onNewEvent, on
 
   return (
     <div className="card-premium p-4 md:p-6">
-      {/* Calendar error banner */}
+      {/* Calendar disconnected — clean reconnect card instead of raw error */}
       {calendarError && (
-        <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-3">
-          <AlertTriangle className="h-4 w-4 text-red-400 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm text-red-400 font-medium">
-              {calendarError.type === 'token_expired'
-                ? 'Google Calendar disconnected'
-                : 'Calendar sync error'}
-            </p>
-            <p className="text-xs text-red-400/70 mt-0.5 truncate">{calendarError.message}</p>
+        <div className="mb-4 p-4 rounded-xl bg-[#0a1628]/60 border border-[#d4af37]/20 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-[#d4af37]/10 flex items-center justify-center flex-shrink-0">
+            <Calendar className="h-5 w-5 text-[#d4af37]" />
           </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-white font-medium">
+              {calendarError.type === 'token_expired' || calendarError.type === 'invalid_credentials'
+                ? 'Calendar disconnected'
+                : calendarError.type === 'network_error'
+                ? 'Calendar temporarily unavailable'
+                : 'Calendar sync issue'}
+            </p>
+            <p className="text-xs text-[#64748b] mt-0.5">
+              {calendarError.type === 'token_expired' || calendarError.type === 'invalid_credentials'
+                ? 'Google Calendar needs to be reconnected. Other briefing data is still available.'
+                : calendarError.type === 'network_error'
+                ? 'Unable to reach Google Calendar. Will retry automatically.'
+                : calendarError.message}
+            </p>
+          </div>
+          {calendarError.type === 'network_error' ? (
+            <button
+              onClick={() => window.location.reload()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2d3a52] text-white text-xs font-medium hover:bg-[#3d4a62] transition-colors flex-shrink-0"
+            >
+              <RefreshCcw className="h-3.5 w-3.5" />
+              Retry
+            </button>
+          ) : (
+            <button
+              onClick={() => window.location.href = '/admin?reconnect=calendar'}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/30 text-[#d4af37] text-xs font-medium hover:bg-[#d4af37]/25 transition-colors flex-shrink-0"
+            >
+              <RefreshCcw className="h-3.5 w-3.5" />
+              Reconnect
+            </button>
+          )}
         </div>
       )}
 

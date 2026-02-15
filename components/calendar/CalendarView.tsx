@@ -8,7 +8,10 @@ import {
   RefreshCw,
   Loader2,
   Clock,
-  MapPin
+  MapPin,
+  AlertTriangle,
+  RefreshCcw,
+  Calendar
 } from 'lucide-react';
 import {
   format,
@@ -32,6 +35,8 @@ export function CalendarView() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [calendarDisconnected, setCalendarDisconnected] = useState(false);
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -39,18 +44,26 @@ export function CalendarView() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isNewEvent, setIsNewEvent] = useState(false);
 
-  // Fetch events for current month
+  // Fetch events for current month with error/disconnected state tracking
   const fetchEvents = useCallback(async () => {
     try {
       const year = currentMonth.getFullYear();
       const month = currentMonth.getMonth();
       const res = await fetch(`/api/calendar?year=${year}&month=${month}`);
       const data = await res.json();
-      if (data.events) {
-        setEvents(data.events);
+      if (data._errorType === 'token_expired' || data._errorType === 'invalid_credentials') {
+        setCalendarDisconnected(true);
+        setEvents([]);
+      } else {
+        setCalendarDisconnected(false);
+        setError(null);
+        if (data.events) {
+          setEvents(data.events);
+        }
       }
-    } catch (error) {
-      console.error('Failed to fetch events:', error);
+    } catch (err) {
+      console.error('Failed to fetch events:', err);
+      setError('Failed to load calendar events');
     } finally {
       setLoading(false);
       setSyncing(false);
@@ -106,26 +119,40 @@ export function CalendarView() {
   };
 
   const handleSaveEvent = async (data: EventFormData) => {
-    const endpoint = isNewEvent
-      ? '/api/calendar'
-      : `/api/calendar/${selectedEvent?.google_id}`;
-    const method = isNewEvent ? 'POST' : 'PATCH';
+    try {
+      const endpoint = isNewEvent
+        ? '/api/calendar'
+        : `/api/calendar/${selectedEvent?.google_id}`;
+      const method = isNewEvent ? 'POST' : 'PATCH';
 
-    const res = await fetch(endpoint, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
+      const res = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
 
-    if (res.ok) {
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData._errorMessage || errData.error || `Save failed (${res.status})`);
+      }
       fetchEvents();
+    } catch (err) {
+      console.error('Failed to save event:', err);
+      throw err; // Re-throw so the modal can display the error
     }
   };
 
   const handleDeleteEvent = async (eventId: string) => {
-    const res = await fetch(`/api/calendar/${eventId}`, { method: 'DELETE' });
-    if (res.ok) {
+    try {
+      const res = await fetch(`/api/calendar/${eventId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData._errorMessage || errData.error || 'Delete failed');
+      }
       setEvents((prev) => prev.filter((e) => e.google_id !== eventId));
+    } catch (err) {
+      console.error('Failed to delete event:', err);
+      throw err;
     }
   };
 
@@ -189,6 +216,35 @@ export function CalendarView() {
           </button>
         </div>
       </div>
+
+      {/* Calendar disconnected banner */}
+      {calendarDisconnected && (
+        <div className="p-4 rounded-xl bg-[#0a1628]/60 border border-[#d4af37]/20 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-[#d4af37]/10 flex items-center justify-center flex-shrink-0">
+            <Calendar className="h-5 w-5 text-[#d4af37]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-white font-medium">Calendar disconnected</p>
+            <p className="text-xs text-[#64748b] mt-0.5">Google Calendar needs to be reconnected.</p>
+          </div>
+          <button
+            onClick={() => window.location.href = '/admin?reconnect=calendar'}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/30 text-[#d4af37] text-xs font-medium hover:bg-[#d4af37]/25 transition-colors flex-shrink-0"
+          >
+            <RefreshCcw className="h-3.5 w-3.5" />
+            Reconnect
+          </button>
+        </div>
+      )}
+
+      {/* Error banner */}
+      {error && !calendarDisconnected && (
+        <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-3">
+          <AlertTriangle className="h-4 w-4 text-red-400 flex-shrink-0" />
+          <p className="text-sm text-red-400">{error}</p>
+          <button onClick={fetchEvents} className="ml-auto text-xs text-red-400 hover:text-red-300">Retry</button>
+        </div>
+      )}
 
       {/* Calendar Grid */}
       {loading ? (

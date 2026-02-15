@@ -24,29 +24,93 @@ oauth2Client.setCredentials({
 
 const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
+// --- Token Management ---
+// Track token expiry to proactively refresh before it expires
+let tokenExpiryMs: number | null = null;
+const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000; // Refresh 5 min before expiry
+
+/** Proactively refresh the access token if it's within 5 min of expiring */
+async function ensureFreshToken(): Promise<void> {
+  const now = Date.now();
+  // If we have a known expiry and it's within the buffer window, force refresh
+  if (tokenExpiryMs && now > tokenExpiryMs - TOKEN_REFRESH_BUFFER_MS) {
+    await forceTokenRefresh();
+    return;
+  }
+  // If we've never fetched a token, get one now so we know the expiry
+  if (tokenExpiryMs === null) {
+    const credentials = oauth2Client.credentials;
+    if (credentials.expiry_date) {
+      tokenExpiryMs = credentials.expiry_date;
+      if (now > tokenExpiryMs - TOKEN_REFRESH_BUFFER_MS) {
+        await forceTokenRefresh();
+      }
+    }
+  }
+}
+
+/** Force a token refresh and update the tracked expiry */
+async function forceTokenRefresh(): Promise<void> {
+  try {
+    const { credentials } = await oauth2Client.refreshAccessToken();
+    oauth2Client.setCredentials(credentials);
+    tokenExpiryMs = credentials.expiry_date ?? null;
+  } catch (err) {
+    console.error('[Calendar] Token refresh failed:', err);
+    throw err;
+  }
+}
+
+/**
+ * Execute a calendar API call with automatic retry on auth errors.
+ * On 401/invalid_grant, attempts one token refresh then retries.
+ */
+async function withTokenRetry<T>(fn: () => Promise<T>): Promise<T> {
+  await ensureFreshToken();
+  try {
+    return await fn();
+  } catch (err) {
+    const classified = classifyCalendarError(err);
+    if (classified.type === 'token_expired' || classified.type === 'invalid_credentials') {
+      // One retry after forcing a token refresh
+      try {
+        await forceTokenRefresh();
+        return await fn();
+      } catch (retryErr) {
+        // Retry also failed — surface the error with auth flag
+        throw retryErr;
+      }
+    }
+    throw err;
+  }
+}
+
 // --- Connection Test ---
 
 export interface CalendarConnectionStatus {
   ok: boolean;
   error?: 'token_expired' | 'invalid_credentials' | 'no_refresh_token' | 'network_error' | 'unknown';
   message?: string;
+  authStatus?: 'connected' | 'reauth_required' | 'not_configured';
 }
 
 export async function testCalendarConnection(): Promise<CalendarConnectionStatus> {
   if (!process.env.GOOGLE_REFRESH_TOKEN) {
-    return { ok: false, error: 'no_refresh_token', message: 'Google Calendar refresh token not configured' };
+    return { ok: false, error: 'no_refresh_token', message: 'Google Calendar refresh token not configured', authStatus: 'not_configured' };
   }
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-    return { ok: false, error: 'invalid_credentials', message: 'Google OAuth credentials not configured' };
+    return { ok: false, error: 'invalid_credentials', message: 'Google OAuth credentials not configured', authStatus: 'not_configured' };
   }
 
   try {
-    await calendar.events.list({
-      calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
-      maxResults: 1,
-      timeMin: new Date().toISOString(),
-    });
-    return { ok: true };
+    await withTokenRetry(() =>
+      calendar.events.list({
+        calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+        maxResults: 1,
+        timeMin: new Date().toISOString(),
+      })
+    );
+    return { ok: true, authStatus: 'connected' };
   } catch (err: unknown) {
     const error = err as { code?: number; message?: string; response?: { status?: number } };
     const status = error.code || error.response?.status;
@@ -54,12 +118,12 @@ export async function testCalendarConnection(): Promise<CalendarConnectionStatus
     if (status === 401 || status === 403) {
       const msg = error.message || '';
       if (msg.includes('invalid_grant') || msg.includes('Token has been expired') || msg.includes('Token has been revoked')) {
-        return { ok: false, error: 'token_expired', message: 'Google Calendar refresh token has expired. Please re-authorize.' };
+        return { ok: false, error: 'token_expired', message: 'Google Calendar refresh token has expired. Please re-authorize.', authStatus: 'reauth_required' };
       }
-      return { ok: false, error: 'invalid_credentials', message: `Google Calendar auth failed (${status}): ${msg}` };
+      return { ok: false, error: 'invalid_credentials', message: `Google Calendar auth failed (${status}): ${msg}`, authStatus: 'reauth_required' };
     }
 
-    return { ok: false, error: 'network_error', message: `Google Calendar connection error: ${error.message || 'Unknown'}` };
+    return { ok: false, error: 'network_error', message: `Google Calendar connection error: ${error.message || 'Unknown'}`, authStatus: 'connected' };
   }
 }
 
@@ -77,8 +141,12 @@ export function classifyCalendarError(err: unknown): { type: string; message: st
     return { type: 'invalid_credentials', message: `Auth error: ${msg}` };
   }
 
-  if (msg.includes('ENOTFOUND') || msg.includes('ECONNREFUSED') || msg.includes('network')) {
+  if (msg.includes('ENOTFOUND') || msg.includes('ECONNREFUSED') || msg.includes('network') || msg.includes('ETIMEDOUT')) {
     return { type: 'network_error', message: 'Cannot reach Google Calendar API' };
+  }
+
+  if (msg.includes('Rate Limit') || status === 429) {
+    return { type: 'rate_limited', message: 'Google Calendar rate limit reached — try again shortly' };
   }
 
   return { type: 'unknown', message: msg };
@@ -125,7 +193,7 @@ function transformEvent(event: calendar_v3.Schema$Event): CalendarEvent {
   };
 }
 
-// --- Fetch Functions ---
+// --- Fetch Functions (all wrapped with automatic token retry) ---
 
 export async function fetchTodayEvents(): Promise<CalendarEvent[]> {
   const now = new Date();
@@ -134,13 +202,15 @@ export async function fetchTodayEvents(): Promise<CalendarEvent[]> {
   const endOfDay = new Date(now);
   endOfDay.setHours(23, 59, 59, 999);
 
-  const response = await calendar.events.list({
-    calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
-    timeMin: startOfDay.toISOString(),
-    timeMax: endOfDay.toISOString(),
-    singleEvents: true,
-    orderBy: 'startTime'
-  });
+  const response = await withTokenRetry(() =>
+    calendar.events.list({
+      calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+      timeMin: startOfDay.toISOString(),
+      timeMax: endOfDay.toISOString(),
+      singleEvents: true,
+      orderBy: 'startTime'
+    })
+  );
 
   return response.data.items?.map(transformEvent) || [];
 }
@@ -153,13 +223,15 @@ export async function fetchTomorrowEvents(): Promise<CalendarEvent[]> {
   const endOfDay = new Date(tomorrow);
   endOfDay.setHours(23, 59, 59, 999);
 
-  const response = await calendar.events.list({
-    calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
-    timeMin: startOfDay.toISOString(),
-    timeMax: endOfDay.toISOString(),
-    singleEvents: true,
-    orderBy: 'startTime'
-  });
+  const response = await withTokenRetry(() =>
+    calendar.events.list({
+      calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+      timeMin: startOfDay.toISOString(),
+      timeMax: endOfDay.toISOString(),
+      singleEvents: true,
+      orderBy: 'startTime'
+    })
+  );
 
   return response.data.items?.map(transformEvent) || [];
 }
@@ -169,13 +241,15 @@ export async function fetchWeekEvents(): Promise<CalendarEvent[]> {
   const endOfWeek = new Date();
   endOfWeek.setDate(now.getDate() + 7);
 
-  const response = await calendar.events.list({
-    calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
-    timeMin: now.toISOString(),
-    timeMax: endOfWeek.toISOString(),
-    singleEvents: true,
-    orderBy: 'startTime'
-  });
+  const response = await withTokenRetry(() =>
+    calendar.events.list({
+      calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+      timeMin: now.toISOString(),
+      timeMax: endOfWeek.toISOString(),
+      singleEvents: true,
+      orderBy: 'startTime'
+    })
+  );
 
   return response.data.items?.map(transformEvent) || [];
 }
@@ -184,14 +258,16 @@ export async function fetchMonthEvents(year: number, month: number): Promise<Cal
   const startOfMonth = new Date(year, month, 1);
   const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59);
 
-  const response = await calendar.events.list({
-    calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
-    timeMin: startOfMonth.toISOString(),
-    timeMax: endOfMonth.toISOString(),
-    singleEvents: true,
-    orderBy: 'startTime',
-    maxResults: 250
-  });
+  const response = await withTokenRetry(() =>
+    calendar.events.list({
+      calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+      timeMin: startOfMonth.toISOString(),
+      timeMax: endOfMonth.toISOString(),
+      singleEvents: true,
+      orderBy: 'startTime',
+      maxResults: 250
+    })
+  );
 
   return response.data.items?.map(transformEvent) || [];
 }
@@ -208,7 +284,7 @@ function normalizeDateTime(dt: string): string {
   return dt + '-04:00';
 }
 
-// --- CRUD ---
+// --- CRUD (all wrapped with automatic token retry) ---
 
 export async function createEvent(input: CreateEventInput): Promise<CalendarEvent> {
   const eventBody: Record<string, unknown> = {
@@ -238,21 +314,25 @@ export async function createEvent(input: CreateEventInput): Promise<CalendarEven
     };
   }
 
-  const response = await calendar.events.insert({
-    calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
-    requestBody: eventBody,
-    conferenceDataVersion: input.add_google_meet ? 1 : undefined,
-    sendUpdates: input.attendees && input.attendees.length > 0 ? 'all' : 'none',
-  });
+  const response = await withTokenRetry(() =>
+    calendar.events.insert({
+      calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+      requestBody: eventBody,
+      conferenceDataVersion: input.add_google_meet ? 1 : undefined,
+      sendUpdates: input.attendees && input.attendees.length > 0 ? 'all' : 'none',
+    })
+  );
 
   return transformEvent(response.data);
 }
 
 export async function updateEvent(eventId: string, input: UpdateEventInput): Promise<CalendarEvent> {
-  const existing = await calendar.events.get({
-    calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
-    eventId
-  });
+  const existing = await withTokenRetry(() =>
+    calendar.events.get({
+      calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+      eventId
+    })
+  );
 
   const eventBody: Record<string, unknown> = {
     summary: input.title ?? existing.data.summary,
@@ -290,20 +370,24 @@ export async function updateEvent(eventId: string, input: UpdateEventInput): Pro
     };
   }
 
-  const response = await calendar.events.update({
-    calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
-    eventId,
-    requestBody: eventBody,
-    conferenceDataVersion: input.add_google_meet ? 1 : undefined,
-    sendUpdates: input.attendees && input.attendees.length > 0 ? 'all' : 'none',
-  });
+  const response = await withTokenRetry(() =>
+    calendar.events.update({
+      calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+      eventId,
+      requestBody: eventBody,
+      conferenceDataVersion: input.add_google_meet ? 1 : undefined,
+      sendUpdates: input.attendees && input.attendees.length > 0 ? 'all' : 'none',
+    })
+  );
 
   return transformEvent(response.data);
 }
 
 export async function deleteEvent(eventId: string): Promise<void> {
-  await calendar.events.delete({
-    calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
-    eventId
-  });
+  await withTokenRetry(() =>
+    calendar.events.delete({
+      calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+      eventId
+    })
+  );
 }
