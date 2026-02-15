@@ -57,7 +57,11 @@ export function Sidebar() {
   const { mobileOpen, setMobileOpen } = useSidebar();
 
   const handleSignOut = async () => {
-    await fetch('/api/auth/gate/logout', { method: 'POST' });
+    try {
+      await fetch('/api/auth/gate/logout', { method: 'POST' });
+    } catch {
+      // Proceed with redirect even if logout API fails
+    }
     router.push('/login');
   };
 

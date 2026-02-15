@@ -249,83 +249,90 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
   const [enhancedRegenerating, setEnhancedRegenerating] = useState(false);
   const [enhancedCached, setEnhancedCached] = useState(false);
 
-  // Fetch KPI data
+  // Fetch KPI data (with AbortController for cleanup on unmount)
   useEffect(() => {
+    const controller = new AbortController();
     async function fetchKpiData() {
       setKpiLoading(true);
       try {
         const [latestRes, trendsRes, analysisRes] = await Promise.all([
-          fetch(`${API_BASE}/gpl/kpi/latest`),
-          fetch(`${API_BASE}/gpl/kpi/trends?months=12`),
-          fetch(`${API_BASE}/gpl/kpi/analysis`)
+          fetch(`${API_BASE}/gpl/kpi/latest`, { signal: controller.signal }),
+          fetch(`${API_BASE}/gpl/kpi/trends?months=12`, { signal: controller.signal }),
+          fetch(`${API_BASE}/gpl/kpi/analysis`, { signal: controller.signal })
         ]);
         const [latestData, trendsData, analysisData] = await Promise.all([
           latestRes.json(), trendsRes.json(), analysisRes.json()
         ]);
-        setKpiData({
-          latest: latestData.success && latestData.hasData ? latestData : null,
-          trends: trendsData.success ? trendsData.trends : [],
-          analysis: analysisData.success && analysisData.hasAnalysis ? analysisData.analysis : null
-        });
+        if (!controller.signal.aborted) {
+          setKpiData({
+            latest: latestData.success && latestData.hasData ? latestData : null,
+            trends: trendsData.success ? trendsData.trends : [],
+            analysis: analysisData.success && analysisData.hasAnalysis ? analysisData.analysis : null
+          });
+        }
       } catch (err) {
-        console.error('Failed to fetch KPI data:', err);
+        if (!controller.signal.aborted) console.error('Failed to fetch KPI data:', err);
       } finally {
-        setKpiLoading(false);
+        if (!controller.signal.aborted) setKpiLoading(false);
       }
     }
     fetchKpiData();
+    return () => controller.abort();
   }, []);
 
-  // Fetch forecast data (legacy + multivariate)
+  // Fetch forecast data (legacy + multivariate) with AbortController
   useEffect(() => {
+    const controller = new AbortController();
     async function fetchForecastData() {
       setForecastLoading(true);
       setMultiForecastLoading(true);
       try {
-        // Fetch both legacy and multivariate forecasts
         const [legacyRes, multiRes] = await Promise.all([
-          fetch(`${API_BASE}/gpl/forecast/all`),
-          fetch(`${API_BASE}/gpl/forecast/multivariate`)
+          fetch(`${API_BASE}/gpl/forecast/all`, { signal: controller.signal }),
+          fetch(`${API_BASE}/gpl/forecast/multivariate`, { signal: controller.signal })
         ]);
         const [legacyData, multiData] = await Promise.all([
           legacyRes.json(),
           multiRes.json()
         ]);
 
-        if (legacyData.success) {
-          setForecastData(legacyData.data);
-        }
-        if (multiData.success && multiData.hasData) {
-          setMultiForecast(multiData.forecast);
+        if (!controller.signal.aborted) {
+          if (legacyData.success) setForecastData(legacyData.data);
+          if (multiData.success && multiData.hasData) setMultiForecast(multiData.forecast);
         }
       } catch (err) {
-        console.error('Failed to fetch forecast data:', err);
+        if (!controller.signal.aborted) console.error('Failed to fetch forecast data:', err);
       } finally {
-        setForecastLoading(false);
-        setMultiForecastLoading(false);
+        if (!controller.signal.aborted) {
+          setForecastLoading(false);
+          setMultiForecastLoading(false);
+        }
       }
     }
     fetchForecastData();
+    return () => controller.abort();
   }, []);
 
-  // Fetch enhanced forecast (Claude Opus)
+  // Fetch enhanced forecast (Claude Opus) with AbortController
   useEffect(() => {
+    const controller = new AbortController();
     async function fetchEnhancedForecast() {
       setEnhancedLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/gpl/forecast/enhanced`);
+        const res = await fetch(`${API_BASE}/gpl/forecast/enhanced`, { signal: controller.signal });
         const json = await res.json();
-        if (json.success && json.forecast) {
+        if (!controller.signal.aborted && json.success && json.forecast) {
           setEnhancedForecast(json.forecast);
           setEnhancedCached(json.cached ?? false);
         }
       } catch (err) {
-        console.error('Failed to fetch enhanced forecast:', err);
+        if (!controller.signal.aborted) console.error('Failed to fetch enhanced forecast:', err);
       } finally {
-        setEnhancedLoading(false);
+        if (!controller.signal.aborted) setEnhancedLoading(false);
       }
     }
     fetchEnhancedForecast();
+    return () => controller.abort();
   }, []);
 
   // Fetch report history for date picker

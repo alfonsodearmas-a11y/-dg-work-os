@@ -118,6 +118,12 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
         body: formData,
       });
 
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        setError(errData.error || `Upload failed (${response.status})`);
+        return;
+      }
+
       const result = await response.json();
 
       if (!result.success) {
@@ -128,7 +134,7 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
 
       setPreview(result.preview);
     } catch (err: any) {
-      setError('Failed to upload file: ' + err.message);
+      setError('Failed to upload file: ' + (err.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }

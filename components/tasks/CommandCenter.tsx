@@ -53,11 +53,24 @@ export function CommandCenter() {
 
   // Touch drag state
   const touchRef = useRef<{ taskId: string; el: HTMLDivElement; startY: number; clone: HTMLDivElement | null } | null>(null);
+  // Track toast dismiss timers for cleanup on unmount
+  const toastTimerRefs = useRef<Set<NodeJS.Timeout>>(new Set());
 
   const addToast = useCallback((type: 'success' | 'error', message: string) => {
     const id = ++toastId;
     setToasts(prev => [...prev.slice(-2), { id, type, message }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
+    const timer = setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+      toastTimerRefs.current.delete(timer);
+    }, 3000);
+    toastTimerRefs.current.add(timer);
+  }, []);
+
+  // Clean up all toast timers on unmount
+  useEffect(() => {
+    return () => {
+      toastTimerRefs.current.forEach(clearTimeout);
+    };
   }, []);
 
   // ── Fetch tasks + team ──────────────────────────────────────────────────

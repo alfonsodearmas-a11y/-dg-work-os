@@ -102,6 +102,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!url || !key) return;
 
     const client = createClient(url, key);
+    // Track scheduled delivery timers so we can cancel on unmount
+    const scheduledTimers: NodeJS.Timeout[] = [];
 
     const channel = client
       .channel('notifications-realtime')
@@ -122,13 +124,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             deliverNotification(newNotif);
           } else {
             const delay = scheduledFor.getTime() - now.getTime();
-            setTimeout(() => deliverNotification(newNotif), delay);
+            const timer = setTimeout(() => deliverNotification(newNotif), delay);
+            scheduledTimers.push(timer);
           }
         }
       )
       .subscribe();
 
     return () => {
+      // Clean up scheduled timers to prevent state updates on unmounted component
+      scheduledTimers.forEach(clearTimeout);
+      // Clean up toast timers
+      toastTimers.current.forEach(clearTimeout);
+      toastTimers.current.clear();
       client.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -23,11 +23,15 @@ export function useOnlineStatus(): OnlineStatus {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncQueueCount, setSyncQueueCount] = useState(0);
 
+  const wasOfflineTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const handleOnline = useCallback(() => {
     setIsOnline(true);
     if (wasOfflineRef.current) {
       setWasOffline(true);
-      setTimeout(() => setWasOffline(false), 5000);
+      // Clear any existing timer before setting a new one
+      if (wasOfflineTimerRef.current) clearTimeout(wasOfflineTimerRef.current);
+      wasOfflineTimerRef.current = setTimeout(() => setWasOffline(false), 5000);
     }
     // Refresh sync queue count when coming online
     getSyncQueueCount().then(setSyncQueueCount).catch(() => {});
@@ -46,6 +50,8 @@ export function useOnlineStatus(): OnlineStatus {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      // Clean up pending wasOffline timer
+      if (wasOfflineTimerRef.current) clearTimeout(wasOfflineTimerRef.current);
     };
   }, [handleOnline, handleOffline]);
 

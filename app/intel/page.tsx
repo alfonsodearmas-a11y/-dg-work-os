@@ -9,6 +9,7 @@ import { StatusBar } from '@/components/intel/StatusBar';
 import { AlertSection } from '@/components/intel/AlertSection';
 import { SlidePanel } from '@/components/layout/SlidePanel';
 import { LoadingSkeleton } from '@/components/intel/common';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { GPLDetail } from '@/components/intel/GPLDetail';
 import { CJIADetail } from '@/components/intel/CJIADetail';
 import { GWIDetail } from '@/components/intel/GWIDetail';
@@ -121,7 +122,9 @@ export default function IntelPage() {
         icon={selectedAgencyObj?.icon}
         accentColor={selectedAgencyObj?.accentColor}
       >
-        {renderDetailPanel()}
+        <ErrorBoundary fallbackTitle={`Failed to load ${selectedAgencyObj?.title || 'agency'} data`}>
+          {renderDetailPanel()}
+        </ErrorBoundary>
       </SlidePanel>
     </div>
   );

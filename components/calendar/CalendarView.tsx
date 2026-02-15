@@ -71,8 +71,12 @@ export function CalendarView() {
   }, [currentMonth]);
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    fetchEvents();
+    fetchEvents().finally(() => {
+      if (cancelled) return; // Prevent state update on unmounted component
+    });
+    return () => { cancelled = true; };
   }, [fetchEvents]);
 
   // Calendar grid

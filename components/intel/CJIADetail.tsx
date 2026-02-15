@@ -99,28 +99,30 @@ export function CJIADetail({ data }: CJIADetailProps) {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [regenerating, setRegenerating] = useState(false);
 
-  // Fetch insights
+  // Fetch insights with AbortController for cleanup on unmount/month change
   useEffect(() => {
+    const controller = new AbortController();
     async function fetchInsights() {
       setInsightsLoading(true);
       try {
         const url = selectedMonth
           ? `/api/cjia/insights/${selectedMonth}`
           : '/api/cjia/insights/latest';
-        const res = await fetch(url);
+        const res = await fetch(url, { signal: controller.signal });
         const json = await res.json();
-        if (json.success && json.data) {
-          setInsights(json.data);
-        } else {
-          setInsights(null);
+        if (!controller.signal.aborted) {
+          setInsights(json.success && json.data ? json.data : null);
         }
       } catch (err) {
-        console.error('Failed to fetch CJIA insights:', err);
+        if (!controller.signal.aborted) {
+          console.error('Failed to fetch CJIA insights:', err);
+        }
       } finally {
-        setInsightsLoading(false);
+        if (!controller.signal.aborted) setInsightsLoading(false);
       }
     }
     fetchInsights();
+    return () => controller.abort();
   }, [selectedMonth]);
 
   // Regenerate AI insights

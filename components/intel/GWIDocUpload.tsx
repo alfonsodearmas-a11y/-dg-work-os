@@ -96,6 +96,12 @@ export function GWIDocUpload({ reportPeriod, onClose, onSaved }: GWIDocUploadPro
         body: formData,
       });
 
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        updateZone(key, { stage: 'error', error: errData.error || `Upload failed (${res.status})` });
+        return;
+      }
+
       const result = await res.json();
 
       if (!result.success) {

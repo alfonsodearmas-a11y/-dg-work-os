@@ -92,6 +92,12 @@ export function DailyExcelUpload({ onSuccess, onCancel }: DailyExcelUploadProps)
         body: formData,
       });
 
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        setError(errData.error || `Upload failed (${response.status})`);
+        return;
+      }
+
       const result = await response.json();
 
       if (!result.success) {
@@ -103,7 +109,7 @@ export function DailyExcelUpload({ onSuccess, onCancel }: DailyExcelUploadProps)
       setPreview(result.data);
       setWarnings(result.warnings || []);
     } catch (err: any) {
-      setError('Failed to upload file: ' + err.message);
+      setError('Failed to upload file: ' + (err.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
