@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { generateAgencyData, getSparklineData } from '@/data/mockData';
 import type { AgencyRawData, GPLData, CJIAData, GCAAData } from '@/data/mockData';
 import { Plane, Droplets, Zap, Shield } from 'lucide-react';
@@ -550,7 +550,7 @@ export const useAgencyData = () => {
     refresh();
   }, [refresh]);
 
-  const agencies = Object.keys(AGENCY_CONFIG).map(id => {
+  const agencies = useMemo(() => Object.keys(AGENCY_CONFIG).map(id => {
     const config = AGENCY_CONFIG[id];
     const data = rawData[id as keyof AgencyRawData];
 
@@ -595,11 +595,11 @@ export const useAgencyData = () => {
       warningBadge: getAgencyWarningBadge(id, data),
       data,
     };
-  });
+  }), [rawData, gwiReport, gwiPrevReport, delayedCounts]);
 
-  const gplSummary = computeGPLSummary(rawData.gpl);
+  const gplSummary = useMemo(() => computeGPLSummary(rawData.gpl), [rawData.gpl]);
 
-  const alerts = [
+  const alerts = useMemo(() => [
     ...(rawData.gwi.nrwPercent > 55 ? [{
       severity: 'critical' as const,
       agency: 'gwi',
@@ -636,7 +636,7 @@ export const useAgencyData = () => {
       message: `${rawData.gwi.activeDisruptions} service disruptions active`,
       detail: rawData.gwi.disruptionAreas.join(', '),
     }] : []),
-  ];
+  ], [rawData.gwi, rawData.cjia, gplSummary]);
 
   const loadGPLByDate = useCallback(async (date: string) => {
     setIsLoading(true);

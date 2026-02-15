@@ -10,10 +10,19 @@ import { AlertSection } from '@/components/intel/AlertSection';
 import { SlidePanel } from '@/components/layout/SlidePanel';
 import { LoadingSkeleton } from '@/components/intel/common';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
-import { GPLDetail } from '@/components/intel/GPLDetail';
-import { CJIADetail } from '@/components/intel/CJIADetail';
-import { GWIDetail } from '@/components/intel/GWIDetail';
-import { GCAADetail } from '@/components/intel/GCAADetail';
+import dynamic from 'next/dynamic';
+import { Loader2 } from 'lucide-react';
+
+const PanelLoader = () => (
+  <div className="flex items-center justify-center py-24">
+    <Loader2 className="h-6 w-6 text-[#d4af37] animate-spin" />
+  </div>
+);
+
+const GPLDetail = dynamic(() => import('@/components/intel/GPLDetail').then(m => ({ default: m.GPLDetail })), { loading: PanelLoader });
+const CJIADetail = dynamic(() => import('@/components/intel/CJIADetail').then(m => ({ default: m.CJIADetail })), { loading: PanelLoader });
+const GWIDetail = dynamic(() => import('@/components/intel/GWIDetail').then(m => ({ default: m.GWIDetail })), { loading: PanelLoader });
+const GCAADetail = dynamic(() => import('@/components/intel/GCAADetail').then(m => ({ default: m.GCAADetail })), { loading: PanelLoader });
 
 export default function IntelPage() {
   const { agencies, alerts, rawData, lastUpdated, isLoading, refresh } = useAgencyData();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Upload, FileText, Building2, FolderOpen, RefreshCw, Search } from 'lucide-react';
 import { UploadZone } from '@/components/documents/UploadZone';
 import { DocumentCard } from '@/components/documents/DocumentCard';
@@ -55,21 +55,21 @@ export default function DocumentsPage() {
     fetchDocuments(query, filters);
   };
 
-  // Group documents by agency
-  const byAgency = documents.reduce((acc, doc) => {
+  // Group documents by agency (memoized to avoid recomputing on every render)
+  const byAgency = useMemo(() => documents.reduce((acc, doc) => {
     const agency = doc.agency || 'Other';
     if (!acc[agency]) acc[agency] = [];
     acc[agency].push(doc);
     return acc;
-  }, {} as Record<string, Document[]>);
+  }, {} as Record<string, Document[]>), [documents]);
 
   // Group by type
-  const byType = documents.reduce((acc, doc) => {
+  const byType = useMemo(() => documents.reduce((acc, doc) => {
     const type = doc.document_type || 'other';
     if (!acc[type]) acc[type] = [];
     acc[type].push(doc);
     return acc;
-  }, {} as Record<string, Document[]>);
+  }, {} as Record<string, Document[]>), [documents]);
 
   const typeLabels: Record<string, string> = {
     contract: 'Contracts',
