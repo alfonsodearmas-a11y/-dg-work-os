@@ -7,6 +7,7 @@ const PUBLIC_PATHS = [
   '/api/auth/',
   '/api/push/',
   '/api/notifications/generate',
+  '/api/integrations/google/callback',
   '/api/webhooks/',
   '/_next',
   '/favicon.ico',

@@ -13,33 +13,107 @@ export { detectEventCategory } from './calendar-types';
 
 import type { CalendarAttendee, ConferenceData, CalendarEvent, CreateEventInput, UpdateEventInput } from './calendar-types';
 
-const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET
-);
+// --- Lazy-init OAuth2 client with DB token support ---
 
-oauth2Client.setCredentials({
-  refresh_token: process.env.GOOGLE_REFRESH_TOKEN
-});
+let cachedOAuth2Client: InstanceType<typeof google.auth.OAuth2> | null = null;
+let cachedCalendar: calendar_v3.Calendar | null = null;
+let cachedCalendarId: string | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+/** Invalidate cached clients — called after connect/disconnect */
+export function invalidateCalendarClientCache(): void {
+  cachedOAuth2Client = null;
+  cachedCalendar = null;
+  cachedCalendarId = null;
+  cacheTimestamp = 0;
+  tokenExpiryMs = null;
+}
+
+function isCacheValid(): boolean {
+  return cachedOAuth2Client !== null && (Date.now() - cacheTimestamp) < CACHE_TTL_MS;
+}
+
+/** Get OAuth2 client, checking DB token first then env var fallback */
+async function getOAuth2Client(): Promise<InstanceType<typeof google.auth.OAuth2>> {
+  if (isCacheValid() && cachedOAuth2Client) {
+    return cachedOAuth2Client;
+  }
+
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+  // Try DB token first
+  let refreshToken: string | undefined;
+  let calendarId: string | undefined;
+
+  try {
+    // Dynamic import to avoid circular dependency at module load time
+    const { getGoogleCalendarToken } = await import('./integration-tokens');
+    const dbToken = await getGoogleCalendarToken();
+    if (dbToken) {
+      refreshToken = dbToken.refresh_token;
+      calendarId = dbToken.calendar_id || undefined;
+    }
+  } catch {
+    // DB not available — fall through to env var
+  }
+
+  // Fall back to env var
+  if (!refreshToken) {
+    refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+  }
+
+  const client = new google.auth.OAuth2(clientId, clientSecret);
+  if (refreshToken) {
+    client.setCredentials({ refresh_token: refreshToken });
+  }
+
+  cachedOAuth2Client = client;
+  cachedCalendarId = calendarId || process.env.GOOGLE_CALENDAR_ID || 'primary';
+  cacheTimestamp = Date.now();
+  tokenExpiryMs = null; // Reset expiry tracking for new client
+
+  return client;
+}
+
+/** Get calendar API client */
+async function getCalendar(): Promise<calendar_v3.Calendar> {
+  if (isCacheValid() && cachedCalendar) {
+    return cachedCalendar;
+  }
+
+  const auth = await getOAuth2Client();
+  cachedCalendar = google.calendar({ version: 'v3', auth });
+  return cachedCalendar;
+}
+
+/** Get the calendar ID (DB → env var → 'primary') */
+async function getCalendarId(): Promise<string> {
+  if (isCacheValid() && cachedCalendarId) {
+    return cachedCalendarId;
+  }
+
+  // getOAuth2Client also populates cachedCalendarId
+  await getOAuth2Client();
+  return cachedCalendarId || 'primary';
+}
 
 // --- Token Management ---
-// Track token expiry to proactively refresh before it expires
 let tokenExpiryMs: number | null = null;
-const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000; // Refresh 5 min before expiry
+const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
-/** Proactively refresh the access token if it's within 5 min of expiring */
 async function ensureFreshToken(): Promise<void> {
+  const client = await getOAuth2Client();
   const now = Date.now();
-  // If we have a known expiry and it's within the buffer window, force refresh
+
   if (tokenExpiryMs && now > tokenExpiryMs - TOKEN_REFRESH_BUFFER_MS) {
     await forceTokenRefresh();
     return;
   }
-  // If we've never fetched a token, get one now so we know the expiry
+
   if (tokenExpiryMs === null) {
-    const credentials = oauth2Client.credentials;
+    const credentials = client.credentials;
     if (credentials.expiry_date) {
       tokenExpiryMs = credentials.expiry_date;
       if (now > tokenExpiryMs - TOKEN_REFRESH_BUFFER_MS) {
@@ -49,11 +123,11 @@ async function ensureFreshToken(): Promise<void> {
   }
 }
 
-/** Force a token refresh and update the tracked expiry */
 async function forceTokenRefresh(): Promise<void> {
   try {
-    const { credentials } = await oauth2Client.refreshAccessToken();
-    oauth2Client.setCredentials(credentials);
+    const client = await getOAuth2Client();
+    const { credentials } = await client.refreshAccessToken();
+    client.setCredentials(credentials);
     tokenExpiryMs = credentials.expiry_date ?? null;
   } catch (err) {
     console.error('[Calendar] Token refresh failed:', err);
@@ -61,10 +135,6 @@ async function forceTokenRefresh(): Promise<void> {
   }
 }
 
-/**
- * Execute a calendar API call with automatic retry on auth errors.
- * On 401/invalid_grant, attempts one token refresh then retries.
- */
 async function withTokenRetry<T>(fn: () => Promise<T>): Promise<T> {
   await ensureFreshToken();
   try {
@@ -72,12 +142,10 @@ async function withTokenRetry<T>(fn: () => Promise<T>): Promise<T> {
   } catch (err) {
     const classified = classifyCalendarError(err);
     if (classified.type === 'token_expired' || classified.type === 'invalid_credentials') {
-      // One retry after forcing a token refresh
       try {
         await forceTokenRefresh();
         return await fn();
       } catch (retryErr) {
-        // Retry also failed — surface the error with auth flag
         throw retryErr;
       }
     }
@@ -95,7 +163,16 @@ export interface CalendarConnectionStatus {
 }
 
 export async function testCalendarConnection(): Promise<CalendarConnectionStatus> {
-  if (!process.env.GOOGLE_REFRESH_TOKEN) {
+  // Check if any token source is available (DB or env var)
+  let hasToken = false;
+  try {
+    const { getGoogleCalendarToken } = await import('./integration-tokens');
+    const dbToken = await getGoogleCalendarToken();
+    if (dbToken) hasToken = true;
+  } catch {
+    // DB unavailable
+  }
+  if (!hasToken && !process.env.GOOGLE_REFRESH_TOKEN) {
     return { ok: false, error: 'no_refresh_token', message: 'Google Calendar refresh token not configured', authStatus: 'not_configured' };
   }
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
@@ -103,9 +180,11 @@ export async function testCalendarConnection(): Promise<CalendarConnectionStatus
   }
 
   try {
+    const cal = await getCalendar();
+    const calId = await getCalendarId();
     await withTokenRetry(() =>
-      calendar.events.list({
-        calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+      cal.events.list({
+        calendarId: calId,
         maxResults: 1,
         timeMin: new Date().toISOString(),
       })
@@ -202,9 +281,12 @@ export async function fetchTodayEvents(): Promise<CalendarEvent[]> {
   const endOfDay = new Date(now);
   endOfDay.setHours(23, 59, 59, 999);
 
+  const cal = await getCalendar();
+  const calId = await getCalendarId();
+
   const response = await withTokenRetry(() =>
-    calendar.events.list({
-      calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+    cal.events.list({
+      calendarId: calId,
       timeMin: startOfDay.toISOString(),
       timeMax: endOfDay.toISOString(),
       singleEvents: true,
@@ -223,9 +305,12 @@ export async function fetchTomorrowEvents(): Promise<CalendarEvent[]> {
   const endOfDay = new Date(tomorrow);
   endOfDay.setHours(23, 59, 59, 999);
 
+  const cal = await getCalendar();
+  const calId = await getCalendarId();
+
   const response = await withTokenRetry(() =>
-    calendar.events.list({
-      calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+    cal.events.list({
+      calendarId: calId,
       timeMin: startOfDay.toISOString(),
       timeMax: endOfDay.toISOString(),
       singleEvents: true,
@@ -241,9 +326,12 @@ export async function fetchWeekEvents(): Promise<CalendarEvent[]> {
   const endOfWeek = new Date();
   endOfWeek.setDate(now.getDate() + 7);
 
+  const cal = await getCalendar();
+  const calId = await getCalendarId();
+
   const response = await withTokenRetry(() =>
-    calendar.events.list({
-      calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+    cal.events.list({
+      calendarId: calId,
       timeMin: now.toISOString(),
       timeMax: endOfWeek.toISOString(),
       singleEvents: true,
@@ -258,9 +346,12 @@ export async function fetchMonthEvents(year: number, month: number): Promise<Cal
   const startOfMonth = new Date(year, month, 1);
   const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59);
 
+  const cal = await getCalendar();
+  const calId = await getCalendarId();
+
   const response = await withTokenRetry(() =>
-    calendar.events.list({
-      calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+    cal.events.list({
+      calendarId: calId,
       timeMin: startOfMonth.toISOString(),
       timeMax: endOfMonth.toISOString(),
       singleEvents: true,
@@ -274,13 +365,9 @@ export async function fetchMonthEvents(year: number, month: number): Promise<Cal
 
 // --- Helpers ---
 
-/** Normalize datetime-local values ("2026-02-08T14:00") to full ISO with timezone */
 function normalizeDateTime(dt: string): string {
-  // Already has timezone offset or Z → leave as-is
   if (/[Z+-]\d{2}:\d{2}$/.test(dt) || dt.endsWith('Z')) return dt;
-  // Add seconds if missing ("T14:00" → "T14:00:00")
   if (/T\d{2}:\d{2}$/.test(dt)) dt += ':00';
-  // Append Guyana timezone (UTC-04:00)
   return dt + '-04:00';
 }
 
@@ -314,9 +401,12 @@ export async function createEvent(input: CreateEventInput): Promise<CalendarEven
     };
   }
 
+  const cal = await getCalendar();
+  const calId = await getCalendarId();
+
   const response = await withTokenRetry(() =>
-    calendar.events.insert({
-      calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+    cal.events.insert({
+      calendarId: calId,
       requestBody: eventBody,
       conferenceDataVersion: input.add_google_meet ? 1 : undefined,
       sendUpdates: input.attendees && input.attendees.length > 0 ? 'all' : 'none',
@@ -327,9 +417,12 @@ export async function createEvent(input: CreateEventInput): Promise<CalendarEven
 }
 
 export async function updateEvent(eventId: string, input: UpdateEventInput): Promise<CalendarEvent> {
+  const cal = await getCalendar();
+  const calId = await getCalendarId();
+
   const existing = await withTokenRetry(() =>
-    calendar.events.get({
-      calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+    cal.events.get({
+      calendarId: calId,
       eventId
     })
   );
@@ -371,8 +464,8 @@ export async function updateEvent(eventId: string, input: UpdateEventInput): Pro
   }
 
   const response = await withTokenRetry(() =>
-    calendar.events.update({
-      calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+    cal.events.update({
+      calendarId: calId,
       eventId,
       requestBody: eventBody,
       conferenceDataVersion: input.add_google_meet ? 1 : undefined,
@@ -384,9 +477,12 @@ export async function updateEvent(eventId: string, input: UpdateEventInput): Pro
 }
 
 export async function deleteEvent(eventId: string): Promise<void> {
+  const cal = await getCalendar();
+  const calId = await getCalendarId();
+
   await withTokenRetry(() =>
-    calendar.events.delete({
-      calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+    cal.events.delete({
+      calendarId: calId,
       eventId
     })
   );
