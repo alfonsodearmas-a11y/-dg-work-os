@@ -14,6 +14,10 @@ import {
   MapPin,
   ChevronDown,
   ChevronRight,
+  Clock,
+  Flame,
+  Users,
+  TrendingDown,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -112,210 +116,265 @@ const AGENCY_EMOJI: Record<string, string> = {
   'Cross-Agency': '🔗', InterEnergy: '🔋',
 };
 
-// ─── Skeleton Components ─────────────────────────────────────────────────────
+const AGENCY_COLORS: Record<string, string> = {
+  GPL: 'border-t-amber-500', GWI: 'border-t-blue-500', CJIA: 'border-t-sky-400',
+  GCAA: 'border-t-violet-500', MARAD: 'border-t-cyan-500', HECI: 'border-t-emerald-500',
+  HAS: 'border-t-orange-400', PPDI: 'border-t-slate-400',
+  'Cross-Agency': 'border-t-[#d4af37]', InterEnergy: 'border-t-yellow-500',
+};
+
+// ─── Skeletons ───────────────────────────────────────────────────────────────
 
 function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse bg-[#1a2744] rounded ${className}`} />;
+  return <div className={`animate-pulse bg-[#1a2744] rounded-lg ${className}`} />;
 }
 
-function BriefingSkeleton() {
+function HeroSkeleton() {
   return (
-    <div className="space-y-3">
-      <Skeleton className="h-4 w-3/4" />
-      <Skeleton className="h-4 w-full" />
-      <Skeleton className="h-4 w-5/6" />
-      <Skeleton className="h-4 w-2/3" />
+    <div className="rounded-xl border border-[#d4af37]/20 bg-[#0f1d32] p-6 md:p-8 space-y-4">
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-10 w-10 rounded-xl" />
+        <Skeleton className="h-6 w-48" />
+      </div>
+      <Skeleton className="h-5 w-full" />
+      <Skeleton className="h-5 w-5/6" />
+      <Skeleton className="h-5 w-3/4" />
+      <Skeleton className="h-5 w-2/3" />
+      <div className="grid grid-cols-3 gap-4 pt-4">
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-24 rounded-xl" />
+      </div>
     </div>
   );
 }
 
-function CardSkeleton() {
+function CardsSkeleton({ count = 3 }: { count?: number }) {
   return (
-    <div className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32]/60 p-4 space-y-3">
-      <Skeleton className="h-4 w-1/2" />
-      <Skeleton className="h-3 w-full" />
-      <Skeleton className="h-3 w-3/4" />
+    <div className="space-y-4">
+      {Array.from({ length: count }).map((_, i) => (
+        <Skeleton key={i} className="h-32 rounded-xl" />
+      ))}
     </div>
   );
 }
 
-// ─── Small UI Components ─────────────────────────────────────────────────────
-
-function PriorityDot({ priority }: { priority: string | null }) {
-  const color = priority === 'High' ? 'bg-red-500' : priority === 'Medium' ? 'bg-amber-500' : 'bg-[#64748b]';
-  return <span className={`inline-block w-1.5 h-1.5 rounded-full ${color} shrink-0`} />;
-}
+// ─── Small UI ────────────────────────────────────────────────────────────────
 
 function AgencyTag({ agency }: { agency: string | null }) {
   if (!agency) return null;
   return (
-    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#1a2744] text-[#94a3b8] border border-[#2d3a52]/50">
+    <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-[#1a2744] text-[#94a3b8] border border-[#2d3a52]/50">
       {agency}
     </span>
   );
 }
 
-function Badge({ children, variant = 'default' }: { children: React.ReactNode; variant?: 'red' | 'amber' | 'green' | 'gold' | 'default' }) {
-  const styles = {
-    red: 'bg-red-500/15 text-red-400',
-    amber: 'bg-amber-500/15 text-amber-400',
-    green: 'bg-emerald-500/15 text-emerald-400',
-    gold: 'bg-[#d4af37]/15 text-[#d4af37]',
-    default: 'bg-[#1a2744] text-[#94a3b8]',
-  };
-  return (
-    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${styles[variant]}`}>
-      {children}
-    </span>
-  );
-}
-
-function HealthDot({ ratio }: { ratio: number }) {
-  const color = ratio >= 0.7 ? 'bg-emerald-500' : ratio >= 0.4 ? 'bg-amber-500' : 'bg-red-500';
-  return <span className={`inline-block w-2 h-2 rounded-full ${color}`} />;
-}
-
 function SectionError({ message }: { message: string }) {
   return (
-    <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 flex items-center gap-3">
-      <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
+    <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-6 flex items-center gap-4">
+      <AlertTriangle className="h-5 w-5 text-red-400 shrink-0" />
       <p className="text-red-400 text-sm">{message}</p>
     </div>
   );
 }
 
-// ─── Action Item Row ─────────────────────────────────────────────────────────
+// ─── Executive Brief Hero ────────────────────────────────────────────────────
 
-function ActionRow({ action }: { action: Action }) {
+function ExecutiveBriefHero({
+  data,
+  loading,
+  stats,
+  calendarToday,
+}: {
+  data: BriefingData | null;
+  loading: boolean;
+  stats: { overdue: number; stale: number } | null;
+  calendarToday: number;
+}) {
+  if (loading && !data) return <HeroSkeleton />;
+
+  return (
+    <div className={`rounded-xl border bg-[#0f1d32] p-6 md:p-8 transition-all duration-500 ${
+      loading ? 'border-[#d4af37]/40 animate-[shimmer_2s_ease-in-out_infinite]' : 'border-[#d4af37]/20'
+    }`}>
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-5">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center shadow-lg shadow-[#d4af37]/20">
+          <Sparkles className="h-5 w-5 text-[#0a1628]" />
+        </div>
+        <div>
+          <h2 className="text-white font-bold text-xl">Morning Brief</h2>
+          {data?.model === 'fallback' && (
+            <span className="text-xs text-amber-400 font-medium">Auto-generated summary</span>
+          )}
+        </div>
+      </div>
+
+      {/* Narrative */}
+      {loading ? (
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-5 h-5 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+            <span className="text-[#d4af37] text-sm font-medium">Generating briefing...</span>
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-5 w-5/6" />
+            <Skeleton className="h-5 w-3/4" />
+          </div>
+        </div>
+      ) : data ? (
+        <div className="text-[#94a3b8] text-base leading-relaxed whitespace-pre-line mb-6">
+          {data.briefing}
+        </div>
+      ) : (
+        <p className="text-[#64748b] text-sm mb-6">Briefing unavailable — data sources may be loading.</p>
+      )}
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-3 gap-3 md:gap-4">
+        <div className="relative rounded-xl bg-[#1a2744]/80 border border-[#2d3a52]/50 p-4 overflow-hidden">
+          <Flame className="absolute -right-2 -bottom-2 h-16 w-16 text-red-500/5" />
+          <p className="text-3xl font-black text-red-400">{stats?.overdue ?? '—'}</p>
+          <p className="text-xs text-[#64748b] font-medium uppercase tracking-wider mt-1">Overdue</p>
+        </div>
+        <div className="relative rounded-xl bg-[#1a2744]/80 border border-[#2d3a52]/50 p-4 overflow-hidden">
+          <TrendingDown className="absolute -right-2 -bottom-2 h-16 w-16 text-amber-500/5" />
+          <p className="text-3xl font-black text-amber-400">{stats?.stale ?? '—'}</p>
+          <p className="text-xs text-[#64748b] font-medium uppercase tracking-wider mt-1">Stale</p>
+        </div>
+        <div className="relative rounded-xl bg-[#1a2744]/80 border border-[#2d3a52]/50 p-4 overflow-hidden">
+          <Users className="absolute -right-2 -bottom-2 h-16 w-16 text-blue-500/5" />
+          <p className="text-3xl font-black text-blue-400">{calendarToday}</p>
+          <p className="text-xs text-[#64748b] font-medium uppercase tracking-wider mt-1">Meetings</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Severity Strip — Overdue Items ──────────────────────────────────────────
+
+function SeverityCard({ action }: { action: Action }) {
+  const borderColor =
+    action.overdueDays >= 7 ? 'border-l-red-500 bg-red-500/[0.03]' :
+    action.overdueDays >= 3 ? 'border-l-amber-500' : 'border-l-[#2d3a52]';
+
   return (
     <a
       href={action.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-start gap-2.5 py-2.5 px-3 -mx-3 rounded-lg hover:bg-[#1a2744]/60 transition-colors group"
+      className={`block rounded-xl border border-[#2d3a52]/50 ${borderColor} border-l-4 bg-[#0f1d32] p-4 md:p-5 hover:translate-x-1 hover:border-[#2d3a52] transition-all duration-200 group`}
     >
-      <PriorityDot priority={action.priority} />
-      <div className="min-w-0 flex-1">
-        <p className="text-white text-sm leading-snug group-hover:text-[#d4af37] transition-colors truncate">
-          {action.title}
-        </p>
-        <div className="flex flex-wrap items-center gap-1.5 mt-1">
-          <AgencyTag agency={action.agency} />
-          {action.assignee && (
-            <span className="text-[10px] text-[#64748b]">{action.assignee}</span>
-          )}
-          {action.overdueDays > 0 && (
-            <Badge variant="red">{action.overdueDays}d overdue</Badge>
-          )}
-          {action.staleDays >= 7 && (
-            <Badge variant="amber">{action.staleDays}d stale</Badge>
-          )}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-white text-base font-medium group-hover:text-[#d4af37] transition-colors">
+            {action.title}
+          </p>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <AgencyTag agency={action.agency} />
+            {action.assignee && (
+              <span className="text-xs text-[#64748b] font-medium">{action.assignee}</span>
+            )}
+          </div>
         </div>
+        <span className="rounded-lg bg-red-500/20 text-red-400 font-bold px-3 py-1 text-sm whitespace-nowrap shrink-0">
+          {action.overdueDays}d overdue
+        </span>
       </div>
     </a>
   );
 }
 
-// ─── Executive Brief Card ────────────────────────────────────────────────────
-
-function ExecutiveBriefCard({ data, loading }: { data: BriefingData | null; loading: boolean }) {
-  return (
-    <div className="rounded-xl border border-[#d4af37]/30 bg-gradient-to-br from-[#d4af37]/5 to-transparent p-4 md:p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center">
-          <Sparkles className="h-3.5 w-3.5 text-[#0a1628]" />
-        </div>
-        <h2 className="text-white font-semibold text-sm">Executive Brief</h2>
-        {data?.model === 'fallback' && (
-          <Badge variant="amber">Fallback</Badge>
-        )}
-      </div>
-      {loading ? (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-4 h-4 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
-            <span className="text-[#d4af37] text-xs">Generating briefing...</span>
-          </div>
-          <BriefingSkeleton />
-        </div>
-      ) : data ? (
-        <div className="text-[#94a3b8] text-sm leading-relaxed whitespace-pre-line">
-          {data.briefing}
-        </div>
-      ) : (
-        <p className="text-[#64748b] text-sm">No briefing available.</p>
-      )}
-    </div>
-  );
-}
-
-// ─── Action Items Triage ─────────────────────────────────────────────────────
-
 function TriageSection({ actions, compact = false }: { actions: ActionsData | null; compact?: boolean }) {
-  if (!actions) return <CardSkeleton />;
+  if (!actions) return <CardsSkeleton />;
 
   const { overdue, dueToday, dueThisWeek } = actions;
   const hasItems = overdue.length > 0 || dueToday.length > 0 || dueThisWeek.length > 0;
 
   if (!hasItems) {
     return (
-      <div className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32]/60 p-4 text-center">
-        <p className="text-[#64748b] text-sm">No action items requiring attention.</p>
+      <div className="rounded-xl border border-emerald-500/20 bg-[#0f1d32] p-6 text-center">
+        <p className="text-emerald-400 text-base font-medium">All clear — no action items requiring attention.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {overdue.length > 0 && (
-        <div className="rounded-xl border border-red-500/20 bg-[#0f1d32]/60 backdrop-blur-sm p-4 md:p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-red-400" />
-              <h3 className="text-red-400 font-semibold text-sm">Overdue</h3>
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <AlertTriangle className="h-5 w-5 text-red-400" />
+              <h3 className="text-lg font-bold text-red-400">Overdue</h3>
             </div>
-            <Badge variant="red">{overdue.length}</Badge>
+            <span className="rounded-lg bg-red-500/15 text-red-400 font-bold px-3 py-1 text-sm">{overdue.length}</span>
           </div>
-          <div className="divide-y divide-[#2d3a52]/30">
+          <div className="space-y-3">
             {(compact ? overdue.slice(0, 5) : overdue).map(a => (
-              <ActionRow key={a.id} action={a} />
+              <SeverityCard key={a.id} action={a} />
             ))}
           </div>
           {compact && overdue.length > 5 && (
-            <p className="text-[#64748b] text-xs mt-2">+{overdue.length - 5} more overdue items</p>
+            <p className="text-[#64748b] text-xs mt-3">+{overdue.length - 5} more overdue items</p>
           )}
         </div>
       )}
 
-      {(dueToday.length > 0 || dueThisWeek.length > 0) && (
-        <div className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32]/60 backdrop-blur-sm p-4 md:p-5">
-          {dueToday.length > 0 && (
-            <>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-[#d4af37] font-semibold text-sm">Due Today</h3>
-                <Badge variant="gold">{dueToday.length}</Badge>
-              </div>
-              <div className="divide-y divide-[#2d3a52]/30">
-                {dueToday.map(a => <ActionRow key={a.id} action={a} />)}
-              </div>
-            </>
-          )}
+      {dueToday.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-[#d4af37]">Due Today</h3>
+            <span className="rounded-lg bg-[#d4af37]/15 text-[#d4af37] font-bold px-3 py-1 text-sm">{dueToday.length}</span>
+          </div>
+          <div className="space-y-3">
+            {dueToday.map(a => (
+              <a
+                key={a.id}
+                href={a.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-xl border border-[#2d3a52]/50 border-l-4 border-l-[#d4af37] bg-[#0f1d32] p-4 md:p-5 hover:translate-x-1 hover:border-[#2d3a52] transition-all duration-200 group"
+              >
+                <p className="text-white text-base font-medium group-hover:text-[#d4af37] transition-colors">{a.title}</p>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <AgencyTag agency={a.agency} />
+                  {a.assignee && <span className="text-xs text-[#64748b] font-medium">{a.assignee}</span>}
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
-          {dueThisWeek.length > 0 && (
-            <div className={dueToday.length > 0 ? 'mt-4 pt-4 border-t border-[#2d3a52]/30' : ''}>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-[#94a3b8] font-semibold text-sm">This Week</h3>
-                <Badge>{dueThisWeek.length}</Badge>
-              </div>
-              <div className="divide-y divide-[#2d3a52]/30">
-                {(compact ? dueThisWeek.slice(0, 3) : dueThisWeek).map(a => (
-                  <ActionRow key={a.id} action={a} />
-                ))}
-              </div>
-              {compact && dueThisWeek.length > 3 && (
-                <p className="text-[#64748b] text-xs mt-2">+{dueThisWeek.length - 3} more this week</p>
-              )}
-            </div>
+      {dueThisWeek.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-[#94a3b8]">This Week</h3>
+            <span className="rounded-lg bg-[#1a2744] text-[#94a3b8] font-bold px-3 py-1 text-sm">{dueThisWeek.length}</span>
+          </div>
+          <div className="space-y-3">
+            {(compact ? dueThisWeek.slice(0, 3) : dueThisWeek).map(a => (
+              <a
+                key={a.id}
+                href={a.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32] p-4 md:p-5 hover:translate-x-1 hover:border-[#2d3a52] transition-all duration-200 group"
+              >
+                <p className="text-white text-base font-medium group-hover:text-[#d4af37] transition-colors">{a.title}</p>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <AgencyTag agency={a.agency} />
+                  {a.assignee && <span className="text-xs text-[#64748b] font-medium">{a.assignee}</span>}
+                </div>
+              </a>
+            ))}
+          </div>
+          {compact && dueThisWeek.length > 3 && (
+            <p className="text-[#64748b] text-xs mt-3">+{dueThisWeek.length - 3} more this week</p>
           )}
         </div>
       )}
@@ -323,60 +382,93 @@ function TriageSection({ actions, compact = false }: { actions: ActionsData | nu
   );
 }
 
-// ─── Stale Section ───────────────────────────────────────────────────────────
+// ─── Stale Items — Visual Decay ──────────────────────────────────────────────
 
 function StaleSection({ actions }: { actions: ActionsData | null }) {
-  if (!actions) return <CardSkeleton />;
+  if (!actions) return <CardsSkeleton />;
   const { stale } = actions;
 
   if (stale.length === 0) {
     return (
-      <div className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32]/60 p-4 text-center">
-        <p className="text-[#64748b] text-sm">No stale items. All actions are being tracked.</p>
+      <div className="rounded-xl border border-emerald-500/20 bg-[#0f1d32] p-6 text-center">
+        <p className="text-emerald-400 text-base font-medium">No stale items. All actions are being tracked.</p>
       </div>
     );
   }
 
+  const critical = stale.filter(a => a.staleDays >= 21);
+  const warning = stale.filter(a => a.staleDays >= 14 && a.staleDays < 21);
+  const watch = stale.filter(a => a.staleDays < 14);
+
+  const groups = [
+    { label: 'Critical', sublabel: '21+ days silent', items: critical, color: 'red' as const },
+    { label: 'Warning', sublabel: '14–20 days', items: warning, color: 'amber' as const },
+    { label: 'Watch', sublabel: '7–13 days', items: watch, color: 'default' as const },
+  ].filter(g => g.items.length > 0);
+
   return (
-    <div className="rounded-xl border border-amber-500/20 bg-[#0f1d32]/60 backdrop-blur-sm p-4 md:p-5">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Ghost className="h-4 w-4 text-amber-400" />
-          <h3 className="text-amber-400 font-semibold text-sm">Falling Through the Cracks</h3>
+    <div className="space-y-6">
+      <div className="flex items-center gap-2.5">
+        <Ghost className="h-5 w-5 text-amber-400" />
+        <h3 className="text-lg font-bold text-amber-400">Falling Through the Cracks</h3>
+      </div>
+
+      {groups.map(group => (
+        <div key={group.label}>
+          <p className={`text-xs font-bold uppercase tracking-wider mb-3 ${
+            group.color === 'red' ? 'text-red-400' :
+            group.color === 'amber' ? 'text-amber-400' : 'text-[#64748b]'
+          }`}>
+            {group.label} — {group.sublabel}
+          </p>
+          <div className="space-y-3">
+            {group.items.map(a => {
+              const barPct = Math.min(100, Math.round((a.staleDays / 30) * 100));
+              const barColor =
+                a.staleDays >= 21 ? 'bg-red-500' :
+                a.staleDays >= 14 ? 'bg-amber-500' : 'bg-[#64748b]';
+              const isPulsing = a.staleDays >= 21;
+
+              return (
+                <a
+                  key={a.id}
+                  href={a.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`block rounded-xl border bg-[#0f1d32] p-4 md:p-5 hover:border-[#2d3a52] transition-all duration-200 group ${
+                    isPulsing ? 'border-red-500/30 animate-[pulse-border_3s_ease-in-out_infinite]' : 'border-[#2d3a52]/50'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-white text-base font-medium group-hover:text-[#d4af37] transition-colors">
+                        {a.title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <AgencyTag agency={a.agency} />
+                        {a.assignee && <span className="text-xs text-[#64748b] font-medium">{a.assignee}</span>}
+                      </div>
+                    </div>
+                    <span className={`text-2xl font-black shrink-0 ${
+                      a.staleDays >= 21 ? 'text-red-400' :
+                      a.staleDays >= 14 ? 'text-amber-400' : 'text-[#64748b]'
+                    }`}>
+                      {a.staleDays}d
+                    </span>
+                  </div>
+                  {/* Decay bar */}
+                  <div className="w-full h-1.5 rounded-full bg-[#1a2744] overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${barColor} transition-all duration-500`}
+                      style={{ width: `${barPct}%` }}
+                    />
+                  </div>
+                </a>
+              );
+            })}
+          </div>
         </div>
-        <Badge variant="amber">{stale.length}</Badge>
-      </div>
-      <div className="space-y-2">
-        {stale.map(a => {
-          const severity = a.staleDays >= 14 ? 'red' : a.staleDays >= 10 ? 'amber' : 'default';
-          return (
-            <a
-              key={a.id}
-              href={a.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-start gap-3 py-2 px-3 -mx-3 rounded-lg hover:bg-[#1a2744]/60 transition-colors group"
-            >
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
-                severity === 'red' ? 'bg-red-500/15 text-red-400' :
-                severity === 'amber' ? 'bg-amber-500/15 text-amber-400' :
-                'bg-[#1a2744] text-[#94a3b8]'
-              }`}>
-                {a.staleDays}d
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-white text-sm leading-snug group-hover:text-[#d4af37] transition-colors truncate">
-                  {a.title}
-                </p>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <AgencyTag agency={a.agency} />
-                  {a.assignee && <span className="text-[10px] text-[#64748b]">{a.assignee}</span>}
-                </div>
-              </div>
-            </a>
-          );
-        })}
-      </div>
+      ))}
     </div>
   );
 }
@@ -384,12 +476,16 @@ function StaleSection({ actions }: { actions: ActionsData | null }) {
 // ─── Agencies Tab ────────────────────────────────────────────────────────────
 
 function AgenciesSection({ actions, meetings }: { actions: ActionsData | null; meetings: MeetingsData | null }) {
-  if (!actions) return <div className="grid grid-cols-1 md:grid-cols-2 gap-3"><CardSkeleton /><CardSkeleton /><CardSkeleton /><CardSkeleton /></div>;
+  if (!actions) return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
+    </div>
+  );
 
   const pulse = actions.agencyPulse;
   if (pulse.length === 0) {
     return (
-      <div className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32]/60 p-4 text-center">
+      <div className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32] p-6 text-center">
         <p className="text-[#64748b] text-sm">No agency data available.</p>
       </div>
     );
@@ -399,47 +495,79 @@ function AgenciesSection({ actions, meetings }: { actions: ActionsData | null; m
     const map: Record<string, MeetingNote> = {};
     if (meetings?.meetings) {
       for (const m of meetings.meetings) {
-        if (m.relatedAgency && !map[m.relatedAgency]) {
-          map[m.relatedAgency] = m;
-        }
+        if (m.relatedAgency && !map[m.relatedAgency]) map[m.relatedAgency] = m;
       }
     }
     return map;
   }, [meetings]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {pulse.map(ag => {
+        const isCritical = ag.healthRatio < 0.5;
+        const healthPct = Math.round(ag.healthRatio * 100);
+        const overduePct = ag.openCount > 0 ? Math.round((ag.overdueCount / ag.openCount) * 100) : 0;
+        const healthColor = ag.healthRatio >= 0.7 ? 'bg-emerald-500' : ag.healthRatio >= 0.4 ? 'bg-amber-500' : 'bg-red-500';
+        const healthLabel = ag.healthRatio >= 0.7 ? 'Healthy' : ag.healthRatio >= 0.4 ? 'At Risk' : 'Critical';
+        const healthTextColor = ag.healthRatio >= 0.7 ? 'text-emerald-400' : ag.healthRatio >= 0.4 ? 'text-amber-400' : 'text-red-400';
         const latestMeeting = meetingsByAgency[ag.agency];
+
         return (
-          <div key={ag.agency} className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32]/60 backdrop-blur-sm p-4">
-            <div className="flex items-center justify-between mb-3">
+          <div
+            key={ag.agency}
+            className={`rounded-xl border bg-[#0f1d32] p-4 md:p-6 transition-all duration-300 ${
+              isCritical ? 'border-red-500/30 animate-[pulse-border_3s_ease-in-out_infinite]' : 'border-[#2d3a52]/50 hover:border-[#2d3a52]'
+            }`}
+          >
+            {/* Agency header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{AGENCY_EMOJI[ag.agency] || '📊'}</span>
+                <span className="text-white font-bold text-lg">{ag.agency}</span>
+              </div>
               <div className="flex items-center gap-2">
-                <span className="text-lg">{AGENCY_EMOJI[ag.agency] || '📊'}</span>
-                <span className="text-white font-semibold text-sm">{ag.agency}</span>
-              </div>
-              <HealthDot ratio={ag.healthRatio} />
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div>
-                <p className="text-white font-bold text-lg">{ag.openCount}</p>
-                <p className="text-[#64748b] text-[10px] uppercase tracking-wider">Open</p>
-              </div>
-              <div>
-                <p className={`font-bold text-lg ${ag.overdueCount > 0 ? 'text-red-400' : 'text-white'}`}>{ag.overdueCount}</p>
-                <p className="text-[#64748b] text-[10px] uppercase tracking-wider">Overdue</p>
-              </div>
-              <div>
-                <p className={`font-bold text-lg ${ag.staleCount > 0 ? 'text-amber-400' : 'text-white'}`}>{ag.staleCount}</p>
-                <p className="text-[#64748b] text-[10px] uppercase tracking-wider">Stale</p>
+                <span className={`w-3 h-3 rounded-full ${healthColor}`} />
+                <span className={`text-xs font-semibold ${healthTextColor}`}>{healthLabel}</span>
               </div>
             </div>
+
+            {/* Numbers */}
+            <div className="grid grid-cols-3 gap-3 text-center mb-4">
+              <div>
+                <p className="text-white font-bold text-2xl">{ag.openCount}</p>
+                <p className="text-[#64748b] text-xs font-medium uppercase tracking-wider">Open</p>
+              </div>
+              <div>
+                <p className={`font-bold text-2xl ${ag.overdueCount > 0 ? 'text-red-400' : 'text-white'}`}>{ag.overdueCount}</p>
+                <p className="text-[#64748b] text-xs font-medium uppercase tracking-wider">Overdue</p>
+              </div>
+              <div>
+                <p className={`font-bold text-2xl ${ag.staleCount > 0 ? 'text-amber-400' : 'text-white'}`}>{ag.staleCount}</p>
+                <p className="text-[#64748b] text-xs font-medium uppercase tracking-wider">Stale</p>
+              </div>
+            </div>
+
+            {/* Health bar */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs text-[#64748b]">Health</span>
+                <span className={`text-xs font-bold ${healthTextColor}`}>{healthPct}%</span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-[#1a2744] overflow-hidden flex">
+                {overduePct > 0 && (
+                  <div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${overduePct}%` }} />
+                )}
+                <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${100 - overduePct}%` }} />
+              </div>
+            </div>
+
+            {/* Latest meeting */}
             {latestMeeting && (
-              <div className="mt-3 pt-3 border-t border-[#2d3a52]/30">
-                <p className="text-[10px] text-[#64748b] uppercase tracking-wider mb-1">Latest Meeting</p>
-                <p className="text-[#94a3b8] text-xs truncate">{latestMeeting.title}</p>
+              <div className="rounded-lg bg-[#1a2744]/60 border border-[#2d3a52]/30 p-3">
+                <p className="text-xs text-[#64748b] font-medium uppercase tracking-wider mb-1">Latest Meeting</p>
+                <p className="text-[#94a3b8] text-sm font-medium truncate">{latestMeeting.title}</p>
                 {latestMeeting.date && (
-                  <p className="text-[#64748b] text-[10px] mt-0.5">{latestMeeting.date}</p>
+                  <p className="text-[#64748b] text-xs mt-1">{latestMeeting.date}</p>
                 )}
               </div>
             )}
@@ -450,9 +578,9 @@ function AgenciesSection({ actions, meetings }: { actions: ActionsData | null; m
   );
 }
 
-// ─── Schedule Tab ────────────────────────────────────────────────────────────
+// ─── Schedule — Timeline ─────────────────────────────────────────────────────
 
-function ScheduleEvent({ event, actions }: { event: CalendarEvent; actions: ActionsData | null }) {
+function TimelineEvent({ event, actions, isFirst }: { event: CalendarEvent; actions: ActionsData | null; isFirst: boolean }) {
   const [expanded, setExpanded] = useState(false);
 
   const relatedActions = useMemo(() => {
@@ -462,58 +590,73 @@ function ScheduleEvent({ event, actions }: { event: CalendarEvent; actions: Acti
   }, [event.agency, actions]);
 
   return (
-    <div className="relative pl-8">
-      {/* Timeline dot + line */}
-      <div className="absolute left-0 top-0 bottom-0 flex flex-col items-center">
-        <div className={`w-3 h-3 rounded-full border-2 shrink-0 ${
-          event.agency ? 'border-[#d4af37] bg-[#d4af37]/20' : 'border-[#2d3a52] bg-[#0f1d32]'
-        }`} />
-        <div className="w-px flex-1 bg-[#2d3a52]/50" />
+    <div className="relative pl-10 md:pl-12">
+      {/* Timeline line + dot */}
+      <div className="absolute left-[11px] top-0 bottom-0 flex flex-col items-center">
+        <div className={`w-[22px] h-[22px] rounded-full border-2 shrink-0 flex items-center justify-center z-10 ${
+          isFirst
+            ? 'border-[#d4af37] bg-[#d4af37]/20 shadow-[0_0_12px_rgba(212,175,55,0.3)]'
+            : event.agency ? 'border-[#d4af37]/60 bg-[#d4af37]/10' : 'border-[#2d3a52] bg-[#0f1d32]'
+        }`}>
+          {isFirst && <div className="w-2 h-2 rounded-full bg-[#d4af37]" />}
+        </div>
+        <div className="w-0.5 flex-1 bg-gradient-to-b from-[#d4af37]/30 to-[#2d3a52]/30" />
       </div>
 
       <div
-        className={`rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32]/60 backdrop-blur-sm p-3 mb-3 ${
-          relatedActions.length > 0 ? 'cursor-pointer hover:border-[#d4af37]/30' : ''
-        } transition-colors`}
+        className={`rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32] p-4 md:p-5 mb-4 transition-all duration-200 ${
+          relatedActions.length > 0 ? 'cursor-pointer hover:border-[#d4af37]/30' : 'hover:border-[#2d3a52]'
+        }`}
         onClick={() => relatedActions.length > 0 && setExpanded(!expanded)}
       >
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[#d4af37] text-xs font-medium">{event.allDay ? 'All day' : event.start}</p>
-            <p className="text-white text-sm font-medium mt-0.5">{event.summary}</p>
+            <p className="text-[#d4af37] text-lg font-bold">{event.allDay ? 'All Day' : event.start}</p>
+            <p className="text-white text-base font-semibold mt-1">{event.summary}</p>
             {event.location && (
-              <div className="flex items-center gap-1 mt-1">
-                <MapPin className="h-3 w-3 text-[#64748b]" />
-                <span className="text-[#64748b] text-xs">{event.location}</span>
+              <div className="flex items-center gap-1.5 mt-2">
+                <MapPin className="h-4 w-4 text-[#64748b]" />
+                <span className="text-[#94a3b8] text-sm">{event.location}</span>
               </div>
             )}
             {event.attendees.length > 0 && (
-              <p className="text-[#64748b] text-[10px] mt-1">{event.attendees.slice(0, 4).join(', ')}{event.attendees.length > 4 ? ` +${event.attendees.length - 4}` : ''}</p>
+              <p className="text-[#64748b] text-xs mt-2">
+                {event.attendees.slice(0, 4).join(', ')}{event.attendees.length > 4 ? ` +${event.attendees.length - 4}` : ''}
+              </p>
             )}
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {event.agency && <AgencyTag agency={event.agency} />}
             {relatedActions.length > 0 && (
               <>
-                <Badge variant="gold">{relatedActions.length} actions</Badge>
-                {expanded ? <ChevronDown className="h-3 w-3 text-[#64748b]" /> : <ChevronRight className="h-3 w-3 text-[#64748b]" />}
+                <span className="rounded-lg bg-[#d4af37]/15 text-[#d4af37] font-bold px-3 py-1 text-sm">
+                  {relatedActions.length} open
+                </span>
+                {expanded
+                  ? <ChevronDown className="h-4 w-4 text-[#64748b]" />
+                  : <ChevronRight className="h-4 w-4 text-[#64748b]" />
+                }
               </>
             )}
           </div>
         </div>
 
         {expanded && relatedActions.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-[#2d3a52]/30 space-y-1.5">
-            <p className="text-[10px] text-[#64748b] uppercase tracking-wider font-semibold mb-1">Meeting Prep — Open Actions</p>
+          <div className="mt-4 pt-4 border-t border-[#2d3a52]/30 space-y-2">
+            <p className="text-xs text-[#64748b] font-bold uppercase tracking-wider mb-2">Meeting Prep — Open Actions</p>
             {relatedActions.slice(0, 5).map(a => (
-              <div key={a.id} className="flex items-center gap-2">
-                <PriorityDot priority={a.priority} />
-                <span className="text-[#94a3b8] text-xs truncate">{a.title}</span>
-                {a.overdueDays > 0 && <Badge variant="red">{a.overdueDays}d</Badge>}
+              <div key={a.id} className="flex items-center gap-3 py-1">
+                <span className={`w-2 h-2 rounded-full shrink-0 ${
+                  a.priority === 'High' ? 'bg-red-500' : a.priority === 'Medium' ? 'bg-amber-500' : 'bg-[#64748b]'
+                }`} />
+                <span className="text-[#94a3b8] text-sm truncate flex-1">{a.title}</span>
+                {a.overdueDays > 0 && (
+                  <span className="rounded-lg bg-red-500/15 text-red-400 font-bold px-2 py-0.5 text-xs shrink-0">{a.overdueDays}d</span>
+                )}
               </div>
             ))}
             {relatedActions.length > 5 && (
-              <p className="text-[#64748b] text-[10px]">+{relatedActions.length - 5} more</p>
+              <p className="text-[#64748b] text-xs">+{relatedActions.length - 5} more</p>
             )}
           </div>
         )}
@@ -523,7 +666,7 @@ function ScheduleEvent({ event, actions }: { event: CalendarEvent; actions: Acti
 }
 
 function ScheduleSection({ calendar, actions }: { calendar: CalendarData | null; actions: ActionsData | null }) {
-  if (!calendar) return <div className="space-y-3"><CardSkeleton /><CardSkeleton /></div>;
+  if (!calendar) return <CardsSkeleton />;
 
   if (calendar.authRequired) {
     return <SectionError message="Calendar disconnected — reconnect from admin settings." />;
@@ -533,72 +676,83 @@ function ScheduleSection({ calendar, actions }: { calendar: CalendarData | null;
 
   if (today.length === 0 && upcoming.length === 0) {
     return (
-      <div className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32]/60 p-4 text-center">
-        <Calendar className="h-8 w-8 text-[#2d3a52] mx-auto mb-2" />
-        <p className="text-[#64748b] text-sm">No events scheduled.</p>
+      <div className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32] p-8 text-center">
+        <Calendar className="h-12 w-12 text-[#2d3a52] mx-auto mb-3" />
+        <p className="text-[#64748b] text-base">No events scheduled.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {today.length > 0 && (
         <div>
-          <h3 className="text-white font-semibold text-sm mb-3">Today</h3>
-          {today.map(ev => <ScheduleEvent key={ev.id} event={ev} actions={actions} />)}
+          <h3 className="text-lg font-bold text-white mb-4">Today</h3>
+          {today.map((ev, i) => <TimelineEvent key={ev.id} event={ev} actions={actions} isFirst={i === 0} />)}
         </div>
       )}
       {upcoming.length > 0 && (
         <div>
-          <h3 className="text-[#94a3b8] font-semibold text-sm mb-3">Upcoming</h3>
-          {upcoming.map(ev => <ScheduleEvent key={ev.id} event={ev} actions={actions} />)}
+          <h3 className="text-lg font-bold text-[#94a3b8] mb-4">Upcoming</h3>
+          {upcoming.map(ev => <TimelineEvent key={ev.id} event={ev} actions={actions} isFirst={false} />)}
         </div>
       )}
     </div>
   );
 }
 
-// ─── Intel Tab ───────────────────────────────────────────────────────────────
+// ─── Intel — Meeting Card Grid ───────────────────────────────────────────────
 
 function IntelSection({ meetings, actions }: { meetings: MeetingsData | null; actions: ActionsData | null }) {
-  if (!meetings) return <div className="space-y-3"><CardSkeleton /><CardSkeleton /></div>;
+  if (!meetings) return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Skeleton className="h-40 rounded-xl" />
+      <Skeleton className="h-40 rounded-xl" />
+    </div>
+  );
 
   if (meetings.meetings.length === 0) {
     return (
-      <div className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32]/60 p-4 text-center">
-        <FileText className="h-8 w-8 text-[#2d3a52] mx-auto mb-2" />
-        <p className="text-[#64748b] text-sm">No meeting notes from the last 7 days.</p>
+      <div className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32] p-8 text-center">
+        <FileText className="h-12 w-12 text-[#2d3a52] mx-auto mb-3" />
+        <p className="text-[#64748b] text-base">No meeting notes from the last 7 days.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {meetings.meetings.map(m => {
-        const newActions = actions?.overdue?.filter(a => a.sourceMeeting && a.sourceMeeting.toLowerCase().includes(m.title.toLowerCase().slice(0, 20))) || [];
+        const relActions = actions?.overdue?.filter(a =>
+          a.sourceMeeting && a.sourceMeeting.toLowerCase().includes(m.title.toLowerCase().slice(0, 20))
+        ) || [];
+        const topBorder = m.relatedAgency ? (AGENCY_COLORS[m.relatedAgency] || 'border-t-[#2d3a52]') : 'border-t-[#2d3a52]';
+
         return (
           <a
             key={m.id}
             href={m.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="block rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32]/60 backdrop-blur-sm p-4 hover:border-[#d4af37]/30 transition-colors"
+            className={`block rounded-xl border border-[#2d3a52]/50 border-t-2 ${topBorder} bg-[#0f1d32] p-4 md:p-6 hover:border-[#2d3a52] transition-all duration-200 group`}
           >
-            <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="flex items-start justify-between gap-3 mb-3">
               <div className="min-w-0">
-                <p className="text-white text-sm font-medium truncate">{m.title}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  {m.date && <span className="text-[#64748b] text-xs">{m.date}</span>}
+                <p className="text-white text-base font-bold group-hover:text-[#d4af37] transition-colors">{m.title}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  {m.date && <span className="text-[#64748b] text-xs font-medium">{m.date}</span>}
                   {m.category && <AgencyTag agency={m.category} />}
-                  {m.relatedAgency && <AgencyTag agency={m.relatedAgency} />}
+                  {m.relatedAgency && m.relatedAgency !== m.category && <AgencyTag agency={m.relatedAgency} />}
                 </div>
               </div>
-              {newActions.length > 0 && (
-                <Badge variant="gold">{newActions.length} actions</Badge>
+              {relActions.length > 0 && (
+                <span className="rounded-lg bg-[#d4af37]/15 text-[#d4af37] font-bold px-3 py-1 text-sm shrink-0">
+                  {relActions.length} actions
+                </span>
               )}
             </div>
             {m.summary && (
-              <p className="text-[#94a3b8] text-xs leading-relaxed line-clamp-3">{m.summary}</p>
+              <p className="text-[#94a3b8] text-sm leading-relaxed line-clamp-3">{m.summary}</p>
             )}
           </a>
         );
@@ -619,12 +773,10 @@ export function BriefingDashboard() {
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [meetingsError, setMeetingsError] = useState<string | null>(null);
   const [briefingLoading, setBriefingLoading] = useState(true);
-  const [dataLoading, setDataLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const tabsRef = useRef<HTMLDivElement>(null);
 
   const fetchAll = useCallback(async () => {
-    // Fetch data endpoints in parallel
     const [actionsP, calendarP, meetingsP] = await Promise.allSettled([
       fetch('/api/briefing/actions').then(r => r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))),
       fetch('/api/briefing/calendar').then(r => r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))),
@@ -639,8 +791,6 @@ export function BriefingDashboard() {
 
     if (meetingsP.status === 'fulfilled') { setMeetings(meetingsP.value); setMeetingsError(null); }
     else setMeetingsError('Failed to load meetings');
-
-    setDataLoading(false);
   }, []);
 
   const fetchBriefing = useCallback(async () => {
@@ -648,10 +798,9 @@ export function BriefingDashboard() {
     try {
       const res = await fetch('/api/briefing/generate');
       if (!res.ok) throw new Error(`${res.status}`);
-      const data = await res.json();
-      setBriefing(data);
+      setBriefing(await res.json());
     } catch {
-      // Briefing generation failed — the card will show empty state
+      // card will show empty state
     } finally {
       setBriefingLoading(false);
     }
@@ -668,62 +817,35 @@ export function BriefingDashboard() {
     setRefreshing(false);
   }, [fetchAll, fetchBriefing]);
 
-  // Summary stats for the header
   const stats = useMemo(() => {
     if (!actions) return null;
-    return {
-      overdue: actions.summary.totalOverdue,
-      today: actions.dueToday.length,
-      stale: actions.summary.totalStale,
-    };
+    return { overdue: actions.summary.totalOverdue, stale: actions.summary.totalStale };
   }, [actions]);
 
+  const calendarTodayCount = calendar?.today?.length ?? 0;
+
   return (
-    <div className="space-y-4 md:space-y-5 relative">
+    <div className="space-y-5 md:space-y-6 relative">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[#64748b] text-xs font-semibold uppercase tracking-wider mb-1">Daily Briefing</p>
-          <h1 className="text-white text-xl md:text-2xl font-bold">{format(new Date(), 'EEEE, MMMM d')}</h1>
+          <h1 className="text-white text-2xl md:text-3xl font-bold">{format(new Date(), 'EEEE, MMMM d')}</h1>
         </div>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#2d3a52]/50 bg-[#0f1d32]/60 text-[#94a3b8] text-sm hover:text-white hover:border-[#d4af37]/30 transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#2d3a52]/50 bg-[#0f1d32] text-[#94a3b8] text-sm font-medium hover:text-white hover:border-[#d4af37]/30 transition-all duration-200 disabled:opacity-50 min-h-[44px]"
         >
-          <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           <span className="hidden md:inline">{refreshing ? 'Refreshing...' : 'Refresh'}</span>
         </button>
       </div>
 
-      {/* Quick stats ribbon */}
-      {stats && (
-        <div className="flex items-center gap-3 text-xs">
-          {stats.overdue > 0 && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-              <span className="text-red-400 font-medium">{stats.overdue} overdue</span>
-            </div>
-          )}
-          {stats.today > 0 && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]" />
-              <span className="text-[#d4af37] font-medium">{stats.today} due today</span>
-            </div>
-          )}
-          {stats.stale > 0 && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-              <span className="text-amber-400 font-medium">{stats.stale} stale</span>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Tab Bar */}
       <div
         ref={tabsRef}
-        className="flex gap-1 overflow-x-auto scrollbar-hide border-b border-[#2d3a52]/30 pb-px -mx-1 px-1"
+        className="flex gap-1 overflow-x-auto scrollbar-hide border-b border-[#2d3a52]/30 pb-px"
       >
         {TABS.map(tab => {
           const Icon = tab.icon;
@@ -732,19 +854,19 @@ export function BriefingDashboard() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium whitespace-nowrap rounded-t-lg transition-colors shrink-0 ${
+              className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold whitespace-nowrap rounded-t-lg transition-all duration-200 shrink-0 min-h-[44px] ${
                 isActive
                   ? 'text-[#d4af37] border-b-2 border-[#d4af37] bg-[#d4af37]/5'
                   : 'text-[#64748b] hover:text-[#94a3b8] border-b-2 border-transparent'
               }`}
             >
-              <Icon className="h-3.5 w-3.5" />
+              <Icon className="h-4 w-4" />
               {tab.label}
               {tab.id === 'triage' && stats && stats.overdue > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500/15 text-red-400">{stats.overdue}</span>
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-500/15 text-red-400">{stats.overdue}</span>
               )}
               {tab.id === 'stale' && stats && stats.stale > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-400">{stats.stale}</span>
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-400">{stats.stale}</span>
               )}
             </button>
           );
@@ -752,39 +874,31 @@ export function BriefingDashboard() {
       </div>
 
       {/* Tab Content */}
-      <div className="min-h-[300px]">
-        {/* Brief Tab */}
+      <div className="min-h-[400px]">
         {activeTab === 'brief' && (
-          <div className="space-y-4">
-            <ExecutiveBriefCard data={briefing} loading={briefingLoading} />
+          <div className="space-y-6">
+            <ExecutiveBriefHero data={briefing} loading={briefingLoading} stats={stats} calendarToday={calendarTodayCount} />
             {actionsError ? <SectionError message={actionsError} /> : <TriageSection actions={actions} compact />}
-            {actions && actions.stale.length > 0 && (
-              <StaleSection actions={actions} />
-            )}
+            {actions && actions.stale.length > 0 && <StaleSection actions={actions} />}
           </div>
         )}
 
-        {/* Triage Tab */}
         {activeTab === 'triage' && (
           actionsError ? <SectionError message={actionsError} /> : <TriageSection actions={actions} />
         )}
 
-        {/* Stale Tab */}
         {activeTab === 'stale' && (
           actionsError ? <SectionError message={actionsError} /> : <StaleSection actions={actions} />
         )}
 
-        {/* Agencies Tab */}
         {activeTab === 'agencies' && (
           actionsError ? <SectionError message={actionsError} /> : <AgenciesSection actions={actions} meetings={meetings} />
         )}
 
-        {/* Schedule Tab */}
         {activeTab === 'schedule' && (
           calendarError ? <SectionError message={calendarError} /> : <ScheduleSection calendar={calendar} actions={actions} />
         )}
 
-        {/* Intel Tab */}
         {activeTab === 'intel' && (
           meetingsError ? <SectionError message={meetingsError} /> : <IntelSection meetings={meetings} actions={actions} />
         )}

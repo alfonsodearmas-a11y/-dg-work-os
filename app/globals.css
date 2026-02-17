@@ -700,6 +700,12 @@ html, body {
   border-radius: 8px;
 }
 
+/* Pulse border animation for critical items */
+@keyframes pulse-border {
+  0%, 100% { border-color: rgba(239, 68, 68, 0.3); }
+  50% { border-color: rgba(239, 68, 68, 0.6); }
+}
+
 /* Bottom nav styles (mobile only) */
 @media (max-width: 768px) {
   .bottom-nav {
