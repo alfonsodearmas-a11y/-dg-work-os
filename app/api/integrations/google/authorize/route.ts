@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { randomBytes } from 'crypto';
-import { cookies } from 'next/headers';
 
 const SCOPES = [
   'https://www.googleapis.com/auth/calendar',
@@ -34,16 +33,6 @@ export async function GET() {
   // CSRF state token
   const state = randomBytes(32).toString('hex');
 
-  // Store state in httpOnly cookie (short-lived, 10 min)
-  const cookieStore = await cookies();
-  cookieStore.set('google-oauth-state', state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 600,
-    path: '/',
-  });
-
   const authUrl = oauth2Client.generateAuthUrl({
     access_type: 'offline',
     prompt: 'consent',
@@ -51,5 +40,15 @@ export async function GET() {
     state,
   });
 
-  return NextResponse.redirect(authUrl);
+  // Set state cookie directly on the redirect response
+  const response = NextResponse.redirect(authUrl);
+  response.cookies.set('google-oauth-state', state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 600,
+    path: '/',
+  });
+
+  return response;
 }

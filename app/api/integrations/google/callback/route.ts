@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
-import { cookies } from 'next/headers';
 import { upsertGoogleCalendarToken } from '@/lib/integration-tokens';
 import { invalidateCalendarClientCache } from '@/lib/google-calendar';
 
@@ -14,7 +13,10 @@ function getRedirectUri(): string {
 
 function adminRedirect(request: NextRequest, params: string): NextResponse {
   const base = new URL('/', request.url).origin;
-  return NextResponse.redirect(`${base}/admin?${params}`);
+  const response = NextResponse.redirect(`${base}/admin?${params}`);
+  // Clear state cookie on all redirects
+  response.cookies.set('google-oauth-state', '', { maxAge: 0, path: '/' });
+  return response;
 }
 
 export async function GET(request: NextRequest) {
@@ -32,16 +34,12 @@ export async function GET(request: NextRequest) {
     return adminRedirect(request, 'google=error&reason=missing_params');
   }
 
-  // Verify CSRF state
-  const cookieStore = await cookies();
-  const storedState = cookieStore.get('google-oauth-state')?.value;
+  // Verify CSRF state — read from request cookies
+  const storedState = request.cookies.get('google-oauth-state')?.value;
 
   if (!storedState || storedState !== state) {
     return adminRedirect(request, 'google=error&reason=state_mismatch');
   }
-
-  // Clear state cookie
-  cookieStore.set('google-oauth-state', '', { maxAge: 0, path: '/' });
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
