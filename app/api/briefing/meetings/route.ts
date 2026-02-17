@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Client } from '@notionhq/client';
+import Anthropic from '@anthropic-ai/sdk';
 
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 const MEETINGS_DB_ID = '270be6a94ad98039ac2cf18ddd037663';
@@ -75,6 +76,41 @@ function parseMeeting(page: any): MeetingNote { // eslint-disable-line @typescri
   };
 }
 
+// --- AI title generation for untitled meetings ---
+
+async function generateTitles(meetings: MeetingNote[]): Promise<void> {
+  const untitled = meetings.filter(m => m.title === 'Untitled' && m.summary);
+  if (untitled.length === 0) return;
+
+  try {
+    const anthropic = new Anthropic();
+    const prompt = untitled.map((m, i) =>
+      `${i + 1}. [${m.date || 'no date'}]${m.category ? ` [${m.category}]` : ''} ${m.summary}`
+    ).join('\n');
+
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 256,
+      messages: [{
+        role: 'user',
+        content: `Generate a concise, descriptive title (3-7 words) for each meeting note below. The titles should read like executive agenda items — direct, specific, no fluff. Return ONLY the titles, one per line, numbered to match.\n\n${prompt}`,
+      }],
+    });
+
+    const text = response.content.filter(b => b.type === 'text').map(b => b.text).join('');
+    const lines = text.trim().split('\n').map(l => l.replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean);
+
+    untitled.forEach((m, i) => {
+      if (lines[i]) {
+        m.title = lines[i];
+        m.relatedAgency = detectAgency(m.title, m.category) || m.relatedAgency;
+      }
+    });
+  } catch (err) {
+    console.error('[Briefing Meetings] Title generation failed, keeping "Untitled":', err);
+  }
+}
+
 // --- Route ---
 
 export async function GET() {
@@ -98,6 +134,7 @@ export async function GET() {
     });
 
     const meetings = response.results.map(parseMeeting);
+    await generateTitles(meetings);
 
     const result: MeetingsResponse = {
       meetings,
