@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings, Cpu, Zap, Database, TrendingDown } from 'lucide-react';
 import { NotificationPreferences } from '@/components/notifications/NotificationPreferences';
 import { PushNotificationSettings } from '@/components/notifications/PushNotificationSettings';
-import { GoogleCalendarCard } from '@/components/admin/GoogleCalendarCard';
 
 interface DailyUsage {
   date: string;
@@ -220,9 +219,6 @@ export default function AdminPage() {
 
       <div className="space-y-6">
         <AIUsageSection />
-        <Suspense fallback={<div className="card-premium p-6"><div className="animate-pulse h-24 bg-white/5 rounded" /></div>}>
-          <GoogleCalendarCard />
-        </Suspense>
         <NotificationPreferences />
         <PushNotificationSettings />
 
