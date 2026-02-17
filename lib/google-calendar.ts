@@ -213,8 +213,13 @@ export function classifyCalendarError(err: unknown): { type: string; message: st
   const status = error.code || error.response?.status;
   const msg = error.message || 'Unknown error';
 
+  // invalid_grant can come as 400 (token endpoint) or 401/403 (API endpoint)
+  if (msg.includes('invalid_grant') || msg.includes('Token has been expired') || msg.includes('Token has been revoked')) {
+    return { type: 'token_expired', message: 'Google Calendar token expired — please reconnect' };
+  }
+
   if (status === 401 || status === 403) {
-    if (msg.includes('invalid_grant') || msg.includes('expired') || msg.includes('revoked')) {
+    if (msg.includes('expired') || msg.includes('revoked')) {
       return { type: 'token_expired', message: 'Google Calendar token expired — please reconnect' };
     }
     return { type: 'invalid_credentials', message: `Auth error: ${msg}` };
