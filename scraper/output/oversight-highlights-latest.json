@@ -1,77 +1,59 @@
 {
   "metadata": {
-    "generatedAt": "2026-02-20T08:00:51.703Z",
-    "totalProjects": 503,
-    "analysisDate": "2026-02-20"
+    "generatedAt": "2026-02-21T07:45:19.427Z",
+    "totalProjects": 504,
+    "analysisDate": "2026-02-21"
   },
   "dashboard": {
     "kpis": {
-      "totalContractCost": 56306652206,
-      "totalContractCostDisplay": "$56.3 B",
-      "totalDisbursement": 8822865130,
-      "totalDisbursementDisplay": "$8.8 B",
-      "totalBalance": 47872313594,
-      "totalBalanceDisplay": "$47.9 B",
-      "totalProjects": 28,
-      "utilizationPercent": 15.7,
-      "utilizationDetail": "$8,822,865,130",
-      "engineerEstimate": 52083334814,
-      "engineerEstimateDisplay": "$52.1 B",
+      "totalContractCost": 60142914336,
+      "totalContractCostDisplay": "$60.1 B",
+      "totalDisbursement": 12103881660,
+      "totalDisbursementDisplay": "$12.1 B",
+      "totalBalance": 49877419343,
+      "totalBalanceDisplay": "$49.9 B",
+      "totalProjects": 42,
+      "utilizationPercent": 20.1,
+      "utilizationDetail": "$12,103,881,660",
+      "engineerEstimate": 53036056579,
+      "engineerEstimateDisplay": "$53.0 B",
       "raw": {
         "TOTAL CONTRACT COST": {
-          "short": "$56.3 B",
-          "detail": "$56,306,652,206"
+          "short": "$60.1 B",
+          "detail": "$60,142,914,336"
         },
         "TOTAL DISBURSEMENT": {
-          "short": "$8.8 B",
-          "detail": "$8,822,865,130"
+          "short": "$12.1 B",
+          "detail": "$12,103,881,660"
         },
         "TOTAL BALANCE": {
-          "short": "$47.9 B",
-          "detail": "$47,872,313,594"
+          "short": "$49.9 B",
+          "detail": "$49,877,419,343"
         },
         "TOTAL PROJECTS": {
-          "short": "28",
+          "short": "42",
           "detail": null
         },
         "TOTAL DISBURSEMENT UTILIZATION": {
-          "short": "15.7%",
-          "detail": "$8,822,865,130"
+          "short": "20.1%",
+          "detail": "$12,103,881,660"
         },
         "TOTAL ENGINEER ESTIMATE": {
-          "short": "$52.1 B",
-          "detail": "$52,083,334,814"
+          "short": "$53.0 B",
+          "detail": "$53,036,056,579"
         }
       }
     },
     "statusChart": {
-      "Designed": {
-        "percent": 0,
-        "count": 1
-      },
-      "Commenced": {
-        "percent": 31,
-        "count": 74
-      },
-      "Delayed": {
-        "percent": 17,
-        "count": 42
-      },
-      "Completed": {
-        "percent": 2,
-        "count": 5
-      },
-      "Rollover": {
-        "percent": 1,
-        "count": 3
-      },
-      "Cancelled": 28,
-      "N/A": {
-        "percent": 20,
-        "count": 48
-      }
+      "Commenced": null,
+      "Delayed": null,
+      "Completed": null,
+      "N/A": null,
+      "2% ( 1 )": null,
+      "21% ( 9 )": null,
+      "71% ( 30 )": null
     },
-    "scrapedAt": "2026-02-20T08:00:42.172Z"
+    "scrapedAt": "2026-02-21T07:45:09.511Z"
   },
   "summary": {
     "delayed": 0,
@@ -98,8 +80,8 @@
       "endDate": "2026-01-24",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 27,
-      "daysOverdueDisplay": "27 days overdue"
+      "daysOverdue": 28,
+      "daysOverdueDisplay": "28 days overdue"
     },
     {
       "id": "275",
@@ -117,8 +99,8 @@
       "endDate": "2026-02-09",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 11,
-      "daysOverdueDisplay": "11 days overdue"
+      "daysOverdue": 12,
+      "daysOverdueDisplay": "12 days overdue"
     },
     {
       "id": "27572",
@@ -136,8 +118,8 @@
       "endDate": "2026-01-16",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 35,
-      "daysOverdueDisplay": "35 days overdue"
+      "daysOverdue": 36,
+      "daysOverdueDisplay": "36 days overdue"
     },
     {
       "id": "27359",
@@ -155,8 +137,8 @@
       "endDate": "2025-12-11",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 71,
-      "daysOverdueDisplay": "71 days overdue"
+      "daysOverdue": 72,
+      "daysOverdueDisplay": "72 days overdue"
     },
     {
       "id": "27476",
@@ -174,8 +156,8 @@
       "endDate": "2025-09-01",
       "hasImages": 1,
       "status": "Overdue",
-      "daysOverdue": 172,
-      "daysOverdueDisplay": "172 days overdue"
+      "daysOverdue": 173,
+      "daysOverdueDisplay": "173 days overdue"
     },
     {
       "id": "27605",
@@ -193,8 +175,8 @@
       "endDate": "2025-12-31",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 51,
-      "daysOverdueDisplay": "51 days overdue"
+      "daysOverdue": 52,
+      "daysOverdueDisplay": "52 days overdue"
     },
     {
       "id": "27608",
@@ -212,8 +194,8 @@
       "endDate": "2025-10-03",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 140,
-      "daysOverdueDisplay": "140 days overdue"
+      "daysOverdue": 141,
+      "daysOverdueDisplay": "141 days overdue"
     },
     {
       "id": "27522",
@@ -231,8 +213,8 @@
       "endDate": "2025-06-15",
       "hasImages": 3,
       "status": "Overdue",
-      "daysOverdue": 250,
-      "daysOverdueDisplay": "250 days overdue"
+      "daysOverdue": 251,
+      "daysOverdueDisplay": "251 days overdue"
     },
     {
       "id": "27615",
@@ -250,8 +232,8 @@
       "endDate": "2025-05-10",
       "hasImages": 14,
       "status": "Overdue",
-      "daysOverdue": 286,
-      "daysOverdueDisplay": "286 days overdue"
+      "daysOverdue": 287,
+      "daysOverdueDisplay": "287 days overdue"
     },
     {
       "id": "27614",
@@ -269,8 +251,8 @@
       "endDate": "2025-05-24",
       "hasImages": 5,
       "status": "Overdue",
-      "daysOverdue": 272,
-      "daysOverdueDisplay": "272 days overdue"
+      "daysOverdue": 273,
+      "daysOverdueDisplay": "273 days overdue"
     },
     {
       "id": "27619",
@@ -288,8 +270,8 @@
       "endDate": "2025-10-31",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 112,
-      "daysOverdueDisplay": "112 days overdue"
+      "daysOverdue": 113,
+      "daysOverdueDisplay": "113 days overdue"
     },
     {
       "id": "27371",
@@ -307,8 +289,8 @@
       "endDate": "2025-09-30",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 143,
-      "daysOverdueDisplay": "143 days overdue"
+      "daysOverdue": 144,
+      "daysOverdueDisplay": "144 days overdue"
     },
     {
       "id": "27373",
@@ -326,8 +308,8 @@
       "endDate": "2025-04-28",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 298,
-      "daysOverdueDisplay": "298 days overdue"
+      "daysOverdue": 299,
+      "daysOverdueDisplay": "299 days overdue"
     },
     {
       "id": "27616",
@@ -345,8 +327,8 @@
       "endDate": "2025-05-10",
       "hasImages": 14,
       "status": "Overdue",
-      "daysOverdue": 286,
-      "daysOverdueDisplay": "286 days overdue"
+      "daysOverdue": 287,
+      "daysOverdueDisplay": "287 days overdue"
     },
     {
       "id": "27617",
@@ -364,8 +346,8 @@
       "endDate": "2025-05-10",
       "hasImages": 13,
       "status": "Overdue",
-      "daysOverdue": 286,
-      "daysOverdueDisplay": "286 days overdue"
+      "daysOverdue": 287,
+      "daysOverdueDisplay": "287 days overdue"
     },
     {
       "id": "27656",
@@ -383,8 +365,8 @@
       "endDate": "2023-10-05",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 869,
-      "daysOverdueDisplay": "869 days overdue"
+      "daysOverdue": 870,
+      "daysOverdueDisplay": "870 days overdue"
     },
     {
       "id": "27657",
@@ -402,8 +384,8 @@
       "endDate": "2024-05-23",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 638,
-      "daysOverdueDisplay": "638 days overdue"
+      "daysOverdue": 639,
+      "daysOverdueDisplay": "639 days overdue"
     },
     {
       "id": "27406",
@@ -421,8 +403,8 @@
       "endDate": "2025-10-12",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 131,
-      "daysOverdueDisplay": "131 days overdue"
+      "daysOverdue": 132,
+      "daysOverdueDisplay": "132 days overdue"
     },
     {
       "id": "27407",
@@ -440,8 +422,8 @@
       "endDate": "2025-10-12",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 131,
-      "daysOverdueDisplay": "131 days overdue"
+      "daysOverdue": 132,
+      "daysOverdueDisplay": "132 days overdue"
     },
     {
       "id": "27408",
@@ -459,8 +441,8 @@
       "endDate": "2025-10-12",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 131,
-      "daysOverdueDisplay": "131 days overdue"
+      "daysOverdue": 132,
+      "daysOverdueDisplay": "132 days overdue"
     },
     {
       "id": "27420",
@@ -478,8 +460,8 @@
       "endDate": "2026-01-27",
       "hasImages": 20,
       "status": "Overdue",
-      "daysOverdue": 24,
-      "daysOverdueDisplay": "24 days overdue"
+      "daysOverdue": 25,
+      "daysOverdueDisplay": "25 days overdue"
     },
     {
       "id": "27692",
@@ -497,8 +479,8 @@
       "endDate": "2023-10-05",
       "hasImages": 5,
       "status": "Overdue",
-      "daysOverdue": 869,
-      "daysOverdueDisplay": "869 days overdue"
+      "daysOverdue": 870,
+      "daysOverdueDisplay": "870 days overdue"
     },
     {
       "id": "27693",
@@ -516,8 +498,8 @@
       "endDate": "2024-05-23",
       "hasImages": 6,
       "status": "Overdue",
-      "daysOverdue": 638,
-      "daysOverdueDisplay": "638 days overdue"
+      "daysOverdue": 639,
+      "daysOverdueDisplay": "639 days overdue"
     },
     {
       "id": "27426",
@@ -535,8 +517,8 @@
       "endDate": "2025-08-14",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 190,
-      "daysOverdueDisplay": "190 days overdue"
+      "daysOverdue": 191,
+      "daysOverdueDisplay": "191 days overdue"
     },
     {
       "id": "27434",
@@ -554,8 +536,8 @@
       "endDate": "2026-01-30",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 21,
-      "daysOverdueDisplay": "21 days overdue"
+      "daysOverdue": 22,
+      "daysOverdueDisplay": "22 days overdue"
     },
     {
       "id": "1056",
@@ -573,8 +555,8 @@
       "endDate": "2026-01-24",
       "hasImages": 5,
       "status": "Overdue",
-      "daysOverdue": 27,
-      "daysOverdueDisplay": "27 days overdue"
+      "daysOverdue": 28,
+      "daysOverdueDisplay": "28 days overdue"
     },
     {
       "id": "27469",
@@ -592,8 +574,8 @@
       "endDate": "2024-11-24",
       "hasImages": 2,
       "status": "Overdue",
-      "daysOverdue": 453,
-      "daysOverdueDisplay": "453 days overdue"
+      "daysOverdue": 454,
+      "daysOverdueDisplay": "454 days overdue"
     },
     {
       "id": "27398",
@@ -611,8 +593,8 @@
       "endDate": "2025-08-09",
       "hasImages": 1,
       "status": "Overdue",
-      "daysOverdue": 195,
-      "daysOverdueDisplay": "195 days overdue"
+      "daysOverdue": 196,
+      "daysOverdueDisplay": "196 days overdue"
     },
     {
       "id": "27331",
@@ -630,8 +612,8 @@
       "endDate": "2025-12-27",
       "hasImages": 6,
       "status": "Overdue",
-      "daysOverdue": 55,
-      "daysOverdueDisplay": "55 days overdue"
+      "daysOverdue": 56,
+      "daysOverdueDisplay": "56 days overdue"
     },
     {
       "id": "27348",
@@ -649,8 +631,8 @@
       "endDate": "2025-04-30",
       "hasImages": 1,
       "status": "Overdue",
-      "daysOverdue": 296,
-      "daysOverdueDisplay": "296 days overdue"
+      "daysOverdue": 297,
+      "daysOverdueDisplay": "297 days overdue"
     },
     {
       "id": "27531",
@@ -668,8 +650,8 @@
       "endDate": "2025-08-19",
       "hasImages": 4,
       "status": "Overdue",
-      "daysOverdue": 185,
-      "daysOverdueDisplay": "185 days overdue"
+      "daysOverdue": 186,
+      "daysOverdueDisplay": "186 days overdue"
     },
     {
       "id": "27534",
@@ -687,8 +669,8 @@
       "endDate": "2024-06-06",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 624,
-      "daysOverdueDisplay": "624 days overdue"
+      "daysOverdue": 625,
+      "daysOverdueDisplay": "625 days overdue"
     },
     {
       "id": "27535",
@@ -702,12 +684,12 @@
       "contractor": "Avinash Contracting & Scrap Metal Inc",
       "contractValue": 890440820,
       "contractValueDisplay": "$890,440,820",
-      "completion": 81,
+      "completion": 83,
       "endDate": "2024-04-23",
       "hasImages": 45,
       "status": "Overdue",
-      "daysOverdue": 668,
-      "daysOverdueDisplay": "668 days overdue"
+      "daysOverdue": 669,
+      "daysOverdueDisplay": "669 days overdue"
     },
     {
       "id": "27577",
@@ -725,8 +707,8 @@
       "endDate": "2025-11-18",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 94,
-      "daysOverdueDisplay": "94 days overdue"
+      "daysOverdue": 95,
+      "daysOverdueDisplay": "95 days overdue"
     },
     {
       "id": "27517",
@@ -742,10 +724,10 @@
       "contractValueDisplay": "$458,141,575",
       "completion": 99,
       "endDate": "2025-08-23",
-      "hasImages": 12,
+      "hasImages": 18,
       "status": "Overdue",
-      "daysOverdue": 181,
-      "daysOverdueDisplay": "181 days overdue"
+      "daysOverdue": 182,
+      "daysOverdueDisplay": "182 days overdue"
     },
     {
       "id": "27515",
@@ -763,8 +745,8 @@
       "endDate": "2025-04-11",
       "hasImages": 4,
       "status": "Overdue",
-      "daysOverdue": 315,
-      "daysOverdueDisplay": "315 days overdue"
+      "daysOverdue": 316,
+      "daysOverdueDisplay": "316 days overdue"
     },
     {
       "id": "27333",
@@ -782,8 +764,8 @@
       "endDate": "2025-12-26",
       "hasImages": 3,
       "status": "Overdue",
-      "daysOverdue": 56,
-      "daysOverdueDisplay": "56 days overdue"
+      "daysOverdue": 57,
+      "daysOverdueDisplay": "57 days overdue"
     },
     {
       "id": "27332",
@@ -801,8 +783,8 @@
       "endDate": "2025-12-27",
       "hasImages": 6,
       "status": "Overdue",
-      "daysOverdue": 55,
-      "daysOverdueDisplay": "55 days overdue"
+      "daysOverdue": 56,
+      "daysOverdueDisplay": "56 days overdue"
     },
     {
       "id": "27471",
@@ -820,8 +802,8 @@
       "endDate": "2023-02-28",
       "hasImages": 33,
       "status": "Overdue",
-      "daysOverdue": 1088,
-      "daysOverdueDisplay": "1088 days overdue"
+      "daysOverdue": 1089,
+      "daysOverdueDisplay": "1089 days overdue"
     },
     {
       "id": "27500",
@@ -839,8 +821,8 @@
       "endDate": "2025-08-02",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 202,
-      "daysOverdueDisplay": "202 days overdue"
+      "daysOverdue": 203,
+      "daysOverdueDisplay": "203 days overdue"
     },
     {
       "id": "27530",
@@ -858,8 +840,8 @@
       "endDate": "2024-09-29",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 509,
-      "daysOverdueDisplay": "509 days overdue"
+      "daysOverdue": 510,
+      "daysOverdueDisplay": "510 days overdue"
     },
     {
       "id": "27532",
@@ -877,8 +859,8 @@
       "endDate": "2026-01-31",
       "hasImages": 15,
       "status": "Overdue",
-      "daysOverdue": 20,
-      "daysOverdueDisplay": "20 days overdue"
+      "daysOverdue": 21,
+      "daysOverdueDisplay": "21 days overdue"
     },
     {
       "id": "27587",
@@ -896,8 +878,8 @@
       "endDate": "2024-01-20",
       "hasImages": 5,
       "status": "Overdue",
-      "daysOverdue": 762,
-      "daysOverdueDisplay": "762 days overdue"
+      "daysOverdue": 763,
+      "daysOverdueDisplay": "763 days overdue"
     },
     {
       "id": "27593",
@@ -915,8 +897,8 @@
       "endDate": "2025-12-01",
       "hasImages": 6,
       "status": "Overdue",
-      "daysOverdue": 81,
-      "daysOverdueDisplay": "81 days overdue"
+      "daysOverdue": 82,
+      "daysOverdueDisplay": "82 days overdue"
     },
     {
       "id": "27477",
@@ -934,8 +916,8 @@
       "endDate": "2025-09-01",
       "hasImages": 18,
       "status": "Overdue",
-      "daysOverdue": 172,
-      "daysOverdueDisplay": "172 days overdue"
+      "daysOverdue": 173,
+      "daysOverdueDisplay": "173 days overdue"
     },
     {
       "id": "27478",
@@ -953,8 +935,8 @@
       "endDate": "2025-09-01",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 172,
-      "daysOverdueDisplay": "172 days overdue"
+      "daysOverdue": 173,
+      "daysOverdueDisplay": "173 days overdue"
     },
     {
       "id": "27591",
@@ -972,8 +954,8 @@
       "endDate": "2025-06-16",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 249,
-      "daysOverdueDisplay": "249 days overdue"
+      "daysOverdue": 250,
+      "daysOverdueDisplay": "250 days overdue"
     },
     {
       "id": "27479",
@@ -991,8 +973,8 @@
       "endDate": "2025-10-01",
       "hasImages": 37,
       "status": "Overdue",
-      "daysOverdue": 142,
-      "daysOverdueDisplay": "142 days overdue"
+      "daysOverdue": 143,
+      "daysOverdueDisplay": "143 days overdue"
     },
     {
       "id": "27481",
@@ -1010,8 +992,8 @@
       "endDate": "2025-09-01",
       "hasImages": 11,
       "status": "Overdue",
-      "daysOverdue": 172,
-      "daysOverdueDisplay": "172 days overdue"
+      "daysOverdue": 173,
+      "daysOverdueDisplay": "173 days overdue"
     },
     {
       "id": "27483",
@@ -1029,8 +1011,8 @@
       "endDate": "2025-09-30",
       "hasImages": 6,
       "status": "Overdue",
-      "daysOverdue": 143,
-      "daysOverdueDisplay": "143 days overdue"
+      "daysOverdue": 144,
+      "daysOverdueDisplay": "144 days overdue"
     },
     {
       "id": "276",
@@ -1048,8 +1030,8 @@
       "endDate": "2026-02-09",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 11,
-      "daysOverdueDisplay": "11 days overdue"
+      "daysOverdue": 12,
+      "daysOverdueDisplay": "12 days overdue"
     }
   ],
   "endingSoon": [
@@ -1069,8 +1051,8 @@
       "endDate": "2026-02-27",
       "hasImages": 3,
       "status": "Ending Soon",
-      "daysRemaining": 7,
-      "daysRemainingDisplay": "7 days remaining"
+      "daysRemaining": 6,
+      "daysRemainingDisplay": "6 days remaining"
     },
     {
       "id": "954",
@@ -1088,8 +1070,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 8,
-      "daysRemainingDisplay": "8 days remaining"
+      "daysRemaining": 7,
+      "daysRemainingDisplay": "7 days remaining"
     },
     {
       "id": "27349",
@@ -1107,8 +1089,8 @@
       "endDate": "2026-02-25",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 5,
-      "daysRemainingDisplay": "5 days remaining"
+      "daysRemaining": 4,
+      "daysRemainingDisplay": "4 days remaining"
     },
     {
       "id": "27364",
@@ -1126,8 +1108,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 8,
-      "daysRemainingDisplay": "8 days remaining"
+      "daysRemaining": 7,
+      "daysRemainingDisplay": "7 days remaining"
     },
     {
       "id": "27374",
@@ -1145,8 +1127,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 8,
-      "daysRemainingDisplay": "8 days remaining"
+      "daysRemaining": 7,
+      "daysRemainingDisplay": "7 days remaining"
     },
     {
       "id": "27416",
@@ -1164,8 +1146,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 8,
-      "daysRemainingDisplay": "8 days remaining"
+      "daysRemaining": 7,
+      "daysRemainingDisplay": "7 days remaining"
     },
     {
       "id": "27435",
@@ -1174,8 +1156,8 @@
       "agency": "GWI",
       "agencyFull": "Guyana Water Inc.",
       "ministry": "MOPUA",
-      "region": "Region -",
-      "regionCode": "-",
+      "region": "Region N/A",
+      "regionCode": "N/A",
       "contractor": "David Persaud Investment Limited",
       "contractValue": 44819000,
       "contractValueDisplay": "$44,819,000",
@@ -1183,8 +1165,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 8,
-      "daysRemainingDisplay": "8 days remaining"
+      "daysRemaining": 7,
+      "daysRemainingDisplay": "7 days remaining"
     },
     {
       "id": "27447",
@@ -1202,8 +1184,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 8,
-      "daysRemainingDisplay": "8 days remaining"
+      "daysRemaining": 7,
+      "daysRemainingDisplay": "7 days remaining"
     },
     {
       "id": "27819",
@@ -1221,8 +1203,8 @@
       "endDate": "2026-02-27",
       "hasImages": 2,
       "status": "Ending Soon",
-      "daysRemaining": 7,
-      "daysRemainingDisplay": "7 days remaining"
+      "daysRemaining": 6,
+      "daysRemainingDisplay": "6 days remaining"
     },
     {
       "id": "27820",
@@ -1240,8 +1222,8 @@
       "endDate": "2026-03-01",
       "hasImages": 3,
       "status": "Ending Soon",
-      "daysRemaining": 9,
-      "daysRemainingDisplay": "9 days remaining"
+      "daysRemaining": 8,
+      "daysRemainingDisplay": "8 days remaining"
     },
     {
       "id": "26881",
@@ -1259,8 +1241,8 @@
       "endDate": "2026-02-28",
       "hasImages": 3,
       "status": "Ending Soon",
-      "daysRemaining": 8,
-      "daysRemainingDisplay": "8 days remaining"
+      "daysRemaining": 7,
+      "daysRemainingDisplay": "7 days remaining"
     },
     {
       "id": "27451",
@@ -1278,8 +1260,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 8,
-      "daysRemainingDisplay": "8 days remaining"
+      "daysRemaining": 7,
+      "daysRemainingDisplay": "7 days remaining"
     },
     {
       "id": "27901",
@@ -1297,8 +1279,8 @@
       "endDate": "2026-02-28",
       "hasImages": 5,
       "status": "Ending Soon",
-      "daysRemaining": 8,
-      "daysRemainingDisplay": "8 days remaining"
+      "daysRemaining": 7,
+      "daysRemainingDisplay": "7 days remaining"
     },
     {
       "id": "27903",
@@ -1316,8 +1298,8 @@
       "endDate": "2026-03-01",
       "hasImages": 7,
       "status": "Ending Soon",
-      "daysRemaining": 9,
-      "daysRemainingDisplay": "9 days remaining"
+      "daysRemaining": 8,
+      "daysRemainingDisplay": "8 days remaining"
     },
     {
       "id": "28281",
@@ -1335,8 +1317,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 8,
-      "daysRemainingDisplay": "8 days remaining"
+      "daysRemaining": 7,
+      "daysRemainingDisplay": "7 days remaining"
     },
     {
       "id": "28100",
@@ -1354,8 +1336,8 @@
       "endDate": "2026-02-27",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 7,
-      "daysRemainingDisplay": "7 days remaining"
+      "daysRemaining": 6,
+      "daysRemainingDisplay": "6 days remaining"
     }
   ],
   "atRisk": [
@@ -1375,8 +1357,8 @@
       "endDate": "2026-02-27",
       "hasImages": 3,
       "status": "At Risk",
-      "daysRemaining": 7,
-      "daysRemainingDisplay": "7 days remaining",
+      "daysRemaining": 6,
+      "daysRemainingDisplay": "6 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1395,8 +1377,8 @@
       "endDate": "2026-03-28",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 36,
-      "daysRemainingDisplay": "36 days remaining",
+      "daysRemaining": 35,
+      "daysRemainingDisplay": "35 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1415,8 +1397,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 8,
-      "daysRemainingDisplay": "8 days remaining",
+      "daysRemaining": 7,
+      "daysRemainingDisplay": "7 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1435,8 +1417,8 @@
       "endDate": "2026-04-30",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 69,
-      "daysRemainingDisplay": "69 days remaining",
+      "daysRemaining": 68,
+      "daysRemainingDisplay": "68 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1455,8 +1437,8 @@
       "endDate": "2026-04-30",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 69,
-      "daysRemainingDisplay": "69 days remaining",
+      "daysRemaining": 68,
+      "daysRemainingDisplay": "68 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1475,8 +1457,8 @@
       "endDate": "2026-03-31",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 39,
-      "daysRemainingDisplay": "39 days remaining",
+      "daysRemaining": 38,
+      "daysRemainingDisplay": "38 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1495,8 +1477,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 8,
-      "daysRemainingDisplay": "8 days remaining",
+      "daysRemaining": 7,
+      "daysRemainingDisplay": "7 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1515,8 +1497,8 @@
       "endDate": "2026-04-30",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 69,
-      "daysRemainingDisplay": "69 days remaining",
+      "daysRemaining": 68,
+      "daysRemainingDisplay": "68 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1535,8 +1517,8 @@
       "endDate": "2026-05-13",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 82,
-      "daysRemainingDisplay": "82 days remaining",
+      "daysRemaining": 81,
+      "daysRemainingDisplay": "81 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1555,8 +1537,8 @@
       "endDate": "2026-05-12",
       "hasImages": 2,
       "status": "At Risk",
-      "daysRemaining": 81,
-      "daysRemainingDisplay": "81 days remaining",
+      "daysRemaining": 80,
+      "daysRemainingDisplay": "80 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1575,8 +1557,8 @@
       "endDate": "2026-05-12",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 81,
-      "daysRemainingDisplay": "81 days remaining",
+      "daysRemaining": 80,
+      "daysRemainingDisplay": "80 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1595,8 +1577,8 @@
       "endDate": "2026-05-01",
       "hasImages": 4,
       "status": "At Risk",
-      "daysRemaining": 70,
-      "daysRemainingDisplay": "70 days remaining",
+      "daysRemaining": 69,
+      "daysRemainingDisplay": "69 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1615,8 +1597,8 @@
       "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 39,
-      "daysRemainingDisplay": "39 days remaining",
+      "daysRemaining": 38,
+      "daysRemainingDisplay": "38 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1635,8 +1617,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 8,
-      "daysRemainingDisplay": "8 days remaining",
+      "daysRemaining": 7,
+      "daysRemainingDisplay": "7 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1655,8 +1637,8 @@
       "endDate": "2026-04-10",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 49,
-      "daysRemainingDisplay": "49 days remaining",
+      "daysRemaining": 48,
+      "daysRemainingDisplay": "48 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1675,8 +1657,8 @@
       "endDate": "2026-04-23",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 62,
-      "daysRemainingDisplay": "62 days remaining",
+      "daysRemaining": 61,
+      "daysRemainingDisplay": "61 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1686,8 +1668,8 @@
       "agency": "GPL",
       "agencyFull": "Guyana Power & Light",
       "ministry": "MOPUA",
-      "region": "Region -",
-      "regionCode": "-",
+      "region": "Region N/A",
+      "regionCode": "N/A",
       "contractor": "Utiliflex LLC",
       "contractValue": 24021900,
       "contractValueDisplay": "$24,021,900",
@@ -1695,8 +1677,8 @@
       "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 39,
-      "daysRemainingDisplay": "39 days remaining",
+      "daysRemaining": 38,
+      "daysRemainingDisplay": "38 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1715,8 +1697,8 @@
       "endDate": "2026-04-26",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 65,
-      "daysRemainingDisplay": "65 days remaining",
+      "daysRemaining": 64,
+      "daysRemainingDisplay": "64 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1735,8 +1717,8 @@
       "endDate": "2026-04-30",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 69,
-      "daysRemainingDisplay": "69 days remaining",
+      "daysRemaining": 68,
+      "daysRemainingDisplay": "68 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1755,8 +1737,8 @@
       "endDate": "2026-03-30",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 38,
-      "daysRemainingDisplay": "38 days remaining",
+      "daysRemaining": 37,
+      "daysRemainingDisplay": "37 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1775,8 +1757,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 8,
-      "daysRemainingDisplay": "8 days remaining",
+      "daysRemaining": 7,
+      "daysRemainingDisplay": "7 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1793,10 +1775,10 @@
       "contractValueDisplay": "$194,859,315",
       "completion": 10,
       "endDate": "2026-03-30",
-      "hasImages": 7,
+      "hasImages": 8,
       "status": "At Risk",
-      "daysRemaining": 38,
-      "daysRemainingDisplay": "38 days remaining",
+      "daysRemaining": 37,
+      "daysRemainingDisplay": "37 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1811,12 +1793,12 @@
       "contractor": "ICAN Engineering & Construction",
       "contractValue": 26492494,
       "contractValueDisplay": "$26,492,494",
-      "completion": 22,
+      "completion": 25,
       "endDate": "2026-05-19",
       "hasImages": 5,
       "status": "At Risk",
-      "daysRemaining": 88,
-      "daysRemainingDisplay": "88 days remaining",
+      "daysRemaining": 87,
+      "daysRemainingDisplay": "87 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1835,8 +1817,8 @@
       "endDate": "2026-05-11",
       "hasImages": 10,
       "status": "At Risk",
-      "daysRemaining": 80,
-      "daysRemainingDisplay": "80 days remaining",
+      "daysRemaining": 79,
+      "daysRemainingDisplay": "79 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1855,8 +1837,8 @@
       "endDate": "2026-04-16",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 55,
-      "daysRemainingDisplay": "55 days remaining",
+      "daysRemaining": 54,
+      "daysRemainingDisplay": "54 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1875,8 +1857,8 @@
       "endDate": "2026-05-16",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 85,
-      "daysRemainingDisplay": "85 days remaining",
+      "daysRemaining": 84,
+      "daysRemainingDisplay": "84 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1895,8 +1877,8 @@
       "endDate": "2026-05-16",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 85,
-      "daysRemainingDisplay": "85 days remaining",
+      "daysRemaining": 84,
+      "daysRemainingDisplay": "84 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1915,8 +1897,8 @@
       "endDate": "2026-04-18",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 57,
-      "daysRemainingDisplay": "57 days remaining",
+      "daysRemaining": 56,
+      "daysRemainingDisplay": "56 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1935,8 +1917,8 @@
       "endDate": "2026-05-16",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 85,
-      "daysRemainingDisplay": "85 days remaining",
+      "daysRemaining": 84,
+      "daysRemainingDisplay": "84 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1955,8 +1937,8 @@
       "endDate": "2026-03-01",
       "hasImages": 7,
       "status": "At Risk",
-      "daysRemaining": 9,
-      "daysRemainingDisplay": "9 days remaining",
+      "daysRemaining": 8,
+      "daysRemainingDisplay": "8 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1975,8 +1957,8 @@
       "endDate": "2026-04-16",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 55,
-      "daysRemainingDisplay": "55 days remaining",
+      "daysRemaining": 54,
+      "daysRemainingDisplay": "54 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1995,8 +1977,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 8,
-      "daysRemainingDisplay": "8 days remaining",
+      "daysRemaining": 7,
+      "daysRemainingDisplay": "7 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -2015,8 +1997,8 @@
       "endDate": "2026-04-18",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 57,
-      "daysRemainingDisplay": "57 days remaining",
+      "daysRemaining": 56,
+      "daysRemainingDisplay": "56 days remaining",
       "riskReason": "Low completion with approaching deadline"
     }
   ],
@@ -2609,7 +2591,7 @@
       "contractor": "Avinash Contracting & Scrap Metal Inc",
       "contractValue": 890440820,
       "contractValueDisplay": "$890,440,820",
-      "completion": 81,
+      "completion": 83,
       "endDate": "2024-04-23",
       "hasImages": 45,
       "status": "Bond Warning",
@@ -2647,7 +2629,7 @@
       "contractValueDisplay": "$458,141,575",
       "completion": 99,
       "endDate": "2025-08-23",
-      "hasImages": 12,
+      "hasImages": 18,
       "status": "Bond Warning",
       "warning": "Missing bond documents for delayed/overdue project"
     },
@@ -2944,9 +2926,9 @@
     {
       "agency": "GPL",
       "agencyFull": "Guyana Power & Light",
-      "projectCount": 282,
-      "totalValue": 179661965012,
-      "totalValueDisplay": "$179,661,965,012",
+      "projectCount": 283,
+      "totalValue": 184099315564,
+      "totalValueDisplay": "$184,099,315,564",
       "avgCompletion": 83.5
     },
     {
@@ -2963,7 +2945,7 @@
       "projectCount": 7,
       "totalValue": 16178319396,
       "totalValueDisplay": "$16,178,319,396",
-      "avgCompletion": 88
+      "avgCompletion": 88.4
     },
     {
       "agency": "MARAD",
@@ -2979,7 +2961,7 @@
       "projectCount": 10,
       "totalValue": 4506314116,
       "totalValueDisplay": "$4,506,314,116",
-      "avgCompletion": 48.7
+      "avgCompletion": 49
     },
     {
       "agency": "-",
@@ -3100,8 +3082,8 @@
       "agency": "GPL",
       "agencyFull": "Guyana Power & Light",
       "ministry": "MOPUA",
-      "region": "Region -",
-      "regionCode": "-",
+      "region": "Region N/A",
+      "regionCode": "N/A",
       "contractor": "JV of SUMEC Complete Equipment & Engineering Co. Ltd and XJ Group Corporation",
       "contractValue": 7880134902,
       "contractValueDisplay": "$7,880,134,902",
@@ -3145,6 +3127,23 @@
     },
     {
       "rank": 9,
+      "id": "29002",
+      "reference": "GPLXXX202602X29002",
+      "name": "Repairs to Stores Building, T&D Bond, Chain-Link Fence and Construction of Transformer Storage Area at Anna Regina Power Station Compound, Essequibo Coast, Region No. 2",
+      "agency": "GPL",
+      "agencyFull": "Guyana Power & Light",
+      "ministry": "MOPUA",
+      "region": "Region 2 - Pomeroon-Supenaam",
+      "regionCode": "02",
+      "contractor": "IMS Construction & Logistics Services",
+      "contractValue": 4437350552,
+      "contractValueDisplay": "$4,437,350,552",
+      "completion": null,
+      "endDate": null,
+      "hasImages": 0
+    },
+    {
+      "rank": 10,
       "id": "27459",
       "reference": "GPLXXX202601X27459",
       "name": "Inter Energy - Project Management Consultancy & Owner's Engineering Services",
@@ -3158,23 +3157,6 @@
       "contractValueDisplay": "$3,497,812,000",
       "completion": 2,
       "endDate": "2027-10-08",
-      "hasImages": 0
-    },
-    {
-      "rank": 10,
-      "id": "27384",
-      "reference": "GWIXXX202601X27384",
-      "name": "Construction of a new surface water treatment plant at Hope, ECD",
-      "agency": "GWI",
-      "agencyFull": "Guyana Water Inc.",
-      "ministry": "MOPUA",
-      "region": "Region 4 - Demerara-Mahaica",
-      "regionCode": "04",
-      "contractor": "SIGMA ENGINEERS limited",
-      "contractValue": 3057375672,
-      "contractValueDisplay": "$3,057,375,672",
-      "completion": 20,
-      "endDate": "2026-11-12",
       "hasImages": 0
     }
   ]
