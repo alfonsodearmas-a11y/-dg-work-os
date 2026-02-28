@@ -2,8 +2,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { GPLAnalysis, GWIAnalysis, PendingApplication } from './pending-applications-types';
 
 const CONFIG = {
-  MODEL: 'claude-sonnet-4-6',
-  MAX_TOKENS: 4096,
+  MODEL: 'claude-opus-4-5-20250929',
+  MAX_TOKENS: 8192,
   TEMPERATURE: 0.3,
 };
 
@@ -25,6 +25,43 @@ function parseJSONResponse(text: string): Record<string, unknown> {
   const objMatch = jsonStr.match(/\{[\s\S]*\}/);
   if (objMatch) jsonStr = objMatch[0];
   return JSON.parse(jsonStr);
+}
+
+// ── CSV Data Generation ──────────────────────────────────────────────────────
+
+function buildGPLCsv(records: PendingApplication[]): string {
+  const header = 'Name,Customer#,PipelineStage,TownCity,DaysWaiting,ApplicationDate,AccountType,AccountStatus,Cycle';
+  const rows = records.map(r =>
+    [
+      `${r.firstName} ${r.lastName}`.trim(),
+      r.customerReference || '',
+      r.pipelineStage || '',
+      r.region || '',
+      r.daysWaiting,
+      r.applicationDate || '',
+      r.accountType || '',
+      r.accountStatus || '',
+      r.cycle || '',
+    ].map(v => String(v).includes(',') ? `"${v}"` : String(v)).join(',')
+  );
+  return [header, ...rows].join('\n');
+}
+
+function buildGWICsv(records: PendingApplication[]): string {
+  const header = 'Name,CustomerRef,Region,District,VillageWard,DaysWaiting,ApplicationDate,Telephone';
+  const rows = records.map(r =>
+    [
+      `${r.firstName} ${r.lastName}`.trim(),
+      r.customerReference || '',
+      r.region || '',
+      r.district || '',
+      r.villageWard || '',
+      r.daysWaiting,
+      r.applicationDate || '',
+      r.telephone || '',
+    ].map(v => String(v).includes(',') ? `"${v}"` : String(v)).join(',')
+  );
+  return [header, ...rows].join('\n');
 }
 
 // ── GPL Deep Analysis ────────────────────────────────────────────────────────
@@ -57,6 +94,8 @@ export async function generateGPLDeepAnalysis(records: PendingApplication[], ana
     .map(([r, c]) => `  - ${r}: ${c}`)
     .join('\n');
 
+  const csvData = buildGPLCsv(records);
+
   const prompt = `You are the AI advisor for the Director General of the Ministry of Public Utilities in Guyana, analyzing GPL (Guyana Power & Light) pending new service connection applications.
 
 ## Data Summary
@@ -78,18 +117,23 @@ ${regionText}
 ## Red Flags Detected
 ${analysis.redFlags.length > 0 ? analysis.redFlags.map(f => `- ${f}`).join('\n') : '- None'}
 
+## Full Dataset (CSV)
+${csvData}
+
+Analyze the FULL dataset above. Identify specific individuals, towns, and patterns. Be precise — cite actual names, locations, and numbers from the data.
+
 Respond in JSON:
 {
-  "executiveSummary": "2-3 sentence executive summary with key numbers for the DG",
+  "executiveSummary": "2-3 sentence executive summary with specific numbers for the DG — total count, worst bottleneck, longest waiting applicant by name",
   "sections": [
-    { "title": "Pipeline Bottleneck Analysis", "severity": "critical|warning|stable|positive", "summary": "one-line with numbers", "detail": "full analysis paragraph" },
-    { "title": "SLA Compliance Assessment", "severity": "critical|warning|stable|positive", "summary": "one-line", "detail": "full analysis" },
-    { "title": "Aging & Backlog Analysis", "severity": "critical|warning|stable|positive", "summary": "one-line", "detail": "analysis of long-waiting applications and backlog trends" },
-    { "title": "Geographic Hotspots", "severity": "critical|warning|stable|positive", "summary": "one-line", "detail": "analysis of regional patterns" },
-    { "title": "Revenue Impact", "severity": "warning|stable", "summary": "estimated connections delayed", "detail": "analysis of backlog cost" }
+    { "title": "Pipeline Bottleneck Analysis", "severity": "critical|warning|stable|positive", "summary": "one-line with specific numbers", "detail": "full analysis paragraph citing specific stages, counts, and the names of individuals waiting longest in each stage" },
+    { "title": "SLA Compliance Assessment", "severity": "critical|warning|stable|positive", "summary": "one-line", "detail": "full analysis with compliance rates per stage and names of worst-case applicants" },
+    { "title": "Aging & Backlog Analysis", "severity": "critical|warning|stable|positive", "summary": "one-line", "detail": "analysis of the oldest applications — name the individuals waiting 60+ days, 90+ days, 180+ days" },
+    { "title": "Geographic Hotspots", "severity": "critical|warning|stable|positive", "summary": "one-line", "detail": "analysis of which towns/cities have the most pending applications and longest waits" },
+    { "title": "Revenue Impact", "severity": "warning|stable", "summary": "estimated connections delayed", "detail": "analysis of backlog cost — how many potential customers are being lost" }
   ],
   "recommendations": [
-    { "category": "Operations|Staffing|Process|Policy", "recommendation": "specific action", "urgency": "Immediate|Short-term|Long-term" }
+    { "category": "Operations|Staffing|Process|Policy", "recommendation": "specific actionable recommendation", "urgency": "Immediate|Short-term|Long-term" }
   ]
 }`;
 
@@ -135,6 +179,8 @@ export async function generateGWIDeepAnalysis(records: PendingApplication[], ana
     .map(c => `  - ${c.village} (${c.region}): ${c.count} pending, avg ${c.avgDays}d`)
     .join('\n') || '  None with 5+ applications';
 
+  const csvData = buildGWICsv(records);
+
   const prompt = `You are the AI advisor for the Director General of the Ministry of Public Utilities in Guyana, analyzing GWI (Guyana Water Inc) pending new water service connection applications.
 
 ## Data Summary
@@ -153,17 +199,22 @@ ${clusterText}
 ## Red Flags Detected
 ${analysis.redFlags.length > 0 ? analysis.redFlags.map(f => `- ${f}`).join('\n') : '- None'}
 
+## Full Dataset (CSV)
+${csvData}
+
+Analyze the FULL dataset above. Identify specific individuals, regions, districts, and villages. Be precise — cite actual names, locations, and numbers from the data.
+
 Respond in JSON:
 {
-  "executiveSummary": "2-3 sentence executive summary with key numbers for the DG",
+  "executiveSummary": "2-3 sentence executive summary with specific numbers for the DG — total count, worst region, longest waiting applicant by name",
   "sections": [
-    { "title": "Service Delivery Assessment", "severity": "critical|warning|stable|positive", "summary": "one-line with numbers", "detail": "full analysis paragraph" },
-    { "title": "Geographic Equity Analysis", "severity": "critical|warning|stable|positive", "summary": "one-line", "detail": "analysis of regional disparities" },
-    { "title": "Community Impact", "severity": "critical|warning|stable|positive", "summary": "one-line", "detail": "analysis of underserved communities" },
-    { "title": "Capacity Planning", "severity": "warning|stable", "summary": "one-line", "detail": "resource allocation recommendations" }
+    { "title": "Service Delivery Assessment", "severity": "critical|warning|stable|positive", "summary": "one-line with specific numbers", "detail": "full analysis paragraph citing specific regions, counts, and names of individuals waiting longest" },
+    { "title": "Geographic Equity Analysis", "severity": "critical|warning|stable|positive", "summary": "one-line", "detail": "analysis of regional disparities — name specific regions and districts with disproportionate backlogs" },
+    { "title": "Community Impact", "severity": "critical|warning|stable|positive", "summary": "one-line", "detail": "analysis of underserved communities — name specific villages with clusters of pending applications" },
+    { "title": "Capacity Planning", "severity": "warning|stable", "summary": "one-line", "detail": "resource allocation recommendations based on geographic concentration of demand" }
   ],
   "recommendations": [
-    { "category": "Operations|Staffing|Infrastructure|Policy", "recommendation": "specific action", "urgency": "Immediate|Short-term|Long-term" }
+    { "category": "Operations|Staffing|Infrastructure|Policy", "recommendation": "specific actionable recommendation", "urgency": "Immediate|Short-term|Long-term" }
   ]
 }`;
 

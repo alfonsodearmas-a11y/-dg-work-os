@@ -29,7 +29,7 @@ function parseDateString(raw: unknown, fallback: string): string {
 // ── Pipeline Stage Detection ─────────────────────────────────────────────────
 
 const STAGE_MAP: [RegExp, string][] = [
-  [/meter/i, 'Metering'],
+  [/met[er]?ring|meter/i, 'Metering'],
   [/design/i, 'Designs'],
   [/execut/i, 'Execution'],
   [/survey/i, 'Survey'],

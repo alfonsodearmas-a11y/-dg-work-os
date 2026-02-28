@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { AlertTriangle, Loader2, Brain, ChevronDown, ChevronRight, RefreshCw, MapPin } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { AlertTriangle, Loader2, Brain, ChevronDown, ChevronLeft, ChevronRight, RefreshCw, Search, X, ArrowUpDown, MapPin } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-import type { GWIAnalysis, DeepAnalysisResult } from '@/lib/pending-applications-types';
+import type { GWIAnalysis, DeepAnalysisResult, PendingApplication } from '@/lib/pending-applications-types';
 
 const SEVERITY_CONFIG: Record<string, { bg: string; text: string; border: string }> = {
   critical: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/30' },
@@ -20,6 +20,19 @@ const SEVERITY_CONFIG: Record<string, { bg: string; text: string; border: string
   positive: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/30' },
 };
 
+function getBadgeColor(days: number) {
+  if (days > 30) return 'bg-red-500/20 text-red-400 border-red-500/30';
+  if (days >= 15) return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
+  if (days >= 7) return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+  return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+}
+
+function fmtDate(s: string) {
+  if (!s) return '—';
+  const d = new Date(s + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 export function GWIAnalysisPanel() {
   const [analysis, setAnalysis] = useState<GWIAnalysis | null>(null);
   const [deepAnalysis, setDeepAnalysis] = useState<DeepAnalysisResult | null>(null);
@@ -27,6 +40,18 @@ export function GWIAnalysisPanel() {
   const [generatingAI, setGeneratingAI] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedRegion, setExpandedRegion] = useState<string | null>(null);
+
+  // Records state
+  const [records, setRecords] = useState<PendingApplication[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loadingRecords, setLoadingRecords] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [regionFilter, setRegionFilter] = useState('');
+  const [sortBy, setSortBy] = useState('days_waiting');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [page, setPage] = useState(1);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -52,8 +77,37 @@ export function GWIAnalysisPanel() {
     load();
   }, []);
 
+  const fetchRecords = useCallback(async () => {
+    setLoadingRecords(true);
+    const params = new URLSearchParams();
+    params.set('agency', 'GWI');
+    params.set('page', String(page));
+    params.set('pageSize', '50');
+    params.set('sortBy', sortBy);
+    params.set('order', sortOrder);
+    if (searchQuery) params.set('search', searchQuery);
+    if (regionFilter) params.set('region', regionFilter);
+    try {
+      const res = await fetch(`/api/pending-applications?${params}`);
+      const data = await res.json();
+      setRecords(data.records || []);
+      setTotalRecords(data.total || 0);
+      setTotalPages(data.totalPages || 1);
+    } catch { /* silent */ }
+    setLoadingRecords(false);
+  }, [searchQuery, regionFilter, sortBy, sortOrder, page]);
+
+  useEffect(() => { fetchRecords(); }, [fetchRecords]);
+  useEffect(() => { setPage(1); }, [searchQuery, regionFilter, sortBy, sortOrder]);
+
+  const handleSort = (col: string) => {
+    if (sortBy === col) setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    else { setSortBy(col); setSortOrder(col === 'days_waiting' ? 'desc' : 'asc'); }
+  };
+
   const generateDeepAnalysis = async () => {
     setGeneratingAI(true);
+    setError(null);
     try {
       const res = await fetch('/api/pending-applications/analysis/deep', {
         method: 'POST',
@@ -82,6 +136,7 @@ export function GWIAnalysisPanel() {
 
   const agingData = analysis.agingBuckets.map(b => ({ name: b.label, count: b.count, pct: b.pct }));
   const AGING_COLORS = ['#059669', '#10b981', '#d4af37', '#f97316', '#dc2626'];
+  const regionNames = analysis.regions.map(r => r.region);
 
   return (
     <div className="space-y-6">
@@ -208,6 +263,92 @@ export function GWIAnalysisPanel() {
         </div>
       )}
 
+      {/* Individual Applications */}
+      <div className="card-premium p-4 md:p-6">
+        <h3 className="text-sm font-semibold text-white mb-4">All GWI Applications ({totalRecords})</h3>
+
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <div className="relative flex-1 min-w-[180px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
+            <input
+              type="text"
+              placeholder="Search name, reference, village..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm placeholder:text-[#64748b] focus:border-[#d4af37] focus:outline-none"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="relative">
+            <select value={regionFilter} onChange={e => setRegionFilter(e.target.value)}
+              className="appearance-none pl-3 pr-8 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-[#94a3b8] text-sm focus:border-[#d4af37] focus:outline-none cursor-pointer">
+              <option value="">All Regions</option>
+              {regionNames.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b] pointer-events-none" />
+          </div>
+        </div>
+
+        {/* Desktop Table */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-[#64748b] text-xs uppercase tracking-wider border-b border-[#2d3a52] bg-[#0a1628]/50">
+                <SortHeader label="Name" field="last_name" current={sortBy} order={sortOrder} onSort={handleSort} />
+                <th className="text-left py-3 px-3">Customer Ref</th>
+                <SortHeader label="Region" field="region" current={sortBy} order={sortOrder} onSort={handleSort} />
+                <th className="text-left py-3 px-3">District</th>
+                <th className="text-left py-3 px-3">Village/Ward</th>
+                <SortHeader label="Days" field="days_waiting" current={sortBy} order={sortOrder} onSort={handleSort} />
+                <SortHeader label="Applied" field="application_date" current={sortBy} order={sortOrder} onSort={handleSort} />
+              </tr>
+            </thead>
+            <tbody>
+              {loadingRecords ? (
+                <tr><td colSpan={7} className="py-12 text-center"><div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto" /></td></tr>
+              ) : records.length === 0 ? (
+                <tr><td colSpan={7} className="py-12 text-center text-[#64748b]">No records found</td></tr>
+              ) : records.map(r => (
+                <RecordRow key={r.id} record={r} expanded={expandedId === r.id} onToggle={() => setExpandedId(expandedId === r.id ? null : r.id)} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="md:hidden space-y-2">
+          {loadingRecords ? (
+            <div className="py-12 text-center"><div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto" /></div>
+          ) : records.length === 0 ? (
+            <div className="py-12 text-center text-[#64748b]">No records found</div>
+          ) : records.map(r => (
+            <MobileCard key={r.id} record={r} expanded={expandedId === r.id} onToggle={() => setExpandedId(expandedId === r.id ? null : r.id)} />
+          ))}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#2d3a52]">
+            <span className="text-xs text-[#64748b]">{totalRecords} records · Page {page} of {totalPages}</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                className="p-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] disabled:opacity-30">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                className="p-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] disabled:opacity-30">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* AI Deep Analysis */}
       <div className="card-premium p-4 md:p-6">
         <div className="flex items-center justify-between mb-4">
@@ -228,7 +369,7 @@ export function GWIAnalysisPanel() {
         {generatingAI && (
           <div className="flex items-center justify-center gap-3 py-8">
             <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" />
-            <span className="text-sm text-[#64748b]">Generating AI analysis...</span>
+            <span className="text-sm text-[#64748b]">Generating AI analysis (this may take a minute)...</span>
           </div>
         )}
 
@@ -274,6 +415,98 @@ export function GWIAnalysisPanel() {
 
         {error && <p className="text-sm text-red-400 mt-2">{error}</p>}
       </div>
+    </div>
+  );
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function SortHeader({ label, field, current, order, onSort }: { label: string; field: string; current: string; order: 'asc' | 'desc'; onSort: (f: string) => void }) {
+  return (
+    <th className="text-left py-3 px-3 cursor-pointer hover:text-white transition-colors select-none whitespace-nowrap" onClick={() => onSort(field)}>
+      <span className="inline-flex items-center gap-1">
+        {label}
+        <ArrowUpDown className={`h-3 w-3 ${current === field ? 'text-[#d4af37]' : ''}`} />
+      </span>
+    </th>
+  );
+}
+
+function RecordRow({ record: r, expanded, onToggle }: { record: PendingApplication; expanded: boolean; onToggle: () => void }) {
+  return (
+    <>
+      <tr onClick={onToggle} className="border-b border-[#2d3a52]/50 hover:bg-[#1a2744]/50 cursor-pointer transition-colors">
+        <td className="py-3 px-3 text-white font-medium">{r.firstName} {r.lastName}</td>
+        <td className="py-3 px-3 text-[#94a3b8] font-mono text-xs">{r.customerReference || '—'}</td>
+        <td className="py-3 px-3 text-[#94a3b8]">{r.region || '—'}</td>
+        <td className="py-3 px-3 text-[#94a3b8]">{r.district || '—'}</td>
+        <td className="py-3 px-3 text-[#94a3b8] truncate max-w-[150px]">{r.villageWard || '—'}</td>
+        <td className="py-3 px-3">
+          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border ${getBadgeColor(r.daysWaiting)}`}>{r.daysWaiting}d</span>
+        </td>
+        <td className="py-3 px-3 text-[#94a3b8] whitespace-nowrap">{fmtDate(r.applicationDate)}</td>
+      </tr>
+      {expanded && (
+        <tr className="bg-[#0a1628]/80">
+          <td colSpan={7} className="px-4 py-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <DetailItem label="Customer Ref" value={r.customerReference} />
+              <DetailItem label="Region" value={r.region} />
+              <DetailItem label="District" value={r.district} />
+              <DetailItem label="Village/Ward" value={r.villageWard} />
+              <DetailItem label="Street" value={r.street} />
+              <DetailItem label="Lot" value={r.lot} />
+              <DetailItem label="Telephone" value={r.telephone} />
+              <DetailItem label="Event Code" value={r.eventCode} />
+              <DetailItem label="Event Description" value={r.eventDescription} />
+              <DetailItem label="Applied" value={fmtDate(r.applicationDate)} />
+              <DetailItem label="Days Waiting" value={`${r.daysWaiting}`} />
+              <DetailItem label="Data As Of" value={fmtDate(r.dataAsOf)} />
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function MobileCard({ record: r, expanded, onToggle }: { record: PendingApplication; expanded: boolean; onToggle: () => void }) {
+  return (
+    <div className="rounded-xl bg-[#0a1628] border border-[#2d3a52] overflow-hidden" onClick={onToggle}>
+      <div className="p-3 flex items-center justify-between cursor-pointer">
+        <div className="min-w-0">
+          <div className="text-sm text-white font-medium truncate">{r.firstName} {r.lastName}</div>
+          <div className="flex items-center gap-2 mt-1 text-xs text-[#64748b]">
+            <span>{r.region || '—'}</span>
+            {r.district && <span>· {r.district}</span>}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border ${getBadgeColor(r.daysWaiting)}`}>{r.daysWaiting}d</span>
+          <ChevronDown className={`h-4 w-4 text-[#64748b] transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </div>
+      </div>
+      {expanded && (
+        <div className="px-3 pb-3 border-t border-[#2d3a52]/50 pt-2 space-y-1.5">
+          <DetailItem label="Customer Ref" value={r.customerReference} />
+          <DetailItem label="Village/Ward" value={r.villageWard} />
+          <DetailItem label="Street" value={r.street} />
+          <DetailItem label="Lot" value={r.lot} />
+          <DetailItem label="Telephone" value={r.telephone} />
+          <DetailItem label="Event" value={r.eventDescription} />
+          <DetailItem label="Applied" value={fmtDate(r.applicationDate)} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DetailItem({ label, value }: { label: string; value?: string }) {
+  if (!value) return null;
+  return (
+    <div>
+      <span className="text-[#64748b]">{label}: </span>
+      <span className="text-[#94a3b8]">{value}</span>
     </div>
   );
 }
