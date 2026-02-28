@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAgencyData } from '@/hooks/useAgencyData';
 import { GPLDetail } from '@/components/intel/GPLDetail';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { PendingConnectionsCard } from '@/components/intel/PendingConnectionsCard';
 
 export default function GPLIntelPage() {
   const { rawData, isLoading, loadGPLByDate } = useAgencyData();
@@ -29,6 +30,9 @@ export default function GPLIntelPage() {
           </div>
         </div>
       </div>
+
+      {/* Pending Connections */}
+      <PendingConnectionsCard agency="GPL" />
 
       {/* Content */}
       <ErrorBoundary fallbackTitle="Failed to load GPL dashboard">

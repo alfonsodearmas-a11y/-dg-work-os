@@ -4,6 +4,7 @@ import { ArrowLeft, Droplets } from 'lucide-react';
 import Link from 'next/link';
 import { GWIDetail } from '@/components/intel/GWIDetail';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { PendingConnectionsCard } from '@/components/intel/PendingConnectionsCard';
 
 export default function GWIIntelPage() {
   return (
@@ -26,6 +27,9 @@ export default function GWIIntelPage() {
           </div>
         </div>
       </div>
+
+      {/* Pending Connections */}
+      <PendingConnectionsCard agency="GWI" />
 
       {/* Self-managing GWI Detail */}
       <ErrorBoundary fallbackTitle="Failed to load GWI dashboard">

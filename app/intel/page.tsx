@@ -10,6 +10,7 @@ import { AlertSection } from '@/components/intel/AlertSection';
 import { SlidePanel } from '@/components/layout/SlidePanel';
 import { LoadingSkeleton } from '@/components/intel/common';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { PendingConnectionsCard } from '@/components/intel/PendingConnectionsCard';
 import dynamic from 'next/dynamic';
 import { Loader2 } from 'lucide-react';
 
@@ -103,6 +104,9 @@ export default function IntelPage() {
               />
             ))}
           </div>
+
+          {/* Pending Connections Overview */}
+          <PendingConnectionsCard compact />
 
           {/* Deep Dive Links */}
           <div className="card-premium p-4">
