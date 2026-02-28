@@ -61,7 +61,6 @@ export interface GPLAnalysis {
   pipeline: GPLPipelineStage[]
   agingBuckets: AgingBucket[]
   accountTypes: { type: string; count: number; avgDays: number }[]
-  legacyOrders: { count: number; oldest: PendingApplication | null; cutoffDate: string }
   redFlags: string[]
 }
 

@@ -191,22 +191,6 @@ export function GPLAnalysisPanel() {
         </div>
       )}
 
-      {/* Legacy Orders */}
-      {analysis.legacyOrders.count > 0 && (
-        <div className="card-premium p-4 md:p-6 border-amber-500/30">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="h-4 w-4 text-amber-400" />
-            <h3 className="text-sm font-semibold text-amber-400">Legacy Orders (pre-{new Date().getFullYear()})</h3>
-          </div>
-          <p className="text-sm text-[#94a3b8]">
-            {analysis.legacyOrders.count} service orders pre-date {analysis.legacyOrders.cutoffDate}.
-            {analysis.legacyOrders.oldest && (
-              <> Oldest: {analysis.legacyOrders.oldest.firstName} {analysis.legacyOrders.oldest.lastName} — {analysis.legacyOrders.oldest.daysWaiting} days.</>
-            )}
-          </p>
-        </div>
-      )}
-
       {/* Red Flags */}
       {analysis.redFlags.length > 0 && (
         <div className="card-premium p-4 md:p-6">

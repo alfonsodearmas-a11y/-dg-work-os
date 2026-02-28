@@ -73,22 +73,11 @@ export function computeGPLAnalysis(records: PendingApplication[]): GPLAnalysis {
     .map(([type, d]) => ({ type, count: d.count, avgDays: Math.round(d.totalDays / d.count) }))
     .sort((a, b) => b.count - a.count);
 
-  // Legacy/zombie detection (applications from before current year)
-  const cutoffYear = new Date().getFullYear();
-  const cutoffDate = `${cutoffYear}-01-01`;
-  const legacyRecords = records.filter(r => r.applicationDate < cutoffDate);
-  const oldest = legacyRecords.length > 0
-    ? legacyRecords.reduce((a, b) => a.daysWaiting > b.daysWaiting ? a : b)
-    : null;
-
   // Red flags
   const redFlags: string[] = [];
   const overallSlaBreached = pipeline.reduce((sum, s) => sum + s.slaBreached, 0);
   if (overallSlaBreached > records.length * 0.5) {
     redFlags.push(`${Math.round((overallSlaBreached / records.length) * 100)}% of orders exceed SLA targets`);
-  }
-  if (legacyRecords.length > 0) {
-    redFlags.push(`${legacyRecords.length} legacy orders from before ${cutoffYear} still open`);
   }
   const over180 = records.filter(r => r.daysWaiting > 180);
   if (over180.length > 0) {
@@ -104,7 +93,6 @@ export function computeGPLAnalysis(records: PendingApplication[]): GPLAnalysis {
     pipeline,
     agingBuckets,
     accountTypes,
-    legacyOrders: { count: legacyRecords.length, oldest, cutoffDate },
     redFlags,
   };
 }

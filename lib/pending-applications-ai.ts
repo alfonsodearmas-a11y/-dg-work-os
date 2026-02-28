@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { GPLAnalysis, GWIAnalysis, PendingApplication } from './pending-applications-types';
 
 const CONFIG = {
-  MODEL: 'claude-sonnet-4-5-20250929',
+  MODEL: 'claude-sonnet-4-6',
   MAX_TOKENS: 4096,
   TEMPERATURE: 0.3,
 };
@@ -62,7 +62,6 @@ export async function generateGPLDeepAnalysis(records: PendingApplication[], ana
 ## Data Summary
 - Total pending orders: ${records.length}
 - Data as of: ${records[0]?.dataAsOf || 'Unknown'}
-- Legacy orders (pre-${new Date().getFullYear()}): ${analysis.legacyOrders.count}
 
 ## Pipeline Funnel
 ${pipelineText}
@@ -85,7 +84,7 @@ Respond in JSON:
   "sections": [
     { "title": "Pipeline Bottleneck Analysis", "severity": "critical|warning|stable|positive", "summary": "one-line with numbers", "detail": "full analysis paragraph" },
     { "title": "SLA Compliance Assessment", "severity": "critical|warning|stable|positive", "summary": "one-line", "detail": "full analysis" },
-    { "title": "Legacy Order Audit", "severity": "critical|warning|stable|positive", "summary": "one-line", "detail": "full analysis" },
+    { "title": "Aging & Backlog Analysis", "severity": "critical|warning|stable|positive", "summary": "one-line", "detail": "analysis of long-waiting applications and backlog trends" },
     { "title": "Geographic Hotspots", "severity": "critical|warning|stable|positive", "summary": "one-line", "detail": "analysis of regional patterns" },
     { "title": "Revenue Impact", "severity": "warning|stable", "summary": "estimated connections delayed", "detail": "analysis of backlog cost" }
   ],
