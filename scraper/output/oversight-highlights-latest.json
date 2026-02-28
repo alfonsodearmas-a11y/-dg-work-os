@@ -1,20 +1,20 @@
 {
   "metadata": {
-    "generatedAt": "2026-02-27T08:00:51.919Z",
+    "generatedAt": "2026-02-28T07:05:56.948Z",
     "totalProjects": 400,
-    "analysisDate": "2026-02-27"
+    "analysisDate": "2026-02-28"
   },
   "dashboard": {
     "kpis": {
       "totalContractCost": 62582808861,
       "totalContractCostDisplay": "$62.6 B",
-      "totalDisbursement": 12103881660,
-      "totalDisbursementDisplay": "$12.1 B",
-      "totalBalance": 52317313868,
+      "totalDisbursement": 12212131660,
+      "totalDisbursementDisplay": "$12.2 B",
+      "totalBalance": 52286863868,
       "totalBalanceDisplay": "$52.3 B",
       "totalProjects": 43,
-      "utilizationPercent": 19.3,
-      "utilizationDetail": "$12,103,881,660",
+      "utilizationPercent": 19.5,
+      "utilizationDetail": "$12,212,131,660",
       "engineerEstimate": 53036056579,
       "engineerEstimateDisplay": "$53.0 B",
       "raw": {
@@ -23,20 +23,20 @@
           "detail": "$62,582,808,861"
         },
         "TOTAL DISBURSEMENT": {
-          "short": "$12.1 B",
-          "detail": "$12,103,881,660"
+          "short": "$12.2 B",
+          "detail": "$12,212,131,660"
         },
         "TOTAL BALANCE": {
           "short": "$52.3 B",
-          "detail": "$52,317,313,868"
+          "detail": "$52,286,863,868"
         },
         "TOTAL PROJECTS": {
           "short": "43",
           "detail": null
         },
         "TOTAL DISBURSEMENT UTILIZATION": {
-          "short": "19.3%",
-          "detail": "$12,103,881,660"
+          "short": "19.5%",
+          "detail": "$12,212,131,660"
         },
         "TOTAL ENGINEER ESTIMATE": {
           "short": "$53.0 B",
@@ -53,14 +53,14 @@
       "21% ( 9 )": null,
       "72% ( 31 )": null
     },
-    "scrapedAt": "2026-02-27T08:00:02.281Z"
+    "scrapedAt": "2026-02-28T07:05:07.918Z"
   },
   "summary": {
     "delayed": 0,
-    "overdue": 34,
+    "overdue": 35,
     "endingSoon": 12,
-    "atRisk": 19,
-    "bondWarnings": 34
+    "atRisk": 16,
+    "bondWarnings": 35
   },
   "delayed": [],
   "overdue": [
@@ -80,27 +80,27 @@
       "endDate": "2026-01-24",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 34,
-      "daysOverdueDisplay": "34 days overdue"
+      "daysOverdue": 35,
+      "daysOverdueDisplay": "35 days overdue"
     },
     {
-      "id": "275",
-      "reference": "HECIXX202510X275",
-      "name": "Supply one (1) 800KVA Generator for Mahdia",
-      "agency": "HECI",
-      "agencyFull": "Hinterland Electrification Company Inc.",
+      "id": "27715",
+      "reference": "GPLXXX202601X27715",
+      "name": "Supply and Delivery of 4000 Tons of 1\" Stones",
+      "agency": "GPL",
+      "agencyFull": "Guyana Power & Light",
       "ministry": "MOPUA",
-      "region": "Region 8 - Potaro-Siparuni",
-      "regionCode": "08",
-      "contractor": "STANDBY POWERs",
-      "contractValue": 24381000,
-      "contractValueDisplay": "$24,381,000",
-      "completion": 60,
-      "endDate": "2026-02-09",
-      "hasImages": 0,
+      "region": "Region 4 - Demerara-Mahaica",
+      "regionCode": "04",
+      "contractor": "BK International Inc",
+      "contractValue": 40660000,
+      "contractValueDisplay": "$40,660,000",
+      "completion": null,
+      "endDate": "2026-02-27",
+      "hasImages": 3,
       "status": "Overdue",
-      "daysOverdue": 18,
-      "daysOverdueDisplay": "18 days overdue"
+      "daysOverdue": 1,
+      "daysOverdueDisplay": "1 day overdue"
     },
     {
       "id": "27572",
@@ -118,8 +118,8 @@
       "endDate": "2026-01-16",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 42,
-      "daysOverdueDisplay": "42 days overdue"
+      "daysOverdue": 43,
+      "daysOverdueDisplay": "43 days overdue"
     },
     {
       "id": "27349",
@@ -137,8 +137,8 @@
       "endDate": "2026-02-25",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 2,
-      "daysOverdueDisplay": "2 days overdue"
+      "daysOverdue": 3,
+      "daysOverdueDisplay": "3 days overdue"
     },
     {
       "id": "27359",
@@ -156,8 +156,8 @@
       "endDate": "2025-12-11",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 78,
-      "daysOverdueDisplay": "78 days overdue"
+      "daysOverdue": 79,
+      "daysOverdueDisplay": "79 days overdue"
     },
     {
       "id": "27476",
@@ -175,8 +175,8 @@
       "endDate": "2025-09-01",
       "hasImages": 1,
       "status": "Overdue",
-      "daysOverdue": 179,
-      "daysOverdueDisplay": "179 days overdue"
+      "daysOverdue": 180,
+      "daysOverdueDisplay": "180 days overdue"
     },
     {
       "id": "27605",
@@ -194,8 +194,8 @@
       "endDate": "2025-12-31",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 58,
-      "daysOverdueDisplay": "58 days overdue"
+      "daysOverdue": 59,
+      "daysOverdueDisplay": "59 days overdue"
     },
     {
       "id": "27608",
@@ -213,8 +213,8 @@
       "endDate": "2025-10-03",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 147,
-      "daysOverdueDisplay": "147 days overdue"
+      "daysOverdue": 148,
+      "daysOverdueDisplay": "148 days overdue"
     },
     {
       "id": "27522",
@@ -232,8 +232,8 @@
       "endDate": "2025-06-15",
       "hasImages": 3,
       "status": "Overdue",
-      "daysOverdue": 257,
-      "daysOverdueDisplay": "257 days overdue"
+      "daysOverdue": 258,
+      "daysOverdueDisplay": "258 days overdue"
     },
     {
       "id": "27615",
@@ -251,8 +251,8 @@
       "endDate": "2025-05-10",
       "hasImages": 14,
       "status": "Overdue",
-      "daysOverdue": 293,
-      "daysOverdueDisplay": "293 days overdue"
+      "daysOverdue": 294,
+      "daysOverdueDisplay": "294 days overdue"
     },
     {
       "id": "27614",
@@ -266,12 +266,12 @@
       "contractor": "Farm Supplies Limited",
       "contractValue": 1093812500,
       "contractValueDisplay": "$1,093,812,500",
-      "completion": 64,
+      "completion": 68,
       "endDate": "2025-05-24",
       "hasImages": 5,
       "status": "Overdue",
-      "daysOverdue": 279,
-      "daysOverdueDisplay": "279 days overdue"
+      "daysOverdue": 280,
+      "daysOverdueDisplay": "280 days overdue"
     },
     {
       "id": "27619",
@@ -289,8 +289,8 @@
       "endDate": "2025-10-31",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 119,
-      "daysOverdueDisplay": "119 days overdue"
+      "daysOverdue": 120,
+      "daysOverdueDisplay": "120 days overdue"
     },
     {
       "id": "27373",
@@ -308,8 +308,8 @@
       "endDate": "2025-04-28",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 305,
-      "daysOverdueDisplay": "305 days overdue"
+      "daysOverdue": 306,
+      "daysOverdueDisplay": "306 days overdue"
     },
     {
       "id": "27616",
@@ -327,8 +327,8 @@
       "endDate": "2025-05-10",
       "hasImages": 14,
       "status": "Overdue",
-      "daysOverdue": 293,
-      "daysOverdueDisplay": "293 days overdue"
+      "daysOverdue": 294,
+      "daysOverdueDisplay": "294 days overdue"
     },
     {
       "id": "27617",
@@ -346,8 +346,8 @@
       "endDate": "2025-05-10",
       "hasImages": 13,
       "status": "Overdue",
-      "daysOverdue": 293,
-      "daysOverdueDisplay": "293 days overdue"
+      "daysOverdue": 294,
+      "daysOverdueDisplay": "294 days overdue"
     },
     {
       "id": "27656",
@@ -365,8 +365,8 @@
       "endDate": "2023-10-05",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 876,
-      "daysOverdueDisplay": "876 days overdue"
+      "daysOverdue": 877,
+      "daysOverdueDisplay": "877 days overdue"
     },
     {
       "id": "27657",
@@ -384,8 +384,8 @@
       "endDate": "2024-05-23",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 645,
-      "daysOverdueDisplay": "645 days overdue"
+      "daysOverdue": 646,
+      "daysOverdueDisplay": "646 days overdue"
     },
     {
       "id": "27406",
@@ -403,8 +403,8 @@
       "endDate": "2025-10-12",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 138,
-      "daysOverdueDisplay": "138 days overdue"
+      "daysOverdue": 139,
+      "daysOverdueDisplay": "139 days overdue"
     },
     {
       "id": "27407",
@@ -422,8 +422,8 @@
       "endDate": "2025-10-12",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 138,
-      "daysOverdueDisplay": "138 days overdue"
+      "daysOverdue": 139,
+      "daysOverdueDisplay": "139 days overdue"
     },
     {
       "id": "27420",
@@ -441,8 +441,8 @@
       "endDate": "2026-01-27",
       "hasImages": 20,
       "status": "Overdue",
-      "daysOverdue": 31,
-      "daysOverdueDisplay": "31 days overdue"
+      "daysOverdue": 32,
+      "daysOverdueDisplay": "32 days overdue"
     },
     {
       "id": "27692",
@@ -460,8 +460,8 @@
       "endDate": "2023-10-05",
       "hasImages": 5,
       "status": "Overdue",
-      "daysOverdue": 876,
-      "daysOverdueDisplay": "876 days overdue"
+      "daysOverdue": 877,
+      "daysOverdueDisplay": "877 days overdue"
     },
     {
       "id": "27693",
@@ -479,8 +479,8 @@
       "endDate": "2024-05-23",
       "hasImages": 6,
       "status": "Overdue",
-      "daysOverdue": 645,
-      "daysOverdueDisplay": "645 days overdue"
+      "daysOverdue": 646,
+      "daysOverdueDisplay": "646 days overdue"
     },
     {
       "id": "27426",
@@ -498,8 +498,8 @@
       "endDate": "2025-08-14",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 197,
-      "daysOverdueDisplay": "197 days overdue"
+      "daysOverdue": 198,
+      "daysOverdueDisplay": "198 days overdue"
     },
     {
       "id": "27434",
@@ -517,8 +517,8 @@
       "endDate": "2026-01-30",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 28,
-      "daysOverdueDisplay": "28 days overdue"
+      "daysOverdue": 29,
+      "daysOverdueDisplay": "29 days overdue"
     },
     {
       "id": "27469",
@@ -536,8 +536,8 @@
       "endDate": "2024-11-24",
       "hasImages": 6,
       "status": "Overdue",
-      "daysOverdue": 460,
-      "daysOverdueDisplay": "460 days overdue"
+      "daysOverdue": 461,
+      "daysOverdueDisplay": "461 days overdue"
     },
     {
       "id": "27398",
@@ -555,8 +555,27 @@
       "endDate": "2025-08-09",
       "hasImages": 1,
       "status": "Overdue",
-      "daysOverdue": 202,
-      "daysOverdueDisplay": "202 days overdue"
+      "daysOverdue": 203,
+      "daysOverdueDisplay": "203 days overdue"
+    },
+    {
+      "id": "27819",
+      "reference": "MARADXX202601X27819",
+      "name": "Removal of Obstructions, Derelict Vessels, Wrecks and Debris from Parika Foreshore, Essequibo River Lot 2 Area 1",
+      "agency": "MARAD",
+      "agencyFull": "Maritime Administration Department",
+      "ministry": "MOPUA",
+      "region": "Region 3 - Essequibo Islands-West Demerara",
+      "regionCode": "03",
+      "contractor": "Mahase Construction",
+      "contractValue": 24150000,
+      "contractValueDisplay": "$24,150,000",
+      "completion": 95,
+      "endDate": "2026-02-27",
+      "hasImages": 4,
+      "status": "Overdue",
+      "daysOverdue": 1,
+      "daysOverdueDisplay": "1 day overdue"
     },
     {
       "id": "27331",
@@ -574,8 +593,8 @@
       "endDate": "2025-12-27",
       "hasImages": 6,
       "status": "Overdue",
-      "daysOverdue": 62,
-      "daysOverdueDisplay": "62 days overdue"
+      "daysOverdue": 63,
+      "daysOverdueDisplay": "63 days overdue"
     },
     {
       "id": "27348",
@@ -593,8 +612,8 @@
       "endDate": "2025-04-30",
       "hasImages": 1,
       "status": "Overdue",
-      "daysOverdue": 303,
-      "daysOverdueDisplay": "303 days overdue"
+      "daysOverdue": 304,
+      "daysOverdueDisplay": "304 days overdue"
     },
     {
       "id": "27531",
@@ -612,8 +631,8 @@
       "endDate": "2025-08-19",
       "hasImages": 4,
       "status": "Overdue",
-      "daysOverdue": 192,
-      "daysOverdueDisplay": "192 days overdue"
+      "daysOverdue": 193,
+      "daysOverdueDisplay": "193 days overdue"
     },
     {
       "id": "27534",
@@ -631,8 +650,8 @@
       "endDate": "2024-06-06",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 631,
-      "daysOverdueDisplay": "631 days overdue"
+      "daysOverdue": 632,
+      "daysOverdueDisplay": "632 days overdue"
     },
     {
       "id": "27535",
@@ -650,8 +669,8 @@
       "endDate": "2024-04-23",
       "hasImages": 52,
       "status": "Overdue",
-      "daysOverdue": 675,
-      "daysOverdueDisplay": "675 days overdue"
+      "daysOverdue": 676,
+      "daysOverdueDisplay": "676 days overdue"
     },
     {
       "id": "27577",
@@ -669,8 +688,8 @@
       "endDate": "2025-11-18",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 101,
-      "daysOverdueDisplay": "101 days overdue"
+      "daysOverdue": 102,
+      "daysOverdueDisplay": "102 days overdue"
     },
     {
       "id": "27517",
@@ -688,8 +707,8 @@
       "endDate": "2025-08-23",
       "hasImages": 18,
       "status": "Overdue",
-      "daysOverdue": 188,
-      "daysOverdueDisplay": "188 days overdue"
+      "daysOverdue": 189,
+      "daysOverdueDisplay": "189 days overdue"
     },
     {
       "id": "27515",
@@ -707,8 +726,8 @@
       "endDate": "2025-04-11",
       "hasImages": 4,
       "status": "Overdue",
-      "daysOverdue": 322,
-      "daysOverdueDisplay": "322 days overdue"
+      "daysOverdue": 323,
+      "daysOverdueDisplay": "323 days overdue"
     }
   ],
   "endingSoon": [
@@ -728,27 +747,8 @@
       "endDate": "2026-03-26",
       "hasImages": 12,
       "status": "Ending Soon",
-      "daysRemaining": 27,
-      "daysRemainingDisplay": "27 days remaining"
-    },
-    {
-      "id": "27715",
-      "reference": "GPLXXX202601X27715",
-      "name": "Supply and Delivery of 4000 Tons of 1\" Stones",
-      "agency": "GPL",
-      "agencyFull": "Guyana Power & Light",
-      "ministry": "MOPUA",
-      "region": "Region 4 - Demerara-Mahaica",
-      "regionCode": "04",
-      "contractor": "BK International Inc",
-      "contractValue": 40660000,
-      "contractValueDisplay": "$40,660,000",
-      "completion": null,
-      "endDate": "2026-02-27",
-      "hasImages": 3,
-      "status": "Ending Soon",
-      "daysRemaining": 0,
-      "daysRemainingDisplay": "0 days remaining"
+      "daysRemaining": 26,
+      "daysRemainingDisplay": "26 days remaining"
     },
     {
       "id": "27740",
@@ -766,8 +766,8 @@
       "endDate": "2026-03-28",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 29,
-      "daysRemainingDisplay": "29 days remaining"
+      "daysRemaining": 28,
+      "daysRemainingDisplay": "28 days remaining"
     },
     {
       "id": "954",
@@ -785,8 +785,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 1,
-      "daysRemainingDisplay": "1 day remaining"
+      "daysRemaining": 0,
+      "daysRemainingDisplay": "0 days remaining"
     },
     {
       "id": "27364",
@@ -804,8 +804,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 1,
-      "daysRemainingDisplay": "1 day remaining"
+      "daysRemaining": 0,
+      "daysRemainingDisplay": "0 days remaining"
     },
     {
       "id": "27374",
@@ -823,8 +823,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 1,
-      "daysRemainingDisplay": "1 day remaining"
+      "daysRemaining": 0,
+      "daysRemainingDisplay": "0 days remaining"
     },
     {
       "id": "27416",
@@ -842,8 +842,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 1,
-      "daysRemainingDisplay": "1 day remaining"
+      "daysRemaining": 0,
+      "daysRemainingDisplay": "0 days remaining"
     },
     {
       "id": "27435",
@@ -861,8 +861,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 1,
-      "daysRemainingDisplay": "1 day remaining"
+      "daysRemaining": 0,
+      "daysRemainingDisplay": "0 days remaining"
     },
     {
       "id": "27442",
@@ -880,8 +880,8 @@
       "endDate": "2026-03-28",
       "hasImages": 2,
       "status": "Ending Soon",
-      "daysRemaining": 29,
-      "daysRemainingDisplay": "29 days remaining"
+      "daysRemaining": 28,
+      "daysRemainingDisplay": "28 days remaining"
     },
     {
       "id": "27447",
@@ -899,27 +899,27 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 1,
-      "daysRemainingDisplay": "1 day remaining"
-    },
-    {
-      "id": "27819",
-      "reference": "MARADXX202601X27819",
-      "name": "Removal of Obstructions, Derelict Vessels, Wrecks and Debris from Parika Foreshore, Essequibo River Lot 2 Area 1",
-      "agency": "MARAD",
-      "agencyFull": "Maritime Administration Department",
-      "ministry": "MOPUA",
-      "region": "Region 3 - Essequibo Islands-West Demerara",
-      "regionCode": "03",
-      "contractor": "Mahase Construction",
-      "contractValue": 24150000,
-      "contractValueDisplay": "$24,150,000",
-      "completion": 95,
-      "endDate": "2026-02-27",
-      "hasImages": 4,
-      "status": "Ending Soon",
       "daysRemaining": 0,
       "daysRemainingDisplay": "0 days remaining"
+    },
+    {
+      "id": "27169",
+      "reference": "GPLXXX202601X27169",
+      "name": "Hinterland Electrification - Supply & Installation and commissioning of Switchgear for Kwakwani Utilities Inc",
+      "agency": "HECI",
+      "agencyFull": "Hinterland Electrification Company Inc.",
+      "ministry": "MOPUA",
+      "region": "Region 10 - Upper Demerara-Berbice",
+      "regionCode": "10",
+      "contractor": "2020 FMCG Inc",
+      "contractValue": 76000000,
+      "contractValueDisplay": "$76,000,000",
+      "completion": 60,
+      "endDate": "2026-03-30",
+      "hasImages": 0,
+      "status": "Ending Soon",
+      "daysRemaining": 30,
+      "daysRemainingDisplay": "30 days remaining"
     },
     {
       "id": "27820",
@@ -937,8 +937,27 @@
       "endDate": "2026-03-01",
       "hasImages": 5,
       "status": "Ending Soon",
-      "daysRemaining": 2,
-      "daysRemainingDisplay": "2 days remaining"
+      "daysRemaining": 1,
+      "daysRemainingDisplay": "1 day remaining"
+    },
+    {
+      "id": "27822",
+      "reference": "MARADXX202601X27822",
+      "name": "Removal of Obstructions, Derelict Vessels, Wrecks and Debris from Parika Foreshore, Essequibo River lot 14- (Area 2)",
+      "agency": "MARAD",
+      "agencyFull": "Maritime Administration Department",
+      "ministry": "MOPUA",
+      "region": "Region 3 - Essequibo Islands-West Demerara",
+      "regionCode": "03",
+      "contractor": "I.B Contracting & Machinery Rental",
+      "contractValue": 57000000,
+      "contractValueDisplay": "$57,000,000",
+      "completion": 13,
+      "endDate": "2026-03-30",
+      "hasImages": 1,
+      "status": "Ending Soon",
+      "daysRemaining": 30,
+      "daysRemainingDisplay": "30 days remaining"
     }
   ],
   "atRisk": [
@@ -958,28 +977,8 @@
       "endDate": "2026-03-28",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 29,
-      "daysRemainingDisplay": "29 days remaining",
-      "riskReason": "Low completion with approaching deadline"
-    },
-    {
-      "id": "954",
-      "reference": "HECIXX202511X954",
-      "name": "Supply, Installation, and Commissioning of Switchgear and Generators for Hinterland Communities.",
-      "agency": "HECI",
-      "agencyFull": "Hinterland Electrification Company Inc.",
-      "ministry": "MOPUA",
-      "region": "Region 7 - Cuyuni-Mazaruni",
-      "regionCode": "07",
-      "contractor": "Akamai Inc",
-      "contractValue": 45326000,
-      "contractValueDisplay": "$45,326,000",
-      "completion": 20,
-      "endDate": "2026-02-28",
-      "hasImages": 0,
-      "status": "At Risk",
-      "daysRemaining": 1,
-      "daysRemainingDisplay": "1 day remaining",
+      "daysRemaining": 28,
+      "daysRemainingDisplay": "28 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -998,8 +997,8 @@
       "endDate": "2026-04-30",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 62,
-      "daysRemainingDisplay": "62 days remaining",
+      "daysRemaining": 61,
+      "daysRemainingDisplay": "61 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1018,8 +1017,8 @@
       "endDate": "2026-04-30",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 62,
-      "daysRemainingDisplay": "62 days remaining",
+      "daysRemaining": 61,
+      "daysRemainingDisplay": "61 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1038,28 +1037,8 @@
       "endDate": "2026-03-31",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 32,
-      "daysRemainingDisplay": "32 days remaining",
-      "riskReason": "Low completion with approaching deadline"
-    },
-    {
-      "id": "27374",
-      "reference": "GWIXXX202601X27374",
-      "name": "Coastal Water Treatment (Transmission Mains and NRW works) : Non Revenue Water programmes - LOT 2 – PVC Fittings",
-      "agency": "GWI",
-      "agencyFull": "Guyana Water Inc.",
-      "ministry": "MOPUA",
-      "region": "Region 4 - Demerara-Mahaica",
-      "regionCode": "04",
-      "contractor": "David Persaud Investment Limited",
-      "contractValue": 30466400,
-      "contractValueDisplay": "$30,466,400",
-      "completion": null,
-      "endDate": "2026-02-28",
-      "hasImages": 0,
-      "status": "At Risk",
-      "daysRemaining": 1,
-      "daysRemainingDisplay": "1 day remaining",
+      "daysRemaining": 31,
+      "daysRemainingDisplay": "31 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1078,8 +1057,8 @@
       "endDate": "2026-04-30",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 62,
-      "daysRemainingDisplay": "62 days remaining",
+      "daysRemaining": 61,
+      "daysRemainingDisplay": "61 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1098,8 +1077,8 @@
       "endDate": "2026-05-13",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 75,
-      "daysRemainingDisplay": "75 days remaining",
+      "daysRemaining": 74,
+      "daysRemainingDisplay": "74 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1118,8 +1097,8 @@
       "endDate": "2026-05-12",
       "hasImages": 2,
       "status": "At Risk",
-      "daysRemaining": 74,
-      "daysRemainingDisplay": "74 days remaining",
+      "daysRemaining": 73,
+      "daysRemainingDisplay": "73 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1138,8 +1117,8 @@
       "endDate": "2026-05-12",
       "hasImages": 2,
       "status": "At Risk",
-      "daysRemaining": 74,
-      "daysRemainingDisplay": "74 days remaining",
+      "daysRemaining": 73,
+      "daysRemainingDisplay": "73 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1158,8 +1137,8 @@
       "endDate": "2026-05-01",
       "hasImages": 7,
       "status": "At Risk",
-      "daysRemaining": 63,
-      "daysRemainingDisplay": "63 days remaining",
+      "daysRemaining": 62,
+      "daysRemainingDisplay": "62 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1178,28 +1157,8 @@
       "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 32,
-      "daysRemainingDisplay": "32 days remaining",
-      "riskReason": "Low completion with approaching deadline"
-    },
-    {
-      "id": "27447",
-      "reference": "GWIXXX202601X27447",
-      "name": "Procurement of Electromechanical equipment for rehabilitation of production facilities: Lot 3 Submersible Cables",
-      "agency": "GWI",
-      "agencyFull": "Guyana Water Inc.",
-      "ministry": "MOPUA",
-      "region": "Region 4 - Demerara-Mahaica",
-      "regionCode": "04",
-      "contractor": "S. Jagmohan Construction and General Supplies Inc.",
-      "contractValue": 12721200,
-      "contractValueDisplay": "$12,721,200",
-      "completion": 25,
-      "endDate": "2026-02-28",
-      "hasImages": 0,
-      "status": "At Risk",
-      "daysRemaining": 1,
-      "daysRemainingDisplay": "1 day remaining",
+      "daysRemaining": 31,
+      "daysRemainingDisplay": "31 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1218,8 +1177,8 @@
       "endDate": "2026-04-10",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 42,
-      "daysRemainingDisplay": "42 days remaining",
+      "daysRemaining": 41,
+      "daysRemainingDisplay": "41 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1238,8 +1197,8 @@
       "endDate": "2026-04-23",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 55,
-      "daysRemainingDisplay": "55 days remaining",
+      "daysRemaining": 54,
+      "daysRemainingDisplay": "54 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1258,8 +1217,8 @@
       "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 32,
-      "daysRemainingDisplay": "32 days remaining",
+      "daysRemaining": 31,
+      "daysRemainingDisplay": "31 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1278,8 +1237,8 @@
       "endDate": "2026-04-26",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 58,
-      "daysRemainingDisplay": "58 days remaining",
+      "daysRemaining": 57,
+      "daysRemainingDisplay": "57 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1298,8 +1257,8 @@
       "endDate": "2026-04-30",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 62,
-      "daysRemainingDisplay": "62 days remaining",
+      "daysRemaining": 61,
+      "daysRemainingDisplay": "61 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1318,8 +1277,8 @@
       "endDate": "2026-03-30",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 31,
-      "daysRemainingDisplay": "31 days remaining",
+      "daysRemaining": 30,
+      "daysRemainingDisplay": "30 days remaining",
       "riskReason": "Low completion with approaching deadline"
     }
   ],
@@ -1343,20 +1302,20 @@
       "warning": "Missing bond documents for delayed/overdue project"
     },
     {
-      "id": "275",
-      "reference": "HECIXX202510X275",
-      "name": "Supply one (1) 800KVA Generator for Mahdia",
-      "agency": "HECI",
-      "agencyFull": "Hinterland Electrification Company Inc.",
+      "id": "27715",
+      "reference": "GPLXXX202601X27715",
+      "name": "Supply and Delivery of 4000 Tons of 1\" Stones",
+      "agency": "GPL",
+      "agencyFull": "Guyana Power & Light",
       "ministry": "MOPUA",
-      "region": "Region 8 - Potaro-Siparuni",
-      "regionCode": "08",
-      "contractor": "STANDBY POWERs",
-      "contractValue": 24381000,
-      "contractValueDisplay": "$24,381,000",
-      "completion": 60,
-      "endDate": "2026-02-09",
-      "hasImages": 0,
+      "region": "Region 4 - Demerara-Mahaica",
+      "regionCode": "04",
+      "contractor": "BK International Inc",
+      "contractValue": 40660000,
+      "contractValueDisplay": "$40,660,000",
+      "completion": null,
+      "endDate": "2026-02-27",
+      "hasImages": 3,
       "status": "Bond Warning",
       "warning": "Missing bond documents for delayed/overdue project"
     },
@@ -1516,7 +1475,7 @@
       "contractor": "Farm Supplies Limited",
       "contractValue": 1093812500,
       "contractValueDisplay": "$1,093,812,500",
-      "completion": 64,
+      "completion": 68,
       "endDate": "2025-05-24",
       "hasImages": 5,
       "status": "Bond Warning",
@@ -1789,6 +1748,24 @@
       "completion": 90,
       "endDate": "2025-08-09",
       "hasImages": 1,
+      "status": "Bond Warning",
+      "warning": "Missing bond documents for delayed/overdue project"
+    },
+    {
+      "id": "27819",
+      "reference": "MARADXX202601X27819",
+      "name": "Removal of Obstructions, Derelict Vessels, Wrecks and Debris from Parika Foreshore, Essequibo River Lot 2 Area 1",
+      "agency": "MARAD",
+      "agencyFull": "Maritime Administration Department",
+      "ministry": "MOPUA",
+      "region": "Region 3 - Essequibo Islands-West Demerara",
+      "regionCode": "03",
+      "contractor": "Mahase Construction",
+      "contractValue": 24150000,
+      "contractValueDisplay": "$24,150,000",
+      "completion": 95,
+      "endDate": "2026-02-27",
+      "hasImages": 4,
       "status": "Bond Warning",
       "warning": "Missing bond documents for delayed/overdue project"
     },
@@ -1941,10 +1918,10 @@
     {
       "agency": "GPL",
       "agencyFull": "Guyana Power & Light",
-      "projectCount": 252,
+      "projectCount": 253,
       "totalValue": 164196754340,
       "totalValueDisplay": "$164,196,754,340",
-      "avgCompletion": 83.3
+      "avgCompletion": 83.7
     },
     {
       "agency": "GWI",
@@ -1952,7 +1929,7 @@
       "projectCount": 100,
       "totalValue": 15173831984,
       "totalValueDisplay": "$15,173,831,984",
-      "avgCompletion": 83.5
+      "avgCompletion": 83.7
     },
     {
       "agency": "MARAD",
@@ -1960,7 +1937,7 @@
       "projectCount": 14,
       "totalValue": 3595827146,
       "totalValueDisplay": "$3,595,827,146",
-      "avgCompletion": 56.5
+      "avgCompletion": 57.3
     },
     {
       "agency": "HAS",
@@ -1981,10 +1958,10 @@
     {
       "agency": "HECI",
       "agencyFull": "Hinterland Electrification Company Inc.",
-      "projectCount": 19,
-      "totalValue": 554814040,
-      "totalValueDisplay": "$554,814,040",
-      "avgCompletion": 85.8
+      "projectCount": 18,
+      "totalValue": 530433040,
+      "totalValueDisplay": "$530,433,040",
+      "avgCompletion": 87.2
     },
     {
       "agency": "GCAA",
@@ -2136,7 +2113,7 @@
       "contractor": "Action Construction Equipment (ACE) JV. Phoenix Projects Private LTD.",
       "contractValue": 2767966900,
       "contractValueDisplay": "$2,767,966,900",
-      "completion": 44,
+      "completion": 46,
       "endDate": "2026-06-13",
       "hasImages": 12
     },
