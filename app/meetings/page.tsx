@@ -19,10 +19,12 @@ export default function MeetingsPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 18;
 
   const fetchMeetings = useCallback(async () => {
     try {
-      const params = new URLSearchParams({ limit: '100' });
+      const params = new URLSearchParams({ limit: String(pageSize), offset: String((page - 1) * pageSize) });
       if (statusFilter) params.set('status', statusFilter);
       const res = await fetch(`/api/meetings?${params}`);
       const data = await res.json();
@@ -31,7 +33,9 @@ export default function MeetingsPage() {
     } catch {
       // Fail silently
     }
-  }, [statusFilter]);
+  }, [statusFilter, page]);
+
+  useEffect(() => { setPage(1); }, [statusFilter]);
 
   useEffect(() => {
     setLoading(true);
@@ -58,7 +62,7 @@ export default function MeetingsPage() {
     setSyncing(false);
   }
 
-  // Count by status
+  // Count by status (from current page — total from API)
   const counts = meetings.reduce(
     (acc, m) => {
       acc[m.status] = (acc[m.status] || 0) + 1;
@@ -66,6 +70,7 @@ export default function MeetingsPage() {
     },
     {} as Record<string, number>
   );
+  const totalPages = Math.ceil(total / pageSize);
 
   // Skeleton
   if (loading) {
@@ -129,26 +134,9 @@ export default function MeetingsPage() {
       {/* ── Stats Bar ── */}
       {total > 0 && (
         <div className="flex flex-wrap items-center gap-3 text-sm">
-          <span className="text-[#64748b]">{total} total</span>
-          {(counts.completed || 0) > 0 && (
-            <span className="flex items-center gap-1 text-emerald-400">
-              <CheckCircle className="h-3.5 w-3.5" /> {counts.completed} completed
-            </span>
-          )}
-          {(counts.pending || 0) > 0 && (
-            <span className="flex items-center gap-1 text-[#64748b]">
-              <Clock className="h-3.5 w-3.5" /> {counts.pending} pending
-            </span>
-          )}
-          {(counts.failed || 0) > 0 && (
-            <span className="flex items-center gap-1 text-red-400">
-              <AlertTriangle className="h-3.5 w-3.5" /> {counts.failed} failed
-            </span>
-          )}
-          {(counts.skipped || 0) > 0 && (
-            <span className="flex items-center gap-1 text-[#64748b]">
-              <SkipForward className="h-3.5 w-3.5" /> {counts.skipped} skipped
-            </span>
+          <span className="text-[#94a3b8] font-medium">{total} meetings</span>
+          {statusFilter && (
+            <span className="text-[#64748b]">showing {meetings.length} {statusFilter}</span>
           )}
         </div>
       )}
@@ -199,11 +187,39 @@ export default function MeetingsPage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {meetings.map(m => (
-            <MeetingCard key={m.id} meeting={m} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {meetings.map(m => (
+              <MeetingCard key={m.id} meeting={m} />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-2 py-3 mt-2">
+              <span className="text-[#64748b] text-sm">
+                {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} of {total}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="btn-navy px-3 py-1.5 text-sm disabled:opacity-30 touch-active"
+                >
+                  Prev
+                </button>
+                <span className="text-[#94a3b8] text-sm">{page}/{totalPages}</span>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="btn-navy px-3 py-1.5 text-sm disabled:opacity-30 touch-active"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

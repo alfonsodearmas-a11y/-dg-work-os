@@ -192,6 +192,10 @@ function ExecutiveBriefHero({
   stats: { overdue: number; stale: number } | null;
   calendarToday: number;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const TRUNCATE_LENGTH = 500;
+  const needsTruncation = (data?.briefing?.length ?? 0) > TRUNCATE_LENGTH;
+
   if (loading && !data) return <HeroSkeleton />;
 
   return (
@@ -226,7 +230,17 @@ function ExecutiveBriefHero({
         </div>
       ) : data ? (
         <div className="text-[#94a3b8] text-base leading-relaxed whitespace-pre-line mb-6">
-          {data.briefing}
+          {needsTruncation && !expanded
+            ? data.briefing.slice(0, TRUNCATE_LENGTH).replace(/\s+\S*$/, '') + '...'
+            : data.briefing}
+          {needsTruncation && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="ml-2 text-[#d4af37] text-sm font-medium hover:underline"
+            >
+              {expanded ? 'Show less' : 'Read more'}
+            </button>
+          )}
         </div>
       ) : (
         <p className="text-[#64748b] text-sm mb-6">Briefing unavailable — data sources may be loading.</p>

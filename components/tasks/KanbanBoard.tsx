@@ -13,7 +13,7 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
-import { RefreshCw, Plus, Search, Filter, X, Loader2 } from 'lucide-react';
+import { RefreshCw, Plus, Search, Filter, X, Loader2, AlertTriangle, CheckSquare, Clock, Inbox } from 'lucide-react';
 import { Task, TaskUpdate } from '@/lib/notion';
 import { KanbanColumn } from './KanbanColumn';
 import { TaskCard } from './TaskCard';
@@ -38,6 +38,7 @@ export function KanbanBoard() {
     'Done': [],
   });
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -71,9 +72,11 @@ export function KanbanBoard() {
       if (data.tasks) {
         setTasks(data.tasks);
         setLastSync(data.lastSync);
+        setFetchError(null);
       }
     } catch (error) {
       console.error('Failed to fetch tasks:', error);
+      setFetchError(error instanceof Error ? error.message : 'Failed to load tasks');
     } finally {
       setLoading(false);
       setSyncing(false);
@@ -285,16 +288,85 @@ export function KanbanBoard() {
 
   const hasActiveFilters = searchQuery || agencyFilter || roleFilter;
 
+  // Compute summary stats
+  const totalTasks = COLUMNS.reduce((sum, col) => sum + tasks[col].length, 0);
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 text-[#d4af37] animate-spin" />
+      <div className="space-y-4 animate-pulse">
+        <div className="flex gap-3">
+          <div className="h-10 bg-[#2d3a52] rounded-lg flex-1 max-w-md" />
+          <div className="h-10 bg-[#2d3a52] rounded-lg w-24" />
+          <div className="h-10 bg-[#2d3a52] rounded-lg w-28" />
+        </div>
+        <div className="flex gap-4 overflow-hidden">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="min-w-[280px] flex-1 bg-[#1a2744] rounded-xl border border-[#2d3a52] p-4">
+              <div className="h-5 bg-[#2d3a52] rounded w-24 mb-4" />
+              <div className="space-y-3">
+                {Array.from({ length: 3 - i }).map((_, j) => (
+                  <div key={j} className="h-20 bg-[#2d3a52]/50 rounded-lg" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (fetchError && totalTasks === 0) {
+    return (
+      <div className="bg-[#1a2744] rounded-xl border border-red-500/30 p-6 md:p-10 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-red-500/15 flex items-center justify-center mx-auto mb-4">
+          <AlertTriangle className="w-7 h-7 text-red-400" />
+        </div>
+        <h3 className="text-white text-lg font-semibold mb-2">Failed to Load Tasks</h3>
+        <p className="text-[#64748b] text-sm mb-4">{fetchError}</p>
+        <button
+          onClick={() => { setLoading(true); fetchTasks(); }}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#2d3a52] hover:bg-[#4a5568] text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          <RefreshCw className="w-4 h-4" /> Try Again
+        </button>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {/* Summary Stats Bar */}
+      {totalTasks > 0 && (
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <span className="text-[#64748b]">{totalTasks} tasks</span>
+          {tasks['To Do'].length > 0 && (
+            <span className="flex items-center gap-1 text-[#94a3b8]">
+              <Inbox className="h-3.5 w-3.5" /> {tasks['To Do'].length} to do
+            </span>
+          )}
+          {tasks['In Progress'].length > 0 && (
+            <span className="flex items-center gap-1 text-blue-400">
+              <Clock className="h-3.5 w-3.5" /> {tasks['In Progress'].length} in progress
+            </span>
+          )}
+          {tasks['Waiting'].length > 0 && (
+            <span className="flex items-center gap-1 text-amber-400">
+              <AlertTriangle className="h-3.5 w-3.5" /> {tasks['Waiting'].length} waiting
+            </span>
+          )}
+          {tasks['Done'].length > 0 && (
+            <span className="flex items-center gap-1 text-emerald-400">
+              <CheckSquare className="h-3.5 w-3.5" /> {tasks['Done'].length} done
+            </span>
+          )}
+          {lastSync && (
+            <span className="ml-auto text-xs text-[#64748b]">
+              Synced {new Date(lastSync).toLocaleTimeString()}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
         {/* Search */}

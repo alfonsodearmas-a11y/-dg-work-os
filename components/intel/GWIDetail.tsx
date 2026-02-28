@@ -387,10 +387,29 @@ export function GWIDetail() {
   // Loading state
   if (loading && !report) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-[#d4af37] animate-spin" />
-          <p className="text-[#94a3b8] text-[15px]">Loading GWI data...</p>
+      <div className="space-y-4 animate-pulse">
+        <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-5">
+          <div className="flex items-center gap-5">
+            <div className="w-[100px] h-[100px] rounded-full bg-[#2d3a52] shrink-0" />
+            <div className="flex-1 space-y-3">
+              <div className="h-5 bg-[#2d3a52] rounded w-48" />
+              <div className="h-4 bg-[#2d3a52] rounded w-full max-w-md" />
+              <div className="h-4 bg-[#2d3a52] rounded w-2/3" />
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-9 bg-[#2d3a52] rounded-lg w-28" />
+          ))}
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="card-premium p-4">
+              <div className="h-4 bg-[#2d3a52] rounded w-24 mb-2" />
+              <div className="h-6 bg-[#2d3a52] rounded w-16" />
+            </div>
+          ))}
         </div>
       </div>
     );

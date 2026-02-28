@@ -93,9 +93,14 @@ export default function IntelPage() {
             }}
           />
 
-          {/* Agency Cards Grid */}
+          {/* Agency Cards Grid — critical/warning agencies sort to top */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {agencies.map(agency => (
+            {[...agencies]
+              .sort((a, b) => {
+                const severity: Record<string, number> = { critical: 0, warning: 1, degraded: 2, operational: 3, unknown: 4 };
+                return (severity[a.status.type] ?? 4) - (severity[b.status.type] ?? 4);
+              })
+              .map(agency => (
               <AgencyCard
                 key={agency.id}
                 agency={agency}
