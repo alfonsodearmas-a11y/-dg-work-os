@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createHash } from 'crypto';
 import { detectAgency, parseGPLBuffer, parseGWIBuffer } from '@/lib/pending-applications-parser';
 import { createSnapshot } from '@/lib/pending-applications-snapshots';
 
@@ -13,11 +14,61 @@ function getSupabase() {
   );
 }
 
+/**
+ * Validate upload authorization. Returns the locked agency (for upload-auth)
+ * or null (for DG access, meaning any agency is allowed).
+ * Throws an object with { status, error } if unauthorized.
+ */
+function validateAuth(request: NextRequest): string | null {
+  // DG is always authorized (middleware already validates dg-auth cookie)
+  const dgAuth = request.cookies.get('dg-auth')?.value;
+  if (dgAuth) return null; // no agency lock
+
+  // Check upload-auth cookie for agency staff
+  const uploadAuth = request.cookies.get('upload-auth')?.value;
+  const uploadAgency = request.cookies.get('upload-agency')?.value;
+
+  if (!uploadAuth || !uploadAgency) {
+    throw { status: 401, error: 'Authentication required' };
+  }
+
+  const agency = uploadAgency.toUpperCase();
+  if (agency !== 'GPL' && agency !== 'GWI') {
+    throw { status: 401, error: 'Invalid agency' };
+  }
+
+  const code = process.env[`UPLOAD_ACCESS_CODE_${agency}`];
+  if (!code) {
+    throw { status: 401, error: 'Upload access not configured' };
+  }
+
+  const expected = createHash('sha256').update(code + '_upload_' + agency).digest('hex');
+  if (uploadAuth !== expected) {
+    throw { status: 401, error: 'Invalid or expired session' };
+  }
+
+  return agency;
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // Auth check
+    let lockedAgency: string | null;
+    try {
+      lockedAgency = validateAuth(request);
+    } catch (authError: unknown) {
+      const err = authError as { status: number; error: string };
+      return NextResponse.json({ error: err.error }, { status: err.status });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const agencyHint = formData.get('agency') as string | null;
+    let agencyHint = formData.get('agency') as string | null;
+
+    // If agency staff, force their agency
+    if (lockedAgency) {
+      agencyHint = lockedAgency;
+    }
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });

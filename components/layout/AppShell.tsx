@@ -17,10 +17,10 @@ import { RecordingIndicator } from '@/components/recording/RecordingIndicator';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isLoginPage = pathname === '/login';
+  const isBareLayout = pathname === '/login' || pathname.startsWith('/upload');
 
-  // Login page gets bare layout — no sidebar, header, or bottom nav
-  if (isLoginPage) {
+  // Login and upload portal pages get bare layout — no sidebar, header, or bottom nav
+  if (isBareLayout) {
     return <>{children}</>;
   }
 

@@ -7,6 +7,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 interface UploadPanelProps {
   onSuccess?: () => void;
+  lockedAgency?: 'GPL' | 'GWI';
 }
 
 interface UploadResult {
@@ -18,7 +19,7 @@ interface UploadResult {
   warnings: string[];
 }
 
-export function UploadPanel({ onSuccess }: UploadPanelProps) {
+export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -66,7 +67,8 @@ export function UploadPanel({ onSuccess }: UploadPanelProps) {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      if (agencyOverride) formData.append('agency', agencyOverride);
+      const agency = lockedAgency || agencyOverride;
+      if (agency) formData.append('agency', agency);
 
       const res = await fetch('/api/pending-applications/upload', { method: 'POST', body: formData });
       const data = await res.json();
@@ -138,8 +140,8 @@ export function UploadPanel({ onSuccess }: UploadPanelProps) {
               )}
             </div>
 
-            {/* Agency Override */}
-            {file && (
+            {/* Agency Override (hidden when agency is locked) */}
+            {file && !lockedAgency && (
               <div className="mt-4 flex items-center gap-3">
                 <label className="text-sm text-[#64748b]">Agency override (optional):</label>
                 <div className="flex gap-2">
