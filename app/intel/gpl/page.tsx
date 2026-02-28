@@ -37,8 +37,23 @@ export default function GPLIntelPage() {
       {/* Content */}
       <ErrorBoundary fallbackTitle="Failed to load GPL dashboard">
         {isLoading ? (
-          <div className="flex items-center justify-center py-24">
-            <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+          <div className="space-y-6 animate-pulse">
+            <div className="flex gap-2 border-b border-[#2d3a52] pb-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-9 bg-[#2d3a52] rounded-lg w-24" />
+              ))}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="card-premium p-5">
+                  <div className="h-8 bg-[#2d3a52] rounded w-16 mb-2" />
+                  <div className="h-4 bg-[#2d3a52] rounded w-24" />
+                </div>
+              ))}
+            </div>
+            <div className="card-premium p-6">
+              <div className="h-48 bg-[#2d3a52] rounded" />
+            </div>
           </div>
         ) : (
           <GPLDetail data={rawData.gpl} onLoadDate={loadGPLByDate} />

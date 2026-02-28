@@ -624,6 +624,7 @@ export default function ProjectsPage() {
   // UI
   const [showUpload, setShowUpload] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [showProjectList, setShowProjectList] = useState(false);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [expandedAgency, setExpandedAgency] = useState<string | null>(null);
   const [agencyStatusFilter, setAgencyStatusFilter] = useState('');
@@ -694,12 +695,14 @@ export default function ProjectsPage() {
       return 'Delayed';
     });
     setSort('end_date');
+    setShowProjectList(true);
     scrollToTable();
   }
 
   function applyKpiFilter(newStatus: string, newSort?: string) {
     setStatus(s => s === newStatus ? '' : newStatus);
     if (newSort) setSort(newSort);
+    setShowProjectList(true);
     scrollToTable();
   }
 
@@ -807,15 +810,15 @@ export default function ProjectsPage() {
             label="Total Projects"
             value={String(summary.total_projects)}
             color="gold"
-            onClick={() => { clearFilters(); scrollToTable(); }}
-            active={!status && !agency && !region && !search}
+            onClick={() => { clearFilters(); setShowProjectList(true); scrollToTable(); }}
+            active={!status && !agency && !region && !search && showProjectList}
           />
           <KpiCard
             icon={DollarSign}
             label="Portfolio Value"
             value={fmtCurrency(summary.total_value)}
             color="gold"
-            onClick={() => { clearFilters(); setSort('value'); scrollToTable(); }}
+            onClick={() => { clearFilters(); setSort('value'); setShowProjectList(true); scrollToTable(); }}
             active={false}
           />
           <KpiCard
@@ -881,6 +884,7 @@ export default function ProjectsPage() {
               function handleShowAll(ag: string, st: string) {
                 setAgency(ag);
                 if (st) setStatus(st);
+                setShowProjectList(true);
                 scrollToTable();
               }
 
@@ -1000,9 +1004,26 @@ export default function ProjectsPage() {
         </div>
       )}
 
+      {/* ── Browse All Projects Toggle ── */}
+      {!showProjectList && (
+        <button
+          onClick={() => { setShowProjectList(true); scrollToTable(); }}
+          className="card-premium p-4 w-full flex items-center justify-between hover:bg-[#1a2744]/60 transition-colors cursor-pointer touch-active"
+        >
+          <div className="flex items-center gap-3">
+            <Search className="h-5 w-5 text-[#d4af37]" />
+            <div>
+              <span className="text-white font-medium text-sm">Browse All Projects</span>
+              <p className="text-[#64748b] text-xs mt-0.5">Search, filter, and view the full project table</p>
+            </div>
+          </div>
+          <ChevronRight className="h-5 w-5 text-[#64748b]" />
+        </button>
+      )}
+
       {/* ── Filters Bar ── */}
       {/* Mobile: filter button + bottom sheet */}
-      {isMobile ? (
+      {showProjectList && isMobile ? (
         <>
           <button
             onClick={() => setShowFilters(true)}
@@ -1031,7 +1052,7 @@ export default function ProjectsPage() {
             onClear={() => { clearFilters(); setShowFilters(false); }}
           />
         </>
-      ) : (
+      ) : showProjectList ? (
         <div className="card-premium p-4">
           <div className="flex flex-wrap items-center gap-3">
             {/* Agency */}
@@ -1103,10 +1124,10 @@ export default function ProjectsPage() {
             )}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* ── Active Filter Chip ── */}
-      {activeFilterLabel && (
+      {showProjectList && activeFilterLabel && (
         <div ref={tableRef} className="flex items-center gap-2 -mb-3 scroll-mt-4">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 text-sm">
             <Filter className="h-3.5 w-3.5 text-[#d4af37]" />
@@ -1120,7 +1141,7 @@ export default function ProjectsPage() {
       )}
 
       {/* ── Project List ── */}
-      <div className={`${!activeFilterLabel ? 'scroll-mt-4' : ''}`} ref={!activeFilterLabel ? tableRef : undefined}>
+      {showProjectList && <div className={`${!activeFilterLabel ? 'scroll-mt-4' : ''}`} ref={!activeFilterLabel ? tableRef : undefined}>
         {isMobile ? (
           /* ── Mobile: Card List ── */
           <div className="space-y-3">
@@ -1272,7 +1293,7 @@ export default function ProjectsPage() {
             </div>
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

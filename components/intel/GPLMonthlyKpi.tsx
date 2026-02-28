@@ -263,7 +263,7 @@ export function GPLMonthlyKpi() {
           />
         ) : (
           <div className="bg-[#1a2744]/50 rounded-xl p-8 border border-[#2d3a52] text-center">
-            <Zap className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+            <Zap className="w-12 h-12 text-[#4a5568] mx-auto mb-4" />
             <p className="text-[#94a3b8] mb-2">No monthly KPI data available</p>
             <p className="text-[#64748b] text-sm">Upload a KPI CSV file to see monthly trends</p>
           </div>

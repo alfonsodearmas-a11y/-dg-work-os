@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ArrowLeft, Calendar } from 'lucide-react';
 import { CalendarView } from '@/components/calendar/CalendarView';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 export default function CalendarPage() {
   return (
@@ -27,7 +28,9 @@ export default function CalendarPage() {
       </div>
 
       {/* Content */}
-      <CalendarView />
+      <ErrorBoundary fallbackTitle="Failed to load calendar">
+        <CalendarView />
+      </ErrorBoundary>
     </div>
   );
 }

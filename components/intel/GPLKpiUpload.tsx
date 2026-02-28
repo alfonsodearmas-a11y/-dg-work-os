@@ -191,7 +191,7 @@ export function GPLKpiUpload({ onSuccess, onCancel }: GPLKpiUploadProps) {
             className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
               dragOver
                 ? 'border-emerald-400 bg-emerald-400/10'
-                : 'border-slate-600 hover:border-slate-500'
+                : 'border-[#2d3a52] hover:border-[#4a5568]'
             }`}
           >
             <Upload className={`w-12 h-12 mx-auto mb-4 ${dragOver ? 'text-emerald-400' : 'text-[#64748b]'}`} />
@@ -220,7 +220,7 @@ export function GPLKpiUpload({ onSuccess, onCancel }: GPLKpiUploadProps) {
             <button
               onClick={parseFile}
               disabled={loading}
-              className="mt-4 w-full py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-600 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
+              className="mt-4 w-full py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-[#4a5568] text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
             >
               {loading ? (
                 <>
@@ -299,14 +299,14 @@ export function GPLKpiUpload({ onSuccess, onCancel }: GPLKpiUploadProps) {
           <div className="flex gap-3">
             <button
               onClick={resetForm}
-              className="flex-1 py-3 bg-[#2d3a52] hover:bg-slate-600 text-white font-medium rounded-lg transition-colors"
+              className="flex-1 py-3 bg-[#2d3a52] hover:bg-[#4a5568] text-white font-medium rounded-lg transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={confirmUpload}
               disabled={submitting}
-              className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-600 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
+              className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-[#4a5568] text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
             >
               {submitting ? (
                 <>

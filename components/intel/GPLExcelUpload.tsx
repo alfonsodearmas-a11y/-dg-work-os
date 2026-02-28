@@ -538,7 +538,7 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
             className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
               dragOver
                 ? 'border-amber-400 bg-amber-400/10'
-                : 'border-slate-600 hover:border-slate-500'
+                : 'border-[#2d3a52] hover:border-[#4a5568]'
             }`}
           >
             <Upload className={`w-12 h-12 mx-auto mb-4 ${dragOver ? 'text-amber-400' : 'text-[#64748b]'}`} />
@@ -567,7 +567,7 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
             <button
               onClick={parseFile}
               disabled={loading}
-              className="mt-4 w-full py-3 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-600 text-black font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
+              className="mt-4 w-full py-3 bg-amber-500 hover:bg-amber-600 disabled:bg-[#4a5568] text-black font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
             >
               {loading ? (
                 <>
@@ -765,14 +765,14 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
             <div className="flex gap-3">
               <button
                 onClick={reset}
-                className="flex-1 py-3 bg-[#2d3a52] hover:bg-slate-600 text-white font-medium rounded-lg transition-colors"
+                className="flex-1 py-3 bg-[#2d3a52] hover:bg-[#4a5568] text-white font-medium rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={submitData}
                 disabled={submitting}
-                className="flex-1 py-3 bg-green-500 hover:bg-green-600 disabled:bg-slate-600 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
+                className="flex-1 py-3 bg-green-500 hover:bg-green-600 disabled:bg-[#4a5568] text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
               >
                 {submitting ? (
                   <>

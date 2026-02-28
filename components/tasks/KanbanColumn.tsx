@@ -14,8 +14,8 @@ interface KanbanColumnProps {
 
 const COLUMN_STYLES: Record<string, { dot: string; count: string }> = {
   'To Do': {
-    dot: 'bg-slate-400',
-    count: 'bg-slate-500/20 text-slate-400'
+    dot: 'bg-[#94a3b8]',
+    count: 'bg-[#4a5568]/20 text-[#94a3b8]'
   },
   'In Progress': {
     dot: 'bg-blue-400',

@@ -183,7 +183,7 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate, onDelete }: T
                         ? 'bg-red-500/20 text-red-400 border border-red-500/50'
                         : priority === 'Medium'
                         ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50'
-                        : 'bg-slate-500/20 text-slate-400 border border-slate-500/50'
+                        : 'bg-[#4a5568]/20 text-[#94a3b8] border border-[#4a5568]/50'
                       : 'bg-[#0a1628] text-[#64748b] border border-[#2d3a52] hover:border-[#3d4a62]'
                   }`}
                 >

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ArrowLeft, CheckSquare } from 'lucide-react';
 import { KanbanBoard } from '@/components/tasks/KanbanBoard';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 export default function TasksPage() {
   return (
@@ -27,7 +28,9 @@ export default function TasksPage() {
       </div>
 
       {/* Content */}
-      <KanbanBoard />
+      <ErrorBoundary fallbackTitle="Failed to load task board">
+        <KanbanBoard />
+      </ErrorBoundary>
     </div>
   );
 }

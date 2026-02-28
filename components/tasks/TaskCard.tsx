@@ -25,7 +25,7 @@ const AGENCY_COLORS: Record<string, string> = {
 const PRIORITY_COLORS: Record<string, string> = {
   'High': 'bg-red-500/20 text-red-400',
   'Medium': 'bg-yellow-500/20 text-yellow-400',
-  'Low': 'bg-slate-500/20 text-slate-400',
+  'Low': 'bg-[#4a5568]/20 text-[#94a3b8]',
 };
 
 export function TaskCard({ task, onClick }: TaskCardProps) {
