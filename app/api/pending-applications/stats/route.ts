@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import type { PendingApplicationStats } from '@/lib/pending-applications-types';
 
-const COLUMNS = 'id,agency,customer_reference,first_name,last_name,telephone,region,district,village_ward,street,lot,event_code,event_description,application_date,days_waiting,data_as_of';
+const COLUMNS = 'id,agency,customer_reference,first_name,last_name,telephone,region,district,village_ward,street,lot,event_code,event_description,application_date,days_waiting,data_as_of,pipeline_stage,account_type,service_order_type,service_order_number,account_status,cycle,division_code';
 
 function getSupabase() {
   return createClient(
@@ -30,6 +30,13 @@ function mapRow(row: Record<string, unknown>) {
     applicationDate: String(row.application_date || ''),
     daysWaiting: Number(row.days_waiting) || 0,
     dataAsOf: String(row.data_as_of || ''),
+    pipelineStage: row.pipeline_stage ? String(row.pipeline_stage) : undefined,
+    accountType: row.account_type ? String(row.account_type) : undefined,
+    serviceOrderType: row.service_order_type ? String(row.service_order_type) : undefined,
+    serviceOrderNumber: row.service_order_number ? String(row.service_order_number) : undefined,
+    accountStatus: row.account_status ? String(row.account_status) : undefined,
+    cycle: row.cycle ? String(row.cycle) : undefined,
+    divisionCode: row.division_code ? String(row.division_code) : undefined,
   };
 }
 
@@ -82,7 +89,30 @@ function buildStats(rows: Record<string, unknown>[]): PendingApplicationStats {
     { label: '> 30 days', min: 31, max: null, count: daysArr.filter(d => d > 30).length },
   ];
 
-  return { total, avgDaysWaiting, maxDaysWaiting, longestWaitCustomer, byRegion, waitBrackets, dataAsOf: String(rows[0].data_as_of || '') };
+  // Build byStage breakdown for GPL records
+  const stageMap = new Map<string, { count: number; totalDays: number; slaCompliant: number }>();
+  for (const row of rows) {
+    const stage = String(row.pipeline_stage || '');
+    if (!stage) continue;
+    const days = Number(row.days_waiting) || 0;
+    const entry = stageMap.get(stage) || { count: 0, totalDays: 0, slaCompliant: 0 };
+    entry.count++;
+    entry.totalDays += days;
+    // SLA thresholds: Metering 3d, Designs 12d, Execution 26d, others 14d
+    const sla = stage === 'Metering' ? 3 : stage === 'Designs' ? 12 : stage === 'Execution' ? 26 : 14;
+    if (days <= sla) entry.slaCompliant++;
+    stageMap.set(stage, entry);
+  }
+  const byStage = stageMap.size > 0 ? Array.from(stageMap.entries())
+    .map(([stage, d]) => ({
+      stage,
+      count: d.count,
+      avgDays: Math.round(d.totalDays / d.count),
+      slaCompliant: d.slaCompliant,
+    }))
+    .sort((a, b) => b.count - a.count) : undefined;
+
+  return { total, avgDaysWaiting, maxDaysWaiting, longestWaitCustomer, byRegion, waitBrackets, byStage, dataAsOf: String(rows[0].data_as_of || '') };
 }
 
 export async function GET() {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const COLUMNS = 'id,agency,customer_reference,first_name,last_name,telephone,region,district,village_ward,street,lot,event_code,event_description,application_date,days_waiting,data_as_of';
+const COLUMNS = 'id,agency,customer_reference,first_name,last_name,telephone,region,district,village_ward,street,lot,event_code,event_description,application_date,days_waiting,data_as_of,pipeline_stage,account_type,service_order_type,service_order_number,account_status,cycle,division_code';
 
 function getSupabase() {
   return createClient(
@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     const minDays = searchParams.get('minDays');
     const maxDays = searchParams.get('maxDays');
     const search = searchParams.get('search');
+    const stage = searchParams.get('stage');
     const sortBy = searchParams.get('sortBy') || 'days_waiting';
     const order = searchParams.get('order') || 'desc';
     const page = parseInt(searchParams.get('page') || '1');
@@ -50,6 +51,9 @@ export async function GET(request: NextRequest) {
     }
     if (maxDays) {
       query = query.lte('days_waiting', parseInt(maxDays));
+    }
+    if (stage) {
+      query = query.eq('pipeline_stage', stage);
     }
     if (search) {
       query = query.or(
@@ -85,6 +89,13 @@ export async function GET(request: NextRequest) {
       applicationDate: row.application_date || '',
       daysWaiting: row.days_waiting,
       dataAsOf: row.data_as_of || '',
+      pipelineStage: row.pipeline_stage || undefined,
+      accountType: row.account_type || undefined,
+      serviceOrderType: row.service_order_type || undefined,
+      serviceOrderNumber: row.service_order_number || undefined,
+      accountStatus: row.account_status || undefined,
+      cycle: row.cycle || undefined,
+      divisionCode: row.division_code || undefined,
     }));
 
     return NextResponse.json({
