@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "generatedAt": "2026-02-28T07:05:56.948Z",
+    "generatedAt": "2026-03-01T07:48:25.363Z",
     "totalProjects": 400,
-    "analysisDate": "2026-02-28"
+    "analysisDate": "2026-03-01"
   },
   "dashboard": {
     "kpis": {
@@ -53,14 +53,14 @@
       "21% ( 9 )": null,
       "72% ( 31 )": null
     },
-    "scrapedAt": "2026-02-28T07:05:07.918Z"
+    "scrapedAt": "2026-03-01T07:47:36.231Z"
   },
   "summary": {
     "delayed": 0,
-    "overdue": 35,
-    "endingSoon": 12,
+    "overdue": 37,
+    "endingSoon": 15,
     "atRisk": 16,
-    "bondWarnings": 35
+    "bondWarnings": 37
   },
   "delayed": [],
   "overdue": [
@@ -80,8 +80,8 @@
       "endDate": "2026-01-24",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 35,
-      "daysOverdueDisplay": "35 days overdue"
+      "daysOverdue": 36,
+      "daysOverdueDisplay": "36 days overdue"
     },
     {
       "id": "27715",
@@ -98,6 +98,25 @@
       "completion": null,
       "endDate": "2026-02-27",
       "hasImages": 3,
+      "status": "Overdue",
+      "daysOverdue": 2,
+      "daysOverdueDisplay": "2 days overdue"
+    },
+    {
+      "id": "954",
+      "reference": "HECIXX202511X954",
+      "name": "Supply, Installation, and Commissioning of Switchgear and Generators for Hinterland Communities.",
+      "agency": "HECI",
+      "agencyFull": "Hinterland Electrification Company Inc.",
+      "ministry": "MOPUA",
+      "region": "Region 7 - Cuyuni-Mazaruni",
+      "regionCode": "07",
+      "contractor": "Akamai Inc",
+      "contractValue": 45326000,
+      "contractValueDisplay": "$45,326,000",
+      "completion": 20,
+      "endDate": "2026-02-28",
+      "hasImages": 0,
       "status": "Overdue",
       "daysOverdue": 1,
       "daysOverdueDisplay": "1 day overdue"
@@ -118,8 +137,8 @@
       "endDate": "2026-01-16",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 43,
-      "daysOverdueDisplay": "43 days overdue"
+      "daysOverdue": 44,
+      "daysOverdueDisplay": "44 days overdue"
     },
     {
       "id": "27349",
@@ -137,8 +156,8 @@
       "endDate": "2026-02-25",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 3,
-      "daysOverdueDisplay": "3 days overdue"
+      "daysOverdue": 4,
+      "daysOverdueDisplay": "4 days overdue"
     },
     {
       "id": "27359",
@@ -156,8 +175,8 @@
       "endDate": "2025-12-11",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 79,
-      "daysOverdueDisplay": "79 days overdue"
+      "daysOverdue": 80,
+      "daysOverdueDisplay": "80 days overdue"
     },
     {
       "id": "27476",
@@ -175,8 +194,8 @@
       "endDate": "2025-09-01",
       "hasImages": 1,
       "status": "Overdue",
-      "daysOverdue": 180,
-      "daysOverdueDisplay": "180 days overdue"
+      "daysOverdue": 181,
+      "daysOverdueDisplay": "181 days overdue"
     },
     {
       "id": "27605",
@@ -194,8 +213,8 @@
       "endDate": "2025-12-31",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 59,
-      "daysOverdueDisplay": "59 days overdue"
+      "daysOverdue": 60,
+      "daysOverdueDisplay": "60 days overdue"
     },
     {
       "id": "27608",
@@ -213,8 +232,8 @@
       "endDate": "2025-10-03",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 148,
-      "daysOverdueDisplay": "148 days overdue"
+      "daysOverdue": 149,
+      "daysOverdueDisplay": "149 days overdue"
     },
     {
       "id": "27522",
@@ -232,8 +251,8 @@
       "endDate": "2025-06-15",
       "hasImages": 3,
       "status": "Overdue",
-      "daysOverdue": 258,
-      "daysOverdueDisplay": "258 days overdue"
+      "daysOverdue": 259,
+      "daysOverdueDisplay": "259 days overdue"
     },
     {
       "id": "27615",
@@ -251,8 +270,8 @@
       "endDate": "2025-05-10",
       "hasImages": 14,
       "status": "Overdue",
-      "daysOverdue": 294,
-      "daysOverdueDisplay": "294 days overdue"
+      "daysOverdue": 295,
+      "daysOverdueDisplay": "295 days overdue"
     },
     {
       "id": "27614",
@@ -270,46 +289,27 @@
       "endDate": "2025-05-24",
       "hasImages": 5,
       "status": "Overdue",
-      "daysOverdue": 280,
-      "daysOverdueDisplay": "280 days overdue"
+      "daysOverdue": 281,
+      "daysOverdueDisplay": "281 days overdue"
     },
     {
-      "id": "27619",
-      "reference": "GWIXXX202601X27619",
-      "name": "Supply and delivery of DI & PVC Pipes and Fittings & appurtenances (Lot 1 to 5): - Flow meter/ UME  - Lot 4",
+      "id": "27364",
+      "reference": "GWIXXX202601X27364",
+      "name": "Hinterland Water Supply – Installation of Water Supply System in Aranaputa, Region 9",
       "agency": "GWI",
       "agencyFull": "Guyana Water Inc.",
       "ministry": "MOPUA",
-      "region": "Region 4 - Demerara-Mahaica",
-      "regionCode": "04",
-      "contractor": "Arka Imports and Harware Supplies",
-      "contractValue": 19095000,
-      "contractValueDisplay": "$19,095,000",
-      "completion": null,
-      "endDate": "2025-10-31",
+      "region": "Region 9 - Upper Takutu-Upper Essequibo",
+      "regionCode": "09",
+      "contractor": "Faldhari Singh and Sons Contracting Services",
+      "contractValue": 34279500,
+      "contractValueDisplay": "$34,279,500",
+      "completion": 80,
+      "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 120,
-      "daysOverdueDisplay": "120 days overdue"
-    },
-    {
-      "id": "27373",
-      "reference": "GWIXXX202601X27373",
-      "name": "Coastal Water Treatment (Transmission Mains and NRW works) : Non Revenue Water programmes - Lot 1– Repair Couplings and Bands",
-      "agency": "GWI",
-      "agencyFull": "Guyana Water Inc.",
-      "ministry": "MOPUA",
-      "region": "Region 4 - Demerara-Mahaica",
-      "regionCode": "04",
-      "contractor": "Arka Imports and Harware Supplies",
-      "contractValue": 23429500,
-      "contractValueDisplay": "$23,429,500",
-      "completion": null,
-      "endDate": "2025-04-28",
-      "hasImages": 0,
-      "status": "Overdue",
-      "daysOverdue": 306,
-      "daysOverdueDisplay": "306 days overdue"
+      "daysOverdue": 1,
+      "daysOverdueDisplay": "1 day overdue"
     },
     {
       "id": "27616",
@@ -327,8 +327,8 @@
       "endDate": "2025-05-10",
       "hasImages": 14,
       "status": "Overdue",
-      "daysOverdue": 294,
-      "daysOverdueDisplay": "294 days overdue"
+      "daysOverdue": 295,
+      "daysOverdueDisplay": "295 days overdue"
     },
     {
       "id": "27617",
@@ -346,8 +346,8 @@
       "endDate": "2025-05-10",
       "hasImages": 13,
       "status": "Overdue",
-      "daysOverdue": 294,
-      "daysOverdueDisplay": "294 days overdue"
+      "daysOverdue": 295,
+      "daysOverdueDisplay": "295 days overdue"
     },
     {
       "id": "27656",
@@ -365,8 +365,8 @@
       "endDate": "2023-10-05",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 877,
-      "daysOverdueDisplay": "877 days overdue"
+      "daysOverdue": 878,
+      "daysOverdueDisplay": "878 days overdue"
     },
     {
       "id": "27657",
@@ -384,8 +384,8 @@
       "endDate": "2024-05-23",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 646,
-      "daysOverdueDisplay": "646 days overdue"
+      "daysOverdue": 647,
+      "daysOverdueDisplay": "647 days overdue"
     },
     {
       "id": "27406",
@@ -403,8 +403,8 @@
       "endDate": "2025-10-12",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 139,
-      "daysOverdueDisplay": "139 days overdue"
+      "daysOverdue": 140,
+      "daysOverdueDisplay": "140 days overdue"
     },
     {
       "id": "27407",
@@ -422,8 +422,8 @@
       "endDate": "2025-10-12",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 139,
-      "daysOverdueDisplay": "139 days overdue"
+      "daysOverdue": 140,
+      "daysOverdueDisplay": "140 days overdue"
     },
     {
       "id": "27420",
@@ -441,8 +441,8 @@
       "endDate": "2026-01-27",
       "hasImages": 20,
       "status": "Overdue",
-      "daysOverdue": 32,
-      "daysOverdueDisplay": "32 days overdue"
+      "daysOverdue": 33,
+      "daysOverdueDisplay": "33 days overdue"
     },
     {
       "id": "27692",
@@ -460,8 +460,8 @@
       "endDate": "2023-10-05",
       "hasImages": 5,
       "status": "Overdue",
-      "daysOverdue": 877,
-      "daysOverdueDisplay": "877 days overdue"
+      "daysOverdue": 878,
+      "daysOverdueDisplay": "878 days overdue"
     },
     {
       "id": "27693",
@@ -479,8 +479,8 @@
       "endDate": "2024-05-23",
       "hasImages": 6,
       "status": "Overdue",
-      "daysOverdue": 646,
-      "daysOverdueDisplay": "646 days overdue"
+      "daysOverdue": 647,
+      "daysOverdueDisplay": "647 days overdue"
     },
     {
       "id": "27426",
@@ -498,8 +498,8 @@
       "endDate": "2025-08-14",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 198,
-      "daysOverdueDisplay": "198 days overdue"
+      "daysOverdue": 199,
+      "daysOverdueDisplay": "199 days overdue"
     },
     {
       "id": "27434",
@@ -513,12 +513,50 @@
       "contractor": "David Persaud Investment Limited",
       "contractValue": 47026470,
       "contractValueDisplay": "$47,026,470",
-      "completion": 75,
+      "completion": 90,
       "endDate": "2026-01-30",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 29,
-      "daysOverdueDisplay": "29 days overdue"
+      "daysOverdue": 30,
+      "daysOverdueDisplay": "30 days overdue"
+    },
+    {
+      "id": "27435",
+      "reference": "GWIXXX202601X27435",
+      "name": "Supply and delivery of Infrastructure Upgrade Materials for Alexander Village, Albouystown and Kitty Lot 2",
+      "agency": "GWI",
+      "agencyFull": "Guyana Water Inc.",
+      "ministry": "MOPUA",
+      "region": "Region N/A",
+      "regionCode": "N/A",
+      "contractor": "David Persaud Investment Limited",
+      "contractValue": 44819000,
+      "contractValueDisplay": "$44,819,000",
+      "completion": 85,
+      "endDate": "2026-02-28",
+      "hasImages": 0,
+      "status": "Overdue",
+      "daysOverdue": 1,
+      "daysOverdueDisplay": "1 day overdue"
+    },
+    {
+      "id": "27447",
+      "reference": "GWIXXX202601X27447",
+      "name": "Procurement of Electromechanical equipment for rehabilitation of production facilities: Lot 3 Submersible Cables",
+      "agency": "GWI",
+      "agencyFull": "Guyana Water Inc.",
+      "ministry": "MOPUA",
+      "region": "Region 4 - Demerara-Mahaica",
+      "regionCode": "04",
+      "contractor": "S. Jagmohan Construction and General Supplies Inc.",
+      "contractValue": 12721200,
+      "contractValueDisplay": "$12,721,200",
+      "completion": 25,
+      "endDate": "2026-02-28",
+      "hasImages": 0,
+      "status": "Overdue",
+      "daysOverdue": 1,
+      "daysOverdueDisplay": "1 day overdue"
     },
     {
       "id": "27469",
@@ -536,8 +574,8 @@
       "endDate": "2024-11-24",
       "hasImages": 6,
       "status": "Overdue",
-      "daysOverdue": 461,
-      "daysOverdueDisplay": "461 days overdue"
+      "daysOverdue": 462,
+      "daysOverdueDisplay": "462 days overdue"
     },
     {
       "id": "27398",
@@ -555,8 +593,8 @@
       "endDate": "2025-08-09",
       "hasImages": 1,
       "status": "Overdue",
-      "daysOverdue": 203,
-      "daysOverdueDisplay": "203 days overdue"
+      "daysOverdue": 204,
+      "daysOverdueDisplay": "204 days overdue"
     },
     {
       "id": "27819",
@@ -574,8 +612,8 @@
       "endDate": "2026-02-27",
       "hasImages": 4,
       "status": "Overdue",
-      "daysOverdue": 1,
-      "daysOverdueDisplay": "1 day overdue"
+      "daysOverdue": 2,
+      "daysOverdueDisplay": "2 days overdue"
     },
     {
       "id": "27331",
@@ -593,8 +631,8 @@
       "endDate": "2025-12-27",
       "hasImages": 6,
       "status": "Overdue",
-      "daysOverdue": 63,
-      "daysOverdueDisplay": "63 days overdue"
+      "daysOverdue": 64,
+      "daysOverdueDisplay": "64 days overdue"
     },
     {
       "id": "27348",
@@ -612,8 +650,8 @@
       "endDate": "2025-04-30",
       "hasImages": 1,
       "status": "Overdue",
-      "daysOverdue": 304,
-      "daysOverdueDisplay": "304 days overdue"
+      "daysOverdue": 305,
+      "daysOverdueDisplay": "305 days overdue"
     },
     {
       "id": "27531",
@@ -631,8 +669,8 @@
       "endDate": "2025-08-19",
       "hasImages": 4,
       "status": "Overdue",
-      "daysOverdue": 193,
-      "daysOverdueDisplay": "193 days overdue"
+      "daysOverdue": 194,
+      "daysOverdueDisplay": "194 days overdue"
     },
     {
       "id": "27534",
@@ -650,8 +688,8 @@
       "endDate": "2024-06-06",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 632,
-      "daysOverdueDisplay": "632 days overdue"
+      "daysOverdue": 633,
+      "daysOverdueDisplay": "633 days overdue"
     },
     {
       "id": "27535",
@@ -669,8 +707,8 @@
       "endDate": "2024-04-23",
       "hasImages": 52,
       "status": "Overdue",
-      "daysOverdue": 676,
-      "daysOverdueDisplay": "676 days overdue"
+      "daysOverdue": 677,
+      "daysOverdueDisplay": "677 days overdue"
     },
     {
       "id": "27577",
@@ -688,8 +726,8 @@
       "endDate": "2025-11-18",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 102,
-      "daysOverdueDisplay": "102 days overdue"
+      "daysOverdue": 103,
+      "daysOverdueDisplay": "103 days overdue"
     },
     {
       "id": "27517",
@@ -707,8 +745,8 @@
       "endDate": "2025-08-23",
       "hasImages": 18,
       "status": "Overdue",
-      "daysOverdue": 189,
-      "daysOverdueDisplay": "189 days overdue"
+      "daysOverdue": 190,
+      "daysOverdueDisplay": "190 days overdue"
     },
     {
       "id": "27515",
@@ -726,8 +764,8 @@
       "endDate": "2025-04-11",
       "hasImages": 4,
       "status": "Overdue",
-      "daysOverdue": 323,
-      "daysOverdueDisplay": "323 days overdue"
+      "daysOverdue": 324,
+      "daysOverdueDisplay": "324 days overdue"
     }
   ],
   "endingSoon": [
@@ -747,8 +785,27 @@
       "endDate": "2026-03-26",
       "hasImages": 12,
       "status": "Ending Soon",
-      "daysRemaining": 26,
-      "daysRemainingDisplay": "26 days remaining"
+      "daysRemaining": 25,
+      "daysRemainingDisplay": "25 days remaining"
+    },
+    {
+      "id": "417",
+      "reference": "HECIXX202510X417",
+      "name": "Construction of an Administrative Building at the Kato Hydropower Site",
+      "agency": "HECI",
+      "agencyFull": "Hinterland Electrification Company Inc.",
+      "ministry": "MOPUA",
+      "region": "Region 8 - Potaro-Siparuni",
+      "regionCode": "08",
+      "contractor": "Hinterland Electrification Co Inc.",
+      "contractValue": 58401925,
+      "contractValueDisplay": "$58,401,925",
+      "completion": 60,
+      "endDate": "2026-03-31",
+      "hasImages": 12,
+      "status": "Ending Soon",
+      "daysRemaining": 30,
+      "daysRemainingDisplay": "30 days remaining"
     },
     {
       "id": "27740",
@@ -766,103 +823,141 @@
       "endDate": "2026-03-28",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 28,
-      "daysRemainingDisplay": "28 days remaining"
+      "daysRemaining": 27,
+      "daysRemainingDisplay": "27 days remaining"
     },
     {
-      "id": "954",
-      "reference": "HECIXX202511X954",
-      "name": "Supply, Installation, and Commissioning of Switchgear and Generators for Hinterland Communities.",
-      "agency": "HECI",
-      "agencyFull": "Hinterland Electrification Company Inc.",
-      "ministry": "MOPUA",
-      "region": "Region 7 - Cuyuni-Mazaruni",
-      "regionCode": "07",
-      "contractor": "Akamai Inc",
-      "contractValue": 45326000,
-      "contractValueDisplay": "$45,326,000",
-      "completion": 20,
-      "endDate": "2026-02-28",
-      "hasImages": 0,
-      "status": "Ending Soon",
-      "daysRemaining": 0,
-      "daysRemainingDisplay": "0 days remaining"
-    },
-    {
-      "id": "27364",
-      "reference": "GWIXXX202601X27364",
-      "name": "Hinterland Water Supply – Installation of Water Supply System in Aranaputa, Region 9",
+      "id": "27347",
+      "reference": "GWIXXX202601X27347",
+      "name": "Hinterland Water Supply (Rollover) - Drilling of potable water wells at Siriki & Kabakaburi - Region No. 2",
       "agency": "GWI",
       "agencyFull": "Guyana Water Inc.",
       "ministry": "MOPUA",
-      "region": "Region 9 - Upper Takutu-Upper Essequibo",
-      "regionCode": "09",
-      "contractor": "Faldhari Singh and Sons Contracting Services",
-      "contractValue": 34279500,
-      "contractValueDisplay": "$34,279,500",
-      "completion": 80,
-      "endDate": "2026-02-28",
-      "hasImages": 0,
+      "region": "Region 2 - Pomeroon-Supenaam",
+      "regionCode": "02",
+      "contractor": "Kanuku Builders and Suppliers Contractors",
+      "contractValue": 48548000,
+      "contractValueDisplay": "$48,548,000",
+      "completion": 95,
+      "endDate": "2026-03-31",
+      "hasImages": 1,
       "status": "Ending Soon",
-      "daysRemaining": 0,
-      "daysRemainingDisplay": "0 days remaining"
+      "daysRemaining": 30,
+      "daysRemainingDisplay": "30 days remaining"
     },
     {
-      "id": "27374",
-      "reference": "GWIXXX202601X27374",
-      "name": "Coastal Water Treatment (Transmission Mains and NRW works) : Non Revenue Water programmes - LOT 2 – PVC Fittings",
+      "id": "27353",
+      "reference": "GWIXXX202601X27353",
+      "name": "Hinterland Water Supply – Expansion and upgrade of water supply systems in 72 Miles Kaburi and Issano",
+      "agency": "GWI",
+      "agencyFull": "Guyana Water Inc.",
+      "ministry": "MOPUA",
+      "region": "Region 7 - Cuyuni-Mazaruni",
+      "regionCode": "07",
+      "contractor": "Joshi Construction & Supplies",
+      "contractValue": 24340500,
+      "contractValueDisplay": "$24,340,500",
+      "completion": 80,
+      "endDate": "2026-03-31",
+      "hasImages": 2,
+      "status": "Ending Soon",
+      "daysRemaining": 30,
+      "daysRemainingDisplay": "30 days remaining"
+    },
+    {
+      "id": "27360",
+      "reference": "GWIXXX202601X27360",
+      "name": "Hinterland Water Supply – New water system in Murawau, Region 8",
+      "agency": "GWI",
+      "agencyFull": "Guyana Water Inc.",
+      "ministry": "MOPUA",
+      "region": "Region 8 - Potaro-Siparuni",
+      "regionCode": "08",
+      "contractor": "Joshi Construction & Supplies",
+      "contractValue": 34188200,
+      "contractValueDisplay": "$34,188,200",
+      "completion": null,
+      "endDate": "2026-03-31",
+      "hasImages": 1,
+      "status": "Ending Soon",
+      "daysRemaining": 30,
+      "daysRemainingDisplay": "30 days remaining"
+    },
+    {
+      "id": "27367",
+      "reference": "GWIXXX202601X27367",
+      "name": "Hinterland Water Supply – Procurement of Vehicles (Double Cab Canters) and ATVs – 5 Canters & 5 ATVs",
       "agency": "GWI",
       "agencyFull": "Guyana Water Inc.",
       "ministry": "MOPUA",
       "region": "Region 4 - Demerara-Mahaica",
       "regionCode": "04",
-      "contractor": "David Persaud Investment Limited",
-      "contractValue": 30466400,
-      "contractValueDisplay": "$30,466,400",
-      "completion": null,
-      "endDate": "2026-02-28",
+      "contractor": "Ansa Motors Guyana Inc",
+      "contractValue": 66250000,
+      "contractValueDisplay": "$66,250,000",
+      "completion": 100,
+      "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 0,
-      "daysRemainingDisplay": "0 days remaining"
+      "daysRemaining": 30,
+      "daysRemainingDisplay": "30 days remaining"
     },
     {
-      "id": "27416",
-      "reference": "GWIXXX202601X27416",
-      "name": "Procurement of Electromechanical Equipment for Rehabilitation of Production Facilities – Vertical Turbine Pumps (Lot 9)",
+      "id": "27376",
+      "reference": "GWIXXX202601X27376",
+      "name": "Coastal Water Supply : Transmission and Distributions (Hope Canal Programme) - Supply and Delivery of HDPE, PVC & DI fittings and Valves and Appurtenances for Installation of Transmission Network from Cove & John to Cane Grove, ECD, Region 4 - Lot 1",
+      "agency": "GWI",
+      "agencyFull": "Guyana Water Inc.",
+      "ministry": "MOPUA",
+      "region": "Region 4 - Demerara-Mahaica",
+      "regionCode": "04",
+      "contractor": "C&L Construction Inc.",
+      "contractValue": 1246797142,
+      "contractValueDisplay": "$1,246,797,142",
+      "completion": 85,
+      "endDate": "2026-03-31",
+      "hasImages": 1,
+      "status": "Ending Soon",
+      "daysRemaining": 30,
+      "daysRemainingDisplay": "30 days remaining"
+    },
+    {
+      "id": "27424",
+      "reference": "GWIXXX202601X27424",
+      "name": "Hypo Generators - Chlorine",
+      "agency": "GWI",
+      "agencyFull": "Guyana Water Inc.",
+      "ministry": "MOPUA",
+      "region": "Region N/A",
+      "regionCode": "N/A",
+      "contractor": "Printine Watertech Labs LLC",
+      "contractValue": 276310000,
+      "contractValueDisplay": "$276,310,000",
+      "completion": 50,
+      "endDate": "2026-03-31",
+      "hasImages": 0,
+      "status": "Ending Soon",
+      "daysRemaining": 30,
+      "daysRemainingDisplay": "30 days remaining"
+    },
+    {
+      "id": "27429",
+      "reference": "GWIXXX202601X27429",
+      "name": "Automatic Meter Infrastructure - Implementation of smart metering",
       "agency": "GWI",
       "agencyFull": "Guyana Water Inc.",
       "ministry": "MOPUA",
       "region": "Region 4 - Demerara-Mahaica",
       "regionCode": "04",
       "contractor": "Dax Contracting Services",
-      "contractValue": 91000000,
-      "contractValueDisplay": "$91,000,000",
-      "completion": 100,
-      "endDate": "2026-02-28",
+      "contractValue": 274940000,
+      "contractValueDisplay": "$274,940,000",
+      "completion": 25,
+      "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 0,
-      "daysRemainingDisplay": "0 days remaining"
-    },
-    {
-      "id": "27435",
-      "reference": "GWIXXX202601X27435",
-      "name": "Supply and delivery of Infrastructure Upgrade Materials for Alexander Village, Albouystown and Kitty Lot 2",
-      "agency": "GWI",
-      "agencyFull": "Guyana Water Inc.",
-      "ministry": "MOPUA",
-      "region": "Region N/A",
-      "regionCode": "N/A",
-      "contractor": "David Persaud Investment Limited",
-      "contractValue": 44819000,
-      "contractValueDisplay": "$44,819,000",
-      "completion": 85,
-      "endDate": "2026-02-28",
-      "hasImages": 0,
-      "status": "Ending Soon",
-      "daysRemaining": 0,
-      "daysRemainingDisplay": "0 days remaining"
+      "daysRemaining": 30,
+      "daysRemainingDisplay": "30 days remaining"
     },
     {
       "id": "27442",
@@ -880,27 +975,8 @@
       "endDate": "2026-03-28",
       "hasImages": 2,
       "status": "Ending Soon",
-      "daysRemaining": 28,
-      "daysRemainingDisplay": "28 days remaining"
-    },
-    {
-      "id": "27447",
-      "reference": "GWIXXX202601X27447",
-      "name": "Procurement of Electromechanical equipment for rehabilitation of production facilities: Lot 3 Submersible Cables",
-      "agency": "GWI",
-      "agencyFull": "Guyana Water Inc.",
-      "ministry": "MOPUA",
-      "region": "Region 4 - Demerara-Mahaica",
-      "regionCode": "04",
-      "contractor": "S. Jagmohan Construction and General Supplies Inc.",
-      "contractValue": 12721200,
-      "contractValueDisplay": "$12,721,200",
-      "completion": 25,
-      "endDate": "2026-02-28",
-      "hasImages": 0,
-      "status": "Ending Soon",
-      "daysRemaining": 0,
-      "daysRemainingDisplay": "0 days remaining"
+      "daysRemaining": 27,
+      "daysRemainingDisplay": "27 days remaining"
     },
     {
       "id": "27169",
@@ -916,6 +992,25 @@
       "contractValueDisplay": "$76,000,000",
       "completion": 60,
       "endDate": "2026-03-30",
+      "hasImages": 0,
+      "status": "Ending Soon",
+      "daysRemaining": 29,
+      "daysRemainingDisplay": "29 days remaining"
+    },
+    {
+      "id": "27814",
+      "reference": "GPLXXX202601X27814",
+      "name": "Upgrade of Prepayment system and migration from on premise to Cloud Computing",
+      "agency": "GPL",
+      "agencyFull": "Guyana Power & Light",
+      "ministry": "MOPUA",
+      "region": "Region N/A",
+      "regionCode": "N/A",
+      "contractor": "Utiliflex LLC",
+      "contractValue": 24021900,
+      "contractValueDisplay": "$24,021,900",
+      "completion": null,
+      "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "Ending Soon",
       "daysRemaining": 30,
@@ -937,8 +1032,8 @@
       "endDate": "2026-03-01",
       "hasImages": 5,
       "status": "Ending Soon",
-      "daysRemaining": 1,
-      "daysRemainingDisplay": "1 day remaining"
+      "daysRemaining": 0,
+      "daysRemainingDisplay": "0 days remaining"
     },
     {
       "id": "27822",
@@ -956,8 +1051,8 @@
       "endDate": "2026-03-30",
       "hasImages": 1,
       "status": "Ending Soon",
-      "daysRemaining": 30,
-      "daysRemainingDisplay": "30 days remaining"
+      "daysRemaining": 29,
+      "daysRemainingDisplay": "29 days remaining"
     }
   ],
   "atRisk": [
@@ -977,8 +1072,8 @@
       "endDate": "2026-03-28",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 28,
-      "daysRemainingDisplay": "28 days remaining",
+      "daysRemaining": 27,
+      "daysRemainingDisplay": "27 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -997,8 +1092,8 @@
       "endDate": "2026-04-30",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 61,
-      "daysRemainingDisplay": "61 days remaining",
+      "daysRemaining": 60,
+      "daysRemainingDisplay": "60 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1017,8 +1112,8 @@
       "endDate": "2026-04-30",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 61,
-      "daysRemainingDisplay": "61 days remaining",
+      "daysRemaining": 60,
+      "daysRemainingDisplay": "60 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1037,8 +1132,8 @@
       "endDate": "2026-03-31",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 31,
-      "daysRemainingDisplay": "31 days remaining",
+      "daysRemaining": 30,
+      "daysRemainingDisplay": "30 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1057,8 +1152,8 @@
       "endDate": "2026-04-30",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 61,
-      "daysRemainingDisplay": "61 days remaining",
+      "daysRemaining": 60,
+      "daysRemainingDisplay": "60 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1077,8 +1172,8 @@
       "endDate": "2026-05-13",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 74,
-      "daysRemainingDisplay": "74 days remaining",
+      "daysRemaining": 73,
+      "daysRemainingDisplay": "73 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1097,8 +1192,8 @@
       "endDate": "2026-05-12",
       "hasImages": 2,
       "status": "At Risk",
-      "daysRemaining": 73,
-      "daysRemainingDisplay": "73 days remaining",
+      "daysRemaining": 72,
+      "daysRemainingDisplay": "72 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1117,8 +1212,8 @@
       "endDate": "2026-05-12",
       "hasImages": 2,
       "status": "At Risk",
-      "daysRemaining": 73,
-      "daysRemainingDisplay": "73 days remaining",
+      "daysRemaining": 72,
+      "daysRemainingDisplay": "72 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1137,8 +1232,8 @@
       "endDate": "2026-05-01",
       "hasImages": 7,
       "status": "At Risk",
-      "daysRemaining": 62,
-      "daysRemainingDisplay": "62 days remaining",
+      "daysRemaining": 61,
+      "daysRemainingDisplay": "61 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1157,8 +1252,8 @@
       "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 31,
-      "daysRemainingDisplay": "31 days remaining",
+      "daysRemaining": 30,
+      "daysRemainingDisplay": "30 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1177,8 +1272,8 @@
       "endDate": "2026-04-10",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 41,
-      "daysRemainingDisplay": "41 days remaining",
+      "daysRemaining": 40,
+      "daysRemainingDisplay": "40 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1197,8 +1292,8 @@
       "endDate": "2026-04-23",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 54,
-      "daysRemainingDisplay": "54 days remaining",
+      "daysRemaining": 53,
+      "daysRemainingDisplay": "53 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1217,8 +1312,8 @@
       "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 31,
-      "daysRemainingDisplay": "31 days remaining",
+      "daysRemaining": 30,
+      "daysRemainingDisplay": "30 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1237,8 +1332,8 @@
       "endDate": "2026-04-26",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 57,
-      "daysRemainingDisplay": "57 days remaining",
+      "daysRemaining": 56,
+      "daysRemainingDisplay": "56 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1257,8 +1352,8 @@
       "endDate": "2026-04-30",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 61,
-      "daysRemainingDisplay": "61 days remaining",
+      "daysRemaining": 60,
+      "daysRemainingDisplay": "60 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1277,8 +1372,8 @@
       "endDate": "2026-03-30",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 30,
-      "daysRemainingDisplay": "30 days remaining",
+      "daysRemaining": 29,
+      "daysRemainingDisplay": "29 days remaining",
       "riskReason": "Low completion with approaching deadline"
     }
   ],
@@ -1320,6 +1415,24 @@
       "warning": "Missing bond documents for delayed/overdue project"
     },
     {
+      "id": "954",
+      "reference": "HECIXX202511X954",
+      "name": "Supply, Installation, and Commissioning of Switchgear and Generators for Hinterland Communities.",
+      "agency": "HECI",
+      "agencyFull": "Hinterland Electrification Company Inc.",
+      "ministry": "MOPUA",
+      "region": "Region 7 - Cuyuni-Mazaruni",
+      "regionCode": "07",
+      "contractor": "Akamai Inc",
+      "contractValue": 45326000,
+      "contractValueDisplay": "$45,326,000",
+      "completion": 20,
+      "endDate": "2026-02-28",
+      "hasImages": 0,
+      "status": "Bond Warning",
+      "warning": "Missing bond documents for delayed/overdue project"
+    },
+    {
       "id": "27572",
       "reference": "MOPUAXX202601X27572",
       "name": "Installation of Water Supply Systemt  in St, Ingatius, Region 9",
@@ -1482,37 +1595,19 @@
       "warning": "Missing bond documents for delayed/overdue project"
     },
     {
-      "id": "27619",
-      "reference": "GWIXXX202601X27619",
-      "name": "Supply and delivery of DI & PVC Pipes and Fittings & appurtenances (Lot 1 to 5): - Flow meter/ UME  - Lot 4",
+      "id": "27364",
+      "reference": "GWIXXX202601X27364",
+      "name": "Hinterland Water Supply – Installation of Water Supply System in Aranaputa, Region 9",
       "agency": "GWI",
       "agencyFull": "Guyana Water Inc.",
       "ministry": "MOPUA",
-      "region": "Region 4 - Demerara-Mahaica",
-      "regionCode": "04",
-      "contractor": "Arka Imports and Harware Supplies",
-      "contractValue": 19095000,
-      "contractValueDisplay": "$19,095,000",
-      "completion": null,
-      "endDate": "2025-10-31",
-      "hasImages": 0,
-      "status": "Bond Warning",
-      "warning": "Missing bond documents for delayed/overdue project"
-    },
-    {
-      "id": "27373",
-      "reference": "GWIXXX202601X27373",
-      "name": "Coastal Water Treatment (Transmission Mains and NRW works) : Non Revenue Water programmes - Lot 1– Repair Couplings and Bands",
-      "agency": "GWI",
-      "agencyFull": "Guyana Water Inc.",
-      "ministry": "MOPUA",
-      "region": "Region 4 - Demerara-Mahaica",
-      "regionCode": "04",
-      "contractor": "Arka Imports and Harware Supplies",
-      "contractValue": 23429500,
-      "contractValueDisplay": "$23,429,500",
-      "completion": null,
-      "endDate": "2025-04-28",
+      "region": "Region 9 - Upper Takutu-Upper Essequibo",
+      "regionCode": "09",
+      "contractor": "Faldhari Singh and Sons Contracting Services",
+      "contractValue": 34279500,
+      "contractValueDisplay": "$34,279,500",
+      "completion": 80,
+      "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Bond Warning",
       "warning": "Missing bond documents for delayed/overdue project"
@@ -1709,8 +1804,44 @@
       "contractor": "David Persaud Investment Limited",
       "contractValue": 47026470,
       "contractValueDisplay": "$47,026,470",
-      "completion": 75,
+      "completion": 90,
       "endDate": "2026-01-30",
+      "hasImages": 0,
+      "status": "Bond Warning",
+      "warning": "Missing bond documents for delayed/overdue project"
+    },
+    {
+      "id": "27435",
+      "reference": "GWIXXX202601X27435",
+      "name": "Supply and delivery of Infrastructure Upgrade Materials for Alexander Village, Albouystown and Kitty Lot 2",
+      "agency": "GWI",
+      "agencyFull": "Guyana Water Inc.",
+      "ministry": "MOPUA",
+      "region": "Region N/A",
+      "regionCode": "N/A",
+      "contractor": "David Persaud Investment Limited",
+      "contractValue": 44819000,
+      "contractValueDisplay": "$44,819,000",
+      "completion": 85,
+      "endDate": "2026-02-28",
+      "hasImages": 0,
+      "status": "Bond Warning",
+      "warning": "Missing bond documents for delayed/overdue project"
+    },
+    {
+      "id": "27447",
+      "reference": "GWIXXX202601X27447",
+      "name": "Procurement of Electromechanical equipment for rehabilitation of production facilities: Lot 3 Submersible Cables",
+      "agency": "GWI",
+      "agencyFull": "Guyana Water Inc.",
+      "ministry": "MOPUA",
+      "region": "Region 4 - Demerara-Mahaica",
+      "regionCode": "04",
+      "contractor": "S. Jagmohan Construction and General Supplies Inc.",
+      "contractValue": 12721200,
+      "contractValueDisplay": "$12,721,200",
+      "completion": 25,
+      "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Bond Warning",
       "warning": "Missing bond documents for delayed/overdue project"
@@ -1929,7 +2060,7 @@
       "projectCount": 100,
       "totalValue": 15173831984,
       "totalValueDisplay": "$15,173,831,984",
-      "avgCompletion": 83.7
+      "avgCompletion": 84.8
     },
     {
       "agency": "MARAD",
