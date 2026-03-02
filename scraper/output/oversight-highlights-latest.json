@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "generatedAt": "2026-03-01T07:48:25.363Z",
+    "generatedAt": "2026-03-02T08:00:50.750Z",
     "totalProjects": 400,
-    "analysisDate": "2026-03-01"
+    "analysisDate": "2026-03-02"
   },
   "dashboard": {
     "kpis": {
@@ -53,14 +53,14 @@
       "21% ( 9 )": null,
       "72% ( 31 )": null
     },
-    "scrapedAt": "2026-03-01T07:47:36.231Z"
+    "scrapedAt": "2026-03-02T08:00:01.943Z"
   },
   "summary": {
     "delayed": 0,
-    "overdue": 37,
-    "endingSoon": 15,
-    "atRisk": 16,
-    "bondWarnings": 37
+    "overdue": 36,
+    "endingSoon": 14,
+    "atRisk": 17,
+    "bondWarnings": 36
   },
   "delayed": [],
   "overdue": [
@@ -80,8 +80,8 @@
       "endDate": "2026-01-24",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 36,
-      "daysOverdueDisplay": "36 days overdue"
+      "daysOverdue": 37,
+      "daysOverdueDisplay": "37 days overdue"
     },
     {
       "id": "27715",
@@ -99,8 +99,8 @@
       "endDate": "2026-02-27",
       "hasImages": 3,
       "status": "Overdue",
-      "daysOverdue": 2,
-      "daysOverdueDisplay": "2 days overdue"
+      "daysOverdue": 3,
+      "daysOverdueDisplay": "3 days overdue"
     },
     {
       "id": "954",
@@ -118,8 +118,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 1,
-      "daysOverdueDisplay": "1 day overdue"
+      "daysOverdue": 2,
+      "daysOverdueDisplay": "2 days overdue"
     },
     {
       "id": "27572",
@@ -137,8 +137,8 @@
       "endDate": "2026-01-16",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 44,
-      "daysOverdueDisplay": "44 days overdue"
+      "daysOverdue": 45,
+      "daysOverdueDisplay": "45 days overdue"
     },
     {
       "id": "27349",
@@ -156,8 +156,8 @@
       "endDate": "2026-02-25",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 4,
-      "daysOverdueDisplay": "4 days overdue"
+      "daysOverdue": 5,
+      "daysOverdueDisplay": "5 days overdue"
     },
     {
       "id": "27359",
@@ -175,8 +175,8 @@
       "endDate": "2025-12-11",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 80,
-      "daysOverdueDisplay": "80 days overdue"
+      "daysOverdue": 81,
+      "daysOverdueDisplay": "81 days overdue"
     },
     {
       "id": "27476",
@@ -194,8 +194,8 @@
       "endDate": "2025-09-01",
       "hasImages": 1,
       "status": "Overdue",
-      "daysOverdue": 181,
-      "daysOverdueDisplay": "181 days overdue"
+      "daysOverdue": 182,
+      "daysOverdueDisplay": "182 days overdue"
     },
     {
       "id": "27605",
@@ -213,8 +213,8 @@
       "endDate": "2025-12-31",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 60,
-      "daysOverdueDisplay": "60 days overdue"
+      "daysOverdue": 61,
+      "daysOverdueDisplay": "61 days overdue"
     },
     {
       "id": "27608",
@@ -232,8 +232,8 @@
       "endDate": "2025-10-03",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 149,
-      "daysOverdueDisplay": "149 days overdue"
+      "daysOverdue": 150,
+      "daysOverdueDisplay": "150 days overdue"
     },
     {
       "id": "27522",
@@ -251,8 +251,8 @@
       "endDate": "2025-06-15",
       "hasImages": 3,
       "status": "Overdue",
-      "daysOverdue": 259,
-      "daysOverdueDisplay": "259 days overdue"
+      "daysOverdue": 260,
+      "daysOverdueDisplay": "260 days overdue"
     },
     {
       "id": "27615",
@@ -268,10 +268,10 @@
       "contractValueDisplay": "$43,253,396",
       "completion": 65,
       "endDate": "2025-05-10",
-      "hasImages": 14,
+      "hasImages": 16,
       "status": "Overdue",
-      "daysOverdue": 295,
-      "daysOverdueDisplay": "295 days overdue"
+      "daysOverdue": 296,
+      "daysOverdueDisplay": "296 days overdue"
     },
     {
       "id": "27614",
@@ -289,8 +289,8 @@
       "endDate": "2025-05-24",
       "hasImages": 5,
       "status": "Overdue",
-      "daysOverdue": 281,
-      "daysOverdueDisplay": "281 days overdue"
+      "daysOverdue": 282,
+      "daysOverdueDisplay": "282 days overdue"
     },
     {
       "id": "27364",
@@ -308,8 +308,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 1,
-      "daysOverdueDisplay": "1 day overdue"
+      "daysOverdue": 2,
+      "daysOverdueDisplay": "2 days overdue"
     },
     {
       "id": "27616",
@@ -323,12 +323,12 @@
       "contractor": "Lynden Owner",
       "contractValue": 43253396,
       "contractValueDisplay": "$43,253,396",
-      "completion": 75,
+      "completion": 80,
       "endDate": "2025-05-10",
-      "hasImages": 14,
+      "hasImages": 18,
       "status": "Overdue",
-      "daysOverdue": 295,
-      "daysOverdueDisplay": "295 days overdue"
+      "daysOverdue": 296,
+      "daysOverdueDisplay": "296 days overdue"
     },
     {
       "id": "27617",
@@ -344,10 +344,10 @@
       "contractValueDisplay": "$43,253,396",
       "completion": 45,
       "endDate": "2025-05-10",
-      "hasImages": 13,
+      "hasImages": 14,
       "status": "Overdue",
-      "daysOverdue": 295,
-      "daysOverdueDisplay": "295 days overdue"
+      "daysOverdue": 296,
+      "daysOverdueDisplay": "296 days overdue"
     },
     {
       "id": "27656",
@@ -365,8 +365,8 @@
       "endDate": "2023-10-05",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 878,
-      "daysOverdueDisplay": "878 days overdue"
+      "daysOverdue": 879,
+      "daysOverdueDisplay": "879 days overdue"
     },
     {
       "id": "27657",
@@ -384,8 +384,8 @@
       "endDate": "2024-05-23",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 647,
-      "daysOverdueDisplay": "647 days overdue"
+      "daysOverdue": 648,
+      "daysOverdueDisplay": "648 days overdue"
     },
     {
       "id": "27406",
@@ -403,8 +403,8 @@
       "endDate": "2025-10-12",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 140,
-      "daysOverdueDisplay": "140 days overdue"
+      "daysOverdue": 141,
+      "daysOverdueDisplay": "141 days overdue"
     },
     {
       "id": "27407",
@@ -422,8 +422,8 @@
       "endDate": "2025-10-12",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 140,
-      "daysOverdueDisplay": "140 days overdue"
+      "daysOverdue": 141,
+      "daysOverdueDisplay": "141 days overdue"
     },
     {
       "id": "27420",
@@ -441,8 +441,8 @@
       "endDate": "2026-01-27",
       "hasImages": 20,
       "status": "Overdue",
-      "daysOverdue": 33,
-      "daysOverdueDisplay": "33 days overdue"
+      "daysOverdue": 34,
+      "daysOverdueDisplay": "34 days overdue"
     },
     {
       "id": "27692",
@@ -460,8 +460,8 @@
       "endDate": "2023-10-05",
       "hasImages": 5,
       "status": "Overdue",
-      "daysOverdue": 878,
-      "daysOverdueDisplay": "878 days overdue"
+      "daysOverdue": 879,
+      "daysOverdueDisplay": "879 days overdue"
     },
     {
       "id": "27693",
@@ -479,8 +479,8 @@
       "endDate": "2024-05-23",
       "hasImages": 6,
       "status": "Overdue",
-      "daysOverdue": 647,
-      "daysOverdueDisplay": "647 days overdue"
+      "daysOverdue": 648,
+      "daysOverdueDisplay": "648 days overdue"
     },
     {
       "id": "27426",
@@ -498,8 +498,8 @@
       "endDate": "2025-08-14",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 199,
-      "daysOverdueDisplay": "199 days overdue"
+      "daysOverdue": 200,
+      "daysOverdueDisplay": "200 days overdue"
     },
     {
       "id": "27434",
@@ -517,8 +517,8 @@
       "endDate": "2026-01-30",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 30,
-      "daysOverdueDisplay": "30 days overdue"
+      "daysOverdue": 31,
+      "daysOverdueDisplay": "31 days overdue"
     },
     {
       "id": "27435",
@@ -536,8 +536,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 1,
-      "daysOverdueDisplay": "1 day overdue"
+      "daysOverdue": 2,
+      "daysOverdueDisplay": "2 days overdue"
     },
     {
       "id": "27447",
@@ -555,8 +555,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 1,
-      "daysOverdueDisplay": "1 day overdue"
+      "daysOverdue": 2,
+      "daysOverdueDisplay": "2 days overdue"
     },
     {
       "id": "27469",
@@ -574,8 +574,8 @@
       "endDate": "2024-11-24",
       "hasImages": 6,
       "status": "Overdue",
-      "daysOverdue": 462,
-      "daysOverdueDisplay": "462 days overdue"
+      "daysOverdue": 463,
+      "daysOverdueDisplay": "463 days overdue"
     },
     {
       "id": "27398",
@@ -593,27 +593,8 @@
       "endDate": "2025-08-09",
       "hasImages": 1,
       "status": "Overdue",
-      "daysOverdue": 204,
-      "daysOverdueDisplay": "204 days overdue"
-    },
-    {
-      "id": "27819",
-      "reference": "MARADXX202601X27819",
-      "name": "Removal of Obstructions, Derelict Vessels, Wrecks and Debris from Parika Foreshore, Essequibo River Lot 2 Area 1",
-      "agency": "MARAD",
-      "agencyFull": "Maritime Administration Department",
-      "ministry": "MOPUA",
-      "region": "Region 3 - Essequibo Islands-West Demerara",
-      "regionCode": "03",
-      "contractor": "Mahase Construction",
-      "contractValue": 24150000,
-      "contractValueDisplay": "$24,150,000",
-      "completion": 95,
-      "endDate": "2026-02-27",
-      "hasImages": 4,
-      "status": "Overdue",
-      "daysOverdue": 2,
-      "daysOverdueDisplay": "2 days overdue"
+      "daysOverdue": 205,
+      "daysOverdueDisplay": "205 days overdue"
     },
     {
       "id": "27331",
@@ -631,8 +612,8 @@
       "endDate": "2025-12-27",
       "hasImages": 6,
       "status": "Overdue",
-      "daysOverdue": 64,
-      "daysOverdueDisplay": "64 days overdue"
+      "daysOverdue": 65,
+      "daysOverdueDisplay": "65 days overdue"
     },
     {
       "id": "27348",
@@ -650,8 +631,8 @@
       "endDate": "2025-04-30",
       "hasImages": 1,
       "status": "Overdue",
-      "daysOverdue": 305,
-      "daysOverdueDisplay": "305 days overdue"
+      "daysOverdue": 306,
+      "daysOverdueDisplay": "306 days overdue"
     },
     {
       "id": "27531",
@@ -669,8 +650,8 @@
       "endDate": "2025-08-19",
       "hasImages": 4,
       "status": "Overdue",
-      "daysOverdue": 194,
-      "daysOverdueDisplay": "194 days overdue"
+      "daysOverdue": 195,
+      "daysOverdueDisplay": "195 days overdue"
     },
     {
       "id": "27534",
@@ -688,8 +669,8 @@
       "endDate": "2024-06-06",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 633,
-      "daysOverdueDisplay": "633 days overdue"
+      "daysOverdue": 634,
+      "daysOverdueDisplay": "634 days overdue"
     },
     {
       "id": "27535",
@@ -707,8 +688,8 @@
       "endDate": "2024-04-23",
       "hasImages": 52,
       "status": "Overdue",
-      "daysOverdue": 677,
-      "daysOverdueDisplay": "677 days overdue"
+      "daysOverdue": 678,
+      "daysOverdueDisplay": "678 days overdue"
     },
     {
       "id": "27577",
@@ -726,8 +707,8 @@
       "endDate": "2025-11-18",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 103,
-      "daysOverdueDisplay": "103 days overdue"
+      "daysOverdue": 104,
+      "daysOverdueDisplay": "104 days overdue"
     },
     {
       "id": "27517",
@@ -745,8 +726,8 @@
       "endDate": "2025-08-23",
       "hasImages": 18,
       "status": "Overdue",
-      "daysOverdue": 190,
-      "daysOverdueDisplay": "190 days overdue"
+      "daysOverdue": 191,
+      "daysOverdueDisplay": "191 days overdue"
     },
     {
       "id": "27515",
@@ -764,8 +745,8 @@
       "endDate": "2025-04-11",
       "hasImages": 4,
       "status": "Overdue",
-      "daysOverdue": 324,
-      "daysOverdueDisplay": "324 days overdue"
+      "daysOverdue": 325,
+      "daysOverdueDisplay": "325 days overdue"
     }
   ],
   "endingSoon": [
@@ -785,8 +766,8 @@
       "endDate": "2026-03-26",
       "hasImages": 12,
       "status": "Ending Soon",
-      "daysRemaining": 25,
-      "daysRemainingDisplay": "25 days remaining"
+      "daysRemaining": 24,
+      "daysRemainingDisplay": "24 days remaining"
     },
     {
       "id": "417",
@@ -804,8 +785,8 @@
       "endDate": "2026-03-31",
       "hasImages": 12,
       "status": "Ending Soon",
-      "daysRemaining": 30,
-      "daysRemainingDisplay": "30 days remaining"
+      "daysRemaining": 29,
+      "daysRemainingDisplay": "29 days remaining"
     },
     {
       "id": "27740",
@@ -823,8 +804,8 @@
       "endDate": "2026-03-28",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 27,
-      "daysRemainingDisplay": "27 days remaining"
+      "daysRemaining": 26,
+      "daysRemainingDisplay": "26 days remaining"
     },
     {
       "id": "27347",
@@ -842,8 +823,8 @@
       "endDate": "2026-03-31",
       "hasImages": 1,
       "status": "Ending Soon",
-      "daysRemaining": 30,
-      "daysRemainingDisplay": "30 days remaining"
+      "daysRemaining": 29,
+      "daysRemainingDisplay": "29 days remaining"
     },
     {
       "id": "27353",
@@ -861,8 +842,8 @@
       "endDate": "2026-03-31",
       "hasImages": 2,
       "status": "Ending Soon",
-      "daysRemaining": 30,
-      "daysRemainingDisplay": "30 days remaining"
+      "daysRemaining": 29,
+      "daysRemainingDisplay": "29 days remaining"
     },
     {
       "id": "27360",
@@ -880,8 +861,8 @@
       "endDate": "2026-03-31",
       "hasImages": 1,
       "status": "Ending Soon",
-      "daysRemaining": 30,
-      "daysRemainingDisplay": "30 days remaining"
+      "daysRemaining": 29,
+      "daysRemainingDisplay": "29 days remaining"
     },
     {
       "id": "27367",
@@ -899,8 +880,8 @@
       "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 30,
-      "daysRemainingDisplay": "30 days remaining"
+      "daysRemaining": 29,
+      "daysRemainingDisplay": "29 days remaining"
     },
     {
       "id": "27376",
@@ -918,8 +899,8 @@
       "endDate": "2026-03-31",
       "hasImages": 1,
       "status": "Ending Soon",
-      "daysRemaining": 30,
-      "daysRemainingDisplay": "30 days remaining"
+      "daysRemaining": 29,
+      "daysRemainingDisplay": "29 days remaining"
     },
     {
       "id": "27424",
@@ -937,8 +918,8 @@
       "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 30,
-      "daysRemainingDisplay": "30 days remaining"
+      "daysRemaining": 29,
+      "daysRemainingDisplay": "29 days remaining"
     },
     {
       "id": "27429",
@@ -956,8 +937,8 @@
       "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 30,
-      "daysRemainingDisplay": "30 days remaining"
+      "daysRemaining": 29,
+      "daysRemainingDisplay": "29 days remaining"
     },
     {
       "id": "27442",
@@ -975,8 +956,8 @@
       "endDate": "2026-03-28",
       "hasImages": 2,
       "status": "Ending Soon",
-      "daysRemaining": 27,
-      "daysRemainingDisplay": "27 days remaining"
+      "daysRemaining": 26,
+      "daysRemainingDisplay": "26 days remaining"
     },
     {
       "id": "27169",
@@ -994,8 +975,8 @@
       "endDate": "2026-03-30",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 29,
-      "daysRemainingDisplay": "29 days remaining"
+      "daysRemaining": 28,
+      "daysRemainingDisplay": "28 days remaining"
     },
     {
       "id": "27814",
@@ -1013,27 +994,8 @@
       "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 30,
-      "daysRemainingDisplay": "30 days remaining"
-    },
-    {
-      "id": "27820",
-      "reference": "MARADXX202601X27820",
-      "name": "Removal of Obstructions, Derelict Vessels, Wrecks and Debris from Parika Foreshore, Essequibo River lot 3 Area 1",
-      "agency": "MARAD",
-      "agencyFull": "Maritime Administration Department",
-      "ministry": "MOPUA",
-      "region": "Region 3 - Essequibo Islands-West Demerara",
-      "regionCode": "03",
-      "contractor": "M.G Investment Guyana",
-      "contractValue": 21250000,
-      "contractValueDisplay": "$21,250,000",
-      "completion": 95,
-      "endDate": "2026-03-01",
-      "hasImages": 5,
-      "status": "Ending Soon",
-      "daysRemaining": 0,
-      "daysRemainingDisplay": "0 days remaining"
+      "daysRemaining": 29,
+      "daysRemainingDisplay": "29 days remaining"
     },
     {
       "id": "27822",
@@ -1051,8 +1013,8 @@
       "endDate": "2026-03-30",
       "hasImages": 1,
       "status": "Ending Soon",
-      "daysRemaining": 29,
-      "daysRemainingDisplay": "29 days remaining"
+      "daysRemaining": 28,
+      "daysRemainingDisplay": "28 days remaining"
     }
   ],
   "atRisk": [
@@ -1072,8 +1034,8 @@
       "endDate": "2026-03-28",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 27,
-      "daysRemainingDisplay": "27 days remaining",
+      "daysRemaining": 26,
+      "daysRemainingDisplay": "26 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1092,8 +1054,8 @@
       "endDate": "2026-04-30",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 60,
-      "daysRemainingDisplay": "60 days remaining",
+      "daysRemaining": 59,
+      "daysRemainingDisplay": "59 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1112,8 +1074,8 @@
       "endDate": "2026-04-30",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 60,
-      "daysRemainingDisplay": "60 days remaining",
+      "daysRemaining": 59,
+      "daysRemainingDisplay": "59 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1132,8 +1094,8 @@
       "endDate": "2026-03-31",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 30,
-      "daysRemainingDisplay": "30 days remaining",
+      "daysRemaining": 29,
+      "daysRemainingDisplay": "29 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1152,8 +1114,8 @@
       "endDate": "2026-04-30",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 60,
-      "daysRemainingDisplay": "60 days remaining",
+      "daysRemaining": 59,
+      "daysRemainingDisplay": "59 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1168,12 +1130,12 @@
       "contractor": "Fabra Enterprise",
       "contractValue": 300000000,
       "contractValueDisplay": "$300,000,000",
-      "completion": null,
+      "completion": 15,
       "endDate": "2026-05-13",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 73,
-      "daysRemainingDisplay": "73 days remaining",
+      "daysRemaining": 72,
+      "daysRemainingDisplay": "72 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1192,8 +1154,8 @@
       "endDate": "2026-05-12",
       "hasImages": 2,
       "status": "At Risk",
-      "daysRemaining": 72,
-      "daysRemainingDisplay": "72 days remaining",
+      "daysRemaining": 71,
+      "daysRemainingDisplay": "71 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1212,8 +1174,8 @@
       "endDate": "2026-05-12",
       "hasImages": 2,
       "status": "At Risk",
-      "daysRemaining": 72,
-      "daysRemainingDisplay": "72 days remaining",
+      "daysRemaining": 71,
+      "daysRemainingDisplay": "71 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1232,8 +1194,8 @@
       "endDate": "2026-05-01",
       "hasImages": 7,
       "status": "At Risk",
-      "daysRemaining": 61,
-      "daysRemainingDisplay": "61 days remaining",
+      "daysRemaining": 60,
+      "daysRemainingDisplay": "60 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1252,14 +1214,14 @@
       "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 30,
-      "daysRemainingDisplay": "30 days remaining",
+      "daysRemaining": 29,
+      "daysRemainingDisplay": "29 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
       "id": "27926",
       "reference": "MARADXX202602X27926",
-      "name": "Lot 5 Removal of Obstructions, Derelict Vessels, Wrecks and Debris from Area 1 (Parika stelling to Bushy Park Beach) Parika Foreshore, Essequibo River and restore it to its natural shape and slope",
+      "name": "Lot 6 Removal of Obstructions, Derelict Vessels, Wrecks and Debris from Area 1 (Parika stelling to Bushy Park Beach) Parika Foreshore, Essequibo River and restore it to its natural shape and slope",
       "agency": "MARAD",
       "agencyFull": "Maritime Administration Department",
       "ministry": "MOPUA",
@@ -1272,8 +1234,8 @@
       "endDate": "2026-04-10",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 40,
-      "daysRemainingDisplay": "40 days remaining",
+      "daysRemaining": 39,
+      "daysRemainingDisplay": "39 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1292,8 +1254,8 @@
       "endDate": "2026-04-23",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 53,
-      "daysRemainingDisplay": "53 days remaining",
+      "daysRemaining": 52,
+      "daysRemainingDisplay": "52 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1312,8 +1274,8 @@
       "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 30,
-      "daysRemainingDisplay": "30 days remaining",
+      "daysRemaining": 29,
+      "daysRemainingDisplay": "29 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1332,8 +1294,8 @@
       "endDate": "2026-04-26",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 56,
-      "daysRemainingDisplay": "56 days remaining",
+      "daysRemaining": 55,
+      "daysRemainingDisplay": "55 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1352,8 +1314,8 @@
       "endDate": "2026-04-30",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 60,
-      "daysRemainingDisplay": "60 days remaining",
+      "daysRemaining": 59,
+      "daysRemainingDisplay": "59 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1372,8 +1334,28 @@
       "endDate": "2026-03-30",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 29,
-      "daysRemainingDisplay": "29 days remaining",
+      "daysRemaining": 28,
+      "daysRemainingDisplay": "28 days remaining",
+      "riskReason": "Low completion with approaching deadline"
+    },
+    {
+      "id": "27464",
+      "reference": "GPLXXX202601X27464",
+      "name": "PROVISION OF SPECIALIZED EQUIPMENT AND SERVICES TO INTEGRATE PROTOCOL-SPECIFIC INTELLIGENT ELECTRONIC DEVICES (IEDS) TO THE SIFANG SUBSTATION SCADA SYSTEM WITHIN THE DEMERARA BERBICE INTERCONNECTED SYSTEM",
+      "agency": "GPL",
+      "agencyFull": "Guyana Power & Light",
+      "ministry": "MOPUA",
+      "region": "Region 4 - Demerara-Mahaica",
+      "regionCode": "04",
+      "contractor": "CHINA NATIONAL MACHINERY IMPORT & EXPORT CORPORATION (CMC)",
+      "contractValue": 84695494,
+      "contractValueDisplay": "$84,695,494",
+      "completion": null,
+      "endDate": "2026-05-30",
+      "hasImages": 0,
+      "status": "At Risk",
+      "daysRemaining": 89,
+      "daysRemainingDisplay": "89 days remaining",
       "riskReason": "Low completion with approaching deadline"
     }
   ],
@@ -1572,7 +1554,7 @@
       "contractValueDisplay": "$43,253,396",
       "completion": 65,
       "endDate": "2025-05-10",
-      "hasImages": 14,
+      "hasImages": 16,
       "status": "Bond Warning",
       "warning": "Missing bond documents for delayed/overdue project"
     },
@@ -1624,9 +1606,9 @@
       "contractor": "Lynden Owner",
       "contractValue": 43253396,
       "contractValueDisplay": "$43,253,396",
-      "completion": 75,
+      "completion": 80,
       "endDate": "2025-05-10",
-      "hasImages": 14,
+      "hasImages": 18,
       "status": "Bond Warning",
       "warning": "Missing bond documents for delayed/overdue project"
     },
@@ -1644,7 +1626,7 @@
       "contractValueDisplay": "$43,253,396",
       "completion": 45,
       "endDate": "2025-05-10",
-      "hasImages": 13,
+      "hasImages": 14,
       "status": "Bond Warning",
       "warning": "Missing bond documents for delayed/overdue project"
     },
@@ -1883,24 +1865,6 @@
       "warning": "Missing bond documents for delayed/overdue project"
     },
     {
-      "id": "27819",
-      "reference": "MARADXX202601X27819",
-      "name": "Removal of Obstructions, Derelict Vessels, Wrecks and Debris from Parika Foreshore, Essequibo River Lot 2 Area 1",
-      "agency": "MARAD",
-      "agencyFull": "Maritime Administration Department",
-      "ministry": "MOPUA",
-      "region": "Region 3 - Essequibo Islands-West Demerara",
-      "regionCode": "03",
-      "contractor": "Mahase Construction",
-      "contractValue": 24150000,
-      "contractValueDisplay": "$24,150,000",
-      "completion": 95,
-      "endDate": "2026-02-27",
-      "hasImages": 4,
-      "status": "Bond Warning",
-      "warning": "Missing bond documents for delayed/overdue project"
-    },
-    {
       "id": "27331",
       "reference": "MARADXX202601X27331",
       "name": "Dredging of Demerara River -Lot 2 Turning Area",
@@ -2060,7 +2024,7 @@
       "projectCount": 100,
       "totalValue": 15173831984,
       "totalValueDisplay": "$15,173,831,984",
-      "avgCompletion": 84.8
+      "avgCompletion": 84
     },
     {
       "agency": "MARAD",
@@ -2068,7 +2032,7 @@
       "projectCount": 14,
       "totalValue": 3595827146,
       "totalValueDisplay": "$3,595,827,146",
-      "avgCompletion": 57.3
+      "avgCompletion": 58.5
     },
     {
       "agency": "HAS",
