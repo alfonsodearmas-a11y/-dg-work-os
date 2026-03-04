@@ -9,22 +9,19 @@ import {
   Zap,
   Droplets,
   Upload,
-  Gauge,
 } from 'lucide-react';
 import { OverviewTab } from '@/components/intel/pending-applications/OverviewTab';
 import { GPLAnalysisPanel } from '@/components/intel/pending-applications/GPLAnalysisPanel';
 import { GWIAnalysisPanel } from '@/components/intel/pending-applications/GWIAnalysisPanel';
 import { UploadPanel } from '@/components/intel/pending-applications/UploadPanel';
 import { TrendCharts } from '@/components/intel/pending-applications/TrendCharts';
-import { EfficiencyPanel } from '@/components/intel/pending-applications/EfficiencyPanel';
 
-type Tab = 'overview' | 'gpl' | 'gwi' | 'efficiency' | 'upload';
+type Tab = 'overview' | 'gpl' | 'gwi' | 'upload';
 
 const TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard },
   { key: 'gpl', label: 'GPL Analysis', icon: Zap },
   { key: 'gwi', label: 'GWI Analysis', icon: Droplets },
-  { key: 'efficiency', label: 'Efficiency', icon: Gauge },
   { key: 'upload', label: 'Upload', icon: Upload },
 ];
 
@@ -86,7 +83,6 @@ export default function PendingApplicationsPage() {
       {activeTab === 'overview' && <OverviewTab refreshKey={refreshKey} />}
       {activeTab === 'gpl' && <GPLAnalysisPanel />}
       {activeTab === 'gwi' && <GWIAnalysisPanel />}
-      {activeTab === 'efficiency' && <EfficiencyPanel />}
       {activeTab === 'upload' && <UploadPanel onSuccess={handleUploadSuccess} />}
     </div>
   );

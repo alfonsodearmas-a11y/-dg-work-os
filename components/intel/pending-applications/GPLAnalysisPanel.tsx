@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { AlertTriangle, Loader2, Brain, ChevronDown, ChevronLeft, ChevronRight, RefreshCw, Search, X, ArrowUpDown } from 'lucide-react';
+import { AlertTriangle, Loader2, Brain, ChevronDown, ChevronLeft, ChevronRight, RefreshCw, Search, X, ArrowUpDown, ClipboardList, Gauge } from 'lucide-react';
+import { EfficiencyPanel } from './EfficiencyPanel';
 import {
   BarChart,
   Bar,
@@ -44,6 +45,38 @@ function fmtDate(s: string) {
 }
 
 export function GPLAnalysisPanel() {
+  const [view, setView] = useState<'pending' | 'efficiency'>('pending');
+
+  return (
+    <div className="space-y-6">
+      {/* Sub-navigation */}
+      <div className="flex items-center gap-1 text-xs">
+        <button
+          onClick={() => setView('pending')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors ${
+            view === 'pending' ? 'bg-amber-500/20 text-amber-400' : 'text-[#64748b] hover:text-white hover:bg-[#2d3a52]/50'
+          }`}
+        >
+          <ClipboardList className="h-3.5 w-3.5" />
+          Pending Analysis
+        </button>
+        <button
+          onClick={() => setView('efficiency')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors ${
+            view === 'efficiency' ? 'bg-amber-500/20 text-amber-400' : 'text-[#64748b] hover:text-white hover:bg-[#2d3a52]/50'
+          }`}
+        >
+          <Gauge className="h-3.5 w-3.5" />
+          Efficiency Tracking
+        </button>
+      </div>
+
+      {view === 'efficiency' ? <EfficiencyPanel /> : <GPLPendingAnalysis />}
+    </div>
+  );
+}
+
+function GPLPendingAnalysis() {
   const [analysis, setAnalysis] = useState<GPLAnalysis | null>(null);
   const [deepAnalysis, setDeepAnalysis] = useState<DeepAnalysisResult | null>(null);
   const [loading, setLoading] = useState(true);
