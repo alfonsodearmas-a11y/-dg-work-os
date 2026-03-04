@@ -71,6 +71,15 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
       if (agency) formData.append('agency', agency);
 
       const res = await fetch('/api/pending-applications/upload', { method: 'POST', body: formData });
+
+      // Handle non-JSON responses (timeouts, server errors return HTML)
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        setError(res.status === 504 ? 'Request timed out — the file may be too large. Try again.' : `Server error (${res.status})`);
+        setUploading(false);
+        return;
+      }
+
       const data = await res.json();
 
       if (!res.ok) {
@@ -80,8 +89,9 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
         setFile(null);
         onSuccess?.();
       }
-    } catch {
-      setError('Network error — please try again');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Network error: ${message}`);
     }
     setUploading(false);
   };

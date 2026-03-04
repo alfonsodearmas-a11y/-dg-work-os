@@ -7,6 +7,8 @@ import { processUploadDiff } from '@/lib/service-connection-diff';
 import type { PendingRecord } from '@/lib/pending-applications-types';
 import { classifyTrack } from '@/lib/service-connection-track';
 
+export const maxDuration = 60; // Vercel: allow up to 60s for large uploads
+
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
 function getSupabase() {

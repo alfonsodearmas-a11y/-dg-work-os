@@ -29,6 +29,8 @@ function isLegacy(applicationDate: string | null): boolean {
   return applicationDate < LEGACY_CUTOFF;
 }
 
+const BATCH_SIZE = 50;
+
 /** Calculate days between two ISO date strings */
 function daysBetween(start: string, end: string): number {
   const s = new Date(start + 'T00:00:00Z');
@@ -90,7 +92,10 @@ export async function processUploadDiff(
     completedIds: [],
   };
 
-  // 1. Detect disappeared (completed) orders
+  // 1. Detect disappeared (completed) orders — batch the updates
+  const disappearedIds: string[] = [];
+  const disappearedRows: typeof existing = [];
+
   for (const [key, row] of existingMap) {
     if (!newKeys.has(key)) {
       // Try fallback: match by customer_reference if SO# mismatch
@@ -100,7 +105,7 @@ export async function processUploadDiff(
 
       if (ref && soNum) {
         // Check if same customer_ref exists in new upload with different/null SO#
-        for (const [nk, nr] of newByKey) {
+        for (const [, nr] of newByKey) {
           const nRef = (nr.customer_reference || '').trim().toUpperCase();
           const nSo = (nr.service_order_number || '').trim().toUpperCase();
           if (nRef === ref && nSo !== soNum && !nSo) {
@@ -110,81 +115,100 @@ export async function processUploadDiff(
         }
       }
 
-      if (foundFallback) continue;
-
-      // Mark as completed
-      const totalDays = row.application_date
-        ? daysBetween(row.application_date, dataAsOf)
-        : null;
-
-      const { error: updateError } = await supabase
-        .from('service_connections')
-        .update({
-          status: 'completed',
-          disappeared_date: dataAsOf,
-          energisation_date: dataAsOf,
-          total_days_to_complete: totalDays,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', row.id);
-
-      if (!updateError) {
-        result.disappeared++;
-        result.completedIds.push(row.id);
+      if (!foundFallback) {
+        disappearedIds.push(row.id);
+        disappearedRows.push(row);
       }
     }
   }
 
-  // 2. Process new upload records: insert new, update existing
+  // Batch-update disappeared orders as completed
+  for (let i = 0; i < disappearedIds.length; i += BATCH_SIZE) {
+    const batchIds = disappearedIds.slice(i, i + BATCH_SIZE);
+    // All get same status fields; total_days_to_complete varies per row
+    // but we can't do per-row values in a batch update, so we update in two passes:
+    // First set the common fields, then update days per-row via individual calls only when needed
+
+    const { error: updateError } = await supabase
+      .from('service_connections')
+      .update({
+        status: 'completed',
+        disappeared_date: dataAsOf,
+        energisation_date: dataAsOf,
+        updated_at: new Date().toISOString(),
+      })
+      .in('id', batchIds);
+
+    if (!updateError) {
+      result.disappeared += batchIds.length;
+      result.completedIds.push(...batchIds);
+    }
+  }
+
+  // Set per-row total_days_to_complete for disappeared rows (batch by computed days)
+  // Group by days value to minimize queries
+  const daysBuckets = new Map<number | null, string[]>();
+  for (const row of disappearedRows) {
+    const totalDays = row.application_date ? daysBetween(row.application_date, dataAsOf) : null;
+    const key = totalDays;
+    if (!daysBuckets.has(key)) daysBuckets.set(key, []);
+    daysBuckets.get(key)!.push(row.id);
+  }
+
+  for (const [days, ids] of daysBuckets) {
+    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+      const batchIds = ids.slice(i, i + BATCH_SIZE);
+      await supabase
+        .from('service_connections')
+        .update({ total_days_to_complete: days })
+        .in('id', batchIds);
+    }
+  }
+
+  // 2. Process new upload records: batch inserts for new, batch updates for existing
+  const newInserts: Record<string, unknown>[] = [];
+  const existingUpdates: { id: string; updates: Record<string, unknown> }[] = [];
+
   for (const rec of newRecords) {
     const key = matchKey(rec.customer_reference, rec.service_order_number);
     const existingRow = existingMap.get(key);
 
     if (!existingRow) {
-      // New order — insert
+      // New order — collect for batch insert
       const legacy = isLegacy(rec.application_date);
       const stageHistory: StageHistoryEntry[] = rec.pipeline_stage
         ? [{ stage: rec.pipeline_stage, entered: dataAsOf, exited: null, days: null }]
         : [];
       const track = classifyTrack(rec.pipeline_stage, rec.service_order_type, []);
 
-      const { error: insertError } = await supabase
-        .from('service_connections')
-        .insert({
-          customer_reference: rec.customer_reference,
-          service_order_number: rec.service_order_number,
-          first_name: rec.first_name,
-          last_name: rec.last_name,
-          telephone: rec.telephone,
-          region: rec.region,
-          district: rec.district,
-          village_ward: rec.village_ward,
-          street: rec.street,
-          lot: rec.lot,
-          account_type: rec.account_type,
-          service_order_type: rec.service_order_type,
-          division_code: rec.division_code,
-          cycle: rec.cycle,
-          application_date: rec.application_date || null,
-          track,
-          status: legacy ? 'legacy_excluded' : 'open',
-          current_stage: rec.pipeline_stage,
-          stage_history: stageHistory,
-          first_seen_date: dataAsOf,
-          last_seen_date: dataAsOf,
-          is_legacy: legacy,
-          raw_data: rec.raw_data,
-        });
-
-      if (!insertError) {
-        if (legacy) {
-          result.legacyExcluded++;
-        } else {
-          result.newOrders++;
-        }
-      }
+      newInserts.push({
+        customer_reference: rec.customer_reference,
+        service_order_number: rec.service_order_number,
+        first_name: rec.first_name,
+        last_name: rec.last_name,
+        telephone: rec.telephone,
+        region: rec.region,
+        district: rec.district,
+        village_ward: rec.village_ward,
+        street: rec.street,
+        lot: rec.lot,
+        account_type: rec.account_type,
+        service_order_type: rec.service_order_type,
+        division_code: rec.division_code,
+        cycle: rec.cycle,
+        application_date: rec.application_date || null,
+        track,
+        status: legacy ? 'legacy_excluded' : 'open',
+        current_stage: rec.pipeline_stage,
+        stage_history: stageHistory,
+        first_seen_date: dataAsOf,
+        last_seen_date: dataAsOf,
+        is_legacy: legacy,
+        raw_data: rec.raw_data,
+        _is_legacy: legacy, // temp flag for counting
+      });
     } else {
-      // Existing order — update
+      // Existing order — collect for individual update (stage history varies per row)
       const updates: Record<string, unknown> = {
         last_seen_date: dataAsOf,
         raw_data: rec.raw_data,
@@ -218,12 +242,76 @@ export async function processUploadDiff(
         updates.track = classifyTrack(newStage, rec.service_order_type, history);
       }
 
-      const { error: updateError } = await supabase
-        .from('service_connections')
-        .update(updates)
-        .eq('id', existingRow.id);
+      existingUpdates.push({ id: existingRow.id, updates });
+    }
+  }
 
-      if (!updateError) {
+  // Batch insert new orders
+  for (let i = 0; i < newInserts.length; i += BATCH_SIZE) {
+    const batch = newInserts.slice(i, i + BATCH_SIZE).map(row => {
+      const { _is_legacy, ...rest } = row;
+      return rest;
+    });
+
+    const { error: insertError } = await supabase
+      .from('service_connections')
+      .insert(batch);
+
+    if (!insertError) {
+      // Count legacy vs new
+      for (const row of newInserts.slice(i, i + BATCH_SIZE)) {
+        if (row._is_legacy) {
+          result.legacyExcluded++;
+        } else {
+          result.newOrders++;
+        }
+      }
+    }
+  }
+
+  // Batch updates for existing orders — group those with identical update payloads
+  // For rows with no stage change, we can batch them (same fields being set)
+  const simpleUpdates: string[] = []; // IDs with no stage change
+  const complexUpdates: typeof existingUpdates = []; // IDs with stage change (unique per row)
+
+  const simpleUpdatePayload: Record<string, unknown> = {
+    last_seen_date: dataAsOf,
+    updated_at: new Date().toISOString(),
+  };
+
+  for (const { id, updates } of existingUpdates) {
+    if (updates.current_stage !== undefined) {
+      // Stage changed — must update individually (stage_history is unique per row)
+      complexUpdates.push({ id, updates });
+    } else {
+      simpleUpdates.push(id);
+    }
+  }
+
+  // Batch simple updates
+  for (let i = 0; i < simpleUpdates.length; i += BATCH_SIZE) {
+    const batchIds = simpleUpdates.slice(i, i + BATCH_SIZE);
+    const { error: updateError } = await supabase
+      .from('service_connections')
+      .update(simpleUpdatePayload)
+      .in('id', batchIds);
+
+    if (!updateError) {
+      result.updated += batchIds.length;
+      result.stillOpen += batchIds.length;
+    }
+  }
+
+  // Individual complex updates (stage changes — can't batch due to unique stage_history)
+  // Run in parallel batches to speed up
+  for (let i = 0; i < complexUpdates.length; i += BATCH_SIZE) {
+    const batch = complexUpdates.slice(i, i + BATCH_SIZE);
+    const promises = batch.map(({ id, updates }) =>
+      supabase.from('service_connections').update(updates).eq('id', id)
+    );
+    const results = await Promise.all(promises);
+    for (const r of results) {
+      if (!r.error) {
         result.updated++;
         result.stillOpen++;
       }
@@ -269,7 +357,9 @@ async function linkRelatedOrders(
     byRef.get(ref)!.push(order);
   }
 
-  // Find pairs: one in Design/Execution, another in Metering
+  // Collect all link updates then batch them
+  const linkUpdates: { id: string; linked_so_number: string }[] = [];
+
   for (const [, orders] of byRef) {
     if (orders.length < 2) continue;
 
@@ -285,16 +375,20 @@ async function linkRelatedOrders(
     for (const cap of capitalOrders) {
       for (const met of meterOrders) {
         if (cap.service_order_number && met.service_order_number) {
-          await supabase
-            .from('service_connections')
-            .update({ linked_so_number: met.service_order_number })
-            .eq('id', cap.id);
-          await supabase
-            .from('service_connections')
-            .update({ linked_so_number: cap.service_order_number })
-            .eq('id', met.id);
+          linkUpdates.push({ id: cap.id, linked_so_number: met.service_order_number });
+          linkUpdates.push({ id: met.id, linked_so_number: cap.service_order_number });
         }
       }
     }
+  }
+
+  // Execute link updates in parallel batches
+  for (let i = 0; i < linkUpdates.length; i += BATCH_SIZE) {
+    const batch = linkUpdates.slice(i, i + BATCH_SIZE);
+    await Promise.all(
+      batch.map(({ id, linked_so_number }) =>
+        supabase.from('service_connections').update({ linked_so_number }).eq('id', id)
+      )
+    );
   }
 }
