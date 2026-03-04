@@ -32,21 +32,21 @@ const STATUS_COLORS: Record<string, string> = {
   legacy_excluded: 'bg-gray-500/20 text-gray-400',
 };
 
-export function EfficiencyPanel() {
+export function EfficiencyPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   const [metrics, setMetrics] = useState<EfficiencyMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [subTab, setSubTab] = useState<SubTab>('overview');
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch('/api/service-connections/stats');
-        if (res.ok) setMetrics(await res.json());
-      } catch { /* silent */ }
-      setLoading(false);
-    }
-    load();
+  const loadMetrics = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/service-connections/stats');
+      if (res.ok) setMetrics(await res.json());
+    } catch { /* silent */ }
+    setLoading(false);
   }, []);
+
+  useEffect(() => { loadMetrics(); }, [loadMetrics, refreshKey]);
 
   if (loading) {
     return (
@@ -56,7 +56,8 @@ export function EfficiencyPanel() {
     );
   }
 
-  if (!metrics) {
+  // Zero-state: API returns metrics object with all zeros when no data exists
+  if (!metrics || (metrics.totalOpen === 0 && metrics.totalCompleted === 0)) {
     return (
       <div className="card-premium p-8 text-center">
         <p className="text-[#64748b]">No service connection lifecycle data available yet. Upload GPL pending applications to start tracking completions.</p>
@@ -130,10 +131,11 @@ function OverviewSection({ metrics }: { metrics: EfficiencyMetrics }) {
         <KPICard icon={Gauge} label="Queue Depth" value={`${metrics.totalOpen}`} sub={`${metrics.totalLegacy} legacy excluded`} color="text-purple-400" />
       </div>
 
-      {/* Track A vs B */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <TrackCard title="Track A — Fast-Track" subtitle="Simple meter installation (target ≤10d)" track={metrics.trackA} color="#10b981" />
-        <TrackCard title="Track B — Capital Work" subtitle="Network extension + installation (target ≤41d)" track={metrics.trackB} color="#f59e0b" />
+      {/* Track A vs B vs Design */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <TrackCard title="Track A — Fast-Track" subtitle="Meter installation (target ≤3d)" track={metrics.trackA} color="#10b981" />
+        <TrackCard title="Track B — Networks" subtitle="Capital works execution (target ≤30d)" track={metrics.trackB} color="#f59e0b" />
+        <TrackCard title="Design — Estimates" subtitle="Capital contribution quotes (target ≤12d)" track={metrics.design} color="#8b5cf6" />
       </div>
 
       {/* Stage Duration Chart */}
@@ -480,7 +482,7 @@ function OrdersSection() {
             </select>
             <select value={track} onChange={e => { setTrack(e.target.value); setPage(1); }}
               className="px-3 py-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:border-[#d4af37] focus:outline-none">
-              <option value="">All Tracks</option><option value="A">Track A</option><option value="B">Track B</option><option value="unknown">Unknown</option>
+              <option value="">All Tracks</option><option value="A">Track A</option><option value="B">Track B</option><option value="Design">Design</option><option value="unknown">Unknown</option>
             </select>
             {(status || track || search) && (
               <button onClick={() => { setStatus(''); setTrack(''); setSearch(''); setSearchInput(''); setPage(1); }} className="text-xs text-[#d4af37] hover:text-[#f0d060]">Clear</button>
@@ -548,7 +550,7 @@ function OrderRowInner({ order, name, days, expanded, onToggle }: {
         <td className="py-2.5"><div className="text-white text-xs font-medium">{name}</div><div className="text-[10px] text-[#64748b]">{order.customer_reference}</div></td>
         <td className="py-2.5 text-[#94a3b8] text-xs hidden md:table-cell">{order.service_order_number || '—'}</td>
         <td className="py-2.5 text-[#94a3b8] text-xs">{order.current_stage || '—'}</td>
-        <td className="py-2.5 text-xs hidden md:table-cell"><span className={order.track === 'A' ? 'text-emerald-400' : order.track === 'B' ? 'text-amber-400' : 'text-[#64748b]'}>{order.track === 'A' ? 'Track A' : order.track === 'B' ? 'Track B' : '—'}</span></td>
+        <td className="py-2.5 text-xs hidden md:table-cell"><span className={order.track === 'A' ? 'text-emerald-400' : order.track === 'B' ? 'text-amber-400' : order.track === 'Design' ? 'text-purple-400' : 'text-[#64748b]'}>{order.track === 'A' ? 'Track A' : order.track === 'B' ? 'Track B' : order.track === 'Design' ? 'Design' : '—'}</span></td>
         <td className="py-2.5 text-right text-xs text-[#94a3b8]">{days !== null ? `${days}d` : '—'}</td>
         <td className="py-2.5 text-right"><span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${STATUS_COLORS[order.status] || ''}`}>{order.status}</span></td>
       </tr>

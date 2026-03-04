@@ -81,7 +81,7 @@ export default function PendingApplicationsPage() {
 
       {/* Tab Content */}
       {activeTab === 'overview' && <OverviewTab refreshKey={refreshKey} />}
-      {activeTab === 'gpl' && <GPLAnalysisPanel />}
+      {activeTab === 'gpl' && <GPLAnalysisPanel refreshKey={refreshKey} />}
       {activeTab === 'gwi' && <GWIAnalysisPanel />}
       {activeTab === 'upload' && <UploadPanel onSuccess={handleUploadSuccess} />}
     </div>

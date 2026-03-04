@@ -39,8 +39,9 @@ function buildPrompt(metrics: EfficiencyMetrics, connections: ServiceConnection[
 
   const overallText = `Overall: ${metrics.overall.completedCount} completed, avg ${metrics.overall.avgDays} days, median ${metrics.overall.medianDays} days, SLA compliance ${metrics.overall.slaPct}%, ${metrics.totalOpen} still open`;
 
-  const trackAText = `Track A (fast-track): ${metrics.trackA.completedCount} completed, avg ${metrics.trackA.avgDays} days (target ≤${metrics.trackA.slaTarget}d), SLA ${metrics.trackA.slaPct}%`;
-  const trackBText = `Track B (capital work): ${metrics.trackB.completedCount} completed, avg ${metrics.trackB.avgDays} days (target ≤${metrics.trackB.slaTarget}d), SLA ${metrics.trackB.slaPct}%`;
+  const trackAText = `Track A (fast-track metering): ${metrics.trackA.completedCount} completed, avg ${metrics.trackA.avgDays} days (target ≤${metrics.trackA.slaTarget}d), SLA ${metrics.trackA.slaPct}%, ${metrics.trackA.openCount} open`;
+  const trackBText = `Track B (networks/execution): ${metrics.trackB.completedCount} completed, avg ${metrics.trackB.avgDays} days (target ≤${metrics.trackB.slaTarget}d), SLA ${metrics.trackB.slaPct}%, ${metrics.trackB.openCount} open`;
+  const designText = `Design (estimates/quotes): ${metrics.design.completedCount} completed, avg ${metrics.design.avgDays} days (target ≤${metrics.design.slaTarget}d), SLA ${metrics.design.slaPct}%, ${metrics.design.openCount} open`;
 
   const stageText = metrics.stages.map(s =>
     `  ${s.stage}: ${s.count} orders, avg ${s.avgDays}d, median ${s.medianDays}d, max ${s.maxDays}d, SLA target ${s.slaTarget}d → ${s.slaPct}% compliance`
@@ -57,12 +58,16 @@ function buildPrompt(metrics: EfficiencyMetrics, connections: ServiceConnection[
   return `You are an energy sector regulatory analyst advising the Director General of the Ministry of Public Utilities (Guyana) on GPL's service connection efficiency.
 
 CONTEXT:
-GPL handles new electricity service connections through a regulated pipeline. The PUC monitors connection times. Track A is fast-track (simple meter installation, target ≤10 business days). Track B requires capital work (network extension + meter, involving Design, Execution, and Metering stages).
+GPL handles new electricity service connections through a regulated pipeline. The PUC monitors connection times.
+- Track A: fast-track meter installation (target ≤3 days)
+- Track B: capital works / network execution (target ≤26 days)
+- Design: estimates and capital contribution quotes (target ≤12 days)
 
 EFFICIENCY SUMMARY:
 ${overallText}
 ${trackAText}
 ${trackBText}
+${designText}
 Legacy excluded: ${metrics.totalLegacy} (pre-2015 applications)
 
 STAGE BREAKDOWN (Track B pipeline):

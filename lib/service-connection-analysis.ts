@@ -20,7 +20,7 @@ function median(values: number[]): number {
 
 function avg(values: number[]): number {
   if (values.length === 0) return 0;
-  return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+  return Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10;
 }
 
 /** Filter out legacy records */
@@ -30,7 +30,7 @@ function nonLegacy(connections: ServiceConnection[]): ServiceConnection[] {
 
 function computeTrackMetrics(
   connections: ServiceConnection[],
-  track: 'A' | 'B' | 'all'
+  track: 'A' | 'B' | 'Design' | 'all'
 ): TrackMetrics {
   const filtered = track === 'all'
     ? connections
@@ -45,7 +45,8 @@ function computeTrackMetrics(
 
   const slaTarget = track === 'A' ? SLA_TARGETS.TRACK_A_OVERALL
     : track === 'B' ? SLA_TARGETS.TRACK_B_OVERALL
-    : SLA_TARGETS.TRACK_B_OVERALL; // use Track B as overall default
+    : track === 'Design' ? SLA_TARGETS.DESIGN_OVERALL
+    : SLA_TARGETS.TRACK_B_OVERALL;
 
   const withinSla = completionDays.filter(d => d <= slaTarget).length;
 
@@ -149,12 +150,16 @@ export function computeMonthlyVolumes(connections: ServiceConnection[]): Monthly
     );
     const trackACompleted = monthCompleted.filter(c => c.track === 'A');
     const trackBCompleted = monthCompleted.filter(c => c.track === 'B');
+    const designCompleted = monthCompleted.filter(c => c.track === 'Design');
 
     const trackASla = trackACompleted.length > 0
       ? Math.round((trackACompleted.filter(c => (c.total_days_to_complete || 0) <= SLA_TARGETS.TRACK_A_OVERALL).length / trackACompleted.length) * 100)
       : null;
     const trackBSla = trackBCompleted.length > 0
       ? Math.round((trackBCompleted.filter(c => (c.total_days_to_complete || 0) <= SLA_TARGETS.TRACK_B_OVERALL).length / trackBCompleted.length) * 100)
+      : null;
+    const designSla = designCompleted.length > 0
+      ? Math.round((designCompleted.filter(c => (c.total_days_to_complete || 0) <= SLA_TARGETS.DESIGN_OVERALL).length / designCompleted.length) * 100)
       : null;
 
     volumes.push({
@@ -166,6 +171,7 @@ export function computeMonthlyVolumes(connections: ServiceConnection[]): Monthly
       avgDaysToComplete: data.completionDays.length > 0 ? avg(data.completionDays) : null,
       trackASla,
       trackBSla,
+      designSla,
     });
   }
 
@@ -198,15 +204,58 @@ function computeRegionMetrics(connections: ServiceConnection[]): RegionMetrics[]
     .sort((a, b) => (b.openCount + b.completedCount) - (a.openCount + a.completedCount));
 }
 
+/** Compute weighted overall SLA from per-track results */
+function computeWeightedOverall(
+  connections: ServiceConnection[],
+  trackA: TrackMetrics,
+  trackB: TrackMetrics,
+  design: TrackMetrics
+): TrackMetrics {
+  const allCompleted = connections.filter(c => c.status === 'completed');
+  const allOpen = connections.filter(c => c.status === 'open');
+  const allDays = allCompleted
+    .map(c => c.total_days_to_complete)
+    .filter((d): d is number => d !== null && d >= 0);
+
+  // Weighted SLA: count records within their *own* track's SLA target
+  let totalWithinSla = 0;
+  let totalWithDays = 0;
+  for (const c of allCompleted) {
+    if (c.total_days_to_complete === null || c.total_days_to_complete < 0) continue;
+    totalWithDays++;
+    const target = c.track === 'A' ? SLA_TARGETS.TRACK_A_OVERALL
+      : c.track === 'B' ? SLA_TARGETS.TRACK_B_OVERALL
+      : c.track === 'Design' ? SLA_TARGETS.DESIGN_OVERALL
+      : SLA_TARGETS.TRACK_B_OVERALL;
+    if (c.total_days_to_complete <= target) totalWithinSla++;
+  }
+
+  return {
+    track: 'all',
+    completedCount: allCompleted.length,
+    avgDays: avg(allDays),
+    medianDays: median(allDays),
+    slaTarget: 0, // not meaningful for weighted overall
+    slaPct: totalWithDays > 0 ? Math.round((totalWithinSla / totalWithDays) * 100) : 0,
+    openCount: allOpen.length,
+  };
+}
+
 /** Main function: compute all efficiency metrics */
 export function computeEfficiencyMetrics(allConnections: ServiceConnection[]): EfficiencyMetrics {
   const connections = nonLegacy(allConnections);
   const legacyCount = allConnections.filter(c => c.is_legacy || c.status === 'legacy_excluded').length;
 
+  const trackA = computeTrackMetrics(connections, 'A');
+  const trackB = computeTrackMetrics(connections, 'B');
+  const design = computeTrackMetrics(connections, 'Design');
+  const overall = computeWeightedOverall(connections, trackA, trackB, design);
+
   return {
-    overall: computeTrackMetrics(connections, 'all'),
-    trackA: computeTrackMetrics(connections, 'A'),
-    trackB: computeTrackMetrics(connections, 'B'),
+    overall,
+    trackA,
+    trackB,
+    design,
     stages: computeStageMetrics(connections),
     monthly: computeMonthlyVolumes(connections),
     regions: computeRegionMetrics(connections),

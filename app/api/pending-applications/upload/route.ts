@@ -4,6 +4,8 @@ import { createHash } from 'crypto';
 import { detectAgency, parseGPLBuffer, parseGWIBuffer } from '@/lib/pending-applications-parser';
 import { createSnapshot } from '@/lib/pending-applications-snapshots';
 import { processUploadDiff } from '@/lib/service-connection-diff';
+import type { PendingRecord } from '@/lib/pending-applications-types';
+import { classifyTrack } from '@/lib/service-connection-track';
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -13,6 +15,72 @@ function getSupabase() {
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
+}
+
+/** Classify track from a PendingRecord using shared classification logic */
+function classifyTrackFromRecord(rec: PendingRecord): 'A' | 'B' | 'Design' | 'unknown' {
+  const track = classifyTrack(rec.pipeline_stage, rec.service_order_type, []);
+  if (track !== 'unknown') return track;
+  // Fall back to raw_data._track set by parser
+  const rawTrack = rec.raw_data?._track;
+  if (rawTrack === 'A' || rawTrack === 'B' || rawTrack === 'Design') return rawTrack as 'A' | 'B' | 'Design';
+  return 'unknown';
+}
+
+/** Insert completed records directly into service_connections */
+async function insertCompletedConnections(records: PendingRecord[], dataAsOf: string) {
+  const supabase = getSupabase();
+  const batchSize = 50;
+
+  for (let i = 0; i < records.length; i += batchSize) {
+    const batch = records.slice(i, i + batchSize).map(rec => {
+      const track = classifyTrackFromRecord(rec);
+      return {
+        customer_reference: rec.customer_reference,
+        service_order_number: rec.service_order_number,
+        first_name: rec.first_name,
+        last_name: rec.last_name,
+        telephone: rec.telephone,
+        region: rec.region,
+        district: rec.district,
+        village_ward: rec.village_ward,
+        street: rec.street,
+        lot: rec.lot,
+        account_type: rec.account_type,
+        service_order_type: rec.service_order_type,
+        division_code: rec.division_code,
+        cycle: rec.cycle,
+        application_date: rec.application_date || null,
+        track,
+        status: 'completed',
+        current_stage: rec.pipeline_stage,
+        stage_history: rec.pipeline_stage
+          ? [{ stage: rec.pipeline_stage, entered: rec.application_date || dataAsOf, exited: rec.date_work_completed || dataAsOf, days: rec.days_taken ?? null }]
+          : [],
+        first_seen_date: dataAsOf,
+        last_seen_date: dataAsOf,
+        disappeared_date: rec.date_work_completed || dataAsOf,
+        energisation_date: rec.date_work_completed || dataAsOf,
+        total_days_to_complete: rec.days_taken ?? null,
+        is_legacy: false,
+        raw_data: rec.raw_data,
+      };
+    });
+
+    const { error } = await supabase
+      .from('service_connections')
+      .upsert(batch, {
+        onConflict: 'customer_reference,service_order_number',
+        ignoreDuplicates: false,
+      });
+
+    if (error) {
+      // Upsert may fail on records without both keys — fall back to insert
+      for (const row of batch) {
+        await supabase.from('service_connections').insert(row).select('id');
+      }
+    }
+  }
 }
 
 /**
@@ -107,17 +175,30 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Run diff engine for GPL to detect completions before we wipe pending_applications
+    // Separate outstanding vs completed records
+    const outstandingRecords = result.records.filter(r => !r.is_completed);
+    const completedRecords = result.records.filter(r => r.is_completed);
+
+    // Run diff engine for GPL outstanding records to detect disappearances
     let diffResult = null;
     if (agency === 'GPL') {
       try {
-        diffResult = await processUploadDiff(result.records, result.dataAsOf);
+        diffResult = await processUploadDiff(outstandingRecords, result.dataAsOf);
       } catch (diffErr) {
         console.error('[upload] Diff engine error (non-fatal):', diffErr);
       }
+
+      // Insert completed records directly into service_connections
+      if (completedRecords.length > 0) {
+        try {
+          await insertCompletedConnections(completedRecords, result.dataAsOf);
+        } catch (compErr) {
+          console.error('[upload] Completed records insert error (non-fatal):', compErr);
+        }
+      }
     }
 
-    // Full-refresh upsert: delete existing records for this agency, then insert
+    // Full-refresh upsert of outstanding records into pending_applications
     const supabase = getSupabase();
 
     const { error: deleteError } = await supabase
@@ -129,11 +210,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Failed to clear existing records: ${deleteError.message}` }, { status: 500 });
     }
 
+    // Strip completed-only fields before inserting into pending_applications
+    const pendingBatch = outstandingRecords.map(r => {
+      const { is_completed, date_work_completed, days_taken, ...rest } = r;
+      return rest;
+    });
+
     // Insert in batches
     let insertedCount = 0;
     const batchSize = 100;
-    for (let i = 0; i < result.records.length; i += batchSize) {
-      const batch = result.records.slice(i, i + batchSize);
+    for (let i = 0; i < pendingBatch.length; i += batchSize) {
+      const batch = pendingBatch.slice(i, i + batchSize);
       const { data, error: insertError } = await supabase
         .from('pending_applications')
         .insert(batch)
@@ -146,15 +233,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create snapshot
-    await createSnapshot(agency, result.records, result.dataAsOf);
+    // Create snapshot (outstanding only)
+    await createSnapshot(agency, outstandingRecords, result.dataAsOf);
 
     // Build summary breakdown
     const breakdown: Record<string, number> = {};
     for (const r of result.records) {
       if (agency === 'GPL') {
-        const stage = r.pipeline_stage || 'Unknown';
-        breakdown[stage] = (breakdown[stage] || 0) + 1;
+        const prefix = r.is_completed ? 'Completed ' : 'Outstanding ';
+        const track = (r.raw_data as Record<string, unknown>)?._track || r.pipeline_stage || 'Unknown';
+        const label = prefix + track;
+        breakdown[label] = (breakdown[label] || 0) + 1;
       } else {
         const region = r.region || 'Unknown';
         breakdown[region] = (breakdown[region] || 0) + 1;

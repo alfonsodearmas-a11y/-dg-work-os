@@ -37,6 +37,9 @@ export async function POST() {
       const trackBCompleted = connections.filter(c =>
         c.status === 'completed' && c.track === 'B' && c.disappeared_date?.slice(0, 7) === month.month
       );
+      const designCompleted = connections.filter(c =>
+        c.status === 'completed' && c.track === 'Design' && c.disappeared_date?.slice(0, 7) === month.month
+      );
 
       const { error: upsertError } = await supabase
         .from('service_connection_monthly_stats')
@@ -46,7 +49,7 @@ export async function POST() {
           completed_count: month.completed,
           queue_depth: month.queueDepth,
           avg_days_to_complete: month.avgDaysToComplete,
-          pct_within_sla: month.trackBSla, // Use Track B SLA as primary
+          pct_within_sla: month.trackBSla,
           track_a_completed: trackACompleted.length,
           track_a_avg_days: trackACompleted.length > 0
             ? Math.round(trackACompleted.reduce((a, c) => a + (c.total_days_to_complete || 0), 0) / trackACompleted.length)
@@ -57,6 +60,11 @@ export async function POST() {
             ? Math.round(trackBCompleted.reduce((a, c) => a + (c.total_days_to_complete || 0), 0) / trackBCompleted.length)
             : null,
           track_b_sla_pct: month.trackBSla,
+          design_completed: designCompleted.length,
+          design_avg_days: designCompleted.length > 0
+            ? Math.round(designCompleted.reduce((a, c) => a + (c.total_days_to_complete || 0), 0) / designCompleted.length)
+            : null,
+          design_sla_pct: month.designSla,
         }, { onConflict: 'report_month' });
 
       if (!upsertError) upserted++;

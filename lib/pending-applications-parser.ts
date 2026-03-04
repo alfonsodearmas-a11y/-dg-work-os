@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import type { PendingRecord, ParseResult } from './pending-applications-types';
+import { classifyByServiceType, classifySheetByName, isRecognisedServiceType } from './service-connection-track';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -151,64 +152,75 @@ export function parseGWIBuffer(buffer: Buffer): ParseResult {
 }
 
 // ── GPL Parser ───────────────────────────────────────────────────────────────
+// Handles multi-sheet format with separate Outstanding/Completed sheets per track.
+// Computes date diffs directly from raw date columns (not formula cells).
 
 export function parseGPLBuffer(buffer: Buffer): ParseResult {
   const warnings: string[] = [];
   try {
     const wb = XLSX.read(buffer, { type: 'buffer' });
-    // Select last sheet (most recent data)
-    const sheetName = wb.SheetNames[wb.SheetNames.length - 1];
-    const data: unknown[][] = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1 });
-
-    // Extract data_as_of from sheet name — e.g. "Open NS Orders COB February 26"
-    let dataAsOf = formatDate(new Date());
-    const sheetDateMatch = sheetName.match(/(\w+)\s+(\d{1,2})/);
-    if (sheetDateMatch) {
-      const m = MONTHS[sheetDateMatch[1].toLowerCase()];
-      if (m !== undefined) {
-        const year = new Date().getFullYear();
-        dataAsOf = formatDate(new Date(year, m, parseInt(sheetDateMatch[2])));
-      }
-    }
-
-    // Find all section headers
-    interface Section {
-      name: string;
-      headerRow: number;
-      headers: string[];
-    }
-    const sections: Section[] = [];
-
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
-      if (!row) continue;
-      const rowStr = row.map(c => String(c || '').trim()).join('|');
-      if (rowStr.includes('No.') && (rowStr.includes('Customer') || rowStr.includes('Account')) && rowStr.includes('Name')) {
-        let sectionName = 'Unknown';
-        for (let j = i - 1; j >= Math.max(0, i - 5); j--) {
-          const titleRow = data[j];
-          if (titleRow && titleRow.some(c => typeof c === 'string' && c.includes('Outstanding'))) {
-            sectionName = String(titleRow.find(c => typeof c === 'string' && c.includes('Outstanding')) || 'Unknown');
-            break;
-          }
-        }
-        const headers = row.map(c => String(c || '').trim());
-        sections.push({ name: sectionName, headerRow: i, headers });
-      }
-    }
-
-    if (sections.length === 0) {
-      warnings.push(`No data sections found in sheet "${sheetName}"`);
-    }
-
     const records: PendingRecord[] = [];
     const today = new Date();
 
-    for (let sIdx = 0; sIdx < sections.length; sIdx++) {
-      const section = sections[sIdx];
-      const endRow = sIdx + 1 < sections.length ? sections[sIdx + 1].headerRow : data.length;
-      const headers = section.headers.map(h => h.toUpperCase().replace(/[#]/g, '').trim());
-      const pipelineStage = detectPipelineStage(section.name);
+    // Extract data_as_of from any sheet name containing a date
+    let dataAsOf = formatDate(today);
+    for (const sn of wb.SheetNames) {
+      // Match patterns like "March3", "Feb28", "mar4"
+      const dateMatch = sn.match(/([A-Za-z]+)\s*(\d{1,2})/);
+      if (dateMatch) {
+        const m = MONTHS[dateMatch[1].toLowerCase()];
+        if (m !== undefined) {
+          const day = parseInt(dateMatch[2]);
+          // Handle year crossover: if the extracted month is in the future
+          // (e.g. December file uploaded in January), use the previous year
+          let year = today.getFullYear();
+          const candidate = new Date(year, m, day);
+          if (candidate.getTime() > today.getTime() + 30 * 86400000) {
+            year--;
+          }
+          dataAsOf = formatDate(new Date(year, m, day));
+          break;
+        }
+      }
+    }
+
+    // Process each sheet except Summary
+    for (const sheetName of wb.SheetNames) {
+      if (/^summary$/i.test(sheetName.trim())) continue;
+
+      const isCompleted = /completed/i.test(sheetName);
+      const sheetDefaults = classifySheetByName(sheetName);
+
+      const sheet = wb.Sheets[sheetName];
+      const data: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+      // Find header row: first row with 4+ non-null values AND at least 2
+      // known column keywords (to avoid matching title/subtitle rows)
+      const HEADER_KEYWORDS = ['NO', 'CUSTOMER', 'NAME', 'ADDRESS', 'SERVICE', 'DATE', 'ACCOUNT', 'STATUS', 'TYPE', 'CYCLE', 'DIVISION', 'ORDER', 'TOWN'];
+      let headerIdx = -1;
+      for (let i = 0; i < Math.min(data.length, 15); i++) {
+        const row = data[i] as unknown[];
+        if (!row) continue;
+        const cells = row.map(c => String(c || '').trim().toUpperCase());
+        const nonNull = cells.filter(c => c !== '').length;
+        if (nonNull < 4) continue;
+        const keywordHits = HEADER_KEYWORDS.filter(kw =>
+          cells.some(c => c.includes(kw))
+        ).length;
+        if (keywordHits >= 2) {
+          headerIdx = i;
+          break;
+        }
+      }
+
+      if (headerIdx === -1) {
+        warnings.push(`No header row found in sheet "${sheetName}"`);
+        continue;
+      }
+
+      const headers = (data[headerIdx] as unknown[]).map(c =>
+        String(c || '').trim().toUpperCase()
+      );
 
       const findCol = (...candidates: string[]) => {
         for (const c of candidates) {
@@ -218,8 +230,7 @@ export function parseGPLBuffer(buffer: Buffer): ParseResult {
         return -1;
       };
 
-      const noCol = findCol('NO');
-      const custCol = findCol('CUSTOMER');
+      const custCol = findCol('CUSTOMER', 'ACCOUNT NO');
       const nameCol = findCol('NAME');
       const firstNameCol = findCol('FIRST NAME');
       const lastNameCol = findCol('LAST NAME');
@@ -227,21 +238,34 @@ export function parseGPLBuffer(buffer: Buffer): ParseResult {
       const cityCol = findCol('TOWN', 'CITY');
       const cycleCol = findCol('CYCLE');
       const dateCreatedCol = findCol('DATE/TIME CREATED', 'DATE CREATED', 'DATE/TIME');
-      const daysElapsedCol = findCol('DAYS ELAPSED', 'TIMELINE ELAPSED', 'DAYS');
-      const typeCol = findCol('TYPE OF SERVICE', 'SERVICE TYPE');
+      const dateCompletedCol = findCol('DATE WORK COMPLETED', 'DATE COMPLETED', 'COMPLETION');
+      const currentDateCol = findCol('CURRENT DATE');
+      const typeCol = findCol('TYPE OF SERVICE');
       const statusCol = findCol('ACCOUNT STATUS', 'STATUS');
       const acctTypeCol = findCol('ACCOUNT TYPE', 'ACCT TYPE');
       const soTypeCol = findCol('SERVICE ORDER TYPE', 'SO TYPE', 'ORDER TYPE');
       const soNumCol = findCol('SERVICE ORDER', 'SO NO', 'SO NUMBER', 'ORDER NO');
       const divCol = findCol('DIVISION', 'DIV');
 
-      for (let i = section.headerRow + 1; i < endRow; i++) {
-        const row = data[i];
-        if (!row || row.length < 3) continue;
-        const rowNo = noCol >= 0 ? row[noCol] : null;
-        if (rowNo === null || rowNo === undefined || rowNo === '') continue;
-        if (typeof rowNo === 'string' && isNaN(parseInt(rowNo))) continue;
+      let sheetRecordCount = 0;
 
+      for (let i = headerIdx + 1; i < data.length; i++) {
+        const row = data[i] as unknown[];
+        if (!row) continue;
+
+        // Validate row: must have 3+ non-empty cells (ignore No. column which uses formulas)
+        const nonEmpty = row.filter(c =>
+          c !== null && c !== undefined && c !== ''
+        ).length;
+        if (nonEmpty < 3) continue;
+
+        // Must have a customer reference or a name to be a valid data row
+        const hasCust = custCol >= 0 && row[custCol] != null && String(row[custCol]).trim() !== '';
+        const hasName = (firstNameCol >= 0 && row[firstNameCol] != null && String(row[firstNameCol]).trim() !== '') ||
+                        (nameCol >= 0 && row[nameCol] != null && String(row[nameCol]).trim() !== '');
+        if (!hasCust && !hasName) continue;
+
+        // Parse names
         let firstName: string | null = null;
         let lastName: string | null = null;
         if (firstNameCol >= 0 && lastNameCol >= 0) {
@@ -258,22 +282,67 @@ export function parseGPLBuffer(buffer: Buffer): ParseResult {
           }
         }
 
-        const applicationDate = parseDateString(dateCreatedCol >= 0 ? row[dateCreatedCol] : null, dataAsOf);
+        // Parse application date from Date/Time Created column
+        const applicationDate = parseDateString(
+          dateCreatedCol >= 0 ? row[dateCreatedCol] : null,
+          dataAsOf,
+        );
 
+        // Compute days directly from date columns — do NOT use formula cells
         let daysWaiting = 0;
-        const rawDays = daysElapsedCol >= 0 ? row[daysElapsedCol] : null;
-        if (typeof rawDays === 'number') {
-          daysWaiting = Math.round(rawDays);
+        let dateWorkCompleted: string | undefined;
+
+        if (isCompleted && dateCompletedCol >= 0 && row[dateCompletedCol] != null) {
+          // Completed sheets: diff = Date Work Completed − Date/Time Created
+          const completedDate = parseDateString(row[dateCompletedCol], dataAsOf);
+          dateWorkCompleted = completedDate;
+          const start = new Date(applicationDate + 'T00:00:00');
+          const end = new Date(completedDate + 'T00:00:00');
+          if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+            daysWaiting = Math.max(0, Math.round((end.getTime() - start.getTime()) / 86400000));
+          }
         } else {
-          const appDate = new Date(applicationDate);
-          daysWaiting = Math.max(0, Math.round((today.getTime() - appDate.getTime()) / 86400000));
+          // Outstanding sheets: diff = current date − Date/Time Created
+          let endDate = today;
+          if (currentDateCol >= 0 && row[currentDateCol] != null) {
+            const parsed = parseDateString(row[currentDateCol], '');
+            if (parsed) {
+              const d = new Date(parsed + 'T00:00:00');
+              if (!isNaN(d.getTime())) endDate = d;
+            }
+          }
+          const start = new Date(applicationDate + 'T00:00:00');
+          if (!isNaN(start.getTime())) {
+            daysWaiting = Math.max(0, Math.round((endDate.getTime() - start.getTime()) / 86400000));
+          }
+        }
+
+        // Classify track from Type of Service Order column (primary)
+        // or fall back to sheet name classification
+        const serviceOrderTypeValue = typeCol >= 0 && row[typeCol]
+          ? String(row[typeCol]).trim()
+          : null;
+        let recordTrack = sheetDefaults.track;
+        let recordStage = sheetDefaults.stage;
+        if (serviceOrderTypeValue) {
+          if (!isRecognisedServiceType(serviceOrderTypeValue)) {
+            const warnKey = `Unrecognised service type "${serviceOrderTypeValue}" (defaulting to Track A)`;
+            if (!warnings.includes(warnKey)) warnings.push(warnKey);
+          }
+          const classified = classifyByServiceType(serviceOrderTypeValue);
+          recordTrack = classified.track;
+          recordStage = classified.stage;
         }
 
         const customerRef = custCol >= 0 && row[custCol] ? String(row[custCol]).trim() : null;
         const city = cityCol >= 0 && row[cityCol] ? String(row[cityCol]).trim() : null;
         const address = addressCol >= 0 && row[addressCol] ? String(row[addressCol]).trim() : null;
 
-        const rawObj: Record<string, unknown> = { _section: section.name };
+        const rawObj: Record<string, unknown> = {
+          _sheet: sheetName,
+          _isCompleted: isCompleted,
+          _track: recordTrack,
+        };
         headers.forEach((h, idx) => { if (h) rawObj[h] = row[idx]; });
 
         records.push({
@@ -288,24 +357,31 @@ export function parseGPLBuffer(buffer: Buffer): ParseResult {
           street: null,
           lot: null,
           event_code: cycleCol >= 0 && row[cycleCol] ? String(row[cycleCol]).trim() : null,
-          event_description: typeCol >= 0 && row[typeCol] ? String(row[typeCol]).trim() :
-                            statusCol >= 0 && row[statusCol] ? String(row[statusCol]).trim() : section.name,
+          event_description: serviceOrderTypeValue || sheetName,
           application_date: applicationDate,
           days_waiting: daysWaiting,
           raw_data: rawObj,
           data_as_of: dataAsOf,
-          pipeline_stage: pipelineStage,
+          pipeline_stage: recordStage,
           account_type: acctTypeCol >= 0 && row[acctTypeCol] ? String(row[acctTypeCol]).trim() : null,
-          service_order_type: soTypeCol >= 0 && row[soTypeCol] ? String(row[soTypeCol]).trim() : null,
+          service_order_type: serviceOrderTypeValue,
           service_order_number: soNumCol >= 0 && row[soNumCol] ? String(row[soNumCol]).trim() : null,
           account_status: statusCol >= 0 && row[statusCol] ? String(row[statusCol]).trim() : null,
           cycle: cycleCol >= 0 && row[cycleCol] ? String(row[cycleCol]).trim() : null,
           division_code: divCol >= 0 && row[divCol] ? String(row[divCol]).trim() : null,
+          is_completed: isCompleted,
+          date_work_completed: dateWorkCompleted,
+          days_taken: isCompleted ? daysWaiting : undefined,
         });
+        sheetRecordCount++;
+      }
+
+      if (sheetRecordCount === 0) {
+        warnings.push(`No data rows found in sheet "${sheetName}"`);
       }
     }
 
-    return { success: true, records, agency: 'GPL', dataAsOf, sheetName, warnings };
+    return { success: true, records, agency: 'GPL', dataAsOf, sheetName: 'All sheets', warnings };
   } catch (err) {
     return { success: false, records: [], agency: 'GPL', dataAsOf: '', sheetName: '', warnings: [`Parse error: ${err instanceof Error ? err.message : String(err)}`] };
   }

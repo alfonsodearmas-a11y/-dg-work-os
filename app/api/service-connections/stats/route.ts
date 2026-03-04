@@ -17,6 +17,8 @@ export async function GET() {
     const { data, error } = await supabase
       .from('service_connections')
       .select('*')
+      .not('status', 'eq', 'legacy_excluded')
+      .not('is_legacy', 'eq', true)
       .order('application_date', { ascending: false });
 
     if (error) {

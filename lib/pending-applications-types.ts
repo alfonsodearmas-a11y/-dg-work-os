@@ -143,4 +143,8 @@ export interface PendingRecord {
   account_status?: string | null
   cycle?: string | null
   division_code?: string | null
+  // Multi-sheet parser fields
+  is_completed?: boolean
+  date_work_completed?: string
+  days_taken?: number
 }

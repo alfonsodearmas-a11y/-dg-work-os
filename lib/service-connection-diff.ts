@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import type { DiffResult, StageHistoryEntry } from './service-connection-types';
 import type { PendingRecord } from './pending-applications-types';
 import { LEGACY_CUTOFF } from './service-connection-types';
+import { classifyTrack } from './service-connection-track';
 
 function getSupabase() {
   return createClient(
@@ -21,35 +22,6 @@ function matchKey(custRef: string | null | undefined, soNum: string | null | und
   return `${c}||${s}`;
 }
 
-/** Classify track based on pipeline stage and service order type */
-function classifyTrack(
-  pipelineStage: string | null | undefined,
-  serviceOrderType: string | null | undefined,
-  stageHistory: StageHistoryEntry[]
-): 'A' | 'B' | 'unknown' {
-  const stage = (pipelineStage || '').toLowerCase();
-  const soType = (serviceOrderType || '').toLowerCase();
-
-  // Stage is Designs or Execution → Track B
-  if (stage.includes('design') || stage.includes('execution')) return 'B';
-
-  // SO type suggests capital work
-  if (soType.includes('execution') || soType.includes('capital') || soType.includes('network')) return 'B';
-
-  // Has prior Design/Execution history → Track B
-  const hasCapitalHistory = stageHistory.some(h => {
-    const s = (h.stage || '').toLowerCase();
-    return s.includes('design') || s.includes('execution');
-  });
-  if (hasCapitalHistory) return 'B';
-
-  // Metering/Estimation/Approval with no capital history → Track A
-  if (stage.includes('meter') || stage.includes('estimation') || stage.includes('approval')) {
-    return 'A';
-  }
-
-  return 'unknown';
-}
 
 /** Check if application date is before legacy cutoff */
 function isLegacy(applicationDate: string | null): boolean {
@@ -253,13 +225,20 @@ export async function processUploadDiff(
 
       if (!updateError) {
         result.updated++;
+        result.stillOpen++;
       }
-      result.stillOpen++;
     }
   }
 
-  // 3. Link related service orders (Track B dual-SO)
-  await linkRelatedOrders(supabase);
+  // 3. Link related service orders (Track B dual-SO) — scoped to this upload's customers
+  const uploadedRefs = new Set<string>();
+  for (const rec of newRecords) {
+    const ref = (rec.customer_reference || '').trim().toUpperCase();
+    if (ref) uploadedRefs.add(ref);
+  }
+  if (uploadedRefs.size > 0) {
+    await linkRelatedOrders(supabase, uploadedRefs);
+  }
 
   return result;
 }
@@ -267,8 +246,12 @@ export async function processUploadDiff(
 /**
  * Scan for same customer_reference with multiple open SOs in different stages.
  * Link them via linked_so_number for end-to-end tracking.
+ * Scoped to only the provided customer references for performance.
  */
-async function linkRelatedOrders(supabase: ReturnType<typeof getSupabase>) {
+async function linkRelatedOrders(
+  supabase: ReturnType<typeof getSupabase>,
+  customerRefs: Set<string>
+) {
   const { data: openOrders, error } = await supabase
     .from('service_connections')
     .select('id, customer_reference, service_order_number, current_stage')
@@ -277,11 +260,11 @@ async function linkRelatedOrders(supabase: ReturnType<typeof getSupabase>) {
 
   if (error || !openOrders) return;
 
-  // Group by customer_reference
+  // Group by customer_reference — only for refs in this upload
   const byRef = new Map<string, typeof openOrders>();
   for (const order of openOrders) {
     const ref = (order.customer_reference || '').trim().toUpperCase();
-    if (!ref) continue;
+    if (!ref || !customerRefs.has(ref)) continue;
     if (!byRef.has(ref)) byRef.set(ref, []);
     byRef.get(ref)!.push(order);
   }

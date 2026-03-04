@@ -24,7 +24,7 @@ export interface ServiceConnection {
   division_code: string | null;
   cycle: string | null;
   application_date: string | null;
-  track: 'A' | 'B' | 'unknown';
+  track: 'A' | 'B' | 'Design' | 'unknown';
   job_complexity: 'simple' | 'extensive' | 'unknown';
   status: 'open' | 'completed' | 'cancelled' | 'legacy_excluded';
   current_stage: string | null;
@@ -42,7 +42,7 @@ export interface ServiceConnection {
 }
 
 export interface TrackMetrics {
-  track: 'A' | 'B' | 'all';
+  track: 'A' | 'B' | 'Design' | 'all';
   completedCount: number;
   avgDays: number;
   medianDays: number;
@@ -70,6 +70,7 @@ export interface MonthlyVolume {
   avgDaysToComplete: number | null;
   trackASla: number | null;
   trackBSla: number | null;
+  designSla: number | null;
 }
 
 export interface RegionMetrics {
@@ -83,6 +84,7 @@ export interface EfficiencyMetrics {
   overall: TrackMetrics;
   trackA: TrackMetrics;
   trackB: TrackMetrics;
+  design: TrackMetrics;
   stages: StageMetrics[];
   monthly: MonthlyVolume[];
   regions: RegionMetrics[];
@@ -115,6 +117,9 @@ export interface MonthlyStats {
   track_b_completed: number;
   track_b_avg_days: number | null;
   track_b_sla_pct: number | null;
+  design_completed: number;
+  design_avg_days: number | null;
+  design_sla_pct: number | null;
   stage_breakdown: Record<string, unknown>;
   complexity_breakdown: Record<string, unknown>;
 }
@@ -136,11 +141,12 @@ export interface AIInsight {
 
 // SLA targets in calendar days
 export const SLA_TARGETS = {
-  TRACK_A_OVERALL: 10,
+  TRACK_A_OVERALL: 3,      // Fast-track metering (≤3 days)
+  TRACK_B_OVERALL: 30,     // Customer-facing capital works SLA (≤30 days)
+  DESIGN_OVERALL: 12,      // Design/estimates stage (≤12 days)
   TRACK_B_DESIGN: 12,
   TRACK_B_EXECUTION: 26,
   TRACK_B_METERING: 3,
-  TRACK_B_OVERALL: 41, // Design + Execution + Metering
 } as const;
 
 export const STAGE_SLA: Record<string, number> = {

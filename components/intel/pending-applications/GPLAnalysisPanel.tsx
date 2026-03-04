@@ -44,7 +44,7 @@ function fmtDate(s: string) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export function GPLAnalysisPanel() {
+export function GPLAnalysisPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   const [view, setView] = useState<'pending' | 'efficiency'>('pending');
 
   return (
@@ -71,7 +71,7 @@ export function GPLAnalysisPanel() {
         </button>
       </div>
 
-      {view === 'efficiency' ? <EfficiencyPanel /> : <GPLPendingAnalysis />}
+      {view === 'efficiency' ? <EfficiencyPanel refreshKey={refreshKey} /> : <GPLPendingAnalysis />}
     </div>
   );
 }
