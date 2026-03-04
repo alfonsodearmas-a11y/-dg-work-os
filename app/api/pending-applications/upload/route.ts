@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
 import { detectAgency, parseGPLBuffer, parseGWIBuffer } from '@/lib/pending-applications-parser';
 import { createSnapshot } from '@/lib/pending-applications-snapshots';
+import { processUploadDiff } from '@/lib/service-connection-diff';
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -106,6 +107,16 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Run diff engine for GPL to detect completions before we wipe pending_applications
+    let diffResult = null;
+    if (agency === 'GPL') {
+      try {
+        diffResult = await processUploadDiff(result.records, result.dataAsOf);
+      } catch (diffErr) {
+        console.error('[upload] Diff engine error (non-fatal):', diffErr);
+      }
+    }
+
     // Full-refresh upsert: delete existing records for this agency, then insert
     const supabase = getSupabase();
 
@@ -158,6 +169,15 @@ export async function POST(request: NextRequest) {
       sheetName: result.sheetName,
       breakdown,
       warnings: result.warnings,
+      ...(diffResult && {
+        diffResult: {
+          disappeared: diffResult.disappeared,
+          newOrders: diffResult.newOrders,
+          updated: diffResult.updated,
+          stillOpen: diffResult.stillOpen,
+          legacyExcluded: diffResult.legacyExcluded,
+        },
+      }),
     });
   } catch (err) {
     console.error('[pending-applications/upload] Error:', err);

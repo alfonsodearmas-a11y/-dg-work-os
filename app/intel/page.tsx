@@ -11,6 +11,7 @@ import { SlidePanel } from '@/components/layout/SlidePanel';
 import { LoadingSkeleton } from '@/components/intel/common';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PendingConnectionsCard } from '@/components/intel/PendingConnectionsCard';
+import { ServiceConnectionCard } from '@/components/intel/ServiceConnectionCard';
 import dynamic from 'next/dynamic';
 import { Loader2 } from 'lucide-react';
 
@@ -112,6 +113,9 @@ export default function IntelPage() {
 
           {/* Pending Connections Overview */}
           <PendingConnectionsCard compact />
+
+          {/* Service Connection Efficiency */}
+          <ServiceConnectionCard compact />
 
           {/* Deep Dive Links */}
           <div className="card-premium p-4">
