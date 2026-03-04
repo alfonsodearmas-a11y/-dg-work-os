@@ -21,7 +21,6 @@ import {
   Users,
   DollarSign,
   Eye,
-  Gauge,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -163,27 +162,16 @@ export function Sidebar() {
                   const href = `/intel/${agency.code}`;
                   const active = pathname.startsWith(href);
                   return (
-                    <div key={agency.code}>
-                      <Link
-                        href={href}
-                        onClick={handleNavClick}
-                        className={`sidebar-item ${active ? 'active' : ''}`}
-                      >
-                        <Icon className={`h-4 w-4 ${active ? 'text-[#d4af37]' : ''}`} />
-                        <span className="text-[15px]">{agency.label}</span>
-                        <span className="ml-auto text-[10px] text-[#64748b] hidden group-hover:inline">{agency.name}</span>
-                      </Link>
-                      {agency.code === 'gpl' && (
-                        <Link
-                          href="/intel/service-connections"
-                          onClick={handleNavClick}
-                          className={`sidebar-item pl-10 ${pathname.startsWith('/intel/service-connections') ? 'active' : ''}`}
-                        >
-                          <Gauge className={`h-3.5 w-3.5 ${pathname.startsWith('/intel/service-connections') ? 'text-[#d4af37]' : ''}`} />
-                          <span className="text-[13px]">Connections</span>
-                        </Link>
-                      )}
-                    </div>
+                    <Link
+                      key={agency.code}
+                      href={href}
+                      onClick={handleNavClick}
+                      className={`sidebar-item ${active ? 'active' : ''}`}
+                    >
+                      <Icon className={`h-4 w-4 ${active ? 'text-[#d4af37]' : ''}`} />
+                      <span className="text-[15px]">{agency.label}</span>
+                      <span className="ml-auto text-[10px] text-[#64748b] hidden group-hover:inline">{agency.name}</span>
+                    </Link>
                   );
                 })}
               </div>
