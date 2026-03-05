@@ -37,6 +37,10 @@ export async function PATCH(
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (body.title !== undefined) updates.title = body.title;
   if (body.attendees !== undefined) updates.attendees = body.attendees;
+  if (body.transcript_text !== undefined) updates.transcript_text = body.transcript_text;
+  if (body.summary !== undefined) updates.summary = body.summary;
+  if (body.decisions !== undefined) updates.decisions = body.decisions;
+  if (body.notes !== undefined) updates.notes = body.notes;
 
   const { data: meeting, error } = await supabaseAdmin
     .from('meetings')
@@ -64,6 +68,19 @@ export async function DELETE(
   if (result instanceof NextResponse) return result;
 
   const { id } = await params;
+
+  // Delete audio from storage if exists
+  const { data: meeting } = await supabaseAdmin
+    .from('meetings')
+    .select('audio_path')
+    .eq('id', id)
+    .single();
+
+  if (meeting?.audio_path) {
+    await supabaseAdmin.storage
+      .from('meetings-audio')
+      .remove([meeting.audio_path]);
+  }
 
   const { error } = await supabaseAdmin
     .from('meetings')

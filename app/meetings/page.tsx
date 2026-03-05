@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { format, isPast, isToday } from 'date-fns';
 import Link from 'next/link';
+import ReactMarkdown from 'react-markdown';
 import {
   BookOpen,
   Plus,
@@ -22,6 +23,11 @@ import {
   ArrowUpRight,
   Mic,
   XCircle,
+  Trash2,
+  Pencil,
+  Check,
+  X,
+  StickyNote,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { NewMeetingModal } from '@/components/meetings/NewMeetingModal';
@@ -56,6 +62,7 @@ interface Meeting {
   transcript_text: string | null;
   summary: string | null;
   decisions: string[];
+  notes: string | null;
   created_at: string;
   updated_at: string;
   meeting_actions: MeetingAction[];
@@ -111,6 +118,7 @@ const TABS = [
   { key: 'analysis',   label: 'Analysis',   icon: FileText },
   { key: 'transcript', label: 'Transcript', icon: MessageSquare },
   { key: 'actions',    label: 'Actions',    icon: ListChecks },
+  { key: 'notes',      label: 'Notes',      icon: StickyNote },
 ] as const;
 
 type TabKey = typeof TABS[number]['key'];
@@ -135,6 +143,40 @@ export default function MeetingsPage() {
 
   // Modal
   const [showNewModal, setShowNewModal] = useState(false);
+
+  // Delete confirmation
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Edit header
+  const [editingHeader, setEditingHeader] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editAttendees, setEditAttendees] = useState('');
+  const [savingHeader, setSavingHeader] = useState(false);
+
+  // Edit transcript
+  const [editingTranscript, setEditingTranscript] = useState(false);
+  const [editTranscriptText, setEditTranscriptText] = useState('');
+  const [savingTranscript, setSavingTranscript] = useState(false);
+
+  // Edit action items
+  const [editingActionId, setEditingActionId] = useState<string | null>(null);
+  const [editActionTask, setEditActionTask] = useState('');
+  const [editActionOwner, setEditActionOwner] = useState('');
+  const [editActionDue, setEditActionDue] = useState('');
+  const [savingAction, setSavingAction] = useState(false);
+  const [showAddAction, setShowAddAction] = useState(false);
+  const [newActionTask, setNewActionTask] = useState('');
+  const [newActionOwner, setNewActionOwner] = useState('');
+  const [newActionDue, setNewActionDue] = useState('');
+  const [addingAction, setAddingAction] = useState(false);
+
+  // Notes
+  const [notesText, setNotesText] = useState('');
+  const [notesSaved, setNotesSaved] = useState(true);
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [notesPreview, setNotesPreview] = useState(false);
+  const notesTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Polling ref
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -168,6 +210,8 @@ export default function MeetingsPage() {
       if (!res.ok) throw new Error('Failed to fetch meeting');
       const data = await res.json();
       setSelectedMeeting(data.meeting);
+      setNotesText(data.meeting.notes || '');
+      setNotesSaved(true);
     } catch (err) {
       setDetailError(err instanceof Error ? err.message : 'Failed to load meeting');
     } finally {
@@ -178,12 +222,21 @@ export default function MeetingsPage() {
   const handleSelect = useCallback((id: string) => {
     setSelectedId(id);
     setActiveTab('analysis');
+    setEditingHeader(false);
+    setEditingTranscript(false);
+    setEditingActionId(null);
+    setShowAddAction(false);
+    setShowDeleteConfirm(false);
+    setNotesPreview(false);
     fetchDetail(id);
   }, [fetchDetail]);
 
   const handleBack = useCallback(() => {
     setSelectedId(null);
     setSelectedMeeting(null);
+    setEditingHeader(false);
+    setEditingTranscript(false);
+    setShowDeleteConfirm(false);
   }, []);
 
   // ── Polling for TRANSCRIBING / ANALYZING ──────────────────────────────────
@@ -202,7 +255,6 @@ export default function MeetingsPage() {
           if (!res.ok) return;
           const data = await res.json();
           setSelectedMeeting(data.meeting);
-          // If status changed, also refresh the list
           if (data.meeting.status !== status) {
             fetchMeetings();
           }
@@ -234,7 +286,6 @@ export default function MeetingsPage() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Transcription failed');
       }
-      // Refresh detail and list
       await fetchDetail(selectedId);
       fetchMeetings();
     } catch (err) {
@@ -262,7 +313,6 @@ export default function MeetingsPage() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Analysis failed');
       }
-      // Refresh detail and list
       await fetchDetail(selectedId);
       fetchMeetings();
     } catch (err) {
@@ -278,11 +328,92 @@ export default function MeetingsPage() {
 
   async function handleRetry() {
     if (!selectedMeeting || !selectedId) return;
-    // Retry from the last successful step
     if (selectedMeeting.transcript_text) {
       await handleAnalyze();
     } else {
       await handleTranscribe();
+    }
+  }
+
+  // ── Delete Meeting ──────────────────────────────────────────────────────────
+
+  async function handleDeleteMeeting() {
+    if (!selectedId) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/meetings/${selectedId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete meeting');
+      setSelectedId(null);
+      setSelectedMeeting(null);
+      setShowDeleteConfirm(false);
+      fetchMeetings();
+    } catch (err) {
+      console.error('Delete failed:', err);
+      setDetailError(err instanceof Error ? err.message : 'Delete failed');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  // ── Edit Header (title + attendees) ──────────────────────────────────────
+
+  function startEditHeader() {
+    if (!selectedMeeting) return;
+    setEditTitle(selectedMeeting.title);
+    setEditAttendees(selectedMeeting.attendees.join(', '));
+    setEditingHeader(true);
+  }
+
+  async function saveHeader() {
+    if (!selectedId) return;
+    setSavingHeader(true);
+    try {
+      const attendees = editAttendees
+        .split(',')
+        .map(a => a.trim())
+        .filter(Boolean);
+      const res = await fetch(`/api/meetings/${selectedId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: editTitle, attendees }),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      const { meeting } = await res.json();
+      setSelectedMeeting(meeting);
+      setEditingHeader(false);
+      fetchMeetings();
+    } catch (err) {
+      console.error('Save header failed:', err);
+    } finally {
+      setSavingHeader(false);
+    }
+  }
+
+  // ── Edit Transcript ──────────────────────────────────────────────────────
+
+  function startEditTranscript() {
+    if (!selectedMeeting) return;
+    setEditTranscriptText(selectedMeeting.transcript_text || '');
+    setEditingTranscript(true);
+  }
+
+  async function saveTranscript() {
+    if (!selectedId) return;
+    setSavingTranscript(true);
+    try {
+      const res = await fetch(`/api/meetings/${selectedId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript_text: editTranscriptText }),
+      });
+      if (!res.ok) throw new Error('Failed to save transcript');
+      const { meeting } = await res.json();
+      setSelectedMeeting(meeting);
+      setEditingTranscript(false);
+    } catch (err) {
+      console.error('Save transcript failed:', err);
+    } finally {
+      setSavingTranscript(false);
     }
   }
 
@@ -305,10 +436,9 @@ export default function MeetingsPage() {
     try {
       const res = await fetch(
         `/api/meetings/${selectedId}/actions/${actionId}`,
-        { method: 'PATCH' }
+        { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }
       );
       if (!res.ok) throw new Error('Failed to update action');
-      // Update with server state
       const { action } = await res.json();
       setSelectedMeeting((prev) => {
         if (!prev) return prev;
@@ -348,12 +478,143 @@ export default function MeetingsPage() {
         }),
       });
       if (!res.ok) throw new Error('Failed to create task');
-      // Mark it done
       await handleToggleAction(action.id);
     } catch (err) {
       console.error('Push to task failed:', err);
     }
   }
+
+  // ── Edit Action Item ───────────────────────────────────────────────────────
+
+  function startEditAction(action: MeetingAction) {
+    setEditingActionId(action.id);
+    setEditActionTask(action.task);
+    setEditActionOwner(action.owner || '');
+    setEditActionDue(action.due_date || '');
+  }
+
+  async function saveEditAction() {
+    if (!selectedId || !editingActionId) return;
+    setSavingAction(true);
+    try {
+      const res = await fetch(`/api/meetings/${selectedId}/actions/${editingActionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          task: editActionTask,
+          owner: editActionOwner || null,
+          due_date: editActionDue || null,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to update action');
+      const { action } = await res.json();
+      setSelectedMeeting((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          meeting_actions: prev.meeting_actions.map((a) =>
+            a.id === action.id ? action : a
+          ),
+        };
+      });
+      setEditingActionId(null);
+      fetchMeetings();
+    } catch (err) {
+      console.error('Save action failed:', err);
+    } finally {
+      setSavingAction(false);
+    }
+  }
+
+  async function handleDeleteAction(actionId: string) {
+    if (!selectedId) return;
+    try {
+      const res = await fetch(`/api/meetings/${selectedId}/actions/${actionId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to delete action');
+      setSelectedMeeting((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          meeting_actions: prev.meeting_actions.filter((a) => a.id !== actionId),
+        };
+      });
+      fetchMeetings();
+    } catch (err) {
+      console.error('Delete action failed:', err);
+    }
+  }
+
+  async function handleAddAction() {
+    if (!selectedId || !newActionTask.trim()) return;
+    setAddingAction(true);
+    try {
+      const res = await fetch(`/api/meetings/${selectedId}/actions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          task: newActionTask.trim(),
+          owner: newActionOwner.trim() || null,
+          due_date: newActionDue || null,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to add action');
+      const { action } = await res.json();
+      setSelectedMeeting((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          meeting_actions: [...prev.meeting_actions, action],
+        };
+      });
+      setNewActionTask('');
+      setNewActionOwner('');
+      setNewActionDue('');
+      setShowAddAction(false);
+      fetchMeetings();
+    } catch (err) {
+      console.error('Add action failed:', err);
+    } finally {
+      setAddingAction(false);
+    }
+  }
+
+  // ── Notes Auto-Save ──────────────────────────────────────────────────────
+
+  function handleNotesChange(value: string) {
+    setNotesText(value);
+    setNotesSaved(false);
+    if (notesTimerRef.current) clearTimeout(notesTimerRef.current);
+    notesTimerRef.current = setTimeout(() => {
+      saveNotes(value);
+    }, 1500);
+  }
+
+  async function saveNotes(text: string) {
+    if (!selectedId) return;
+    setSavingNotes(true);
+    try {
+      const res = await fetch(`/api/meetings/${selectedId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: text }),
+      });
+      if (!res.ok) throw new Error('Failed to save notes');
+      setNotesSaved(true);
+    } catch (err) {
+      console.error('Save notes failed:', err);
+    } finally {
+      setSavingNotes(false);
+    }
+  }
+
+  // Cleanup notes timer
+  useEffect(() => {
+    return () => {
+      if (notesTimerRef.current) clearTimeout(notesTimerRef.current);
+    };
+  }, []);
 
   // ── New Meeting Callback ──────────────────────────────────────────────────
 
@@ -563,28 +824,85 @@ export default function MeetingsPage() {
       );
     }
 
-    // If we have segments with timestamps, render them
-    const segments = selectedMeeting.transcript_raw?.segments;
-    if (segments && segments.length > 0) {
+    // Edit mode
+    if (editingTranscript) {
       return (
-        <div className="space-y-0.5">
-          {segments.map((seg, i) => (
-            <div key={i} className="flex gap-3 py-1.5 group hover:bg-[#1a2744]/30 rounded-lg px-2 -mx-2">
-              <span className="text-[10px] font-mono text-[#64748b] w-12 shrink-0 pt-0.5 text-right">
-                {formatTimestamp(seg.start)}
-              </span>
-              <p className="text-sm text-[#c8d1df] leading-relaxed">{seg.text.trim()}</p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-[#64748b]">Edit transcript text</p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setEditingTranscript(false)}
+                className="btn-navy flex items-center gap-1 px-2 py-1 text-xs"
+              >
+                <X className="h-3 w-3" /> Cancel
+              </button>
+              <button
+                onClick={saveTranscript}
+                disabled={savingTranscript}
+                className="btn-gold flex items-center gap-1 px-2 py-1 text-xs disabled:opacity-50"
+              >
+                {savingTranscript ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                Save
+              </button>
             </div>
-          ))}
+          </div>
+          <textarea
+            value={editTranscriptText}
+            onChange={(e) => setEditTranscriptText(e.target.value)}
+            className="input-premium w-full min-h-[300px] text-sm font-mono leading-relaxed resize-y"
+          />
+          {selectedMeeting.status === 'ANALYZED' && (
+            <button
+              onClick={handleAnalyze}
+              disabled={processing}
+              className="btn-navy flex items-center gap-2 text-xs px-3 py-1.5 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${processing ? 'animate-spin' : ''}`} />
+              Re-analyze with updated transcript
+            </button>
+          )}
         </div>
       );
     }
 
-    // Plain text fallback
     return (
-      <p className="text-[#c8d1df] text-sm leading-relaxed whitespace-pre-wrap">
-        {selectedMeeting.transcript_text}
-      </p>
+      <div>
+        <div className="flex justify-end mb-3">
+          <button
+            onClick={startEditTranscript}
+            className="btn-navy flex items-center gap-1 px-2 py-1 text-xs"
+          >
+            <Pencil className="h-3 w-3" /> Edit
+          </button>
+        </div>
+
+        {/* If we have segments with timestamps, render them */}
+        {(() => {
+          const segments = selectedMeeting.transcript_raw?.segments;
+          if (segments && segments.length > 0) {
+            return (
+              <div className="space-y-0.5">
+                {segments.map((seg, i) => (
+                  <div key={i} className="flex gap-3 py-1.5 group hover:bg-[#1a2744]/30 rounded-lg px-2 -mx-2">
+                    <span className="text-[10px] font-mono text-[#64748b] w-12 shrink-0 pt-0.5 text-right">
+                      {formatTimestamp(seg.start)}
+                    </span>
+                    <p className="text-sm text-[#c8d1df] leading-relaxed">{seg.text.trim()}</p>
+                  </div>
+                ))}
+              </div>
+            );
+          }
+
+          // Plain text fallback
+          return (
+            <p className="text-[#c8d1df] text-sm leading-relaxed whitespace-pre-wrap">
+              {selectedMeeting.transcript_text}
+            </p>
+          );
+        })()}
+      </div>
     );
   }
 
@@ -592,99 +910,280 @@ export default function MeetingsPage() {
     if (!selectedMeeting) return null;
     const actions = selectedMeeting.meeting_actions || [];
 
-    if (actions.length === 0) {
-      return (
-        <p className="text-[#64748b] text-sm">
-          Action items will appear here after analysis.
-        </p>
-      );
-    }
-
-    const openItems = actions.filter(a => !a.done);
-    const doneItems = actions.filter(a => a.done);
-
     return (
       <div className="space-y-3">
+        {/* Add action button */}
+        <div className="flex justify-end">
+          {!showAddAction && (
+            <button
+              onClick={() => setShowAddAction(true)}
+              className="btn-navy flex items-center gap-1 px-2 py-1 text-xs"
+            >
+              <Plus className="h-3 w-3" /> Add action item
+            </button>
+          )}
+        </div>
+
+        {/* Add action form */}
+        {showAddAction && (
+          <div className="glass-card p-3 rounded-xl space-y-2">
+            <input
+              type="text"
+              placeholder="Task description..."
+              value={newActionTask}
+              onChange={(e) => setNewActionTask(e.target.value)}
+              className="input-premium w-full text-sm"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Owner"
+                value={newActionOwner}
+                onChange={(e) => setNewActionOwner(e.target.value)}
+                className="input-premium flex-1 text-sm"
+              />
+              <input
+                type="date"
+                value={newActionDue}
+                onChange={(e) => setNewActionDue(e.target.value)}
+                className="input-premium flex-1 text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2 justify-end">
+              <button
+                onClick={() => { setShowAddAction(false); setNewActionTask(''); setNewActionOwner(''); setNewActionDue(''); }}
+                className="btn-navy px-2 py-1 text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddAction}
+                disabled={addingAction || !newActionTask.trim()}
+                className="btn-gold flex items-center gap-1 px-2 py-1 text-xs disabled:opacity-50"
+              >
+                {addingAction ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                Add
+              </button>
+            </div>
+          </div>
+        )}
+
+        {actions.length === 0 && !showAddAction && (
+          <p className="text-[#64748b] text-sm">
+            No action items yet. Click &quot;Add action item&quot; to create one.
+          </p>
+        )}
+
         {/* Open items */}
-        {openItems.map((a) => (
+        {actions.filter(a => !a.done).map((a) => (
           <div
             key={a.id}
             className="flex items-start gap-3 p-3 rounded-xl border bg-[#1a2744]/50 border-[#2d3a52]/50"
           >
-            <button
-              onClick={() => handleToggleAction(a.id)}
-              className="w-5 h-5 rounded-full border-2 border-[#64748b] hover:border-[#d4af37] mt-0.5 shrink-0 transition-colors"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white">{a.task}</p>
-              <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                {a.owner && (
-                  <span className="px-2 py-0.5 rounded-full bg-[#2d3a52]/60 text-[#94a3b8] text-[10px]">
-                    {a.owner}
-                  </span>
-                )}
-                {a.due_date && (
-                  <span
-                    className={`flex items-center gap-1 text-[11px] ${
-                      isPast(new Date(a.due_date)) && !isToday(new Date(a.due_date))
-                        ? 'text-red-400'
-                        : 'text-[#64748b]'
-                    }`}
+            {editingActionId === a.id ? (
+              /* Edit mode */
+              <div className="flex-1 space-y-2">
+                <input
+                  type="text"
+                  value={editActionTask}
+                  onChange={(e) => setEditActionTask(e.target.value)}
+                  className="input-premium w-full text-sm"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Owner"
+                    value={editActionOwner}
+                    onChange={(e) => setEditActionOwner(e.target.value)}
+                    className="input-premium flex-1 text-sm"
+                  />
+                  <input
+                    type="date"
+                    value={editActionDue}
+                    onChange={(e) => setEditActionDue(e.target.value)}
+                    className="input-premium flex-1 text-sm"
+                  />
+                </div>
+                <div className="flex items-center gap-2 justify-end">
+                  <button onClick={() => setEditingActionId(null)} className="btn-navy px-2 py-1 text-xs">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveEditAction}
+                    disabled={savingAction}
+                    className="btn-gold flex items-center gap-1 px-2 py-1 text-xs disabled:opacity-50"
                   >
-                    <Clock className="h-3 w-3" />
-                    {format(new Date(a.due_date), 'MMM d')}
-                  </span>
-                )}
+                    {savingAction ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                    Save
+                  </button>
+                </div>
               </div>
-            </div>
-            <button
-              onClick={() => handlePushToTask(a)}
-              className="btn-navy flex items-center gap-1 px-2 py-1 text-[10px] shrink-0 opacity-70 hover:opacity-100 transition-opacity"
-              title="Push to Task Board"
-            >
-              <ArrowUpRight className="h-3 w-3" />
-              <span className="hidden sm:inline">Task</span>
-            </button>
+            ) : (
+              /* View mode */
+              <>
+                <button
+                  onClick={() => handleToggleAction(a.id)}
+                  className="w-5 h-5 rounded-full border-2 border-[#64748b] hover:border-[#d4af37] mt-0.5 shrink-0 transition-colors"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white">{a.task}</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                    {a.owner && (
+                      <span className="px-2 py-0.5 rounded-full bg-[#2d3a52]/60 text-[#94a3b8] text-[10px]">
+                        {a.owner}
+                      </span>
+                    )}
+                    {a.due_date && (
+                      <span
+                        className={`flex items-center gap-1 text-[11px] ${
+                          isPast(new Date(a.due_date)) && !isToday(new Date(a.due_date))
+                            ? 'text-red-400'
+                            : 'text-[#64748b]'
+                        }`}
+                      >
+                        <Clock className="h-3 w-3" />
+                        {format(new Date(a.due_date), 'MMM d')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => startEditAction(a)}
+                    className="p-1 rounded text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
+                    title="Edit"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteAction(a.id)}
+                    className="p-1 rounded text-[#64748b] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={() => handlePushToTask(a)}
+                    className="btn-navy flex items-center gap-1 px-2 py-1 text-[10px] opacity-70 hover:opacity-100 transition-opacity ml-1"
+                    title="Push to Task Board"
+                  >
+                    <ArrowUpRight className="h-3 w-3" />
+                    <span className="hidden sm:inline">Task</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         ))}
 
         {/* Done items */}
-        {doneItems.length > 0 && openItems.length > 0 && (
-          <div className="border-t border-[#2d3a52] pt-3 mt-3">
-            <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider mb-2">
-              Completed
-            </p>
-          </div>
-        )}
-        {doneItems.map((a) => (
-          <div
-            key={a.id}
-            className="flex items-start gap-3 p-3 rounded-xl border bg-emerald-500/5 border-emerald-500/20"
-          >
+        {(() => {
+          const doneItems = actions.filter(a => a.done);
+          const openItems = actions.filter(a => !a.done);
+          if (doneItems.length === 0) return null;
+          return (
+            <>
+              {openItems.length > 0 && (
+                <div className="border-t border-[#2d3a52] pt-3 mt-3">
+                  <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider mb-2">
+                    Completed
+                  </p>
+                </div>
+              )}
+              {doneItems.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex items-start gap-3 p-3 rounded-xl border bg-emerald-500/5 border-emerald-500/20"
+                >
+                  <button
+                    onClick={() => handleToggleAction(a.id)}
+                    className="w-5 h-5 rounded-full border-2 border-emerald-400 bg-emerald-400 flex items-center justify-center mt-0.5 shrink-0"
+                  >
+                    <CheckCircle2 className="h-3 w-3 text-[#0a1628]" />
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[#64748b] line-through">{a.task}</p>
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                      {a.owner && (
+                        <span className="px-2 py-0.5 rounded-full bg-[#2d3a52]/40 text-[#64748b] text-[10px]">
+                          {a.owner}
+                        </span>
+                      )}
+                      {a.due_date && (
+                        <span className="flex items-center gap-1 text-[11px] text-[#64748b]">
+                          <Clock className="h-3 w-3" />
+                          {format(new Date(a.due_date), 'MMM d')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => handleDeleteAction(a.id)}
+                      className="p-1 rounded text-[#64748b] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </>
+          );
+        })()}
+      </div>
+    );
+  }
+
+  function renderNotesTab() {
+    if (!selectedMeeting) return null;
+
+    return (
+      <div className="space-y-3 h-full flex flex-col">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => handleToggleAction(a.id)}
-              className="w-5 h-5 rounded-full border-2 border-emerald-400 bg-emerald-400 flex items-center justify-center mt-0.5 shrink-0"
+              onClick={() => setNotesPreview(false)}
+              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                !notesPreview ? 'bg-[#d4af37]/20 text-[#d4af37]' : 'text-[#64748b] hover:text-white'
+              }`}
             >
-              <CheckCircle2 className="h-3 w-3 text-[#0a1628]" />
+              Write
             </button>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-[#64748b] line-through">{a.task}</p>
-              <div className="flex flex-wrap items-center gap-2 mt-1">
-                {a.owner && (
-                  <span className="px-2 py-0.5 rounded-full bg-[#2d3a52]/40 text-[#64748b] text-[10px]">
-                    {a.owner}
-                  </span>
-                )}
-                {a.due_date && (
-                  <span className="flex items-center gap-1 text-[11px] text-[#64748b]">
-                    <Clock className="h-3 w-3" />
-                    {format(new Date(a.due_date), 'MMM d')}
-                  </span>
-                )}
-              </div>
-            </div>
+            <button
+              onClick={() => setNotesPreview(true)}
+              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                notesPreview ? 'bg-[#d4af37]/20 text-[#d4af37]' : 'text-[#64748b] hover:text-white'
+              }`}
+            >
+              Preview
+            </button>
           </div>
-        ))}
+          <span className={`text-[10px] transition-opacity ${notesSaved ? 'text-emerald-400' : savingNotes ? 'text-[#d4af37]' : 'text-[#64748b]'}`}>
+            {savingNotes ? 'Saving...' : notesSaved ? 'Saved' : 'Unsaved changes'}
+          </span>
+        </div>
+
+        {/* Editor / Preview */}
+        {notesPreview ? (
+          <div className="flex-1 glass-card p-4 rounded-xl overflow-y-auto prose prose-invert prose-sm max-w-none prose-headings:text-white prose-p:text-[#c8d1df] prose-strong:text-white prose-a:text-[#d4af37]">
+            {notesText ? (
+              <ReactMarkdown>{notesText}</ReactMarkdown>
+            ) : (
+              <p className="text-[#64748b] italic">No notes yet. Switch to Write to add notes.</p>
+            )}
+          </div>
+        ) : (
+          <textarea
+            value={notesText}
+            onChange={(e) => handleNotesChange(e.target.value)}
+            placeholder="Write meeting notes here... (Markdown supported)"
+            className="input-premium w-full flex-1 min-h-[300px] text-sm leading-relaxed resize-y font-mono"
+          />
+        )}
       </div>
     );
   }
@@ -885,45 +1384,124 @@ export default function MeetingsPage() {
                   <ArrowLeft className="h-3 w-3" /> Back to list
                 </button>
 
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <h2 className="text-lg font-semibold text-white truncate min-w-0">
-                    {selectedMeeting.title}
-                  </h2>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <StatusBadge status={selectedMeeting.status} />
-                    <button className="btn-navy flex items-center gap-1.5 px-3 py-1.5 text-xs">
-                      <Download className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Export</span>
-                    </button>
+                {editingHeader ? (
+                  /* Edit header mode */
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="input-premium w-full text-lg font-semibold"
+                      placeholder="Meeting title"
+                      autoFocus
+                    />
+                    <input
+                      type="text"
+                      value={editAttendees}
+                      onChange={(e) => setEditAttendees(e.target.value)}
+                      className="input-premium w-full text-sm"
+                      placeholder="Attendees (comma-separated)"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setEditingHeader(false)}
+                        className="btn-navy flex items-center gap-1 px-2 py-1 text-xs"
+                      >
+                        <X className="h-3 w-3" /> Cancel
+                      </button>
+                      <button
+                        onClick={saveHeader}
+                        disabled={savingHeader}
+                        className="btn-gold flex items-center gap-1 px-2 py-1 text-xs disabled:opacity-50"
+                      >
+                        {savingHeader ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                        Save
+                      </button>
+                    </div>
                   </div>
-                </div>
-
-                {/* Meta row */}
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#64748b]">
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5" />
-                    {format(new Date(selectedMeeting.date), 'MMM d, yyyy · h:mm a')}
-                  </span>
-                  {selectedMeeting.duration_secs != null && selectedMeeting.duration_secs > 0 && (
-                    <span>· {formatDuration(selectedMeeting.duration_secs)}</span>
-                  )}
-                  {selectedMeeting.attendees.length > 0 && (
-                    <>
-                      <span className="hidden sm:inline">·</span>
-                      <Users className="h-3.5 w-3.5 hidden sm:block" />
-                      <div className="flex flex-wrap gap-1 w-full sm:w-auto mt-1 sm:mt-0">
-                        {selectedMeeting.attendees.map((a, i) => (
-                          <span
-                            key={i}
-                            className="px-2 py-0.5 rounded-full bg-[#2d3a52]/60 text-[#94a3b8] text-[10px]"
-                          >
-                            {a}
-                          </span>
-                        ))}
+                ) : (
+                  /* View header mode */
+                  <>
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <h2 className="text-lg font-semibold text-white truncate min-w-0">
+                        {selectedMeeting.title}
+                      </h2>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <StatusBadge status={selectedMeeting.status} />
+                        <button
+                          onClick={startEditHeader}
+                          className="p-1.5 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
+                          title="Edit title & attendees"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setShowDeleteConfirm(true)}
+                          className="p-1.5 rounded-lg text-[#64748b] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          title="Delete meeting"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                        <button className="btn-navy flex items-center gap-1.5 px-3 py-1.5 text-xs">
+                          <Download className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Export</span>
+                        </button>
                       </div>
-                    </>
-                  )}
-                </div>
+                    </div>
+
+                    {/* Delete Confirmation */}
+                    {showDeleteConfirm && (
+                      <div className="mb-3 p-3 rounded-xl border border-red-500/30 bg-red-500/10">
+                        <p className="text-sm text-red-300 mb-2">
+                          Delete this meeting? This cannot be undone.
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setShowDeleteConfirm(false)}
+                            className="btn-navy px-3 py-1 text-xs"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleDeleteMeeting}
+                            disabled={deleting}
+                            className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                          >
+                            {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Meta row */}
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#64748b]">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3.5 w-3.5" />
+                        {format(new Date(selectedMeeting.date), 'MMM d, yyyy · h:mm a')}
+                      </span>
+                      {selectedMeeting.duration_secs != null && selectedMeeting.duration_secs > 0 && (
+                        <span>· {formatDuration(selectedMeeting.duration_secs)}</span>
+                      )}
+                      {selectedMeeting.attendees.length > 0 && (
+                        <>
+                          <span className="hidden sm:inline">·</span>
+                          <Users className="h-3.5 w-3.5 hidden sm:block" />
+                          <div className="flex flex-wrap gap-1 w-full sm:w-auto mt-1 sm:mt-0">
+                            {selectedMeeting.attendees.map((a, i) => (
+                              <span
+                                key={i}
+                                className="px-2 py-0.5 rounded-full bg-[#2d3a52]/60 text-[#94a3b8] text-[10px]"
+                              >
+                                {a}
+                              </span>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Tabs */}
@@ -970,6 +1548,7 @@ export default function MeetingsPage() {
                 {activeTab === 'analysis' && renderAnalysisTab()}
                 {activeTab === 'transcript' && renderTranscriptTab()}
                 {activeTab === 'actions' && renderActionsTab()}
+                {activeTab === 'notes' && renderNotesTab()}
               </div>
             </div>
           ) : null}
