@@ -87,7 +87,7 @@ export default function AgencyScorecard() {
             return (
               <button
                 key={stats.agency}
-                onClick={() => router.push(`/admin/tasks?agency=${stats.agency}`)}
+                onClick={() => router.push(`/tasks`)}
                 className={`card-premium p-5 text-left hover:ring-1 hover:ring-[#d4af37]/30 transition-all border ${config.color.split(' ').pop()}`}
               >
                 <div className="flex items-center justify-between mb-3">

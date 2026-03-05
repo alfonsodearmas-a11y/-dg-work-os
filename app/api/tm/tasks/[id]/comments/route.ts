@@ -38,7 +38,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const notifyUser = await query('SELECT full_name, email, role FROM users WHERE id = $1', [notifyUserId]);
     if (notifyUser.rows.length > 0) {
       await createTaskNotification(notifyUserId, 'comment_added', id, `New comment on: ${task.title}`, commentBody.substring(0, 200));
-      const viewPath = notifyUser.rows[0].role === 'ceo' ? `/dashboard/tasks/${id}` : `/admin/tasks/${id}`;
+      const viewPath = `/tasks`;
       const emailData = commentAddedEmail(notifyUser.rows[0].full_name, { id, title: task.title }, user.fullName, commentBody.substring(0, 200), viewPath);
       sendTaskEmail(notifyUser.rows[0].email, emailData.subject, emailData.html).catch(() => {});
     }

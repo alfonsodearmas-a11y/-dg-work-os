@@ -73,7 +73,7 @@ export function taskSubmittedEmail(dgName: string, task: { id: string; title: st
       <h2 style="color: #1e293b; margin-top: 0;">Hello ${dgName},</h2>
       <p style="color: #475569;"><strong>${submitterName}</strong> has submitted a task for your review:</p>
       ${taskCard(task)}
-      <a href="${BASE_URL}/admin/tasks/${task.id}" style="display: inline-block; background: #059669; color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 8px;">Review Task</a>
+      <a href="${BASE_URL}/tasks" style="display: inline-block; background: #059669; color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 8px;">Review Task</a>
     `),
   };
 }
@@ -89,7 +89,7 @@ export function extensionRequestedEmail(dgName: string, task: { id: string; titl
         <p style="margin: 0 0 4px; color: #1e40af;"><strong>New requested date:</strong> ${requestedDate}</p>
         <p style="margin: 0; color: #1e40af;"><strong>Reason:</strong> ${reason}</p>
       </div>
-      <a href="${BASE_URL}/admin/tasks/${task.id}" style="display: inline-block; background: #d4af37; color: #0a1628; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 8px;">Review Request</a>
+      <a href="${BASE_URL}/tasks" style="display: inline-block; background: #d4af37; color: #0a1628; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 8px;">Review Request</a>
     `),
   };
 }

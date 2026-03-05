@@ -17,7 +17,6 @@ import {
   ChevronDown,
   LogOut,
   X,
-  Target,
   Users,
   DollarSign,
   Eye,
@@ -38,7 +37,7 @@ const ROLE_LABELS: Record<string, string> = {
 const mainNavItems = [
   { href: '/', label: 'Daily Briefing', icon: LayoutDashboard },
   { href: '/intel', label: 'Agency Intel', icon: Activity },
-  { href: '/tasks', label: 'Task Board', icon: CheckSquare },
+  { href: '/tasks', label: 'Tasks', icon: CheckSquare },
   { href: '/oversight', label: 'Oversight', icon: Eye },
   { href: '/budget', label: 'Budget 2026', icon: DollarSign },
   { href: '/meetings', label: 'Meetings', icon: Mic },
@@ -53,7 +52,6 @@ const agencies = [
 ];
 
 const adminItems = [
-  { href: '/admin/tasks', label: 'Command Center', icon: Target },
   { href: '/admin/people', label: 'People', icon: Users },
   { href: '/admin', label: 'Settings', icon: Settings },
 ];
