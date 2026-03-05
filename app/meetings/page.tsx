@@ -28,9 +28,11 @@ import {
   Check,
   X,
   StickyNote,
+  CalendarPlus,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { NewMeetingModal } from '@/components/meetings/NewMeetingModal';
+import { CreateEventModal } from '@/components/calendar/CreateEventModal';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -166,6 +168,7 @@ export default function MeetingsPage() {
   const [editActionDue, setEditActionDue] = useState('');
   const [savingAction, setSavingAction] = useState(false);
   const [showAddAction, setShowAddAction] = useState(false);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [newActionTask, setNewActionTask] = useState('');
   const [newActionOwner, setNewActionOwner] = useState('');
   const [newActionDue, setNewActionDue] = useState('');
@@ -1442,6 +1445,13 @@ export default function MeetingsPage() {
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
+                        <button
+                          onClick={() => setShowCalendarModal(true)}
+                          className="p-1.5 rounded-lg text-[#64748b] hover:text-[#d4af37] hover:bg-[#d4af37]/10 transition-colors"
+                          title="Add to Google Calendar"
+                        >
+                          <CalendarPlus className="h-3.5 w-3.5" />
+                        </button>
                         <button className="btn-navy flex items-center gap-1.5 px-3 py-1.5 text-xs">
                           <Download className="h-3.5 w-3.5" />
                           <span className="hidden sm:inline">Export</span>
@@ -1560,6 +1570,14 @@ export default function MeetingsPage() {
         isOpen={showNewModal}
         onClose={() => setShowNewModal(false)}
         onComplete={handleNewMeetingComplete}
+      />
+
+      <CreateEventModal
+        isOpen={showCalendarModal}
+        onClose={() => setShowCalendarModal(false)}
+        defaultTitle={selectedMeeting?.title}
+        defaultDate={selectedMeeting?.date?.split('T')[0]}
+        defaultAttendees={selectedMeeting?.attendees?.filter(a => a.includes('@'))}
       />
     </div>
   );

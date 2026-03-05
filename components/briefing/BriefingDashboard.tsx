@@ -8,6 +8,7 @@ import {
   Sparkles,
   AlertTriangle,
   Calendar,
+  CalendarPlus,
   Building2,
   FileText,
   ListChecks,
@@ -22,6 +23,7 @@ import {
   Mic,
   ArrowRight,
 } from 'lucide-react';
+import { CreateEventModal } from '@/components/calendar/CreateEventModal';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -694,7 +696,7 @@ function TimelineEvent({ event, actions, isFirst }: { event: CalendarEvent; acti
   );
 }
 
-function ScheduleSection({ calendar, actions }: { calendar: CalendarData | null; actions: ActionsData | null }) {
+function ScheduleSection({ calendar, actions, onNewEvent }: { calendar: CalendarData | null; actions: ActionsData | null; onNewEvent: () => void }) {
   if (!calendar) return <CardsSkeleton />;
 
   if (calendar.authRequired) {
@@ -703,28 +705,39 @@ function ScheduleSection({ calendar, actions }: { calendar: CalendarData | null;
 
   const { today, upcoming } = calendar;
 
-  if (today.length === 0 && upcoming.length === 0) {
-    return (
-      <div className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32] p-8 text-center">
-        <Calendar className="h-12 w-12 text-[#2d3a52] mx-auto mb-3" />
-        <p className="text-[#64748b] text-base">No events scheduled.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {today.length > 0 && (
-        <div>
-          <h3 className="text-lg font-bold text-white mb-4">Today</h3>
-          {today.map((ev, i) => <TimelineEvent key={ev.id} event={ev} actions={actions} isFirst={i === 0} />)}
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-bold text-white">Schedule</h3>
+        <button
+          onClick={onNewEvent}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#d4af37] text-[#0a1628] text-sm font-medium hover:bg-[#c9a432] transition-colors"
+        >
+          <CalendarPlus className="h-4 w-4" />
+          New Event
+        </button>
+      </div>
+
+      {today.length === 0 && upcoming.length === 0 ? (
+        <div className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32] p-8 text-center">
+          <Calendar className="h-12 w-12 text-[#2d3a52] mx-auto mb-3" />
+          <p className="text-[#64748b] text-base">No events scheduled.</p>
         </div>
-      )}
-      {upcoming.length > 0 && (
-        <div>
-          <h3 className="text-lg font-bold text-[#94a3b8] mb-4">Upcoming</h3>
-          {upcoming.map(ev => <TimelineEvent key={ev.id} event={ev} actions={actions} isFirst={false} />)}
-        </div>
+      ) : (
+        <>
+          {today.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold text-white mb-4">Today</h3>
+              {today.map((ev, i) => <TimelineEvent key={ev.id} event={ev} actions={actions} isFirst={i === 0} />)}
+            </div>
+          )}
+          {upcoming.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold text-[#94a3b8] mb-4">Upcoming</h3>
+              {upcoming.map(ev => <TimelineEvent key={ev.id} event={ev} actions={actions} isFirst={false} />)}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -860,6 +873,7 @@ export function BriefingDashboard() {
   const [meetingsError, setMeetingsError] = useState<string | null>(null);
   const [briefingLoading, setBriefingLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showCreateEvent, setShowCreateEvent] = useState(false);
   const tabsRef = useRef<HTMLDivElement>(null);
 
   const fetchAll = useCallback(async () => {
@@ -986,13 +1000,18 @@ export function BriefingDashboard() {
         )}
 
         {activeTab === 'schedule' && (
-          calendarError ? <SectionError message={calendarError} /> : <ScheduleSection calendar={calendar} actions={actions} />
+          calendarError ? <SectionError message={calendarError} /> : <ScheduleSection calendar={calendar} actions={actions} onNewEvent={() => setShowCreateEvent(true)} />
         )}
 
         {activeTab === 'intel' && (
           meetingsError ? <SectionError message={meetingsError} /> : <IntelSection meetings={meetings} actions={actions} />
         )}
       </div>
+
+      <CreateEventModal
+        isOpen={showCreateEvent}
+        onClose={() => setShowCreateEvent(false)}
+      />
     </div>
   );
 }

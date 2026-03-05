@@ -38,7 +38,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          scope: 'openid email profile https://www.googleapis.com/auth/calendar.readonly',
+          // NOTE: Upgraded from calendar.readonly to calendar.events to support creating events.
+          // Existing users must sign out and sign back in to grant the new write permission.
+          scope: 'openid email profile https://www.googleapis.com/auth/calendar.events',
           access_type: 'offline',
           prompt: 'consent',
         },

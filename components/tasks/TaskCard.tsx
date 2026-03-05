@@ -2,13 +2,14 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Calendar, GripVertical, User } from 'lucide-react';
+import { Calendar, CalendarPlus, GripVertical, User } from 'lucide-react';
 import { Task } from '@/lib/task-types';
 import { format, isToday, isPast, parseISO } from 'date-fns';
 
 interface TaskCardProps {
   task: Task;
   onClick: () => void;
+  onCalendar?: (task: Task) => void;
 }
 
 const AGENCY_COLORS: Record<string, string> = {
@@ -29,7 +30,7 @@ const PRIORITY_COLORS: Record<string, string> = {
   low: 'bg-[#4a5568]/20 text-[#94a3b8]',
 };
 
-export function TaskCard({ task, onClick }: TaskCardProps) {
+export function TaskCard({ task, onClick, onCalendar }: TaskCardProps) {
   const {
     attributes,
     listeners,
@@ -113,7 +114,16 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
               </div>
             )}
           </div>
-
+          {onCalendar && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onCalendar(task); }}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="p-1 rounded text-[#64748b] hover:text-[#d4af37] hover:bg-[#d4af37]/10 transition-colors opacity-0 group-hover:opacity-100"
+              title="Add to Calendar"
+            >
+              <CalendarPlus className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
     </div>

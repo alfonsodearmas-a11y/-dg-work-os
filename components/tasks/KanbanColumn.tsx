@@ -10,6 +10,7 @@ interface KanbanColumnProps {
   title: string;
   tasks: Task[];
   onTaskClick: (task: Task) => void;
+  onCalendar?: (task: Task) => void;
 }
 
 const COLUMN_STYLES: Record<string, { dot: string; count: string }> = {
@@ -31,7 +32,7 @@ const COLUMN_STYLES: Record<string, { dot: string; count: string }> = {
   }
 };
 
-export function KanbanColumn({ id, title, tasks, onTaskClick }: KanbanColumnProps) {
+export function KanbanColumn({ id, title, tasks, onTaskClick, onCalendar }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
   const styles = COLUMN_STYLES[title] || COLUMN_STYLES['Not Started'];
@@ -67,6 +68,7 @@ export function KanbanColumn({ id, title, tasks, onTaskClick }: KanbanColumnProp
               key={task.id}
               task={task}
               onClick={() => onTaskClick(task)}
+              onCalendar={onCalendar}
             />
           ))}
         </SortableContext>

@@ -18,6 +18,7 @@ import { Task, TaskUpdate } from '@/lib/task-types';
 import { KanbanColumn } from './KanbanColumn';
 import { TaskCard } from './TaskCard';
 import { TaskDetailModal } from './TaskDetailModal';
+import { CreateEventModal } from '@/components/calendar/CreateEventModal';
 
 type TasksByStatus = {
   not_started: Task[];
@@ -62,6 +63,7 @@ export function KanbanBoard() {
   const [showNewTask, setShowNewTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [creatingTask, setCreatingTask] = useState(false);
+  const [calendarTask, setCalendarTask] = useState<Task | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -522,6 +524,7 @@ export function KanbanBoard() {
                 setSelectedTask(task);
                 setModalOpen(true);
               }}
+              onCalendar={(task) => setCalendarTask(task)}
             />
           ))}
         </div>
@@ -545,6 +548,14 @@ export function KanbanBoard() {
         }}
         onUpdate={updateTask}
         onDelete={deleteTask}
+      />
+
+      {/* Calendar Event Modal */}
+      <CreateEventModal
+        isOpen={!!calendarTask}
+        onClose={() => setCalendarTask(null)}
+        defaultTitle={calendarTask?.title}
+        defaultDate={calendarTask?.due_date?.split('T')[0]}
       />
     </div>
   );
