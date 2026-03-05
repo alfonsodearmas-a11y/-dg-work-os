@@ -11,8 +11,7 @@ export type TaskPriority = 'high' | 'medium' | 'low';
 export type TaskAction =
   | 'created' | 'status_changed' | 'priority_changed' | 'reassigned'
   | 'commented' | 'due_date_changed' | 'extension_requested'
-  | 'extension_approved' | 'extension_rejected' | 'evidence_added'
-  | 'notion_synced';
+  | 'extension_approved' | 'extension_rejected' | 'evidence_added';
 
 export interface TaskRow {
   id: string;

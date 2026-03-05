@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db-pg';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const authResult = await requireRole(['dg', 'ps', 'agency_admin']);
+  if (authResult instanceof NextResponse) return authResult;
+  const userId = authResult.session.user.id;
+
   try {
     const { id } = await params;
     const body = await request.json();
@@ -11,12 +16,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (action === 'resolve') {
       result = await query(
         'UPDATE alerts SET resolved_at = NOW(), resolved_by = $1, is_active = false WHERE id = $2 RETURNING *',
-        ['dg-admin', id]
+        [userId, id]
       );
     } else {
       result = await query(
         'UPDATE alerts SET acknowledged_at = NOW(), acknowledged_by = $1 WHERE id = $2 RETURNING *',
-        ['dg-admin', id]
+        [userId, id]
       );
     }
 

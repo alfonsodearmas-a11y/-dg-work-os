@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
     // Store as a special notification type for debugging
     await supabaseAdmin.from('notifications').insert({
-      user_id: 'dg',
+      user_id: String((body as Record<string, unknown>).user_id || 'system'),
       type: 'meeting_starting', // use a valid type
       title: `[SW_LOG] ${entry.event}`,
       body: entry.detail,

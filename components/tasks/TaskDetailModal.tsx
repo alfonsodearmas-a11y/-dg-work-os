@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, ExternalLink, Trash2, Loader2 } from 'lucide-react';
-import { Task, TaskUpdate } from '@/lib/notion';
+import { X, Trash2, Loader2 } from 'lucide-react';
+import { Task, TaskUpdate } from '@/lib/task-types';
 
 interface TaskDetailModalProps {
   task: Task | null;
@@ -12,10 +12,29 @@ interface TaskDetailModalProps {
   onDelete: (taskId: string) => Promise<void>;
 }
 
-const STATUSES = ['To Do', 'In Progress', 'Waiting', 'Done'] as const;
+const STATUSES = [
+  { value: 'not_started', label: 'Not Started' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'blocked', label: 'Blocked' },
+  { value: 'completed', label: 'Completed' },
+] as const;
+
 const AGENCIES = ['GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'HAS', 'Ministry'] as const;
 const ROLES = ['Ministry', 'GWI Board', 'NCN Board', 'UG', 'City Council', 'Meeting Action Item'] as const;
-const PRIORITIES = ['High', 'Medium', 'Low'] as const;
+
+const PRIORITIES = [
+  { value: 'urgent', label: 'Urgent' },
+  { value: 'high', label: 'High' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'low', label: 'Low' },
+] as const;
+
+const PRIORITY_ACTIVE_STYLES: Record<string, string> = {
+  urgent: 'bg-red-500/20 text-red-400 border border-red-500/50',
+  high: 'bg-amber-500/20 text-amber-400 border border-amber-500/50',
+  medium: 'bg-blue-500/20 text-blue-400 border border-blue-500/50',
+  low: 'bg-[#4a5568]/20 text-[#94a3b8] border border-[#4a5568]/50',
+};
 
 export function TaskDetailModal({ task, isOpen, onClose, onUpdate, onDelete }: TaskDetailModalProps) {
   const [formData, setFormData] = useState<TaskUpdate>({});
@@ -40,7 +59,7 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate, onDelete }: T
   const handleSave = async () => {
     setSaving(true);
     try {
-      await onUpdate(task.notion_id, formData);
+      await onUpdate(task.id, formData);
       onClose();
     } finally {
       setSaving(false);
@@ -51,7 +70,7 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate, onDelete }: T
     if (!confirm('Archive this task? It will be removed from the board.')) return;
     setDeleting(true);
     try {
-      await onDelete(task.notion_id);
+      await onDelete(task.id);
       onClose();
     } finally {
       setDeleting(false);
@@ -71,22 +90,12 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate, onDelete }: T
         {/* Header */}
         <div className="flex items-center justify-between p-3 md:p-4 border-b border-[#2d3a52]">
           <h2 className="text-lg font-semibold text-white">Edit Task</h2>
-          <div className="flex items-center gap-2">
-            <a
-              href={task.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-lg text-[#64748b] hover:text-[#d4af37] hover:bg-[#d4af37]/10 transition-colors"
-            >
-              <ExternalLink className="h-4 w-4" />
-            </a>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         {/* Content */}
@@ -110,12 +119,12 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate, onDelete }: T
               Status
             </label>
             <select
-              value={formData.status || 'To Do'}
+              value={formData.status || 'not_started'}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as TaskUpdate['status'] })}
               className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white focus:outline-none focus:border-[#d4af37] transition-colors"
             >
-              {STATUSES.map((status) => (
-                <option key={status} value={status}>{status}</option>
+              {STATUSES.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
               ))}
             </select>
           </div>
@@ -173,37 +182,35 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate, onDelete }: T
               Priority
             </label>
             <div className="flex gap-2">
-              {PRIORITIES.map((priority) => (
+              {PRIORITIES.map((p) => (
                 <button
-                  key={priority}
-                  onClick={() => setFormData({ ...formData, priority: formData.priority === priority ? null : priority })}
+                  key={p.value}
+                  onClick={() => setFormData({ ...formData, priority: formData.priority === p.value ? null : p.value as Task['priority'] })}
                   className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    formData.priority === priority
-                      ? priority === 'High'
-                        ? 'bg-red-500/20 text-red-400 border border-red-500/50'
-                        : priority === 'Medium'
-                        ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50'
-                        : 'bg-[#4a5568]/20 text-[#94a3b8] border border-[#4a5568]/50'
+                    formData.priority === p.value
+                      ? PRIORITY_ACTIVE_STYLES[p.value]
                       : 'bg-[#0a1628] text-[#64748b] border border-[#2d3a52] hover:border-[#3d4a62]'
                   }`}
                 >
-                  {priority}
+                  {p.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Assignee (read-only) */}
-          {task.assignee && (
-            <div>
-              <label className="block text-sm font-medium text-[#94a3b8] mb-1.5">
-                Assignee
-              </label>
-              <div className="px-3 py-2 rounded-lg bg-[#0a1628]/50 border border-[#2d3a52] text-[#94a3b8]">
-                {task.assignee}
-              </div>
-            </div>
-          )}
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-[#94a3b8] mb-1.5">
+              Description
+            </label>
+            <textarea
+              value={formData.description || ''}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value || undefined })}
+              rows={3}
+              placeholder="Add a description..."
+              className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] transition-colors resize-none"
+            />
+          </div>
         </div>
 
         {/* Footer */}

@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    const userId = session?.user?.id || 'system';
     let result;
     try {
       const { runAllForecasts } = await import('@/lib/gpl-forecasting');
-      console.log(`[gpl-forecast-refresh] Triggered by dg-admin`);
+      console.log(`[gpl-forecast-refresh] Triggered by ${userId}`);
       result = await runAllForecasts();
     } catch (importError: any) {
       console.error('[gpl-forecast-refresh] gpl-forecasting module error:', importError.message);
@@ -26,7 +29,7 @@ export async function POST(request: NextRequest) {
         unitRisk: result.unitRisk.length,
         kpiForecasts: result.kpiForecasts.length,
       },
-      refreshedBy: 'dg-admin',
+      refreshedBy: userId,
       refreshedAt: new Date().toISOString(),
     });
   } catch (error: any) {

@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { Client } from '@notionhq/client';
-import Anthropic from '@anthropic-ai/sdk';
+import { supabaseAdmin } from '@/lib/db';
 
-const notion = new Client({ auth: process.env.NOTION_API_KEY });
-const MEETINGS_DB_ID = '270be6a94ad98039ac2cf18ddd037663';
+// Meetings are now stored natively — no Notion dependency
 
 const AGENCY_KEYWORDS: Record<string, string[]> = {
   GPL: ['GPL', 'Guyana Power', 'power company', 'electricity'],
@@ -17,11 +15,8 @@ const AGENCY_KEYWORDS: Record<string, string[]> = {
   PPDI: ['PPDI'],
 };
 
-// --- In-memory cache (5 min TTL) ---
 let cache: { data: MeetingsResponse; expiry: number } | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000;
-
-// --- Types ---
 
 interface MeetingNote {
   id: string;
@@ -30,21 +25,11 @@ interface MeetingNote {
   category: string | null;
   summary: string | null;
   relatedAgency: string | null;
-  url: string;
 }
 
 interface MeetingsResponse {
   meetings: MeetingNote[];
   lastUpdated: string;
-}
-
-// --- Helpers ---
-
-function getPlainText(prop: any): string | null { // eslint-disable-line @typescript-eslint/no-explicit-any
-  if (!prop) return null;
-  if (prop.type === 'title') return prop.title?.map((t: any) => t.plain_text).join('') || null; // eslint-disable-line @typescript-eslint/no-explicit-any
-  if (prop.type === 'rich_text') return prop.rich_text?.map((t: any) => t.plain_text).join('') || null; // eslint-disable-line @typescript-eslint/no-explicit-any
-  return null;
 }
 
 function detectAgency(title: string, category: string | null): string | null {
@@ -57,62 +42,6 @@ function detectAgency(title: string, category: string | null): string | null {
   return null;
 }
 
-function parseMeeting(page: any): MeetingNote { // eslint-disable-line @typescript-eslint/no-explicit-any
-  const props = page.properties;
-
-  const title = getPlainText(props['Name']) || getPlainText(props['Title']) || 'Untitled';
-  const date = props['Date']?.date?.start || null;
-  const category = props['Category']?.select?.name || null;
-  const summary = getPlainText(props['Summary']) || null;
-
-  return {
-    id: page.id,
-    title,
-    date,
-    category,
-    summary,
-    relatedAgency: detectAgency(title, category),
-    url: page.url,
-  };
-}
-
-// --- AI title generation for untitled meetings ---
-
-async function generateTitles(meetings: MeetingNote[]): Promise<void> {
-  const untitled = meetings.filter(m => m.title === 'Untitled' && m.summary);
-  if (untitled.length === 0) return;
-
-  try {
-    const anthropic = new Anthropic();
-    const prompt = untitled.map((m, i) =>
-      `${i + 1}. [${m.date || 'no date'}]${m.category ? ` [${m.category}]` : ''} ${m.summary}`
-    ).join('\n');
-
-    const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 256,
-      messages: [{
-        role: 'user',
-        content: `Generate a concise, descriptive title (3-7 words) for each meeting note below. The titles should read like executive agenda items — direct, specific, no fluff. Return ONLY the titles, one per line, numbered to match.\n\n${prompt}`,
-      }],
-    });
-
-    const text = response.content.filter(b => b.type === 'text').map(b => b.text).join('');
-    const lines = text.trim().split('\n').map(l => l.replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean);
-
-    untitled.forEach((m, i) => {
-      if (lines[i]) {
-        m.title = lines[i];
-        m.relatedAgency = detectAgency(m.title, m.category) || m.relatedAgency;
-      }
-    });
-  } catch (err) {
-    console.error('[Briefing Meetings] Title generation failed, keeping "Untitled":', err);
-  }
-}
-
-// --- Route ---
-
 export async function GET() {
   if (cache && Date.now() < cache.expiry) {
     return NextResponse.json(cache.data);
@@ -121,20 +50,24 @@ export async function GET() {
   try {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const sinceDate = sevenDaysAgo.toISOString().slice(0, 10);
 
-    const response: any = await notion.databases.query({ // eslint-disable-line @typescript-eslint/no-explicit-any
-      database_id: MEETINGS_DB_ID,
-      filter: {
-        property: 'Date',
-        date: { on_or_after: sinceDate },
-      },
-      sorts: [{ property: 'Date', direction: 'descending' }],
-      page_size: 10,
-    });
+    const { data: rows, error } = await supabaseAdmin
+      .from('meeting_minutes')
+      .select('id, title, meeting_date, category, minutes_markdown')
+      .gte('meeting_date', sevenDaysAgo.toISOString())
+      .order('meeting_date', { ascending: false })
+      .limit(10);
 
-    const meetings = response.results.map(parseMeeting);
-    await generateTitles(meetings);
+    if (error) throw error;
+
+    const meetings: MeetingNote[] = (rows || []).map((r: any) => ({
+      id: r.id,
+      title: r.title,
+      date: r.meeting_date,
+      category: r.category,
+      summary: r.minutes_markdown?.slice(0, 200) || null,
+      relatedAgency: detectAgency(r.title, r.category),
+    }));
 
     const result: MeetingsResponse = {
       meetings,
@@ -142,7 +75,6 @@ export async function GET() {
     };
 
     cache = { data: result, expiry: Date.now() + CACHE_TTL_MS };
-
     return NextResponse.json(result);
   } catch (err) {
     console.error('[Briefing Meetings] Error:', err);

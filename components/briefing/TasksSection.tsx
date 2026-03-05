@@ -9,22 +9,19 @@ import {
   AlertTriangle,
   Clock,
   CheckSquare,
-  ExternalLink,
   X,
   Loader2,
 } from 'lucide-react';
 import { format, isPast, isToday, isWithinInterval, addDays, parseISO } from 'date-fns';
 
 interface Task {
-  notion_id: string;
+  id: string;
   title: string;
-  status: 'To Do' | 'In Progress' | 'Waiting' | 'Done';
+  status: 'not_started' | 'in_progress' | 'blocked' | 'completed';
   due_date: string | null;
-  assignee: string | null;
   agency: string | null;
   role: string | null;
-  priority: 'High' | 'Medium' | 'Low' | null;
-  url?: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent' | null;
 }
 
 interface TasksSectionProps {
@@ -38,7 +35,7 @@ type FilterType = 'All' | 'Overdue' | 'Due Today' | 'This Week' | 'By Agency';
 const AGENCIES = ['GPL', 'GWI', 'CJIA', 'GCAA', 'MARAD', 'HAS', 'HECI', 'MOPUA'];
 
 function isOverdue(task: Task): boolean {
-  if (!task.due_date || task.status === 'Done') return false;
+  if (!task.due_date || task.status === 'completed') return false;
   const due = parseISO(task.due_date);
   return isPast(due) && !isToday(due);
 }
@@ -82,16 +79,24 @@ function formatDueDate(task: Task): { label: string; className: string } {
 }
 
 const statusStyles: Record<string, string> = {
-  'To Do': 'bg-[#4a5568]/30 text-[#94a3b8]',
-  'In Progress': 'bg-blue-500/20 text-blue-400',
-  'Waiting': 'bg-amber-500/20 text-amber-400',
-  'Done': 'bg-emerald-500/20 text-emerald-400',
+  not_started: 'bg-[#4a5568]/30 text-[#94a3b8]',
+  in_progress: 'bg-blue-500/20 text-blue-400',
+  blocked: 'bg-amber-500/20 text-amber-400',
+  completed: 'bg-emerald-500/20 text-emerald-400',
+};
+
+const statusLabels: Record<string, string> = {
+  not_started: 'Not Started',
+  in_progress: 'In Progress',
+  blocked: 'Blocked',
+  completed: 'Completed',
 };
 
 const priorityDot: Record<string, string> = {
-  High: 'bg-red-500',
-  Medium: 'bg-amber-500',
-  Low: 'bg-blue-500',
+  urgent: 'bg-red-500',
+  high: 'bg-amber-500',
+  medium: 'bg-blue-500',
+  low: 'bg-[#4a5568]',
 };
 
 export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps) {
@@ -116,13 +121,13 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
       case 'Overdue':
         return tasks.filter(isOverdue);
       case 'Due Today':
-        return tasks.filter((t) => t.status !== 'Done' && isDueToday(t));
+        return tasks.filter((t) => t.status !== 'completed' && isDueToday(t));
       case 'This Week':
-        return tasks.filter((t) => t.status !== 'Done' && isDueThisWeek(t));
+        return tasks.filter((t) => t.status !== 'completed' && isDueThisWeek(t));
       case 'All':
       case 'By Agency':
       default:
-        return tasks.filter((t) => t.status !== 'Done');
+        return tasks.filter((t) => t.status !== 'completed');
     }
   }, [tasks, activeFilter]);
 
@@ -191,7 +196,7 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
           agency: newAgency || null,
           priority: newPriority || null,
           due_date: newDueDate || null,
-          status: 'To Do',
+          status: 'not_started',
         }),
       });
 
@@ -229,7 +234,7 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold text-white">TASKS</h2>
           <span className="bg-[#d4af37]/20 text-[#d4af37] text-xs font-bold px-2 py-0.5 rounded-full">
-            {tasks.filter((t) => t.status !== 'Done').length}
+            {tasks.filter((t) => t.status !== 'completed').length}
           </span>
         </div>
         <button
@@ -272,9 +277,10 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
               className={inputClasses}
             >
               <option value="">Priority (optional)</option>
-              <option value="High">High</option>
-              <option value="Medium">Medium</option>
-              <option value="Low">Low</option>
+              <option value="urgent">Urgent</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
             </select>
             <input
               type="date"
@@ -365,7 +371,7 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
                       const due = formatDueDate(task);
                       return (
                         <div
-                          key={task.notion_id}
+                          key={task.id}
                           onClick={() => onEditTask(task)}
                           className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#1a2744] transition-colors cursor-pointer min-h-[56px]"
                         >
@@ -378,14 +384,14 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
                             }`}
                           />
 
-                          {/* Center: Title + Assignee */}
+                          {/* Center: Title + Role */}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-white line-clamp-1">
                               {task.title}
                             </p>
-                            {(task.assignee || task.role) && (
+                            {task.role && (
                               <p className="text-xs text-[#64748b] mt-0.5 line-clamp-1">
-                                {task.assignee || task.role}
+                                {task.role}
                               </p>
                             )}
                           </div>
@@ -402,7 +408,7 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
                                 statusStyles[task.status] || 'bg-[#4a5568]/30 text-[#94a3b8]'
                               }`}
                             >
-                              {task.status}
+                              {statusLabels[task.status] || task.status}
                             </span>
                           </div>
                         </div>

@@ -222,9 +222,6 @@ export default function AdminPage() {
         <NotificationPreferences />
         <PushNotificationSettings />
 
-        <div className="card-premium p-8 text-center">
-          <p className="text-[#64748b]">User management & data entry coming soon</p>
-        </div>
       </div>
     </div>
   );

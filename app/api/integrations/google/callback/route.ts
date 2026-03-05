@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { auth } from '@/lib/auth';
 import { upsertGoogleCalendarToken } from '@/lib/integration-tokens';
 import { invalidateCalendarClientCache } from '@/lib/google-calendar';
 
@@ -52,6 +53,12 @@ export async function GET(request: NextRequest) {
   const oauth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 
   try {
+    const session = await auth();
+    const userId = session?.user?.id;
+    if (!userId) {
+      return adminRedirect(request, 'google=error&reason=not_authenticated');
+    }
+
     // Exchange code for tokens
     const { tokens } = await oauth2Client.getToken(code);
 
@@ -80,10 +87,10 @@ export async function GET(request: NextRequest) {
       calendar_id: process.env.GOOGLE_CALENDAR_ID || 'primary',
       account_email: accountEmail,
       scopes: tokens.scope || undefined,
-    });
+    }, userId);
 
     // Invalidate cached calendar client so it picks up the new token
-    invalidateCalendarClientCache();
+    invalidateCalendarClientCache(userId);
 
     return adminRedirect(request, 'google=connected');
   } catch (err) {

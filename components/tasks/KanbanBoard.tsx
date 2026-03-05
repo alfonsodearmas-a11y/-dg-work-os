@@ -14,28 +14,35 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { RefreshCw, Plus, Search, Filter, X, Loader2, AlertTriangle, CheckSquare, Clock, Inbox } from 'lucide-react';
-import { Task, TaskUpdate } from '@/lib/notion';
+import { Task, TaskUpdate } from '@/lib/task-types';
 import { KanbanColumn } from './KanbanColumn';
 import { TaskCard } from './TaskCard';
 import { TaskDetailModal } from './TaskDetailModal';
 
 type TasksByStatus = {
-  'To Do': Task[];
-  'In Progress': Task[];
-  'Waiting': Task[];
-  'Done': Task[];
+  not_started: Task[];
+  in_progress: Task[];
+  blocked: Task[];
+  completed: Task[];
 };
 
-const COLUMNS: (keyof TasksByStatus)[] = ['To Do', 'In Progress', 'Waiting', 'Done'];
+const COLUMNS: (keyof TasksByStatus)[] = ['not_started', 'in_progress', 'blocked', 'completed'];
+
+const COLUMN_LABELS: Record<string, string> = {
+  not_started: 'Not Started',
+  in_progress: 'In Progress',
+  blocked: 'Blocked',
+  completed: 'Completed',
+};
 const AGENCIES = ['GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'HAS', 'Ministry'];
 const ROLES = ['Ministry', 'GWI Board', 'NCN Board', 'UG', 'City Council', 'Meeting Action Item'];
 
 export function KanbanBoard() {
   const [tasks, setTasks] = useState<TasksByStatus>({
-    'To Do': [],
-    'In Progress': [],
-    'Waiting': [],
-    'Done': [],
+    not_started: [],
+    in_progress: [],
+    blocked: [],
+    completed: [],
   });
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -104,13 +111,13 @@ export function KanbanBoard() {
     setTasks((prev) => {
       const newTasks = { ...prev };
       for (const status of COLUMNS) {
-        const index = newTasks[status].findIndex((t) => t.notion_id === taskId);
+        const index = newTasks[status].findIndex((t) => t.id === taskId);
         if (index !== -1) {
           const task = newTasks[status][index];
 
           // If status changed, move to new column
           if (updates.status && updates.status !== status) {
-            newTasks[status] = newTasks[status].filter((t) => t.notion_id !== taskId);
+            newTasks[status] = newTasks[status].filter((t) => t.id !== taskId);
             newTasks[updates.status] = [
               { ...task, ...updates },
               ...newTasks[updates.status],
@@ -124,7 +131,6 @@ export function KanbanBoard() {
       return newTasks;
     });
 
-    // Sync to Notion
     try {
       await fetch(`/api/tasks/${taskId}`, {
         method: 'PATCH',
@@ -144,12 +150,11 @@ export function KanbanBoard() {
     setTasks((prev) => {
       const newTasks = { ...prev };
       for (const status of COLUMNS) {
-        newTasks[status] = newTasks[status].filter((t) => t.notion_id !== taskId);
+        newTasks[status] = newTasks[status].filter((t) => t.id !== taskId);
       }
       return newTasks;
     });
 
-    // Sync to Notion
     try {
       await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
     } catch (error) {
@@ -174,7 +179,7 @@ export function KanbanBoard() {
       if (data.task) {
         setTasks((prev) => ({
           ...prev,
-          'To Do': [data.task, ...prev['To Do']],
+          not_started: [data.task, ...prev.not_started],
         }));
       }
 
@@ -213,7 +218,7 @@ export function KanbanBoard() {
       const activeItems = [...prev[activeColumn]];
       const overItems = [...prev[overColumn]];
 
-      const activeIndex = activeItems.findIndex((t) => t.notion_id === activeId);
+      const activeIndex = activeItems.findIndex((t) => t.id === activeId);
       const [movedTask] = activeItems.splice(activeIndex, 1);
 
       return {
@@ -246,8 +251,8 @@ export function KanbanBoard() {
     } else {
       // Reorder within same column
       const items = tasks[activeColumn];
-      const activeIndex = items.findIndex((t) => t.notion_id === activeId);
-      const overIndex = items.findIndex((t) => t.notion_id === overId);
+      const activeIndex = items.findIndex((t) => t.id === activeId);
+      const overIndex = items.findIndex((t) => t.id === overId);
 
       if (activeIndex !== overIndex) {
         setTasks((prev) => ({
@@ -260,7 +265,7 @@ export function KanbanBoard() {
 
   const findTask = (id: string): Task | undefined => {
     for (const status of COLUMNS) {
-      const task = tasks[status].find((t) => t.notion_id === id);
+      const task = tasks[status].find((t) => t.id === id);
       if (task) return task;
     }
     return undefined;
@@ -268,7 +273,7 @@ export function KanbanBoard() {
 
   const findColumn = (taskId: string): keyof TasksByStatus | null => {
     for (const status of COLUMNS) {
-      if (tasks[status].some((t) => t.notion_id === taskId)) {
+      if (tasks[status].some((t) => t.id === taskId)) {
         return status;
       }
     }
@@ -339,24 +344,24 @@ export function KanbanBoard() {
       {totalTasks > 0 && (
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <span className="text-[#64748b]">{totalTasks} tasks</span>
-          {tasks['To Do'].length > 0 && (
+          {tasks.not_started.length > 0 && (
             <span className="flex items-center gap-1 text-[#94a3b8]">
-              <Inbox className="h-3.5 w-3.5" /> {tasks['To Do'].length} to do
+              <Inbox className="h-3.5 w-3.5" /> {tasks.not_started.length} not started
             </span>
           )}
-          {tasks['In Progress'].length > 0 && (
+          {tasks.in_progress.length > 0 && (
             <span className="flex items-center gap-1 text-blue-400">
-              <Clock className="h-3.5 w-3.5" /> {tasks['In Progress'].length} in progress
+              <Clock className="h-3.5 w-3.5" /> {tasks.in_progress.length} in progress
             </span>
           )}
-          {tasks['Waiting'].length > 0 && (
+          {tasks.blocked.length > 0 && (
             <span className="flex items-center gap-1 text-amber-400">
-              <AlertTriangle className="h-3.5 w-3.5" /> {tasks['Waiting'].length} waiting
+              <AlertTriangle className="h-3.5 w-3.5" /> {tasks.blocked.length} blocked
             </span>
           )}
-          {tasks['Done'].length > 0 && (
+          {tasks.completed.length > 0 && (
             <span className="flex items-center gap-1 text-emerald-400">
-              <CheckSquare className="h-3.5 w-3.5" /> {tasks['Done'].length} done
+              <CheckSquare className="h-3.5 w-3.5" /> {tasks.completed.length} completed
             </span>
           )}
           {lastSync && (
@@ -511,7 +516,7 @@ export function KanbanBoard() {
             <KanbanColumn
               key={column}
               id={column}
-              title={column}
+              title={COLUMN_LABELS[column] || column}
               tasks={filterTasks(tasks[column])}
               onTaskClick={(task) => {
                 setSelectedTask(task);

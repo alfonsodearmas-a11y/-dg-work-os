@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import { Smartphone, Monitor, Send, Trash2, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 
 interface PushSub {
@@ -56,6 +57,7 @@ function isIOSBrowser(): boolean {
 }
 
 export function PushNotificationSettings() {
+  const { data: session } = useSession();
   const [permissionState, setPermissionState] = useState<string>('default');
   const [subscriptions, setSubscriptions] = useState<PushSub[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +83,7 @@ export function PushNotificationSettings() {
 
   const fetchSubscriptions = async () => {
     try {
-      const res = await fetch('/api/push/subscribe?user_id=dg');
+      const res = await fetch(`/api/push/subscribe?user_id=${session?.user?.id || ''}`);
       if (res.ok) {
         const data = await res.json();
         setSubscriptions(data.subscriptions || []);
@@ -119,7 +121,7 @@ export function PushNotificationSettings() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            user_id: 'dg',
+            user_id: session?.user?.id,
             subscription: {
               endpoint: subJSON.endpoint,
               keys: { p256dh: subJSON.keys?.p256dh, auth: subJSON.keys?.auth },
@@ -173,7 +175,7 @@ export function PushNotificationSettings() {
       const res = await fetch('/api/push/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: 'dg' }),
+        body: JSON.stringify({ user_id: session?.user?.id }),
       });
       const data = await res.json();
       if (data.sent > 0) {

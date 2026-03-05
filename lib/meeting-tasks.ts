@@ -1,5 +1,4 @@
 import { supabaseAdmin } from '@/lib/db';
-import { createTask } from '@/lib/notion';
 import type { ActionItem, MeetingMinutes } from '@/lib/meeting-minutes';
 import { getMinutesById } from '@/lib/meeting-minutes';
 
@@ -8,7 +7,7 @@ import { getMinutesById } from '@/lib/meeting-minutes';
 export interface LinkedActionItem extends ActionItem {
   junction_id: string | null;
   task_id: string | null;
-  task_status: string | null;      // live status from Notion task (via cache)
+  task_status: string | null;
   link_status: 'created' | 'failed' | 'unlinked';
   error_message: string | null;
 }
@@ -30,15 +29,6 @@ function mapAgency(agency: string | null): string | null {
   if (VALID_AGENCIES.has(upper)) return upper;
   if (agency.toLowerCase() === 'ministry') return 'Ministry';
   return null;
-}
-
-function mapPriority(priority: string): 'High' | 'Medium' | 'Low' {
-  const map: Record<string, 'High' | 'Medium' | 'Low'> = {
-    high: 'High',
-    medium: 'Medium',
-    low: 'Low',
-  };
-  return map[priority?.toLowerCase()] || 'Medium';
 }
 
 function formatMeetingDate(iso: string | null): string {
@@ -76,35 +66,40 @@ export async function createTasksFromActionItems(meetingId: string): Promise<Tas
     }
 
     try {
-      // Build description with meeting reference
       const descLines: string[] = [];
       if (item.description) descLines.push(item.description);
       descLines.push('');
       descLines.push(`From: ${meeting.title}, ${formatMeetingDate(meeting.meeting_date)}`);
       descLines.push(`Meeting minutes: /meetings/${meeting.id}`);
       if (item.assigned_to) {
-        descLines.push(`Assigned to: ${item.assigned_to} (please assign manually in Notion)`);
+        descLines.push(`Assigned to: ${item.assigned_to}`);
       }
 
-      // Map fields to task system
       const agency = mapAgency(item.agency);
 
-      const task = await createTask({
-        title: item.title,
-        status: 'To Do',
-        due_date: item.deadline || null,
-        agency,
-        role: 'Meeting Action Item',
-        priority: mapPriority(item.priority),
-        description: descLines.join('\n'),
-      });
+      // Insert into native tasks table
+      const { data: task, error: taskErr } = await supabaseAdmin
+        .from('tasks')
+        .insert({
+          title: item.title,
+          description: descLines.join('\n'),
+          status: 'not_started',
+          priority: item.priority?.toLowerCase() || 'medium',
+          due_date: item.deadline || null,
+          agency,
+          source_meeting_id: meetingId,
+        })
+        .select('id')
+        .single();
+
+      if (taskErr) throw taskErr;
 
       // Insert junction row
       await supabaseAdmin
         .from('meeting_action_items')
         .upsert({
           meeting_id: meetingId,
-          task_id: task.notion_id,
+          task_id: task.id,
           action_item_id: item.id,
           title: item.title,
           assigned_to: item.assigned_to || null,
@@ -154,7 +149,7 @@ export async function getActionItemsWithStatus(meetingId: string): Promise<Linke
     linkMap.set(link.action_item_id, link);
   }
 
-  // Fetch task statuses from Notion cache (notion_tasks table)
+  // Fetch task statuses from native tasks table
   const taskIds = (links || [])
     .filter((l: any) => l.task_id && l.status === 'created')
     .map((l: any) => l.task_id);
@@ -162,12 +157,12 @@ export async function getActionItemsWithStatus(meetingId: string): Promise<Linke
   const taskStatusMap = new Map<string, string>();
   if (taskIds.length > 0) {
     const { data: tasks } = await supabaseAdmin
-      .from('notion_tasks')
-      .select('notion_id, status')
-      .in('notion_id', taskIds);
+      .from('tasks')
+      .select('id, status')
+      .in('id', taskIds);
 
     for (const t of tasks || []) {
-      taskStatusMap.set(t.notion_id, t.status);
+      taskStatusMap.set(t.id, t.status);
     }
   }
 

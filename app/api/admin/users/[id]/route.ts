@@ -1,112 +1,74 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateAny, authorizeRoles, AuthError } from '@/lib/auth';
-import { query } from '@/lib/db-pg';
-import { auditService } from '@/lib/audit';
-import { revokeUserTokens } from '@/lib/invite-tokens';
+import { requireRole } from '@/lib/auth-helpers';
+import { supabaseAdmin } from '@/lib/db';
+import type { Role } from '@/lib/auth';
+
+const VALID_ROLES: Role[] = ['dg', 'minister', 'ps', 'agency_admin', 'officer'];
+const VALID_AGENCIES = ['gpl', 'cjia', 'gwi', 'gcaa'];
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params;
-    const user = await authenticateAny(request);
-    authorizeRoles(user, 'director', 'admin');
+  const authResult = await requireRole(['dg']);
+  if (authResult instanceof NextResponse) return authResult;
+  const { session } = authResult;
+  const { id } = await params;
 
-    const body = await request.json();
-    const { status, role, agency } = body;
-
-    const currentResult = await query('SELECT * FROM users WHERE id = $1', [id]);
-    if (currentResult.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
-    }
-
-    const currentUser = currentResult.rows[0];
-
-    // Cannot modify own status
-    if (status && user.id === id) {
-      return NextResponse.json({ success: false, error: 'Cannot change your own account status' }, { status: 400 });
-    }
-
-    const updates: string[] = [];
-    const values: any[] = [];
-    let paramIdx = 1;
-
-    if (status !== undefined) {
-      updates.push(`status = $${paramIdx++}`);
-      values.push(status);
-      // Sync is_active with status
-      updates.push(`is_active = $${paramIdx++}`);
-      values.push(status !== 'disabled');
-    }
-    if (role !== undefined) { updates.push(`role = $${paramIdx++}`); values.push(role); }
-    if (agency !== undefined) { updates.push(`agency = $${paramIdx++}`); values.push(agency); }
-
-    if (updates.length === 0) {
-      return NextResponse.json({ success: false, error: 'No fields to update' }, { status: 400 });
-    }
-
-    values.push(id);
-    const result = await query(
-      `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIdx} RETURNING id, username, email, full_name, role, agency, is_active, status`,
-      values
-    );
-
-    // When disabling: revoke all tokens, kill sessions
-    if (status === 'disabled') {
-      await revokeUserTokens(id);
-      await query('DELETE FROM refresh_tokens WHERE user_id = $1', [id]);
-    }
-
-    await auditService.log({
-      userId: user.id,
-      action: 'UPDATE_USER',
-      entityType: 'users',
-      entityId: id,
-      oldValues: { status: currentUser.status, role: currentUser.role, agency: currentUser.agency },
-      newValues: body,
-      request,
-    });
-
-    return NextResponse.json({ success: true, data: result.rows[0] });
-  } catch (error: any) {
-    if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  if (session.user.id === id) {
+    return NextResponse.json({ error: 'Cannot modify your own account' }, { status: 400 });
   }
-}
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params;
-    const user = await authenticateAny(request);
-    authorizeRoles(user, 'director');
+  const body = await request.json();
+  const updates: Record<string, unknown> = {};
 
-    if (user.id === id) {
-      return NextResponse.json({ success: false, error: 'Cannot delete your own account' }, { status: 400 });
+  if (body.role !== undefined) {
+    if (!VALID_ROLES.includes(body.role)) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
-
-    const target = await query('SELECT id, full_name FROM users WHERE id = $1', [id]);
-    if (target.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
-    }
-
-    // Clean up related data
-    await query('DELETE FROM refresh_tokens WHERE user_id = $1', [id]);
-    await query('DELETE FROM task_notifications WHERE user_id = $1', [id]);
-    // invite_tokens cascades via FK
-
-    await query('DELETE FROM users WHERE id = $1', [id]);
-
-    await auditService.log({
-      userId: user.id,
-      action: 'DELETE_USER',
-      entityType: 'users',
-      entityId: id,
-      oldValues: { full_name: target.rows[0].full_name },
-      newValues: { deleted: true },
-      request,
-    });
-
-    return new NextResponse(null, { status: 204 });
-  } catch (error: any) {
-    if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    updates.role = body.role;
   }
+
+  if (body.agency !== undefined) {
+    if (body.agency !== null && !VALID_AGENCIES.includes(body.agency)) {
+      return NextResponse.json({ error: 'Invalid agency' }, { status: 400 });
+    }
+    updates.agency = body.agency;
+  }
+
+  if (body.is_active !== undefined) {
+    updates.is_active = Boolean(body.is_active);
+  }
+
+  // Enforce constraint: ministry roles must have null agency, agency roles must have agency
+  const newRole = (updates.role as string) || undefined;
+  if (newRole) {
+    if (['dg', 'minister', 'ps'].includes(newRole)) {
+      updates.agency = null;
+    } else if (['agency_admin', 'officer'].includes(newRole) && !updates.agency && body.agency === undefined) {
+      // Need to check if existing user already has an agency
+      const { data: existing } = await supabaseAdmin
+        .from('users')
+        .select('agency')
+        .eq('id', id)
+        .single();
+      if (!existing?.agency) {
+        return NextResponse.json({ error: 'Agency is required for agency_admin and officer roles' }, { status: 400 });
+      }
+    }
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('users')
+    .update(updates)
+    .eq('id', id)
+    .select('id, email, name, role, agency, is_active')
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ user: data });
 }

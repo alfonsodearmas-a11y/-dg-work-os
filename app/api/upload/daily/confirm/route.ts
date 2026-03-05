@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query, transaction } from '@/lib/db-pg';
 import { auditService } from '@/lib/audit';
 import { analyzeMetrics } from '@/lib/ai-analysis';
+import { auth } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    const userId = session?.user?.id || 'system';
     const { date, records, filename } = await request.json();
 
     if (!date || !records || !Array.isArray(records)) {
@@ -27,7 +30,7 @@ export async function POST(request: NextRequest) {
       const uploadResult = await client.query(
         `INSERT INTO daily_uploads (report_date, filename, uploaded_by, record_count, status)
          VALUES ($1, $2, $3, $4, 'confirmed') RETURNING id`,
-        [date, filename, 'dg-admin', records.length]
+        [date, filename, userId, records.length]
       );
       const uploadId = uploadResult.rows[0].id;
 
@@ -44,7 +47,7 @@ export async function POST(request: NextRequest) {
       return { uploadId, duplicateWarning };
     });
 
-    await auditService.log({ userId: 'dg-admin', action: 'DAILY_UPLOAD', entityType: 'daily_uploads', entityId: result.uploadId, newValues: { date, filename, recordCount: records.length }, request });
+    await auditService.log({ userId, action: 'DAILY_UPLOAD', entityType: 'daily_uploads', entityId: result.uploadId, newValues: { date, filename, recordCount: records.length }, request });
 
     // Trigger AI analysis async (non-blocking)
     analyzeMetrics(records, date).then(async (analysis) => {

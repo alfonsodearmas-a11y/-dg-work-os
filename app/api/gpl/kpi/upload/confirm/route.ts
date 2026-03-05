@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
+import { requireRole, canUploadData } from '@/lib/auth-helpers';
 
 export async function POST(request: NextRequest) {
+  const result = await requireRole(['dg', 'agency_admin', 'officer']);
+  if (result instanceof NextResponse) return result;
+  const { session } = result;
+  if (!canUploadData(session.user.role, session.user.agency, 'GPL')) return NextResponse.json({ error: 'Cannot upload GPL data' }, { status: 403 });
+
   try {
     const body = await request.json();
     const { data, filename } = body;

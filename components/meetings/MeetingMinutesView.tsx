@@ -19,7 +19,6 @@ import {
   Building2,
   Target,
   ListTodo,
-  ExternalLink,
   RotateCcw,
   ClipboardPaste,
   Send,
@@ -332,7 +331,7 @@ export function MeetingMinutesView({ meeting }: { meeting: MeetingData }) {
           {showPasteForm && (
             <div className="mt-4 pt-4 border-t border-[#2d3a52]">
               <p className="text-sm text-[#94a3b8] mb-2">
-                Paste the meeting transcript below, then click Process. Copy it from the Notion page or your recording tool.
+                Paste the meeting transcript below, then click Process.
               </p>
               <textarea
                 value={manualTranscript}
@@ -521,17 +520,10 @@ export function MeetingMinutesView({ meeting }: { meeting: MeetingData }) {
                         <span className="text-[#d4af37]">{item.agency}</span>
                       </span>
                     )}
-                    {/* Link to Notion task */}
                     {isLinked && (
-                      <a
-                        href={`https://notion.so/${(item.task_id as string).replace(/-/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-[#d4af37] hover:text-[#e5c04b] transition-colors"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <ExternalLink className="h-3 w-3" /> View Task
-                      </a>
+                      <span className="flex items-center gap-1 text-emerald-400">
+                        <CheckCircle className="h-3 w-3" /> Task created
+                      </span>
                     )}
                   </div>
                 </div>

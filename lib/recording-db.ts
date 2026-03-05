@@ -1,7 +1,6 @@
 // Supabase CRUD for meeting recordings + draft action items
 
 import { supabaseAdmin } from '@/lib/db';
-import { createTask } from '@/lib/notion';
 import { createTask as createPgTask } from '@/lib/task-queries';
 import { query } from '@/lib/db-pg';
 import type { RecordingAnalysis, RecordingActionItem } from '@/lib/recording-processor';
@@ -62,11 +61,6 @@ function mapAgency(agency: string | null): string | null {
   if (VALID_AGENCIES.has(upper)) return upper;
   if (agency.toLowerCase() === 'ministry') return 'Ministry';
   return null;
-}
-
-function mapPriority(p: string): 'High' | 'Medium' | 'Low' {
-  const map: Record<string, 'High' | 'Medium' | 'Low'> = { high: 'High', medium: 'Medium', low: 'Low' };
-  return map[p?.toLowerCase()] || 'Medium';
 }
 
 function mapPriorityToPg(p: string): TaskPriority {
@@ -256,72 +250,40 @@ export async function approveDraftItem(id: string, userId?: string): Promise<Dra
 
   if (fetchErr) throw new Error(`Failed to fetch action item: ${fetchErr.message}`);
 
-  const recording = (item as any).meeting_recordings;
-
   try {
-    // Build description for Notion task
-    const descLines: string[] = [];
-    if (item.description) descLines.push(item.description);
-    descLines.push('');
-    descLines.push(`From recording: ${recording.title}`);
-    if (item.assigned_to) {
-      descLines.push(`Assigned to: ${item.assigned_to}`);
-    }
+    const mappedAgency = mapAgency(item.agency);
 
-    const task = await createTask({
-      title: item.title,
-      status: 'To Do',
-      due_date: item.deadline || null,
-      agency: mapAgency(item.agency),
-      role: 'Meeting Action Item',
-      priority: mapPriority(item.priority),
-      description: descLines.join('\n'),
-    });
+    // Create task in PostgreSQL DB
+    if (mappedAgency) {
+      const ceoResult = await query(
+        `SELECT id FROM users WHERE agency = $1 AND role IN ('agency_admin', 'ceo') AND is_active = true LIMIT 1`,
+        [mappedAgency.toLowerCase()]
+      );
 
-    // Also create task in PostgreSQL DB
-    try {
-      const mappedAgency = mapAgency(item.agency);
-      if (mappedAgency) {
-        // Look up CEO assignee for this agency
-        const ceoResult = await query(
-          `SELECT id FROM users WHERE agency = $1 AND role = 'ceo' AND is_active = true LIMIT 1`,
-          [mappedAgency]
+      if (ceoResult.rows.length > 0) {
+        const assigneeId = ceoResult.rows[0].id;
+        const creatorId = userId || assigneeId;
+
+        await createPgTask(
+          {
+            title: item.title,
+            description: `From meeting recording: ${item.recording_id}\n\n${item.description || item.title}`,
+            priority: mapPriorityToPg(item.priority),
+            agency: mappedAgency,
+            assignee_id: assigneeId,
+            due_date: item.deadline || null,
+            source_recording_id: item.recording_id,
+          },
+          creatorId
         );
-
-        if (ceoResult.rows.length > 0) {
-          const assigneeId = ceoResult.rows[0].id;
-          const creatorId = userId || assigneeId; // Use approver userId if available, otherwise use assignee
-
-          await createPgTask(
-            {
-              title: item.title,
-              description: `From meeting recording: ${item.recording_id}\n\n${item.description || item.title}`,
-              priority: mapPriorityToPg(item.priority),
-              agency: mappedAgency,
-              assignee_id: assigneeId,
-              due_date: item.deadline || null,
-              source_recording_id: item.recording_id,
-            },
-            creatorId
-          );
-          console.log(`[PG Task] Created task for action item ${id} in agency ${mappedAgency}`);
-        } else {
-          console.warn(`[PG Task] No active CEO found for agency ${mappedAgency}, skipping PG task creation`);
-        }
-      } else {
-        console.warn(`[PG Task] No valid agency for action item ${id}, skipping PG task creation`);
       }
-    } catch (pgErr: any) {
-      console.error(`[PG Task] Failed to create PostgreSQL task for action item ${id}:`, pgErr.message);
-      // Don't throw - allow the approval to succeed even if PG task creation fails
     }
 
     // Update with success
     const { data: updated, error: updateErr } = await supabaseAdmin
       .from('draft_action_items')
       .update({
-        review_status: 'pushed_to_notion',
-        notion_task_id: task.notion_id,
+        review_status: 'approved',
         push_error: null,
         updated_at: new Date().toISOString(),
       })
@@ -329,22 +291,21 @@ export async function approveDraftItem(id: string, userId?: string): Promise<Dra
       .select()
       .single();
 
-    if (updateErr) throw new Error(`Failed to update after push: ${updateErr.message}`);
+    if (updateErr) throw new Error(`Failed to update after approval: ${updateErr.message}`);
     return updated as DraftActionItem;
   } catch (pushErr: any) {
-    // Record error but set approved
     const { data: updated, error: updateErr } = await supabaseAdmin
       .from('draft_action_items')
       .update({
         review_status: 'approved',
-        push_error: pushErr.message || 'Unknown error pushing to Notion',
+        push_error: pushErr.message || 'Unknown error creating task',
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
       .select()
       .single();
 
-    if (updateErr) throw new Error(`Failed to update after push error: ${updateErr.message}`);
+    if (updateErr) throw new Error(`Failed to update after error: ${updateErr.message}`);
     return updated as DraftActionItem;
   }
 }

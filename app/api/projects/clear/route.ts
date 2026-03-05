@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function POST() {
+  const result = await requireRole(['dg']);
+  if (result instanceof NextResponse) return result;
+
   try {
     await supabaseAdmin.from('project_uploads').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     const { error } = await supabaseAdmin.from('projects').delete().neq('project_id', '');

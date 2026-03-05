@@ -46,7 +46,7 @@ export function NotificationPreferences() {
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    fetch('/api/notifications/preferences?user_id=dg')
+    fetch('/api/notifications/preferences')
       .then(res => res.ok ? res.json() : null)
       .then(data => { if (data) setPrefs(data); })
       .catch(() => {})
@@ -61,7 +61,7 @@ export function NotificationPreferences() {
         await fetch('/api/notifications/preferences', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: 'dg', ...updated }),
+          body: JSON.stringify(updated),
         });
       } catch {
         // ignore

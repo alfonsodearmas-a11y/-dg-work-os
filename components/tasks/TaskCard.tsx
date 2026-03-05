@@ -2,8 +2,8 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Calendar, ExternalLink, GripVertical, User } from 'lucide-react';
-import { Task } from '@/lib/notion';
+import { Calendar, GripVertical, User } from 'lucide-react';
+import { Task } from '@/lib/task-types';
 import { format, isToday, isPast, parseISO } from 'date-fns';
 
 interface TaskCardProps {
@@ -23,9 +23,10 @@ const AGENCY_COLORS: Record<string, string> = {
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
-  'High': 'bg-red-500/20 text-red-400',
-  'Medium': 'bg-yellow-500/20 text-yellow-400',
-  'Low': 'bg-[#4a5568]/20 text-[#94a3b8]',
+  urgent: 'bg-red-500/20 text-red-400',
+  high: 'bg-amber-500/20 text-amber-400',
+  medium: 'bg-blue-500/20 text-blue-400',
+  low: 'bg-[#4a5568]/20 text-[#94a3b8]',
 };
 
 export function TaskCard({ task, onClick }: TaskCardProps) {
@@ -36,7 +37,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.notion_id });
+  } = useSortable({ id: task.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -111,24 +112,8 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
                 <span>{formatDueDate()}</span>
               </div>
             )}
-            {task.assignee && (
-              <div className="flex items-center gap-1 text-[#64748b]">
-                <User className="h-3 w-3" />
-                <span className="truncate max-w-[80px]">{task.assignee}</span>
-              </div>
-            )}
           </div>
 
-          {/* Open in Notion */}
-          <a
-            href={task.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="opacity-0 group-hover:opacity-100 text-[#64748b] hover:text-[#d4af37] transition-all"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
         </div>
       </div>
     </div>

@@ -2,10 +2,7 @@
 
 ## What This Is
 
-A unified executive Work OS for the Director General of the Ministry of Public Utilities and Aviation (Guyana). It merges two previously separate projects:
-
-1. **DG Command Center** — Next.js 16 + TypeScript app with Daily Briefing (Notion tasks + Google Calendar), Project Tracker (PSIP oversight), and Document Vault (AI-powered doc management)
-2. **Ministry Dashboard** — Vite + React 18 frontend with Express.js backend. Agency operational monitoring for GPL (power), CJIA (airport), GWI (water), GCAA (aviation). Includes data entry workflows, JWT auth, GPL forecasting, and admin portal.
+A multi-user executive Work OS for the Ministry of Public Utilities and Aviation (Guyana). Features include Daily Briefing (tasks + Google Calendar), Task Board (Kanban), Project Tracker (PSIP oversight), Document Vault (AI-powered doc management), Agency Intel (GPL, CJIA, GWI, GCAA operational monitoring), Oversight dashboard, Budget tracking, and Meeting management.
 
 ## Tech Stack
 
@@ -13,9 +10,10 @@ A unified executive Work OS for the Director General of the Ministry of Public U
 - **Styling:** Tailwind CSS v4 with custom design tokens
 - **Database:** Supabase (primary) + direct PostgreSQL connection for Ministry metric tables
 - **AI:** Anthropic Claude API (@anthropic-ai/sdk)
-- **Integrations:** Notion API, Google Calendar API, Gmail/SMTP
+- **Integrations:** Google Calendar API, Gmail/SMTP
 - **Charts:** recharts (client components only)
-- **Auth:** JWT (for data entry/admin routes only — DG views are unprotected)
+- **Auth:** NextAuth v5 (beta) with Google Workspace OAuth — all routes protected
+- **Roles:** dg | minister | ps | agency_admin | officer
 
 ## Design System
 
@@ -61,67 +59,59 @@ Patterns:
 /intel/cjia ................ CJIA Passenger Analytics
 /intel/gwi ................. GWI Metrics
 /intel/gcaa ................ GCAA Compliance
+/tasks ..................... Task Board (Kanban)
+/oversight ................. Oversight Dashboard
+/budget .................... Budget 2026
+/meetings .................. Meetings
+/documents ................. Document Vault (list + upload + search)
+/documents/[id] ............ Document Viewer + AI Q&A
 /projects .................. PSIP Project Tracker (agency summaries + upload)
 /projects/[id] ............. Project Detail
 /projects/agency/[agency] .. Per-Agency Project List
 /projects/delayed .......... Delayed Projects
 /projects/problems ......... Flagged Issues
-/documents ................. Document Vault (list + upload + search)
-/documents/[id] ............ Document Viewer + AI Q&A
-/admin ..................... User Management + Data Entry Portal
+/admin ..................... Settings (AI usage, notifications)
+/admin/people .............. User Management (DG only)
+/admin/tasks ............... Command Center
+/login ..................... Google OAuth sign-in
 ```
 
 ## Sidebar
 
 Collapsible sidebar with sections:
-- **Main Menu:** Daily Briefing, Agency Intel, Projects, Documents
+- **Main Menu:** Daily Briefing, Agency Intel, Task Board, Oversight, Budget, Meetings, Documents
 - **Agencies:** GPL, GWI, CJIA, GCAA (links to /intel/[agency])
-- **Admin:** Settings, Data Entry (conditional on auth role)
+- **Admin:** Command Center, People, Settings (visible to dg/minister/ps only)
+- Agency users only see their own agency in the sidebar
 
-## Source Projects Location
+## Authentication
 
-The two source projects to merge are in:
-- `./source/dg-command-center/` — Next.js project (copy from as-is, it's already the right stack)
-- `./source/ministry-dashboard/` — Vite frontend in `frontend/`, Express backend in `backend/`
-
-## Key Migration Rules
-
-### Express → Next.js API Routes
-- Each Express route becomes a `route.ts` file under `app/api/`
-- `req.body` → `await request.json()`
-- `req.file` (multer) → `await request.formData()`
-- `res.json()` → `NextResponse.json()`
-- Auth middleware → helper function called at top of route handler
-- Rate limiting → Next.js middleware or per-route logic
-
-### Vite React → Next.js App Router
-- All Ministry Dashboard components need `'use client'` directive
-- `import.meta.env.VITE_API_URL` → remove (use relative `/api/` paths)
-- `react-router-dom` → Next.js `Link` + `useRouter` + `usePathname`
-- `useState` for view switching → Next.js page-based routing where appropriate
-- Keep `recharts` imports in client components only
-
-### TypeScript
-- Ministry Dashboard JS files should be converted to TypeScript
-- Start with `// @ts-nocheck` if full typing would slow progress, add types incrementally
-- DG Command Center files are already TypeScript — copy as-is
+- **NextAuth v5** (beta 30) with Google Workspace OAuth
+- `lib/auth.ts` — NextAuth config, exports `{ handlers, auth, signIn, signOut }`
+- `lib/auth-helpers.ts` — `requireRole()`, `canAccessAgency()`, `canUploadData()`, `canAssignTasks()`
+- `middleware.ts` — Redirects unauthenticated users to `/login`; public paths: `/login`, `/api/auth`, `/api/push`, `/api/webhooks`, `/serwist`, `/upload`
+- `components/providers/SessionProvider.tsx` — Wraps app with `<SessionProvider>` for `useSession()` in client components
+- Module augmentation: `declare module '@auth/core/jwt'` (NOT `next-auth/jwt`)
+- Backward-compatible shims in `lib/auth.ts`: `authenticateAny()`, `authenticateFromCookie()`, `authorizeRoles()` — bridge old PG routes to NextAuth sessions
+- `authorizeRoles()` maps old role names: `director` → `dg`, `admin` → `dg/agency_admin`
+- All new routes use `requireRole(['dg', 'ps', ...])` from `lib/auth-helpers.ts`
 
 ## Database
 
 Two database connections:
 
-1. **Supabase** (`lib/db.ts`) — Documents, tasks, projects, calendar events
-2. **PostgreSQL pool** (`lib/db-pg.ts`) — Ministry metric tables (users, CJIA metrics, GWI metrics, GPL data, audit logs)
+1. **Supabase** (`lib/db.ts`) — Users, tasks, documents, projects, calendar events, notifications, integration tokens
+2. **PostgreSQL pool** (`lib/db-pg.ts`) — Ministry metric tables (CJIA metrics, GWI metrics, GPL data, audit logs, legacy task management)
 
-Both use the `pg` library under the hood. Supabase wraps it with its client SDK.
+Users table is in Supabase (see `supabase/migrations/021_multi_user.sql`). Tasks table is in Supabase (see `supabase/migrations/022_tasks.sql`).
 
 ## API Route Organization
 
 ```
 app/api/
-├── briefing/route.ts          # GET — Daily briefing from Notion + Calendar
+├── briefing/route.ts          # GET — Daily briefing (tasks + calendar)
 ├── tasks/
-│   ├── route.ts               # GET/POST — Notion task CRUD
+│   ├── route.ts               # GET/POST — Task CRUD (Supabase)
 │   └── [id]/route.ts          # PATCH/DELETE — Single task
 ├── documents/
 │   ├── route.ts               # GET — List documents
@@ -139,7 +129,6 @@ app/api/
 │   ├── route.ts               # GET/POST — Calendar events
 │   └── [id]/route.ts          # PATCH/DELETE
 ├── sync/
-│   ├── notion/route.ts        # POST — Sync Notion
 │   └── calendar/route.ts      # POST — Sync Calendar
 ├── dashboard/route.ts         # GET — Agency overview data
 ├── metrics/
@@ -171,14 +160,10 @@ app/api/
 │       ├── refresh/route.ts   # POST — Recalculate
 │       └── multivariate/route.ts # GET/POST — Scenario forecasts
 ├── auth/
-│   ├── login/route.ts         # POST
-│   ├── logout/route.ts        # POST
-│   ├── register/route.ts      # POST
-│   ├── refresh/route.ts       # POST
-│   └── profile/route.ts       # GET
+│   └── [...nextauth]/route.ts # NextAuth v5 handler (GET/POST)
 ├── admin/
-│   ├── users/route.ts         # GET/POST — User management
-│   ├── users/[id]/route.ts    # PATCH
+│   ├── users/route.ts         # GET — List users (DG/Minister/PS)
+│   ├── users/[id]/route.ts    # PATCH — Update role/agency/active (DG only)
 │   └── audit/route.ts         # GET — Audit logs
 ├── alerts/
 │   ├── route.ts               # GET
@@ -187,42 +172,29 @@ app/api/
     └── daily/route.ts         # POST — Daily Excel upload
 ```
 
-## Important Files to Preserve Logic From
+## Key Files
 
-### DG Command Center (copy nearly as-is)
-- `lib/briefing.ts` — Briefing generation logic
-- `lib/notion.ts` — Full Notion CRUD with task/meeting types
-- `lib/google-calendar.ts` — Calendar sync
-- `lib/document-*.ts` — All document processing (analyzer, parser, search, qa)
+### Auth
+- `lib/auth.ts` — NextAuth config + backward-compatible shims
+- `lib/auth-helpers.ts` — `requireRole()` and access control helpers
+- `middleware.ts` — Route protection + public path allowlist
+- `components/providers/SessionProvider.tsx` — Client-side session provider
+- `app/api/auth/[...nextauth]/route.ts` — NextAuth route handler
+
+### Core
+- `lib/briefing.ts` — Daily briefing generation (tasks + calendar)
+- `lib/google-calendar.ts` — Per-user Google Calendar API (server-only)
+- `lib/calendar-types.ts` — Shared calendar types (client-safe)
+- `lib/task-types.ts` — Task type definitions
+- `lib/integration-tokens.ts` — Google Calendar token storage
+- `lib/document-*.ts` — Document processing (analyzer, parser, search, qa)
 - `lib/excel-parser.ts` — PSIP Excel parsing
 - `lib/project-queries.ts` — Project database queries
-- `lib/change-detector.ts` — PSIP change tracking
+
+### Components
+- `components/layout/Sidebar.tsx` — Role-aware sidebar navigation
+- `components/layout/AppShell.tsx` — App shell with session-aware header
 - `components/briefing/BriefingDashboard.tsx` — Main briefing UI
+- `components/tasks/KanbanBoard.tsx` — Task board (Kanban)
 - `components/documents/*` — Full document vault UI
 - `components/projects/*` — Full project tracker UI
-
-### Ministry Dashboard (needs conversion to TS + Next.js patterns)
-- `backend/src/services/gplStatusParser.js` — Critical GPL DBIS parsing logic
-- `backend/src/services/gplForecasting.js` — Demand forecasting algorithms
-- `backend/src/services/gplForecastAI.js` — Claude API integration for forecasts
-- `backend/src/services/gplMultivariateForecast.js` — Scenario-based forecasting
-- `backend/src/services/gplKpiCsvParser.js` — Monthly KPI CSV parsing
-- `backend/src/services/gplScheduleParser.js` — Generation schedule parsing
-- `backend/src/services/dailyExcelParser.js` — Wide-format daily Excel parser
-- `backend/src/services/aiAnalysisService.js` — General AI analysis service
-- `backend/src/services/auditService.js` — Audit logging
-- `backend/src/services/emailService.js` — Email notifications
-- `backend/src/services/excelParser.js` — GPL Excel parsing
-- `backend/src/middleware/auth.js` — JWT authentication logic
-- `backend/src/config/database.js` — PG pool configuration
-- `backend/src/controllers/*.js` — All controller logic (converts to route handlers)
-- `frontend/src/components/agencies/GPLDetail.jsx` — Massive GPL detail component
-- `frontend/src/components/agencies/CJIADetail.jsx` — CJIA passenger analytics
-- `frontend/src/components/agencies/GWIDetail.jsx` — GWI metrics
-- `frontend/src/components/agencies/GCAADetail.jsx` — GCAA compliance
-- `frontend/src/hooks/useAgencyData.js` — Agency data fetching + transformation
-- `frontend/src/data/mockData.js` — Mock data for CJIA/GWI/GCAA
-- `frontend/src/components/summary/*` — Overview components
-- `frontend/src/components/layout/SlidePanel.jsx` — Reusable slide panel
-- `frontend/src/components/common/*` — Shared UI components
-- `frontend/src/components/GPL*.jsx` — GPL upload and chart components

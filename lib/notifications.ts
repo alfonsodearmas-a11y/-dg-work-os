@@ -1,5 +1,4 @@
 import { supabaseAdmin } from './db';
-import { fetchTasks } from './notion';
 import { fetchWeekEvents } from './google-calendar';
 
 // --- Types ---
@@ -285,13 +284,20 @@ export async function generateTaskNotifications(userId: string): Promise<{ count
   const created: Notification[] = [];
 
   try {
-    const tasks = await fetchTasks();
+    // Fetch tasks from native tasks table
+    const { data: tasks, error: tasksErr } = await supabaseAdmin
+      .from('tasks')
+      .select('id, title, agency, due_date, status')
+      .neq('status', 'completed');
+
+    if (tasksErr) throw tasksErr;
+
     const now = new Date();
     const today = now.toISOString().split('T')[0];
     const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const morningSlot = `${today}T08:00:00.000Z`;
 
-    for (const task of tasks) {
+    for (const task of tasks || []) {
       if (!task.due_date) continue;
 
       const dueDate = task.due_date.split('T')[0];
@@ -306,11 +312,11 @@ export async function generateTaskNotifications(userId: string): Promise<{ count
           icon: 'task',
           priority: 'medium',
           reference_type: 'task',
-          reference_id: task.notion_id,
-          reference_url: task.url || '/',
+          reference_id: task.id,
+          reference_url: `/tasks`,
           scheduled_for: morningSlot,
           category: 'tasks',
-          source_module: 'notion',
+          source_module: 'tasks',
         });
         if (inserted) created.push(inserted);
       }
@@ -324,11 +330,11 @@ export async function generateTaskNotifications(userId: string): Promise<{ count
           icon: 'task',
           priority: 'high',
           reference_type: 'task',
-          reference_id: task.notion_id,
-          reference_url: task.url || '/',
+          reference_id: task.id,
+          reference_url: `/tasks`,
           scheduled_for: morningSlot,
           category: 'tasks',
-          source_module: 'notion',
+          source_module: 'tasks',
         });
         if (inserted) created.push(inserted);
       }
@@ -343,11 +349,11 @@ export async function generateTaskNotifications(userId: string): Promise<{ count
           icon: 'task',
           priority: 'urgent',
           reference_type: 'task',
-          reference_id: task.notion_id,
-          reference_url: task.url || '/',
+          reference_id: task.id,
+          reference_url: `/tasks`,
           scheduled_for: morningSlot,
           category: 'tasks',
-          source_module: 'notion',
+          source_module: 'tasks',
         });
         if (inserted) created.push(inserted);
       }

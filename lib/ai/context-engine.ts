@@ -1,5 +1,4 @@
 import { supabaseAdmin } from '@/lib/db';
-import { fetchAllTasks, Task } from '@/lib/notion';
 import { fetchTodayEvents, fetchWeekEvents } from '@/lib/google-calendar';
 import { getPortfolioSummary, getDelayedProjects, PortfolioSummary, Project } from '@/lib/project-queries';
 import { CalendarEvent } from '@/lib/calendar-types';
@@ -352,7 +351,7 @@ export async function assembleRawData(): Promise<RawContextData> {
     fetchGCAALatest(),
     getPortfolioSummary(),
     getDelayedProjects(),
-    fetchAllTasks(),
+    supabaseAdmin.from('tasks').select('title, status, due_date, agency').neq('status', 'completed').then(r => r.data || []),
     fetchTodayEvents(),
     fetchWeekEvents(),
   ]);
@@ -370,7 +369,7 @@ export async function assembleRawData(): Promise<RawContextData> {
   const todayEvents = todayEventsResult.status === 'fulfilled' ? todayEventsResult.value : [];
   const weekEvents = weekEventsResult.status === 'fulfilled' ? weekEventsResult.value : [];
 
-  if (tasksResult.status === 'rejected') gaps.push('Notion tasks unavailable');
+  if (tasksResult.status === 'rejected') gaps.push('Tasks database unavailable');
   if (todayEventsResult.status === 'rejected') gaps.push('Google Calendar unavailable');
 
   const gplHealth = computeGPLHealth(gpl.summary, gpl.stations, gplKpi.kpis);
@@ -395,7 +394,7 @@ export async function assembleRawData(): Promise<RawContextData> {
     gcaa,
     portfolio,
     delayed,
-    tasks: tasks.map((t: Task) => ({
+    tasks: tasks.map((t: any) => ({
       title: t.title,
       status: t.status,
       due_date: t.due_date,
@@ -650,7 +649,7 @@ export function formatFullContext(raw: RawContextData, currentPage: string): str
       }
     }
   } else {
-    lines.push('No tasks available (Notion may be disconnected)');
+    lines.push('No tasks available');
   }
 
   // ── Calendar Section ──

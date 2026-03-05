@@ -5,7 +5,7 @@ import { supabaseAdmin } from '@/lib/db';
 
 export async function POST() {
   try {
-    // Step 1: Detect new meetings from Notion
+    // Step 1: Detect new meetings
     const { newCount, existingCount } = await syncNewMeetings();
 
     // Step 2: Process up to 3 pending meetings

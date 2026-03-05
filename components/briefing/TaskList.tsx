@@ -5,11 +5,10 @@ import { Edit2 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
 interface Task {
-  notion_id: string;
+  id: string;
   title: string;
   status: string | null;
   due_date: string | null;
-  assignee: string | null;
   agency: string | null;
   role: string | null;
   priority: string | null;
@@ -27,7 +26,7 @@ export function TaskList({ tasks, showOverdueInfo, showDueDate, onEdit }: TaskLi
     <div className="space-y-3">
       {tasks.map((task) => (
         <div
-          key={task.notion_id}
+          key={task.id}
           className={`flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors ${onEdit ? 'cursor-pointer' : ''}`}
           onClick={() => onEdit?.(task)}
         >
@@ -35,7 +34,7 @@ export function TaskList({ tasks, showOverdueInfo, showDueDate, onEdit }: TaskLi
             <input
               type="checkbox"
               className="h-4 w-4 text-blue-600 rounded border-gray-300"
-              checked={task.status === 'Done'}
+              checked={task.status === 'completed'}
               readOnly
             />
           </div>
@@ -50,14 +49,14 @@ export function TaskList({ tasks, showOverdueInfo, showDueDate, onEdit }: TaskLi
               {task.role && (
                 <Badge variant="default">{task.role}</Badge>
               )}
-              {task.priority === 'High' && (
-                <Badge variant="danger">High Priority</Badge>
+              {(task.priority === 'urgent' || task.priority === 'high') && (
+                <Badge variant="danger">{task.priority === 'urgent' ? 'Urgent' : 'High'}</Badge>
               )}
-              {task.priority === 'Medium' && (
+              {task.priority === 'medium' && (
                 <Badge variant="warning">Medium</Badge>
               )}
-              {task.status && task.status !== 'To do' && (
-                <Badge variant={task.status === 'Done' ? 'success' : 'default'}>{task.status}</Badge>
+              {task.status && task.status !== 'not_started' && (
+                <Badge variant={task.status === 'completed' ? 'success' : 'default'}>{task.status.replace('_', ' ')}</Badge>
               )}
             </div>
           </div>

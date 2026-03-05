@@ -1,76 +1,99 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchAllTasks, createTask, Task } from '@/lib/notion';
+import { requireRole, canAssignTasks } from '@/lib/auth-helpers';
+import { supabaseAdmin } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-export type TasksByStatus = {
-  'To Do': Task[];
-  'In Progress': Task[];
-  'Waiting': Task[];
-  'Done': Task[];
-};
+export async function GET(request: NextRequest) {
+  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (result instanceof NextResponse) return result;
+  const { session } = result;
 
-export async function GET() {
-  try {
-    const tasks = await fetchAllTasks();
+  const { searchParams } = new URL(request.url);
+  const status = searchParams.get('status');
+  const agency = searchParams.get('agency');
+  const overdue = searchParams.get('overdue');
 
-    // Group by status
-    const grouped: TasksByStatus = {
-      'To Do': [],
-      'In Progress': [],
-      'Waiting': [],
-      'Done': []
-    };
+  let query = supabaseAdmin
+    .from('tasks')
+    .select('*')
+    .order('due_date', { ascending: true });
 
-    for (const task of tasks) {
-      if (grouped[task.status]) {
-        grouped[task.status].push(task);
-      } else {
-        grouped['To Do'].push(task);
-      }
-    }
-
-    return NextResponse.json({
-      tasks: grouped,
-      lastSync: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Fetch tasks error:', error);
-    // Return empty structure so the page still renders
-    return NextResponse.json({
-      tasks: { 'To Do': [], 'In Progress': [], 'Waiting': [], 'Done': [] },
-      lastSync: new Date().toISOString(),
-      _error: 'Notion API unavailable'
-    });
+  // Scope by role
+  if (session.user.role === 'officer') {
+    query = query.eq('owner_user_id', session.user.id);
+  } else if (session.user.role === 'agency_admin') {
+    query = query.eq('agency', session.user.agency);
   }
+
+  if (status) query = query.eq('status', status);
+  if (agency) query = query.eq('agency', agency);
+  if (overdue === 'true') {
+    const today = new Date().toISOString().split('T')[0];
+    query = query.lt('due_date', today).neq('status', 'completed');
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Group by status for kanban view
+  const grouped = {
+    not_started: [] as any[],
+    in_progress: [] as any[],
+    blocked: [] as any[],
+    completed: [] as any[],
+  };
+
+  for (const task of data || []) {
+    const col = grouped[task.status as keyof typeof grouped];
+    if (col) col.push(task);
+    else grouped.not_started.push(task);
+  }
+
+  return NextResponse.json({
+    tasks: grouped,
+    lastSync: new Date().toISOString(),
+  });
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
+  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (result instanceof NextResponse) return result;
+  const { session } = result;
 
-    if (!body.title) {
-      return NextResponse.json(
-        { error: 'Title is required' },
-        { status: 400 }
-      );
-    }
+  const body = await request.json();
 
-    const task = await createTask({
+  if (!body.title) {
+    return NextResponse.json({ error: 'Title is required' }, { status: 400 });
+  }
+
+  // Determine owner
+  let ownerId = session.user.id;
+  if (body.assignee_id && canAssignTasks(session.user.role)) {
+    ownerId = body.assignee_id;
+  }
+
+  const { data: task, error } = await supabaseAdmin
+    .from('tasks')
+    .insert({
       title: body.title,
-      status: body.status || 'To Do',
+      description: body.description || null,
+      status: body.status || 'not_started',
+      priority: body.priority || 'medium',
       due_date: body.due_date || null,
       agency: body.agency || null,
       role: body.role || null,
-      priority: body.priority || null
-    });
+      owner_user_id: ownerId,
+      assigned_by_user_id: body.assignee_id && canAssignTasks(session.user.role) ? session.user.id : null,
+    })
+    .select()
+    .single();
 
-    return NextResponse.json({ task });
-  } catch (error) {
-    console.error('Create task error:', error);
-    return NextResponse.json(
-      { error: 'Failed to create task' },
-      { status: 500 }
-    );
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  return NextResponse.json({ task });
 }

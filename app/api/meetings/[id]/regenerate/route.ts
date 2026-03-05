@@ -9,7 +9,7 @@ export async function POST(
   try {
     const { id } = await params;
 
-    // Unlink existing action items (don't delete the Notion tasks, just unlink)
+    // Unlink existing action items (don't delete the tasks, just unlink)
     await unlinkActionItems(id);
 
     // Regenerate minutes

@@ -1,40 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import { supabaseAdmin } from '@/lib/db';
 import { generateAll } from '@/lib/notifications';
 import { sendPushForNotifications } from '@/lib/push';
 
 export async function POST(request: NextRequest) {
-  // Allow if: (1) cron secret matches, (2) no cron secret configured, or (3) has valid dg-auth cookie
+  // Auth: either cron secret OR authenticated session
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
-  const hasDgAuth = !!request.cookies.get('dg-auth')?.value;
+  const session = await auth();
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}` && !hasDgAuth) {
+  const isCron = cronSecret && authHeader === `Bearer ${cronSecret}`;
+  const isAuthenticated = !!session?.user?.id;
+
+  if (!isCron && !isAuthenticated) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const userId = 'dg';
-    const result = await generateAll(userId);
+    // For cron: generate for ALL active users; for session: just the current user
+    let userIds: string[];
 
-    // Send push notifications for newly created notifications whose scheduled_for <= now
-    let pushSent = 0;
-    const now = new Date();
-    const pushable = result.allNotifications.filter(n => new Date(n.scheduled_for) <= now);
-    if (pushable.length > 0) {
-      pushSent = await sendPushForNotifications(pushable);
+    if (isCron) {
+      const { data: users } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('is_active', true);
+      userIds = (users || []).map(u => u.id);
+    } else {
+      userIds = [session!.user.id];
+    }
+
+    let totalGenerated = 0;
+    let totalPushSent = 0;
+
+    for (const userId of userIds) {
+      const result = await generateAll(userId);
+      totalGenerated += result.allNotifications.length;
+
+      const now = new Date();
+      const pushable = result.allNotifications.filter(n => new Date(n.scheduled_for) <= now);
+      if (pushable.length > 0) {
+        totalPushSent += await sendPushForNotifications(pushable);
+      }
     }
 
     return NextResponse.json({
       generated: {
-        meetings: result.meetings,
-        tasks: result.tasks,
-        minutes: result.minutes,
-        projects: result.projects,
-        kpi: result.kpi,
-        oversight: result.oversight,
-        taskBridge: result.taskBridge,
-        total: result.allNotifications.length,
-        pushSent,
+        users: userIds.length,
+        total: totalGenerated,
+        pushSent: totalPushSent,
       },
     });
   } catch (err) {

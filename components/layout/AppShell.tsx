@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Sidebar } from './Sidebar';
 import { SidebarProvider } from './SidebarContext';
 import { MobileMenuButton } from './MobileMenuButton';
@@ -15,9 +16,23 @@ import { PushPromptBanner } from '@/components/notifications/PushPromptBanner';
 import { RecordingProvider } from '@/components/recording/RecordingProvider';
 import { RecordingIndicator } from '@/components/recording/RecordingIndicator';
 
+const ROLE_LABELS: Record<string, string> = {
+  dg: 'Director General',
+  minister: 'Minister',
+  ps: 'Permanent Secretary',
+  agency_admin: 'Agency Admin',
+  officer: 'Officer',
+};
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const isBareLayout = pathname === '/login' || pathname.startsWith('/upload');
+
+  const userName = session?.user?.name || 'User';
+  const userRole = (session?.user as { role?: string })?.role || 'officer';
+  const roleLabel = ROLE_LABELS[userRole] || userRole;
+  const initials = userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   // Login and upload portal pages get bare layout — no sidebar, header, or bottom nav
   if (isBareLayout) {
@@ -48,7 +63,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {/* Desktop: full greeting */}
                 <div className="hidden md:block">
                   <h2 className="text-white/80 text-sm font-light tracking-wide">Welcome back,</h2>
-                  <p className="text-[#d4af37] font-semibold tracking-tight">Director General</p>
+                  <p className="text-[#d4af37] font-semibold tracking-tight">{roleLabel}</p>
                 </div>
                 {/* Mobile: compact title */}
                 <span className="md:hidden text-[#d4af37] font-semibold text-sm truncate">DG Work OS</span>
@@ -58,7 +73,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <HeaderDate />
                 <NotificationBell />
                 <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center flex-shrink-0">
-                  <span className="text-[#0a1628] font-bold text-xs md:text-sm">AD</span>
+                  <span className="text-[#0a1628] font-bold text-xs md:text-sm">{initials}</span>
                 </div>
               </div>
             </div>

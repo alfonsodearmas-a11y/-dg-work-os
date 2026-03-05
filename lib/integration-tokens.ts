@@ -2,7 +2,6 @@ import { supabaseAdmin } from './db';
 
 const TABLE = 'integration_tokens';
 const PROVIDER = 'google_calendar';
-const USER_ID = 'dg';
 
 export interface GoogleCalendarToken {
   refresh_token: string;
@@ -21,11 +20,12 @@ export interface GoogleConnectionStatus {
   connected_at?: string | null;
 }
 
-export async function getGoogleCalendarToken(): Promise<GoogleCalendarToken | null> {
+export async function getGoogleCalendarToken(userId?: string): Promise<GoogleCalendarToken | null> {
+  const uid = userId || 'dg';
   const { data, error } = await supabaseAdmin
     .from(TABLE)
     .select('refresh_token, access_token, token_expiry, calendar_id, account_email, scopes, connected_at')
-    .eq('user_id', USER_ID)
+    .eq('user_id', uid)
     .eq('provider', PROVIDER)
     .single();
 
@@ -40,12 +40,13 @@ export async function upsertGoogleCalendarToken(token: {
   calendar_id?: string;
   account_email?: string;
   scopes?: string;
-}): Promise<void> {
+}, userId?: string): Promise<void> {
+  const uid = userId || 'dg';
   const { error } = await supabaseAdmin
     .from(TABLE)
     .upsert(
       {
-        user_id: USER_ID,
+        user_id: uid,
         provider: PROVIDER,
         refresh_token: token.refresh_token,
         access_token: token.access_token || null,
@@ -64,11 +65,12 @@ export async function upsertGoogleCalendarToken(token: {
   }
 }
 
-export async function deleteGoogleCalendarToken(): Promise<void> {
+export async function deleteGoogleCalendarToken(userId?: string): Promise<void> {
+  const uid = userId || 'dg';
   const { error } = await supabaseAdmin
     .from(TABLE)
     .delete()
-    .eq('user_id', USER_ID)
+    .eq('user_id', uid)
     .eq('provider', PROVIDER);
 
   if (error) {
@@ -77,11 +79,12 @@ export async function deleteGoogleCalendarToken(): Promise<void> {
   }
 }
 
-export async function getGoogleConnectionStatus(): Promise<GoogleConnectionStatus> {
+export async function getGoogleConnectionStatus(userId?: string): Promise<GoogleConnectionStatus> {
+  const uid = userId || 'dg';
   const { data, error } = await supabaseAdmin
     .from(TABLE)
     .select('account_email, calendar_id, connected_at')
-    .eq('user_id', USER_ID)
+    .eq('user_id', uid)
     .eq('provider', PROVIDER)
     .single();
 

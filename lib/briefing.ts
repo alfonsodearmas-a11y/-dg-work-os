@@ -1,14 +1,14 @@
-import { fetchTasks } from './notion';
+import { supabaseAdmin } from './db';
 import { fetchTodayEvents, fetchWeekEvents, fetchTomorrowEvents, CalendarEvent, classifyCalendarError } from './google-calendar';
 import { calculateDayStats } from './calendar-utils';
 import { isToday, isPast, isWithinInterval, addDays } from 'date-fns';
+import type { Role } from './auth';
 
 interface Task {
-  notion_id: string;
+  id: string;
   title: string;
   status: string | null;
   due_date: string | null;
-  assignee: string | null;
   agency: string | null;
   role: string | null;
   priority: string | null;
@@ -46,13 +46,29 @@ interface Briefing {
   generated_at: string;
 }
 
-export async function generateBriefing(): Promise<Briefing> {
-  // Fetch independently — don't let one failing service break the whole briefing
+async function fetchTasks(userId: string, role: Role): Promise<Task[]> {
+  let query = supabaseAdmin
+    .from('tasks')
+    .select('id, title, status, due_date, agency, role, priority, created_at')
+    .neq('status', 'completed')
+    .order('due_date', { ascending: true });
+
+  // Scope by role
+  if (role === 'agency_admin' || role === 'officer') {
+    query = query.eq('owner_user_id', userId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []) as Task[];
+}
+
+export async function generateBriefing(userId: string, role: Role): Promise<Briefing> {
   const [tasksResult, todayResult, weekResult, tomorrowResult] = await Promise.allSettled([
-    fetchTasks(),
-    fetchTodayEvents(),
-    fetchWeekEvents(),
-    fetchTomorrowEvents()
+    fetchTasks(userId, role),
+    fetchTodayEvents(userId),
+    fetchWeekEvents(userId),
+    fetchTomorrowEvents(userId)
   ]);
 
   const tasks = tasksResult.status === 'fulfilled' ? tasksResult.value : [];
@@ -60,20 +76,17 @@ export async function generateBriefing(): Promise<Briefing> {
   const weekEvents = weekResult.status === 'fulfilled' ? weekResult.value : [];
   const tomorrowEvents = tomorrowResult.status === 'fulfilled' ? tomorrowResult.value : [];
 
-  // Collect error details for frontend
   const _errors: Briefing['_errors'] = {};
 
   if (tasksResult.status === 'rejected') {
-    console.error('Notion tasks fetch failed:', tasksResult.reason);
-    const msg = tasksResult.reason?.message || 'Notion API unavailable';
-    _errors.tasks = { type: msg.includes('Unauthorized') ? 'token_expired' : 'unknown', message: msg };
+    const msg = tasksResult.reason?.message || 'Tasks database unavailable';
+    _errors.tasks = { type: 'unknown', message: msg };
   }
 
   const calendarFailed = todayResult.status === 'rejected' || weekResult.status === 'rejected';
   if (calendarFailed) {
     const reason = todayResult.status === 'rejected' ? todayResult.reason : weekResult.status === 'rejected' ? weekResult.reason : null;
     if (reason) {
-      console.error('Calendar fetch failed:', reason);
       const classified = classifyCalendarError(reason);
       _errors.calendar = classified;
     }
@@ -82,7 +95,6 @@ export async function generateBriefing(): Promise<Briefing> {
   const now = new Date();
   const weekFromNow = addDays(now, 7);
 
-  // Categorize tasks
   const overdue = tasks.filter(t =>
     t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date))
   ).sort((a, b) =>
@@ -102,13 +114,8 @@ export async function generateBriefing(): Promise<Briefing> {
 
   const noDueDate = tasks.filter(t => !t.due_date);
 
-  // Group by role
   const byRole = groupBy(tasks, 'role');
-
-  // Group by agency
   const byAgency = groupBy(tasks, 'agency');
-
-  // Calculate day stats
   const dayStats = calculateDayStats(todayEvents);
 
   return {

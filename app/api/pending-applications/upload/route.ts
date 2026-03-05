@@ -6,6 +6,7 @@ import { createSnapshot } from '@/lib/pending-applications-snapshots';
 import { processUploadDiff } from '@/lib/service-connection-diff';
 import type { PendingRecord } from '@/lib/pending-applications-types';
 import { classifyTrack } from '@/lib/service-connection-track';
+import { auth } from '@/lib/auth';
 
 export const maxDuration = 60; // Vercel: allow up to 60s for large uploads
 
@@ -86,16 +87,23 @@ async function insertCompletedConnections(records: PendingRecord[], dataAsOf: st
 }
 
 /**
- * Validate upload authorization. Returns the locked agency (for upload-auth)
- * or null (for DG access, meaning any agency is allowed).
+ * Validate upload authorization. Returns the locked agency (for upload-auth portal)
+ * or null (for authenticated users with DG/minister/ps role, meaning any agency is allowed).
  * Throws an object with { status, error } if unauthorized.
  */
-function validateAuth(request: NextRequest): string | null {
-  // DG is always authorized (middleware already validates dg-auth cookie)
-  const dgAuth = request.cookies.get('dg-auth')?.value;
-  if (dgAuth) return null; // no agency lock
+async function validateAuth(request: NextRequest): Promise<string | null> {
+  // Check NextAuth session — authenticated users
+  const session = await auth();
+  if (session?.user?.id) {
+    const role = session.user.role;
+    // DG/Minister/PS can upload for any agency
+    if (['dg', 'minister', 'ps'].includes(role)) return null;
+    // Agency users can upload for their agency
+    if (session.user.agency) return session.user.agency.toUpperCase();
+    throw { status: 403, error: 'Your account does not have upload access' };
+  }
 
-  // Check upload-auth cookie for agency staff
+  // Check upload-auth cookie for agency staff (public upload portal)
   const uploadAuth = request.cookies.get('upload-auth')?.value;
   const uploadAgency = request.cookies.get('upload-agency')?.value;
 
@@ -126,7 +134,7 @@ export async function POST(request: NextRequest) {
     // Auth check
     let lockedAgency: string | null;
     try {
-      lockedAgency = validateAuth(request);
+      lockedAgency = await validateAuth(request);
     } catch (authError: unknown) {
       const err = authError as { status: number; error: string };
       return NextResponse.json({ error: err.error }, { status: err.status });

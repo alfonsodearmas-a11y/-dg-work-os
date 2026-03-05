@@ -21,14 +21,24 @@ import {
   Users,
   DollarSign,
   Eye,
+  CheckSquare,
 } from 'lucide-react';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
 import { useSidebar } from './SidebarContext';
+
+const ROLE_LABELS: Record<string, string> = {
+  dg: 'Director General',
+  minister: 'Minister',
+  ps: 'Permanent Secretary',
+  agency_admin: 'Agency Admin',
+  officer: 'Officer',
+};
 
 const mainNavItems = [
   { href: '/', label: 'Daily Briefing', icon: LayoutDashboard },
   { href: '/intel', label: 'Agency Intel', icon: Activity },
+  { href: '/tasks', label: 'Task Board', icon: CheckSquare },
   { href: '/oversight', label: 'Oversight', icon: Eye },
   { href: '/budget', label: 'Budget 2026', icon: DollarSign },
   { href: '/meetings', label: 'Meetings', icon: BookOpen },
@@ -48,19 +58,32 @@ const adminItems = [
   { href: '/admin', label: 'Settings', icon: Settings },
 ];
 
+// Roles that can see the admin section
+const ADMIN_ROLES = ['dg', 'minister', 'ps'];
+// Roles that can see the full agency list (non-agency users see all; agency users see only theirs)
+const MINISTRY_ROLES = ['dg', 'minister', 'ps'];
+
 export function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
+  const { data: session } = useSession();
   const [agenciesOpen, setAgenciesOpen] = useState(true);
   const { mobileOpen, setMobileOpen } = useSidebar();
 
-  const handleSignOut = async () => {
-    try {
-      await fetch('/api/auth/gate/logout', { method: 'POST' });
-    } catch {
-      // Proceed with redirect even if logout API fails
-    }
-    router.push('/login');
+  const userRole = (session?.user as { role?: string })?.role || 'officer';
+  const userAgency = (session?.user as { agency?: string | null })?.agency || null;
+  const userName = session?.user?.name || 'User';
+  const roleLabel = ROLE_LABELS[userRole] || userRole;
+
+  const showAdmin = ADMIN_ROLES.includes(userRole);
+  const isMinistry = MINISTRY_ROLES.includes(userRole);
+
+  // Agency users only see their own agency in the sidebar
+  const visibleAgencies = isMinistry
+    ? agencies
+    : agencies.filter(a => a.code === userAgency?.toLowerCase());
+
+  const handleSignOut = () => {
+    signOut({ callbackUrl: '/login' });
   };
 
   const allNavItems = [...mainNavItems, ...adminItems];
@@ -68,7 +91,6 @@ export function Sidebar() {
     if (href === '/') return pathname === '/';
     if (href === '/admin') return pathname === '/admin';
     if (!pathname.startsWith(href)) return false;
-    // Check that no more-specific sibling nav item also matches
     return !allNavItems.some(
       item => item.href !== href && item.href.startsWith(href) && pathname.startsWith(item.href),
     );
@@ -108,7 +130,7 @@ export function Sidebar() {
             </div>
             <div>
               <h1 className="font-bold text-white text-base leading-tight tracking-tight">Work <span className="text-[#d4af37]">OS</span></h1>
-              <p className="text-[#64748b] text-[10px] font-medium tracking-wide uppercase">Director General</p>
+              <p className="text-[#64748b] text-[10px] font-medium tracking-wide uppercase">{roleLabel}</p>
             </div>
           </Link>
           <button
@@ -143,68 +165,76 @@ export function Sidebar() {
           })}
 
           {/* Agencies Section */}
-          <div className="mt-8">
-            <button
-              onClick={() => setAgenciesOpen(!agenciesOpen)}
-              className="w-full px-4 mb-2 flex items-center justify-between"
-            >
-              <span className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">Agencies</span>
-              {agenciesOpen ? (
-                <ChevronDown className="h-3 w-3 text-[#64748b]" />
-              ) : (
-                <ChevronRight className="h-3 w-3 text-[#64748b]" />
-              )}
-            </button>
-            {agenciesOpen && (
-              <div className="space-y-0.5">
-                {agencies.map((agency) => {
-                  const Icon = agency.icon;
-                  const href = `/intel/${agency.code}`;
-                  const active = pathname.startsWith(href);
-                  return (
-                    <Link
-                      key={agency.code}
-                      href={href}
-                      onClick={handleNavClick}
-                      className={`sidebar-item ${active ? 'active' : ''}`}
-                    >
-                      <Icon className={`h-4 w-4 ${active ? 'text-[#d4af37]' : ''}`} />
-                      <span className="text-[15px]">{agency.label}</span>
-                      <span className="ml-auto text-[10px] text-[#64748b] hidden group-hover:inline">{agency.name}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Admin Section */}
-          <div className="mt-8 px-4 mb-2">
-            <span className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">Admin</span>
-          </div>
-          {adminItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={handleNavClick}
-                className={`sidebar-item ${active ? 'active' : ''}`}
+          {visibleAgencies.length > 0 && (
+            <div className="mt-8">
+              <button
+                onClick={() => setAgenciesOpen(!agenciesOpen)}
+                className="w-full px-4 mb-2 flex items-center justify-between"
               >
-                <Icon className={active ? 'text-[#d4af37]' : ''} />
-                <span className="text-[15px]">{item.label}</span>
-              </Link>
-            );
-          })}
+                <span className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">Agencies</span>
+                {agenciesOpen ? (
+                  <ChevronDown className="h-3 w-3 text-[#64748b]" />
+                ) : (
+                  <ChevronRight className="h-3 w-3 text-[#64748b]" />
+                )}
+              </button>
+              {agenciesOpen && (
+                <div className="space-y-0.5">
+                  {visibleAgencies.map((agency) => {
+                    const Icon = agency.icon;
+                    const href = `/intel/${agency.code}`;
+                    const active = pathname.startsWith(href);
+                    return (
+                      <Link
+                        key={agency.code}
+                        href={href}
+                        onClick={handleNavClick}
+                        className={`sidebar-item ${active ? 'active' : ''}`}
+                      >
+                        <Icon className={`h-4 w-4 ${active ? 'text-[#d4af37]' : ''}`} />
+                        <span className="text-[15px]">{agency.label}</span>
+                        <span className="ml-auto text-[10px] text-[#64748b] hidden group-hover:inline">{agency.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Admin Section (DG, Minister, PS only) */}
+          {showAdmin && (
+            <>
+              <div className="mt-8 px-4 mb-2">
+                <span className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">Admin</span>
+              </div>
+              {adminItems.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={handleNavClick}
+                    className={`sidebar-item ${active ? 'active' : ''}`}
+                  >
+                    <Icon className={active ? 'text-[#d4af37]' : ''} />
+                    <span className="text-[15px]">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </>
+          )}
         </nav>
 
         {/* Footer */}
         <div className="p-4 border-t border-[#2d3a52]/50 space-y-3">
           <div className="glass-card p-4">
-            <p className="text-xs text-[#64748b] mb-1">Director General</p>
-            <p className="text-sm font-medium text-white">Ministry of Public Utilities</p>
-            <p className="text-xs text-[#d4af37] mt-1">& Aviation</p>
+            <p className="text-sm font-medium text-white truncate">{userName}</p>
+            <p className="text-xs text-[#d4af37] mt-0.5">{roleLabel}</p>
+            {userAgency && (
+              <p className="text-xs text-[#64748b] mt-0.5">{userAgency}</p>
+            )}
           </div>
           <button
             onClick={handleSignOut}

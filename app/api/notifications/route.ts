@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 import {
   getNotifications,
   getUnreadCount,
@@ -11,8 +12,11 @@ import {
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+    const userId = session?.user?.id;
+    if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+
     const { searchParams } = request.nextUrl;
-    const userId = searchParams.get('user_id') || 'dg';
     const unreadOnly = searchParams.get('unread_only') === 'true';
     const category = searchParams.get('category') || undefined;
     const actionRequiredOnly = searchParams.get('action_required') === 'true';
@@ -33,8 +37,12 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const session = await auth();
+    const userId = session?.user?.id;
+    if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+
     const body = await request.json();
-    const { action, id, user_id } = body;
+    const { action, id } = body;
 
     switch (action) {
       case 'mark_read':
@@ -42,14 +50,14 @@ export async function PATCH(request: NextRequest) {
         await markAsRead(id);
         break;
       case 'mark_all_read':
-        await markAllRead(user_id || 'dg');
+        await markAllRead(userId);
         break;
       case 'dismiss':
         if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
         await dismissNotification(id);
         break;
       case 'dismiss_all':
-        await dismissAll(user_id || 'dg');
+        await dismissAll(userId);
         break;
       case 'delivered':
         if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });

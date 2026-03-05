@@ -2,7 +2,7 @@
 
 import {
   Plus, ArrowRight, MessageSquare, Clock, AlertTriangle,
-  CheckCircle, XCircle, UserPlus, Calendar, Globe
+  CheckCircle, XCircle, UserPlus, Calendar
 } from 'lucide-react';
 
 const ACTION_CONFIG: Record<string, { icon: React.ElementType; color: string; label: string }> = {
@@ -16,7 +16,6 @@ const ACTION_CONFIG: Record<string, { icon: React.ElementType; color: string; la
   extension_approved: { icon: CheckCircle, color: 'text-green-400', label: 'Extension approved' },
   extension_rejected: { icon: XCircle, color: 'text-red-400', label: 'Extension rejected' },
   evidence_added: { icon: Plus, color: 'text-green-400', label: 'Evidence added' },
-  notion_synced: { icon: Globe, color: 'text-[#d4af37]', label: 'Synced to Notion' },
 };
 
 interface Activity {

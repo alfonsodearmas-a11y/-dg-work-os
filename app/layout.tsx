@@ -3,6 +3,7 @@ import { Outfit, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
 import { PWAWrapper } from "@/components/pwa/PWAWrapper";
+import { AuthSessionProvider } from "@/components/providers/SessionProvider";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -48,9 +49,11 @@ export default function RootLayout({
         <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" href="/splash/splash-750x1334.png" />
       </head>
       <body suppressHydrationWarning className={`${outfit.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
-        <PWAWrapper>
-          <AppShell>{children}</AppShell>
-        </PWAWrapper>
+        <AuthSessionProvider>
+          <PWAWrapper>
+            <AppShell>{children}</AppShell>
+          </PWAWrapper>
+        </AuthSessionProvider>
       </body>
     </html>
   );

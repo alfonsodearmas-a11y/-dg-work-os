@@ -13,44 +13,53 @@ export { detectEventCategory } from './calendar-types';
 
 import type { CalendarAttendee, ConferenceData, CalendarEvent, CreateEventInput, UpdateEventInput } from './calendar-types';
 
-// --- Lazy-init OAuth2 client with DB token support ---
+// --- Per-user OAuth2 client cache ---
 
-let cachedOAuth2Client: InstanceType<typeof google.auth.OAuth2> | null = null;
-let cachedCalendar: calendar_v3.Calendar | null = null;
-let cachedCalendarId: string | null = null;
-let cacheTimestamp = 0;
+interface UserCache {
+  oAuth2Client: InstanceType<typeof google.auth.OAuth2>;
+  calendar: calendar_v3.Calendar;
+  calendarId: string;
+  tokenExpiryMs: number | null;
+  timestamp: number;
+}
+
+const userCaches = new Map<string, UserCache>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
+const DEFAULT_USER = '__default__';
 
 /** Invalidate cached clients — called after connect/disconnect */
-export function invalidateCalendarClientCache(): void {
-  cachedOAuth2Client = null;
-  cachedCalendar = null;
-  cachedCalendarId = null;
-  cacheTimestamp = 0;
-  tokenExpiryMs = null;
-}
-
-function isCacheValid(): boolean {
-  return cachedOAuth2Client !== null && (Date.now() - cacheTimestamp) < CACHE_TTL_MS;
-}
-
-/** Get OAuth2 client, checking DB token first then env var fallback */
-async function getOAuth2Client(): Promise<InstanceType<typeof google.auth.OAuth2>> {
-  if (isCacheValid() && cachedOAuth2Client) {
-    return cachedOAuth2Client;
+export function invalidateCalendarClientCache(userId?: string): void {
+  if (userId) {
+    userCaches.delete(userId);
+  } else {
+    userCaches.clear();
   }
+}
+
+function getUserCache(userId: string): UserCache | null {
+  const cache = userCaches.get(userId);
+  if (cache && (Date.now() - cache.timestamp) < CACHE_TTL_MS) {
+    return cache;
+  }
+  return null;
+}
+
+/** Get OAuth2 client for a specific user */
+async function getOAuth2Client(userId?: string): Promise<InstanceType<typeof google.auth.OAuth2>> {
+  const uid = userId || DEFAULT_USER;
+  const cached = getUserCache(uid);
+  if (cached) return cached.oAuth2Client;
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
-  // Try DB token first
   let refreshToken: string | undefined;
   let calendarId: string | undefined;
 
   try {
-    // Dynamic import to avoid circular dependency at module load time
     const { getGoogleCalendarToken } = await import('./integration-tokens');
-    const dbToken = await getGoogleCalendarToken();
+    const dbToken = await getGoogleCalendarToken(userId);
     if (dbToken) {
       refreshToken = dbToken.refresh_token;
       calendarId = dbToken.calendar_id || undefined;
@@ -59,7 +68,6 @@ async function getOAuth2Client(): Promise<InstanceType<typeof google.auth.OAuth2
     // DB not available — fall through to env var
   }
 
-  // Fall back to env var
   if (!refreshToken) {
     refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
   }
@@ -69,81 +77,87 @@ async function getOAuth2Client(): Promise<InstanceType<typeof google.auth.OAuth2
     client.setCredentials({ refresh_token: refreshToken });
   }
 
-  cachedOAuth2Client = client;
-  cachedCalendarId = calendarId || process.env.GOOGLE_CALENDAR_ID || 'primary';
-  cacheTimestamp = Date.now();
-  tokenExpiryMs = null; // Reset expiry tracking for new client
+  const cal = google.calendar({ version: 'v3', auth: client });
+  const cid = calendarId || process.env.GOOGLE_CALENDAR_ID || 'primary';
+
+  userCaches.set(uid, {
+    oAuth2Client: client,
+    calendar: cal,
+    calendarId: cid,
+    tokenExpiryMs: null,
+    timestamp: Date.now(),
+  });
 
   return client;
 }
 
 /** Get calendar API client */
-async function getCalendar(): Promise<calendar_v3.Calendar> {
-  if (isCacheValid() && cachedCalendar) {
-    return cachedCalendar;
-  }
+async function getCalendar(userId?: string): Promise<calendar_v3.Calendar> {
+  const uid = userId || DEFAULT_USER;
+  const cached = getUserCache(uid);
+  if (cached) return cached.calendar;
 
-  const auth = await getOAuth2Client();
-  cachedCalendar = google.calendar({ version: 'v3', auth });
-  return cachedCalendar;
+  await getOAuth2Client(userId);
+  return userCaches.get(uid)!.calendar;
 }
 
-/** Get the calendar ID (DB → env var → 'primary') */
-async function getCalendarId(): Promise<string> {
-  if (isCacheValid() && cachedCalendarId) {
-    return cachedCalendarId;
-  }
+/** Get the calendar ID */
+async function getCalendarId(userId?: string): Promise<string> {
+  const uid = userId || DEFAULT_USER;
+  const cached = getUserCache(uid);
+  if (cached) return cached.calendarId;
 
-  // getOAuth2Client also populates cachedCalendarId
-  await getOAuth2Client();
-  return cachedCalendarId || 'primary';
+  await getOAuth2Client(userId);
+  return userCaches.get(uid)!.calendarId;
 }
 
 // --- Token Management ---
-let tokenExpiryMs: number | null = null;
-const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
-async function ensureFreshToken(): Promise<void> {
-  const client = await getOAuth2Client();
+async function ensureFreshToken(userId?: string): Promise<void> {
+  const uid = userId || DEFAULT_USER;
+  const client = await getOAuth2Client(userId);
+  const cache = userCaches.get(uid)!;
   const now = Date.now();
 
-  if (tokenExpiryMs && now > tokenExpiryMs - TOKEN_REFRESH_BUFFER_MS) {
-    await forceTokenRefresh();
+  if (cache.tokenExpiryMs && now > cache.tokenExpiryMs - TOKEN_REFRESH_BUFFER_MS) {
+    await forceTokenRefresh(userId);
     return;
   }
 
-  if (tokenExpiryMs === null) {
+  if (cache.tokenExpiryMs === null) {
     const credentials = client.credentials;
     if (credentials.expiry_date) {
-      tokenExpiryMs = credentials.expiry_date;
-      if (now > tokenExpiryMs - TOKEN_REFRESH_BUFFER_MS) {
-        await forceTokenRefresh();
+      cache.tokenExpiryMs = credentials.expiry_date;
+      if (now > cache.tokenExpiryMs - TOKEN_REFRESH_BUFFER_MS) {
+        await forceTokenRefresh(userId);
       }
     }
   }
 }
 
-async function forceTokenRefresh(): Promise<void> {
+async function forceTokenRefresh(userId?: string): Promise<void> {
+  const uid = userId || DEFAULT_USER;
   try {
-    const client = await getOAuth2Client();
+    const client = await getOAuth2Client(userId);
     const { credentials } = await client.refreshAccessToken();
     client.setCredentials(credentials);
-    tokenExpiryMs = credentials.expiry_date ?? null;
+    const cache = userCaches.get(uid);
+    if (cache) cache.tokenExpiryMs = credentials.expiry_date ?? null;
   } catch (err) {
     console.error('[Calendar] Token refresh failed:', err);
     throw err;
   }
 }
 
-async function withTokenRetry<T>(fn: () => Promise<T>): Promise<T> {
-  await ensureFreshToken();
+async function withTokenRetry<T>(fn: () => Promise<T>, userId?: string): Promise<T> {
+  await ensureFreshToken(userId);
   try {
     return await fn();
   } catch (err) {
     const classified = classifyCalendarError(err);
     if (classified.type === 'token_expired' || classified.type === 'invalid_credentials') {
       try {
-        await forceTokenRefresh();
+        await forceTokenRefresh(userId);
         return await fn();
       } catch (retryErr) {
         throw retryErr;
@@ -162,12 +176,12 @@ export interface CalendarConnectionStatus {
   authStatus?: 'connected' | 'reauth_required' | 'not_configured';
 }
 
-export async function testCalendarConnection(): Promise<CalendarConnectionStatus> {
+export async function testCalendarConnection(userId?: string): Promise<CalendarConnectionStatus> {
   // Check if any token source is available (DB or env var)
   let hasToken = false;
   try {
     const { getGoogleCalendarToken } = await import('./integration-tokens');
-    const dbToken = await getGoogleCalendarToken();
+    const dbToken = await getGoogleCalendarToken(userId);
     if (dbToken) hasToken = true;
   } catch {
     // DB unavailable
@@ -180,15 +194,15 @@ export async function testCalendarConnection(): Promise<CalendarConnectionStatus
   }
 
   try {
-    const cal = await getCalendar();
-    const calId = await getCalendarId();
+    const cal = await getCalendar(userId);
+    const calId = await getCalendarId(userId);
     await withTokenRetry(() =>
       cal.events.list({
         calendarId: calId,
         maxResults: 1,
         timeMin: new Date().toISOString(),
       })
-    );
+    , userId);
     return { ok: true, authStatus: 'connected' };
   } catch (err: unknown) {
     const error = err as { code?: number; message?: string; response?: { status?: number } };
@@ -279,15 +293,15 @@ function transformEvent(event: calendar_v3.Schema$Event): CalendarEvent {
 
 // --- Fetch Functions (all wrapped with automatic token retry) ---
 
-export async function fetchTodayEvents(): Promise<CalendarEvent[]> {
+export async function fetchTodayEvents(userId?: string): Promise<CalendarEvent[]> {
   const now = new Date();
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);
   const endOfDay = new Date(now);
   endOfDay.setHours(23, 59, 59, 999);
 
-  const cal = await getCalendar();
-  const calId = await getCalendarId();
+  const cal = await getCalendar(userId);
+  const calId = await getCalendarId(userId);
 
   const response = await withTokenRetry(() =>
     cal.events.list({
@@ -297,12 +311,12 @@ export async function fetchTodayEvents(): Promise<CalendarEvent[]> {
       singleEvents: true,
       orderBy: 'startTime'
     })
-  );
+  , userId);
 
   return response.data.items?.map(transformEvent) || [];
 }
 
-export async function fetchTomorrowEvents(): Promise<CalendarEvent[]> {
+export async function fetchTomorrowEvents(userId?: string): Promise<CalendarEvent[]> {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const startOfDay = new Date(tomorrow);
@@ -310,8 +324,8 @@ export async function fetchTomorrowEvents(): Promise<CalendarEvent[]> {
   const endOfDay = new Date(tomorrow);
   endOfDay.setHours(23, 59, 59, 999);
 
-  const cal = await getCalendar();
-  const calId = await getCalendarId();
+  const cal = await getCalendar(userId);
+  const calId = await getCalendarId(userId);
 
   const response = await withTokenRetry(() =>
     cal.events.list({
@@ -321,18 +335,18 @@ export async function fetchTomorrowEvents(): Promise<CalendarEvent[]> {
       singleEvents: true,
       orderBy: 'startTime'
     })
-  );
+  , userId);
 
   return response.data.items?.map(transformEvent) || [];
 }
 
-export async function fetchWeekEvents(): Promise<CalendarEvent[]> {
+export async function fetchWeekEvents(userId?: string): Promise<CalendarEvent[]> {
   const now = new Date();
   const endOfWeek = new Date();
   endOfWeek.setDate(now.getDate() + 7);
 
-  const cal = await getCalendar();
-  const calId = await getCalendarId();
+  const cal = await getCalendar(userId);
+  const calId = await getCalendarId(userId);
 
   const response = await withTokenRetry(() =>
     cal.events.list({
@@ -342,17 +356,17 @@ export async function fetchWeekEvents(): Promise<CalendarEvent[]> {
       singleEvents: true,
       orderBy: 'startTime'
     })
-  );
+  , userId);
 
   return response.data.items?.map(transformEvent) || [];
 }
 
-export async function fetchMonthEvents(year: number, month: number): Promise<CalendarEvent[]> {
+export async function fetchMonthEvents(year: number, month: number, userId?: string): Promise<CalendarEvent[]> {
   const startOfMonth = new Date(year, month, 1);
   const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59);
 
-  const cal = await getCalendar();
-  const calId = await getCalendarId();
+  const cal = await getCalendar(userId);
+  const calId = await getCalendarId(userId);
 
   const response = await withTokenRetry(() =>
     cal.events.list({
@@ -363,7 +377,7 @@ export async function fetchMonthEvents(year: number, month: number): Promise<Cal
       orderBy: 'startTime',
       maxResults: 250
     })
-  );
+  , userId);
 
   return response.data.items?.map(transformEvent) || [];
 }
@@ -378,7 +392,7 @@ function normalizeDateTime(dt: string): string {
 
 // --- CRUD (all wrapped with automatic token retry) ---
 
-export async function createEvent(input: CreateEventInput): Promise<CalendarEvent> {
+export async function createEvent(input: CreateEventInput, userId?: string): Promise<CalendarEvent> {
   const eventBody: Record<string, unknown> = {
     summary: input.title,
     location: input.location,
@@ -406,8 +420,8 @@ export async function createEvent(input: CreateEventInput): Promise<CalendarEven
     };
   }
 
-  const cal = await getCalendar();
-  const calId = await getCalendarId();
+  const cal = await getCalendar(userId);
+  const calId = await getCalendarId(userId);
 
   const response = await withTokenRetry(() =>
     cal.events.insert({
@@ -416,21 +430,21 @@ export async function createEvent(input: CreateEventInput): Promise<CalendarEven
       conferenceDataVersion: input.add_google_meet ? 1 : undefined,
       sendUpdates: input.attendees && input.attendees.length > 0 ? 'all' : 'none',
     })
-  );
+  , userId);
 
   return transformEvent(response.data);
 }
 
-export async function updateEvent(eventId: string, input: UpdateEventInput): Promise<CalendarEvent> {
-  const cal = await getCalendar();
-  const calId = await getCalendarId();
+export async function updateEvent(eventId: string, input: UpdateEventInput, userId?: string): Promise<CalendarEvent> {
+  const cal = await getCalendar(userId);
+  const calId = await getCalendarId(userId);
 
   const existing = await withTokenRetry(() =>
     cal.events.get({
       calendarId: calId,
       eventId
     })
-  );
+  , userId);
 
   const eventBody: Record<string, unknown> = {
     summary: input.title ?? existing.data.summary,
@@ -476,19 +490,19 @@ export async function updateEvent(eventId: string, input: UpdateEventInput): Pro
       conferenceDataVersion: input.add_google_meet ? 1 : undefined,
       sendUpdates: input.attendees && input.attendees.length > 0 ? 'all' : 'none',
     })
-  );
+  , userId);
 
   return transformEvent(response.data);
 }
 
-export async function deleteEvent(eventId: string): Promise<void> {
-  const cal = await getCalendar();
-  const calId = await getCalendarId();
+export async function deleteEvent(eventId: string, userId?: string): Promise<void> {
+  const cal = await getCalendar(userId);
+  const calId = await getCalendarId(userId);
 
   await withTokenRetry(() =>
     cal.events.delete({
       calendarId: calId,
       eventId
     })
-  );
+  , userId);
 }

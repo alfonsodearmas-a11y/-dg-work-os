@@ -26,11 +26,11 @@ export async function GET(request: NextRequest) {
       const taskStatusMap = new Map<string, string>();
       if (taskIds.length > 0) {
         const { data: tasks } = await supabaseAdmin
-          .from('notion_tasks')
-          .select('notion_id, status')
-          .in('notion_id', taskIds);
+          .from('tasks')
+          .select('id, status')
+          .in('id', taskIds);
         for (const t of tasks || []) {
-          taskStatusMap.set(t.notion_id, t.status);
+          taskStatusMap.set(t.id, t.status);
         }
       }
 
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
         summaryMap[mid] = {
           total: totalFromJson,
           created: meetingLinks.filter(l => l.status === 'created').length,
-          completed: meetingLinks.filter(l => l.status === 'created' && taskStatusMap.get(l.task_id) === 'Done').length,
+          completed: meetingLinks.filter(l => l.status === 'created' && taskStatusMap.get(l.task_id) === 'completed').length,
           failed: meetingLinks.filter(l => l.status === 'failed').length,
         };
       }

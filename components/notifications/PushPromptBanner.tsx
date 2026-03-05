@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import { Bell, X, Share } from 'lucide-react';
 
 const DISMISS_KEY = 'dg-push-prompt-dismissed';
@@ -25,6 +26,7 @@ function isIOSBrowser(): boolean {
 }
 
 export function PushPromptBanner() {
+  const { data: session } = useSession();
   const [show, setShow] = useState(false);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
   const [permissionState, setPermissionState] = useState<string>('default');
@@ -96,7 +98,7 @@ export function PushPromptBanner() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            user_id: 'dg',
+            user_id: session?.user?.id,
             subscription: {
               endpoint: subJSON.endpoint,
               keys: {

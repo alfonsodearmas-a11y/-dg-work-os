@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { auditService } from '@/lib/audit';
 import { generateGPLBriefing } from '@/lib/ai-analysis';
+import { requireRole, canUploadData } from '@/lib/auth-helpers';
 
 export async function POST(request: NextRequest) {
+  const result = await requireRole(['dg', 'agency_admin', 'officer']);
+  if (result instanceof NextResponse) return result;
+  const { session } = result;
+  if (!canUploadData(session.user.role, session.user.agency, 'GPL')) return NextResponse.json({ error: 'Cannot upload GPL data' }, { status: 403 });
+
   try {
     const body = await request.json();
     const { uploadData, reportDate } = body;
@@ -28,7 +34,7 @@ export async function POST(request: NextRequest) {
       .insert({
         report_date: reportDate,
         filename: uploadData.fileName || 'gpl-dbis.xlsx',
-        uploaded_by: 'dg-admin',
+        uploaded_by: session.user.id,
         status: 'confirmed',
         raw_data: uploadData,
       })
@@ -133,7 +139,7 @@ export async function POST(request: NextRequest) {
 
     // Audit log
     await auditService.log({
-      userId: 'dg-admin',
+      userId: session.user.id,
       action: 'CREATE',
       entityType: 'gpl_uploads',
       entityId: uploadId,

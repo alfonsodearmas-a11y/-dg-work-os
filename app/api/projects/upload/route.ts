@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { parseProjectsExcelWithDebug } from '@/lib/excel-parser';
 import { detectChanges } from '@/lib/change-detector';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function POST(request: NextRequest) {
+  const result = await requireRole(['dg', 'agency_admin']);
+  if (result instanceof NextResponse) return result;
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
+import { auth } from '@/lib/auth';
 
 export async function GET() {
   try {
@@ -51,10 +52,12 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    const userId = session?.user?.id || 'system';
     let forecastResult;
     try {
       const { generateForecast } = await import('@/lib/gpl-multivariate-forecast');
-      console.log(`[gpl-forecast-multivariate] Generation triggered by dg-admin`);
+      console.log(`[gpl-forecast-multivariate] Generation triggered by ${userId}`);
       forecastResult = await generateForecast();
     } catch (importError: any) {
       console.warn('[gpl-forecast-multivariate] Module unavailable:', importError.message);
@@ -76,7 +79,7 @@ export async function POST(request: NextRequest) {
       success: true,
       data: forecastResult.forecast,
       warning: 'warning' in forecastResult ? forecastResult.warning : undefined,
-      generatedBy: 'dg-admin',
+      generatedBy: userId,
     });
   } catch (error: any) {
     console.error('[gpl-forecast-multivariate] POST Error:', error.message);

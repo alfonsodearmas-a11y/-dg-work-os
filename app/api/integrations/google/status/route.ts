@@ -1,17 +1,16 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 import { getGoogleConnectionStatus } from '@/lib/integration-tokens';
 
 export async function GET() {
   try {
-    const status = await getGoogleConnectionStatus();
+    const session = await auth();
+    const userId = session?.user?.id;
+    if (!userId) return NextResponse.json({ connected: false, error: 'Not authenticated' }, { status: 401 });
 
-    // Also check if env var fallback exists
-    const hasEnvToken = !!process.env.GOOGLE_REFRESH_TOKEN;
+    const status = await getGoogleConnectionStatus(userId);
 
-    return NextResponse.json({
-      ...status,
-      has_env_fallback: hasEnvToken,
-    });
+    return NextResponse.json(status);
   } catch (err) {
     console.error('[Google Status] Error:', err);
     return NextResponse.json(

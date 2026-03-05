@@ -2,7 +2,7 @@
 
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Task } from '@/lib/notion';
+import { Task } from '@/lib/task-types';
 import { TaskCard } from './TaskCard';
 
 interface KanbanColumnProps {
@@ -13,7 +13,7 @@ interface KanbanColumnProps {
 }
 
 const COLUMN_STYLES: Record<string, { dot: string; count: string }> = {
-  'To Do': {
+  'Not Started': {
     dot: 'bg-[#94a3b8]',
     count: 'bg-[#4a5568]/20 text-[#94a3b8]'
   },
@@ -21,11 +21,11 @@ const COLUMN_STYLES: Record<string, { dot: string; count: string }> = {
     dot: 'bg-blue-400',
     count: 'bg-blue-500/20 text-blue-400'
   },
-  'Waiting': {
+  'Blocked': {
     dot: 'bg-amber-400',
     count: 'bg-amber-500/20 text-amber-400'
   },
-  'Done': {
+  'Completed': {
     dot: 'bg-emerald-400',
     count: 'bg-emerald-500/20 text-emerald-400'
   }
@@ -34,7 +34,7 @@ const COLUMN_STYLES: Record<string, { dot: string; count: string }> = {
 export function KanbanColumn({ id, title, tasks, onTaskClick }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
-  const styles = COLUMN_STYLES[title] || COLUMN_STYLES['To Do'];
+  const styles = COLUMN_STYLES[title] || COLUMN_STYLES['Not Started'];
 
   return (
     <div className="flex-1 min-w-[280px] max-w-[320px]">
@@ -59,12 +59,12 @@ export function KanbanColumn({ id, title, tasks, onTaskClick }: KanbanColumnProp
         }`}
       >
         <SortableContext
-          items={tasks.map((t) => t.notion_id)}
+          items={tasks.map((t) => t.id)}
           strategy={verticalListSortingStrategy}
         >
           {tasks.map((task) => (
             <TaskCard
-              key={task.notion_id}
+              key={task.id}
               task={task}
               onClick={() => onTaskClick(task)}
             />

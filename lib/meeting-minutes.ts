@@ -1,7 +1,5 @@
 import { supabaseAdmin } from '@/lib/db';
-import { fetchMeetings, fetchPageBlocks } from '@/lib/notion';
 import Anthropic from '@anthropic-ai/sdk';
-import type { Meeting } from '@/lib/notion';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -157,117 +155,47 @@ export async function getMinutesById(id: string): Promise<MeetingMinutes | null>
 }
 
 // ── Sync Logic ─────────────────────────────────────────────────────────────
+// Notion sync removed — meetings are now created natively via recordings or manual entry.
 
 export async function syncNewMeetings(): Promise<{ newCount: number; existingCount: number }> {
-  // Fetch meetings from Notion (last 90 days)
-  const notionMeetings = await fetchMeetings(90);
-
-  // Get existing notion_meeting_ids from our table
-  const { data: existing } = await supabaseAdmin
+  const { count } = await supabaseAdmin
     .from('meeting_minutes')
-    .select('notion_meeting_id');
+    .select('id', { count: 'exact', head: true });
 
-  const existingIds = new Set((existing || []).map((r: any) => r.notion_meeting_id));
-
-  // Find new meetings
-  const newMeetings = notionMeetings.filter(m => !existingIds.has(m.notion_id));
-
-  // Insert new meetings as pending
-  if (newMeetings.length > 0) {
-    const rows = newMeetings.map((m: Meeting) => ({
-      notion_meeting_id: m.notion_id,
-      title: m.title,
-      meeting_date: m.meeting_date,
-      attendees: m.attendees,
-      category: m.category,
-      status: 'pending',
-    }));
-
-    const { error } = await supabaseAdmin
-      .from('meeting_minutes')
-      .insert(rows);
-
-    if (error) throw new Error(`Failed to insert new meetings: ${error.message}`);
-  }
-
-  return {
-    newCount: newMeetings.length,
-    existingCount: existingIds.size,
-  };
+  return { newCount: 0, existingCount: count || 0 };
 }
 
 // ── Process a Single Meeting ───────────────────────────────────────────────
 
 export async function processOneMeeting(minutesId: string): Promise<MeetingMinutes> {
-  // Fetch the row
   const row = await getMinutesById(minutesId);
   if (!row) throw new Error('Meeting minutes row not found');
 
-  // Set status to processing
   await supabaseAdmin
     .from('meeting_minutes')
     .update({ status: 'processing', error_message: null, updated_at: new Date().toISOString() })
     .eq('id', minutesId);
 
   try {
-    // Fetch transcript from Notion
-    let transcript: string;
-    let unsupportedTypes: string[] = [];
-    try {
-      const result = await fetchPageBlocks(row.notion_meeting_id);
-      transcript = result.text;
-      unsupportedTypes = result.unsupportedTypes;
-    } catch (fetchError: any) {
-      const errorMsg = `Transcript fetch error: ${fetchError.message || 'Unknown error'}`;
-      console.error(`[meeting-minutes] ${errorMsg} for meeting "${row.title}" (${minutesId})`);
-      const { data } = await supabaseAdmin
-        .from('meeting_minutes')
-        .update({
-          status: 'failed',
-          error_message: errorMsg,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', minutesId)
-        .select()
-        .single();
-      return data as MeetingMinutes;
-    }
+    // Use the stored transcript (no longer fetched from Notion)
+    const transcript = row.raw_transcript || '';
 
-    const blockCount = transcript.split('\n').filter(l => l.trim()).length;
-
-    // Update transcript
-    await supabaseAdmin
-      .from('meeting_minutes')
-      .update({ raw_transcript: transcript, transcript_block_count: blockCount })
-      .eq('id', minutesId);
-
-    // Skip if transcript is too short
     const trimmedLength = transcript.trim().length;
     const wordCount = transcript.trim().split(/\s+/).filter(Boolean).length;
     if (!transcript || trimmedLength < 50) {
-      let reason: string;
-      if (unsupportedTypes.length > 0) {
-        reason = `Transcript is inside a Notion ${unsupportedTypes[0]} block which is not accessible via the API. Please paste the transcript manually.`;
-      } else if (!transcript || trimmedLength === 0) {
-        reason = 'No transcript found on Notion page';
-      } else {
-        reason = `Transcript too short (${wordCount} word${wordCount !== 1 ? 's' : ''}, ${trimmedLength} chars)`;
-      }
-      console.warn(`[meeting-minutes] Skipping "${row.title}" (${minutesId}): ${reason}`);
+      const reason = !transcript || trimmedLength === 0
+        ? 'No transcript available. Please paste the transcript manually.'
+        : `Transcript too short (${wordCount} word${wordCount !== 1 ? 's' : ''}, ${trimmedLength} chars)`;
+
       const { data } = await supabaseAdmin
         .from('meeting_minutes')
-        .update({
-          status: 'skipped',
-          error_message: reason,
-          updated_at: new Date().toISOString(),
-        })
+        .update({ status: 'skipped', error_message: reason, updated_at: new Date().toISOString() })
         .eq('id', minutesId)
         .select()
         .single();
       return data as MeetingMinutes;
     }
 
-    // Build prompt
     const userPrompt = `Meeting: ${row.title}
 Date: ${row.meeting_date || 'Not specified'}
 Attendees: ${row.attendees?.join(', ') || 'Not specified'}
@@ -276,7 +204,6 @@ Category: ${row.category || 'General'}
 --- TRANSCRIPT ---
 ${transcript}`;
 
-    // Call Claude Opus
     const client = getClient();
     const response = await client.messages.create({
       model: 'claude-opus-4-6',
@@ -292,11 +219,8 @@ ${transcript}`;
       .join('\n');
 
     const tokensUsed = (response.usage?.input_tokens || 0) + (response.usage?.output_tokens || 0);
-
-    // Parse response
     const { markdown, actionItems } = parseAIResponse(responseText, row.title);
 
-    // Update row with results
     const { data } = await supabaseAdmin
       .from('meeting_minutes')
       .update({
@@ -314,7 +238,6 @@ ${transcript}`;
 
     return data as MeetingMinutes;
   } catch (error: any) {
-    // Set failed status
     const { data } = await supabaseAdmin
       .from('meeting_minutes')
       .update({
@@ -333,130 +256,8 @@ ${transcript}`;
 // ── Regenerate Minutes ─────────────────────────────────────────────────────
 
 export async function regenerateMinutes(minutesId: string): Promise<MeetingMinutes> {
-  const row = await getMinutesById(minutesId);
-  if (!row) throw new Error('Meeting minutes row not found');
-
-  // Always re-fetch transcript from Notion (the whole point of "Re-fetch & Process")
-  let transcript: string;
-  let unsupportedTypes: string[] = [];
-  try {
-    const result = await fetchPageBlocks(row.notion_meeting_id);
-    transcript = result.text;
-    unsupportedTypes = result.unsupportedTypes;
-  } catch (fetchError: any) {
-    const errorMsg = `Transcript fetch error: ${fetchError.message || 'Unknown error'}`;
-    console.error(`[meeting-minutes] ${errorMsg} for meeting "${row.title}" (${minutesId})`);
-    const { data } = await supabaseAdmin
-      .from('meeting_minutes')
-      .update({
-        status: 'failed',
-        error_message: errorMsg,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', minutesId)
-      .select()
-      .single();
-    return data as MeetingMinutes;
-  }
-
-  const blockCount = transcript.split('\n').filter(l => l.trim()).length;
-
-  // Save the freshly fetched transcript
-  await supabaseAdmin
-    .from('meeting_minutes')
-    .update({
-      raw_transcript: transcript,
-      transcript_block_count: blockCount,
-    })
-    .eq('id', minutesId);
-
-  // Set processing
-  await supabaseAdmin
-    .from('meeting_minutes')
-    .update({ status: 'processing', error_message: null, updated_at: new Date().toISOString() })
-    .eq('id', minutesId);
-
-  try {
-    const trimmedLength = transcript.trim().length;
-    const wordCount = transcript.trim().split(/\s+/).filter(Boolean).length;
-    if (!transcript || trimmedLength < 50) {
-      let reason: string;
-      if (unsupportedTypes.length > 0) {
-        reason = `Transcript is inside a Notion ${unsupportedTypes[0]} block which is not accessible via the API. Please paste the transcript manually.`;
-      } else if (!transcript || trimmedLength === 0) {
-        reason = 'No transcript found on Notion page';
-      } else {
-        reason = `Transcript too short (${wordCount} word${wordCount !== 1 ? 's' : ''}, ${trimmedLength} chars)`;
-      }
-      console.warn(`[meeting-minutes] Skipping "${row.title}" (${minutesId}): ${reason}`);
-      const { data } = await supabaseAdmin
-        .from('meeting_minutes')
-        .update({
-          status: 'skipped',
-          error_message: reason,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', minutesId)
-        .select()
-        .single();
-      return data as MeetingMinutes;
-    }
-
-    const userPrompt = `Meeting: ${row.title}
-Date: ${row.meeting_date || 'Not specified'}
-Attendees: ${row.attendees?.join(', ') || 'Not specified'}
-Category: ${row.category || 'General'}
-
---- TRANSCRIPT ---
-${transcript}`;
-
-    const client = getClient();
-    const response = await client.messages.create({
-      model: 'claude-opus-4-6',
-      max_tokens: 8192,
-      temperature: 0.2,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userPrompt }],
-    });
-
-    const responseText = response.content
-      .filter(b => b.type === 'text')
-      .map(b => (b as Anthropic.TextBlock).text)
-      .join('\n');
-
-    const tokensUsed = (response.usage?.input_tokens || 0) + (response.usage?.output_tokens || 0);
-    const { markdown, actionItems } = parseAIResponse(responseText, row.title);
-
-    const { data } = await supabaseAdmin
-      .from('meeting_minutes')
-      .update({
-        minutes_markdown: markdown,
-        action_items: actionItems,
-        ai_model: 'claude-opus-4-6',
-        ai_tokens_used: tokensUsed,
-        status: 'completed',
-        processed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', minutesId)
-      .select()
-      .single();
-
-    return data as MeetingMinutes;
-  } catch (error: any) {
-    const { data } = await supabaseAdmin
-      .from('meeting_minutes')
-      .update({
-        status: 'failed',
-        error_message: error.message || 'Unknown error',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', minutesId)
-      .select()
-      .single();
-
-    return data as MeetingMinutes;
-  }
+  // Re-process using stored transcript (no longer fetches from Notion)
+  return processOneMeeting(minutesId);
 }
 
 // ── Process with Manual Transcript ────────────────────────────────────────

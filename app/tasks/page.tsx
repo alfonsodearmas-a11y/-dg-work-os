@@ -22,7 +22,7 @@ export default function TasksPage() {
           </div>
           <div>
             <h1 className="text-lg md:text-xl font-bold text-white">Task Board</h1>
-            <p className="text-xs md:text-sm text-[#64748b]">Synced with Notion</p>
+            <p className="text-xs md:text-sm text-[#64748b]">Manage your tasks</p>
           </div>
         </div>
       </div>

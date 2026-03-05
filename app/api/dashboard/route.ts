@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db-pg';
+import { requireRole } from '@/lib/auth-helpers';
 
 // Safe query that returns empty rows on table-not-found or connection errors
 async function safeQuery(sql: string) {
@@ -11,6 +12,9 @@ async function safeQuery(sql: string) {
 }
 
 export async function GET() {
+  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (result instanceof NextResponse) return result;
+
   try {
     const [cjia, gwi, gpl, gplDbis, gcaa, alerts] = await Promise.all([
       safeQuery("SELECT * FROM cjia_daily_metrics WHERE status = 'approved' ORDER BY report_date DESC LIMIT 1"),

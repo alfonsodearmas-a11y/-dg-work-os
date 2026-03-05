@@ -4,11 +4,10 @@ import { useState } from 'react';
 import { X, Loader2, Calendar, Flag, Building2, CheckCircle } from 'lucide-react';
 
 interface Task {
-  notion_id: string;
+  id: string;
   title: string;
   status: string | null;
   due_date: string | null;
-  assignee: string | null;
   agency: string | null;
   priority: string | null;
 }
@@ -19,13 +18,23 @@ interface TaskEditModalProps {
   onSave: () => void;
 }
 
-const statuses = ['To do', 'In progress', 'Done'];
-const priorities = ['High', 'Medium', 'Low'];
+const statuses = [
+  { value: 'not_started', label: 'Not Started' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'blocked', label: 'Blocked' },
+  { value: 'completed', label: 'Completed' },
+];
+const priorities = [
+  { value: 'urgent', label: 'Urgent' },
+  { value: 'high', label: 'High' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'low', label: 'Low' },
+];
 const agencies = ['GPL', 'GWI', 'HECI', 'MARAD', 'GCAA', 'CJIA', 'HAS', 'MOPUA'];
 
 export function TaskEditModal({ task, onClose, onSave }: TaskEditModalProps) {
   const [dueDate, setDueDate] = useState(task.due_date || '');
-  const [status, setStatus] = useState(task.status || 'To do');
+  const [status, setStatus] = useState(task.status || 'not_started');
   const [priority, setPriority] = useState(task.priority || '');
   const [agency, setAgency] = useState(task.agency || '');
   const [saving, setSaving] = useState(false);
@@ -33,7 +42,7 @@ export function TaskEditModal({ task, onClose, onSave }: TaskEditModalProps) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/tasks/${task.notion_id}`, {
+      const res = await fetch(`/api/tasks/${task.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -107,7 +116,7 @@ export function TaskEditModal({ task, onClose, onSave }: TaskEditModalProps) {
               style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em' }}
             >
               {statuses.map((s) => (
-                <option key={s} value={s} className="bg-[#1a2744]">{s}</option>
+                <option key={s.value} value={s.value} className="bg-[#1a2744]">{s.label}</option>
               ))}
             </select>
           </div>
@@ -126,7 +135,7 @@ export function TaskEditModal({ task, onClose, onSave }: TaskEditModalProps) {
             >
               <option value="" className="bg-[#1a2744]">None</option>
               {priorities.map((p) => (
-                <option key={p} value={p} className="bg-[#1a2744]">{p}</option>
+                <option key={p.value} value={p.value} className="bg-[#1a2744]">{p.label}</option>
               ))}
             </select>
           </div>

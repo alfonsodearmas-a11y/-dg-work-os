@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 import { getPreferences, updatePreferences } from '@/lib/notifications';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const userId = request.nextUrl.searchParams.get('user_id') || 'dg';
+    const session = await auth();
+    const userId = session?.user?.id;
+    if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+
     const prefs = await getPreferences(userId);
     return NextResponse.json(prefs);
   } catch (err) {
@@ -14,9 +18,12 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { user_id, ...prefs } = body;
-    const updated = await updatePreferences(user_id || 'dg', prefs);
+    const session = await auth();
+    const userId = session?.user?.id;
+    if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+
+    const prefs = await request.json();
+    const updated = await updatePreferences(userId, prefs);
     return NextResponse.json(updated);
   } catch (err) {
     console.error('PUT /api/notifications/preferences error:', err);

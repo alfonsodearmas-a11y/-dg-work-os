@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { createClient } from '@supabase/supabase-js';
 import type { Notification } from '@/lib/notifications';
 
@@ -37,10 +38,10 @@ export function useNotifications() {
   return useContext(NotificationContext);
 }
 
-const USER_ID = 'dg';
-
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -62,8 +63,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Fetch notifications
   const fetchNotifications = useCallback(async () => {
+    if (!userId) return;
     try {
-      const res = await fetch(`/api/notifications?user_id=${USER_ID}`);
+      const res = await fetch('/api/notifications');
       if (!res.ok) return;
       const data = await res.json();
       setNotifications(data.notifications || []);
@@ -71,7 +73,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     } catch {
       // silently fail
     }
-  }, []);
+  }, [userId]);
 
   // Compute action required count from current notifications
   const actionRequiredCount = useMemo(
@@ -99,7 +101,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!url || !key) return;
+    if (!url || !key || !userId) return;
 
     const client = createClient(url, key);
     // Track scheduled delivery timers so we can cancel on unmount
@@ -113,7 +115,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
-          filter: `user_id=eq.${USER_ID}`,
+          filter: `user_id=eq.${userId}`,
         },
         (payload) => {
           const newNotif = payload.new as Notification;
@@ -140,7 +142,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       client.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [userId]);
 
   const deliverNotification = useCallback((notif: Notification) => {
     // Add to notifications list
@@ -200,7 +202,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       await fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'mark_all_read', user_id: USER_ID }),
+        body: JSON.stringify({ action: 'mark_all_read' }),
       });
     } catch {
       fetchNotifications();
@@ -215,7 +217,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       await fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'dismiss_all', user_id: USER_ID }),
+        body: JSON.stringify({ action: 'dismiss_all' }),
       });
     } catch {
       fetchNotifications();
