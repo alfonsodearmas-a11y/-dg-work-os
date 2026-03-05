@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
-import OpenAI from 'openai';
+import OpenAI, { toFile } from 'openai';
 
 export const maxDuration = 120;
 
@@ -41,6 +41,7 @@ export async function POST(
       .eq('id', id);
 
     // Download audio from Supabase Storage
+    console.log('[Transcribe] Downloading audio:', meeting.audio_path);
     const { data: blob, error: downloadError } = await supabaseAdmin.storage
       .from('meetings-audio')
       .download(meeting.audio_path);
@@ -48,18 +49,22 @@ export async function POST(
     if (downloadError || !blob) {
       throw new Error(`Failed to download audio: ${downloadError?.message}`);
     }
+    console.log('[Transcribe] Audio downloaded, size:', blob.size, 'type:', blob.type);
 
-    // Create a File object for the OpenAI API
+    // Convert to a File the OpenAI SDK can handle reliably
     const filename = meeting.audio_path.split('/').pop() || 'audio.webm';
-    const audioFile = new File([blob], filename, { type: blob.type || 'audio/webm' });
+    const audioBuffer = Buffer.from(await blob.arrayBuffer());
+    const audioFile = await toFile(audioBuffer, filename, { type: blob.type || 'audio/webm' });
 
     // Call Whisper
+    console.log('[Transcribe] Calling Whisper, key present:', !!process.env.OPENAI_API_KEY);
     const transcription = await getOpenAI().audio.transcriptions.create({
       model: 'whisper-1',
       file: audioFile,
       response_format: 'verbose_json',
       language: 'en',
     });
+    console.log('[Transcribe] Whisper returned, text length:', transcription.text?.length);
 
     const transcriptText = (transcription.segments ?? [])
       .map((s) => s.text)
@@ -80,8 +85,9 @@ export async function POST(
     if (updateError) throw updateError;
 
     return NextResponse.json({ transcriptText });
-  } catch (err) {
-    console.error('[Meetings Transcribe] Error:', err);
+  } catch (err: unknown) {
+    const errObj = err as { message?: string; status?: number; code?: string };
+    console.error('[Transcribe] Error:', errObj.message, 'status:', errObj.status, 'code:', errObj.code);
 
     await supabaseAdmin
       .from('meetings')
