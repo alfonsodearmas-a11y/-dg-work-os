@@ -40,6 +40,39 @@ export async function GET() {
     return NextResponse.json({ error: actionsErr.message }, { status: 500 });
   }
 
+  // NEEDS_REVIEW items across recent meetings (last 30 days)
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(now.getDate() - 30);
+
+  const { data: reviewItems, error: reviewErr } = await supabaseAdmin
+    .from('meeting_actions')
+    .select('id, task, meeting_id, review_reason, meetings(id, title)')
+    .eq('confidence', 'NEEDS_REVIEW')
+    .eq('done', false)
+    .eq('skipped', false)
+    .is('task_id', null)
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (reviewErr) {
+    return NextResponse.json({ error: reviewErr.message }, { status: 500 });
+  }
+
+  // Group review items by meeting
+  const reviewByMeeting: Record<string, { meeting_id: string; meeting_title: string; count: number }> = {};
+  for (const item of reviewItems || []) {
+    const mid = item.meeting_id;
+    if (!reviewByMeeting[mid]) {
+      const meetingData = item.meetings as unknown as { id: string; title: string } | null;
+      reviewByMeeting[mid] = {
+        meeting_id: mid,
+        meeting_title: meetingData?.title ?? 'Untitled',
+        count: 0,
+      };
+    }
+    reviewByMeeting[mid].count++;
+  }
+
   return NextResponse.json({
     meetingsThisWeek: weekMeetings?.length ?? 0,
     actions: (actions || []).map((a: Record<string, unknown>) => ({
@@ -48,5 +81,9 @@ export async function GET() {
       due_date: a.due_date,
       meeting_title: (a.meetings as { title: string } | null)?.title ?? null,
     })),
+    needsReview: {
+      total: reviewItems?.length ?? 0,
+      byMeeting: Object.values(reviewByMeeting),
+    },
   });
 }

@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
       role: body.role || null,
       owner_user_id: ownerId,
       assigned_by_user_id: body.assignee_id && canAssignTasks(session.user.role) ? session.user.id : null,
+      source_meeting_id: body.source_meeting_id || null,
     })
     .select()
     .single();

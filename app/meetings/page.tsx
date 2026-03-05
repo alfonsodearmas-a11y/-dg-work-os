@@ -43,6 +43,10 @@ interface MeetingAction {
   owner: string | null;
   due_date: string | null;
   done: boolean;
+  confidence: 'AUTO_CREATE' | 'NEEDS_REVIEW';
+  review_reason: string | null;
+  task_id: string | null;
+  skipped: boolean;
   created_at: string;
 }
 
@@ -173,6 +177,18 @@ export default function MeetingsPage() {
   const [newActionOwner, setNewActionOwner] = useState('');
   const [newActionDue, setNewActionDue] = useState('');
   const [addingAction, setAddingAction] = useState(false);
+
+  // Review modal
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewIndex, setReviewIndex] = useState(0);
+  const [reviewItems, setReviewItems] = useState<MeetingAction[]>([]);
+  const [reviewTask, setReviewTask] = useState('');
+  const [reviewOwner, setReviewOwner] = useState('');
+  const [reviewDue, setReviewDue] = useState('');
+  const [reviewCreating, setReviewCreating] = useState(false);
+  const [reviewCreatedCount, setReviewCreatedCount] = useState(0);
+  const [knownAssignees, setKnownAssignees] = useState<string[]>([]);
+  const [reviewToast, setReviewToast] = useState<string | null>(null);
 
   // Notes
   const [notesText, setNotesText] = useState('');
@@ -478,9 +494,30 @@ export default function MeetingsPage() {
           due_date: action.due_date || null,
           priority: 'medium',
           role: 'Meeting Action Item',
+          source_meeting_id: selectedId,
         }),
       });
       if (!res.ok) throw new Error('Failed to create task');
+      const { task } = await res.json();
+
+      // Link task_id back to the action
+      if (task?.id && selectedId) {
+        await fetch(`/api/meetings/${selectedId}/actions/${action.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ task_id: task.id }),
+        });
+        setSelectedMeeting((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            meeting_actions: prev.meeting_actions.map((a) =>
+              a.id === action.id ? { ...a, task_id: task.id } : a
+            ),
+          };
+        });
+      }
+
       await handleToggleAction(action.id);
     } catch (err) {
       console.error('Push to task failed:', err);
@@ -580,6 +617,132 @@ export default function MeetingsPage() {
       console.error('Add action failed:', err);
     } finally {
       setAddingAction(false);
+    }
+  }
+
+  // ── Review Modal Handlers ────────────────────────────────────────────────
+
+  function openReviewModal() {
+    if (!selectedMeeting) return;
+    const items = selectedMeeting.meeting_actions.filter(
+      (a) => a.confidence === 'NEEDS_REVIEW' && !a.done && !a.skipped && !a.task_id
+    );
+    if (items.length === 0) return;
+    setReviewItems(items);
+    setReviewIndex(0);
+    setReviewCreatedCount(0);
+    loadReviewItem(items[0]);
+    setShowReviewModal(true);
+    // Fetch known assignees
+    fetch('/api/tasks/assignees')
+      .then((r) => r.json())
+      .then((d) => setKnownAssignees(d.assignees || []))
+      .catch(() => {});
+  }
+
+  function loadReviewItem(item: MeetingAction) {
+    setReviewTask(item.task);
+    setReviewOwner(item.owner || '');
+    setReviewDue(item.due_date ? item.due_date.split('T')[0] : '');
+  }
+
+  async function handleReviewSkip() {
+    const item = reviewItems[reviewIndex];
+    if (!selectedId || !item) return;
+
+    // Mark as skipped
+    await fetch(`/api/meetings/${selectedId}/actions/${item.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ skipped: true }),
+    });
+
+    // Update local state
+    setSelectedMeeting((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        meeting_actions: prev.meeting_actions.map((a) =>
+          a.id === item.id ? { ...a, skipped: true } : a
+        ),
+      };
+    });
+
+    advanceReview();
+  }
+
+  async function handleReviewCreate() {
+    const item = reviewItems[reviewIndex];
+    if (!selectedId || !item) return;
+    setReviewCreating(true);
+
+    try {
+      // Create the task
+      const taskRes = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: reviewTask,
+          description: `From meeting: ${selectedMeeting?.title}`,
+          due_date: reviewDue || null,
+          priority: 'medium',
+          role: 'Meeting Action Item',
+          source_meeting_id: selectedId,
+        }),
+      });
+
+      if (!taskRes.ok) throw new Error('Failed to create task');
+      const { task } = await taskRes.json();
+
+      // Update the action item
+      await fetch(`/api/meetings/${selectedId}/actions/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          task: reviewTask,
+          owner: reviewOwner || null,
+          due_date: reviewDue || null,
+          task_id: task.id,
+          confidence: 'AUTO_CREATE',
+        }),
+      });
+
+      // Update local state
+      setSelectedMeeting((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          meeting_actions: prev.meeting_actions.map((a) =>
+            a.id === item.id
+              ? { ...a, task: reviewTask, owner: reviewOwner || null, due_date: reviewDue || null, task_id: task.id, confidence: 'AUTO_CREATE' as const }
+              : a
+          ),
+        };
+      });
+
+      setReviewCreatedCount((c) => c + 1);
+      advanceReview(true);
+    } catch (err) {
+      console.error('Review create failed:', err);
+    } finally {
+      setReviewCreating(false);
+    }
+  }
+
+  function advanceReview(justCreated = false) {
+    const totalCreated = reviewCreatedCount + (justCreated ? 1 : 0);
+    const nextIndex = reviewIndex + 1;
+    if (nextIndex >= reviewItems.length) {
+      setShowReviewModal(false);
+      fetchMeetings();
+      if (selectedId) fetchDetail(selectedId);
+      if (totalCreated > 0) {
+        setReviewToast(`${totalCreated} task${totalCreated !== 1 ? 's' : ''} created from this meeting`);
+        setTimeout(() => setReviewToast(null), 4000);
+      }
+    } else {
+      setReviewIndex(nextIndex);
+      loadReviewItem(reviewItems[nextIndex]);
     }
   }
 
@@ -912,9 +1075,58 @@ export default function MeetingsPage() {
   function renderActionsTab() {
     if (!selectedMeeting) return null;
     const actions = selectedMeeting.meeting_actions || [];
+    const needsReviewCount = actions.filter(
+      (a) => a.confidence === 'NEEDS_REVIEW' && !a.done && !a.skipped && !a.task_id
+    ).length;
+
+    function actionStatusBadge(a: MeetingAction) {
+      if (a.task_id) {
+        return (
+          <Link
+            href="/tasks"
+            className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-medium hover:bg-emerald-500/25 transition-colors"
+          >
+            Task created
+          </Link>
+        );
+      }
+      if (a.skipped) {
+        return (
+          <span className="px-2 py-0.5 rounded-full bg-[#2d3a52]/60 text-[#64748b] text-[10px] font-medium">
+            Skipped
+          </span>
+        );
+      }
+      if (a.confidence === 'NEEDS_REVIEW' && !a.done) {
+        return (
+          <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 text-[10px] font-medium">
+            Needs review
+          </span>
+        );
+      }
+      return null;
+    }
 
     return (
       <div className="space-y-3">
+        {/* Review banner */}
+        {needsReviewCount > 0 && (
+          <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-amber-500/30 bg-amber-500/5">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-400 shrink-0" />
+              <p className="text-sm text-amber-200">
+                {needsReviewCount} action item{needsReviewCount !== 1 ? 's' : ''} need{needsReviewCount === 1 ? 's' : ''} your input before creating tasks
+              </p>
+            </div>
+            <button
+              onClick={openReviewModal}
+              className="btn-gold flex items-center gap-1 px-3 py-1.5 text-xs shrink-0"
+            >
+              Review Now
+            </button>
+          </div>
+        )}
+
         {/* Add action button */}
         <div className="flex justify-end">
           {!showAddAction && (
@@ -979,7 +1191,7 @@ export default function MeetingsPage() {
         )}
 
         {/* Open items */}
-        {actions.filter(a => !a.done).map((a) => (
+        {actions.filter(a => !a.done && !a.skipped).map((a) => (
           <div
             key={a.id}
             className="flex items-start gap-3 p-3 rounded-xl border bg-[#1a2744]/50 border-[#2d3a52]/50"
@@ -1031,7 +1243,10 @@ export default function MeetingsPage() {
                   className="w-5 h-5 rounded-full border-2 border-[#64748b] hover:border-[#d4af37] mt-0.5 shrink-0 transition-colors"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white">{a.task}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-medium text-white">{a.task}</p>
+                    {actionStatusBadge(a)}
+                  </div>
                   <div className="flex flex-wrap items-center gap-2 mt-1.5">
                     {a.owner && (
                       <span className="px-2 py-0.5 rounded-full bg-[#2d3a52]/60 text-[#94a3b8] text-[10px]">
@@ -1067,24 +1282,62 @@ export default function MeetingsPage() {
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>
-                  <button
-                    onClick={() => handlePushToTask(a)}
-                    className="btn-navy flex items-center gap-1 px-2 py-1 text-[10px] opacity-70 hover:opacity-100 transition-opacity ml-1"
-                    title="Push to Task Board"
-                  >
-                    <ArrowUpRight className="h-3 w-3" />
-                    <span className="hidden sm:inline">Task</span>
-                  </button>
+                  {!a.task_id && (
+                    <button
+                      onClick={() => handlePushToTask(a)}
+                      className="btn-navy flex items-center gap-1 px-2 py-1 text-[10px] opacity-70 hover:opacity-100 transition-opacity ml-1"
+                      title="Push to Task Board"
+                    >
+                      <ArrowUpRight className="h-3 w-3" />
+                      <span className="hidden sm:inline">Task</span>
+                    </button>
+                  )}
                 </div>
               </>
             )}
           </div>
         ))}
 
+        {/* Skipped items */}
+        {(() => {
+          const skippedItems = actions.filter(a => a.skipped && !a.done);
+          if (skippedItems.length === 0) return null;
+          return (
+            <>
+              <div className="border-t border-[#2d3a52] pt-3 mt-3">
+                <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider mb-2">
+                  Skipped
+                </p>
+              </div>
+              {skippedItems.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex items-start gap-3 p-3 rounded-xl border bg-[#1a2744]/20 border-[#2d3a52]/30 opacity-60"
+                >
+                  <div className="w-5 h-5 rounded-full border-2 border-[#2d3a52] mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-[#64748b]">{a.task}</p>
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                      {actionStatusBadge(a)}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteAction(a.id)}
+                    className="p-1 rounded text-[#64748b] hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </>
+          );
+        })()}
+
         {/* Done items */}
         {(() => {
           const doneItems = actions.filter(a => a.done);
-          const openItems = actions.filter(a => !a.done);
+          const openItems = actions.filter(a => !a.done && !a.skipped);
           if (doneItems.length === 0) return null;
           return (
             <>
@@ -1107,7 +1360,10 @@ export default function MeetingsPage() {
                     <CheckCircle2 className="h-3 w-3 text-[#0a1628]" />
                   </button>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[#64748b] line-through">{a.task}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium text-[#64748b] line-through">{a.task}</p>
+                      {actionStatusBadge(a)}
+                    </div>
                     <div className="flex flex-wrap items-center gap-2 mt-1">
                       {a.owner && (
                         <span className="px-2 py-0.5 rounded-full bg-[#2d3a52]/40 text-[#64748b] text-[10px]">
@@ -1579,6 +1835,126 @@ export default function MeetingsPage() {
         defaultDate={selectedMeeting?.date?.split('T')[0]}
         defaultAttendees={selectedMeeting?.attendees?.filter(a => a.includes('@'))}
       />
+
+      {/* Review Modal */}
+      {showReviewModal && reviewItems.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-[#2d3a52] bg-[#0f1d32] shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-[#2d3a52]">
+              <div>
+                <h2 className="text-white font-bold text-lg">Review Action Items</h2>
+                <p className="text-[#64748b] text-xs mt-0.5">
+                  Reviewing {reviewIndex + 1} of {reviewItems.length}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowReviewModal(false)}
+                className="p-1.5 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Progress bar */}
+            <div className="h-1 bg-[#1a2744]">
+              <div
+                className="h-full bg-[#d4af37] transition-all duration-300"
+                style={{ width: `${((reviewIndex + 1) / reviewItems.length) * 100}%` }}
+              />
+            </div>
+
+            {/* Content */}
+            <div className="p-4 space-y-4">
+              {/* Review reason */}
+              {reviewItems[reviewIndex]?.review_reason && (
+                <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <AlertCircle className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+                  <p className="text-amber-200 text-xs">{reviewItems[reviewIndex].review_reason}</p>
+                </div>
+              )}
+
+              {/* Task text */}
+              <div>
+                <label className="text-[#64748b] text-xs font-medium uppercase tracking-wider mb-1.5 block">
+                  Task
+                </label>
+                <textarea
+                  value={reviewTask}
+                  onChange={(e) => setReviewTask(e.target.value)}
+                  className="input-premium w-full text-sm min-h-[60px] resize-none"
+                  rows={2}
+                />
+              </div>
+
+              {/* Owner */}
+              <div>
+                <label className="text-[#64748b] text-xs font-medium uppercase tracking-wider mb-1.5 block">
+                  Owner
+                </label>
+                <input
+                  type="text"
+                  value={reviewOwner}
+                  onChange={(e) => setReviewOwner(e.target.value)}
+                  placeholder="Assign to..."
+                  className="input-premium w-full text-sm"
+                  list="known-assignees"
+                />
+                {knownAssignees.length > 0 && (
+                  <datalist id="known-assignees">
+                    {knownAssignees.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
+                )}
+              </div>
+
+              {/* Due date */}
+              <div>
+                <label className="text-[#64748b] text-xs font-medium uppercase tracking-wider mb-1.5 block">
+                  Due Date
+                </label>
+                <input
+                  type="date"
+                  value={reviewDue}
+                  onChange={(e) => setReviewDue(e.target.value)}
+                  className="input-premium w-full text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between p-4 border-t border-[#2d3a52]">
+              <button
+                onClick={handleReviewSkip}
+                className="btn-navy px-4 py-2 text-sm"
+              >
+                Skip — don&apos;t create task
+              </button>
+              <button
+                onClick={handleReviewCreate}
+                disabled={reviewCreating || !reviewTask.trim()}
+                className="btn-gold flex items-center gap-2 px-4 py-2 text-sm disabled:opacity-50"
+              >
+                {reviewCreating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowUpRight className="h-4 w-4" />
+                )}
+                Create Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {reviewToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-sm font-medium shadow-lg backdrop-blur-sm flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4" />
+          {reviewToast}
+        </div>
+      )}
     </div>
   );
 }

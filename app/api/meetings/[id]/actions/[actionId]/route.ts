@@ -14,7 +14,9 @@ export async function PATCH(
 
   // If body is empty, toggle done (backward compat)
   const hasFields = body.task !== undefined || body.owner !== undefined ||
-    body.due_date !== undefined || body.done !== undefined;
+    body.due_date !== undefined || body.done !== undefined ||
+    body.confidence !== undefined || body.skipped !== undefined ||
+    body.task_id !== undefined;
 
   let updates: Record<string, unknown>;
 
@@ -24,6 +26,9 @@ export async function PATCH(
     if (body.owner !== undefined) updates.owner = body.owner;
     if (body.due_date !== undefined) updates.due_date = body.due_date;
     if (body.done !== undefined) updates.done = body.done;
+    if (body.confidence !== undefined) updates.confidence = body.confidence;
+    if (body.skipped !== undefined) updates.skipped = body.skipped;
+    if (body.task_id !== undefined) updates.task_id = body.task_id;
   } else {
     // Toggle done
     const { data: action, error: fetchError } = await supabaseAdmin

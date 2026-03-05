@@ -103,9 +103,19 @@ interface MeetingSummaryAction {
   meeting_title: string | null;
 }
 
+interface MeetingNeedsReview {
+  meeting_id: string;
+  meeting_title: string;
+  count: number;
+}
+
 interface MeetingSummaryData {
   meetingsThisWeek: number;
   actions: MeetingSummaryAction[];
+  needsReview?: {
+    total: number;
+    byMeeting: MeetingNeedsReview[];
+  };
 }
 
 interface BriefingData {
@@ -847,6 +857,32 @@ function MeetingsWeekSection({ data }: { data: MeetingSummaryData | null }) {
         </div>
       ) : (
         <p className="text-[#64748b] text-sm mb-4">No meeting actions due this week.</p>
+      )}
+
+      {/* Needs Review banner */}
+      {data.needsReview && data.needsReview.total > 0 && (
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="h-4 w-4 text-amber-400" />
+            <p className="text-amber-200 text-sm font-medium">
+              {data.needsReview.total} meeting action item{data.needsReview.total !== 1 ? 's' : ''} need{data.needsReview.total === 1 ? 's' : ''} your review
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            {data.needsReview.byMeeting.map((m) => (
+              <Link
+                key={m.meeting_id}
+                href="/meetings"
+                className="flex items-center justify-between text-xs text-[#94a3b8] hover:text-white transition-colors"
+              >
+                <span>{m.meeting_title}</span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-medium">
+                  {m.count}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
       )}
 
       <Link
