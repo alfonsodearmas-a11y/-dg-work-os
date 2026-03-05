@@ -57,46 +57,70 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Domain check
       const domain = profile.email.split('@')[1]?.toLowerCase();
       if (allowedDomains.length > 0 && !allowedDomains.includes(domain)) {
-        return false;
+        return '/403';
       }
 
       const googleSub = profile.sub;
       if (!googleSub) return false;
 
-      // Upsert user and get back the UUID
-      const { data: existing } = await supabaseAdmin
+      const now = new Date().toISOString();
+      let userId: string;
+
+      // 1. Check by google_sub (returning user)
+      const { data: existingBySub } = await supabaseAdmin
         .from('users')
-        .select('id')
+        .select('id, is_active, status, login_count')
         .eq('google_sub', googleSub)
         .single();
 
-      let userId: string;
-
-      if (existing) {
-        userId = existing.id;
+      if (existingBySub) {
+        if (!existingBySub.is_active) return '/403';
+        userId = existingBySub.id;
         await supabaseAdmin
           .from('users')
           .update({
             email: profile.email,
             name: profile.name || null,
             avatar_url: profile.picture || null,
-            last_login: new Date().toISOString(),
+            last_login: now,
+            last_seen_at: now,
+            login_count: (existingBySub.login_count ?? 0) + 1,
           })
-          .eq('google_sub', googleSub);
+          .eq('id', userId);
       } else {
-        const { data: newUser } = await supabaseAdmin
+        // 2. Check by email (invited user, first sign-in)
+        const { data: existingByEmail } = await supabaseAdmin
           .from('users')
-          .insert({
+          .select('id, is_active, status, first_login_at, login_count')
+          .eq('email', profile.email)
+          .single();
+
+        if (!existingByEmail) {
+          // Email not in whitelist — deny access
+          return '/403';
+        }
+
+        if (!existingByEmail.is_active && existingByEmail.status !== 'pending') {
+          // Deactivated user — deny access
+          return '/403';
+        }
+
+        // First sign-in for invited user, or re-sign-in for active user without google_sub
+        userId = existingByEmail.id;
+        await supabaseAdmin
+          .from('users')
+          .update({
             google_sub: googleSub,
-            email: profile.email,
             name: profile.name || null,
             avatar_url: profile.picture || null,
-            role: 'officer',
-            last_login: new Date().toISOString(),
+            is_active: true,
+            status: 'active',
+            first_login_at: existingByEmail.first_login_at || now,
+            last_login: now,
+            last_seen_at: now,
+            login_count: (existingByEmail.login_count ?? 0) + 1,
           })
-          .select('id')
-          .single();
-        userId = newUser?.id;
+          .eq('id', userId);
       }
 
       // Store refresh token for calendar access (keyed by user UUID)
@@ -149,6 +173,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (user && user.is_active) {
           token.role = user.role as Role;
           token.agency = user.agency;
+        } else {
+          // User was deactivated — clear token so middleware redirects to /403
+          token.userId = '';
         }
       }
 

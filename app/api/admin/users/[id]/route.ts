@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/db';
 import type { Role } from '@/lib/auth';
 
 const VALID_ROLES: Role[] = ['dg', 'minister', 'ps', 'agency_admin', 'officer'];
-const VALID_AGENCIES = ['gpl', 'cjia', 'gwi', 'gcaa'];
+const VALID_AGENCIES = ['gpl', 'cjia', 'gwi', 'gcaa', 'heci', 'marad', 'has'];
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const authResult = await requireRole(['dg']);
@@ -35,6 +35,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   if (body.is_active !== undefined) {
     updates.is_active = Boolean(body.is_active);
+    // Sync status with is_active toggle
+    updates.status = body.is_active ? 'active' : 'inactive';
   }
 
   // Enforce constraint: ministry roles must have null agency, agency roles must have agency

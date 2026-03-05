@@ -7,6 +7,7 @@ export default auth((req) => {
   // Allow public paths
   if (
     pathname === '/login' ||
+    pathname === '/403' ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/push/') ||
     pathname.startsWith('/api/notifications/generate') ||
@@ -21,6 +22,11 @@ export default auth((req) => {
   if (!req.auth) {
     const loginUrl = new URL('/login', req.url);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // If user was deactivated mid-session (userId cleared by JWT callback), redirect to /403
+  if (req.auth.user && !req.auth.user.id) {
+    return NextResponse.redirect(new URL('/403', req.url));
   }
 
   return NextResponse.next();

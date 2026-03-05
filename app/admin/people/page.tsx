@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Users, UserCheck, UserX, Shield, ShieldOff, CheckCircle, AlertTriangle } from 'lucide-react';
+import {
+  Search, Users, UserCheck, UserX, UserPlus, Shield, ShieldOff,
+  CheckCircle, AlertTriangle, X, Clock,
+} from 'lucide-react';
 
 interface User {
   id: string;
@@ -11,7 +14,12 @@ interface User {
   role: string;
   agency: string | null;
   is_active: boolean;
+  status: string | null;
   last_login: string | null;
+  login_count: number | null;
+  first_login_at: string | null;
+  last_seen_at: string | null;
+  invited_at: string | null;
   created_at: string;
 }
 
@@ -23,6 +31,20 @@ const ROLE_LABELS: Record<string, string> = {
   officer: 'Officer',
 };
 
+const ROLE_COLORS: Record<string, string> = {
+  dg: 'bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/30',
+  minister: 'bg-purple-500/20 text-purple-400 border border-purple-500/30',
+  ps: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
+  agency_admin: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30',
+  officer: 'bg-[#4a5568]/20 text-[#94a3b8] border border-[#4a5568]/30',
+};
+
+const STATUS_STYLES: Record<string, string> = {
+  active: 'bg-green-500/20 text-green-400',
+  pending: 'bg-amber-500/20 text-amber-400',
+  inactive: 'bg-gray-500/20 text-gray-400',
+};
+
 const ROLE_OPTIONS = [
   { value: 'dg', label: 'Director General' },
   { value: 'minister', label: 'Minister' },
@@ -31,11 +53,19 @@ const ROLE_OPTIONS = [
   { value: 'officer', label: 'Officer' },
 ];
 
+const INVITE_ROLE_OPTIONS = [
+  { value: 'agency_admin', label: 'Agency Admin' },
+  { value: 'officer', label: 'Officer' },
+];
+
 const AGENCY_OPTIONS = [
   { value: 'gpl', label: 'GPL' },
-  { value: 'cjia', label: 'CJIA' },
   { value: 'gwi', label: 'GWI' },
+  { value: 'cjia', label: 'CJIA' },
   { value: 'gcaa', label: 'GCAA' },
+  { value: 'heci', label: 'HECI' },
+  { value: 'marad', label: 'MARAD' },
+  { value: 'has', label: 'HAS' },
 ];
 
 const MINISTRY_ROLES = ['dg', 'minister', 'ps'];
@@ -47,6 +77,7 @@ export default function PeoplePage() {
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ role: string; agency: string | null }>({ role: '', agency: null });
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [showInvite, setShowInvite] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -106,7 +137,15 @@ export default function PeoplePage() {
     } catch { showToast('Failed to update', 'error'); }
   };
 
-  const filtered = users.filter(u => {
+  // Sort: active first, then pending, then inactive
+  const statusOrder: Record<string, number> = { active: 0, pending: 1, inactive: 2 };
+  const sorted = [...users].sort((a, b) => {
+    const sa = statusOrder[a.status || 'active'] ?? 0;
+    const sb = statusOrder[b.status || 'active'] ?? 0;
+    return sa - sb;
+  });
+
+  const filtered = sorted.filter(u => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (u.name || '').toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
@@ -114,23 +153,36 @@ export default function PeoplePage() {
 
   const stats = {
     total: users.length,
-    active: users.filter(u => u.is_active).length,
-    inactive: users.filter(u => !u.is_active).length,
+    active: users.filter(u => u.status === 'active' || (u.is_active && !u.status)).length,
+    pending: users.filter(u => u.status === 'pending').length,
+    inactive: users.filter(u => u.status === 'inactive' || (!u.is_active && u.status !== 'pending')).length,
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white">People</h1>
-        <p className="text-sm text-[#64748b] mt-1">Manage user roles and access. Users are created automatically on first Google sign-in.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">People</h1>
+          <p className="text-sm text-[#64748b] mt-1">
+            {stats.active} active · {stats.pending} pending · {stats.inactive} inactive
+          </p>
+        </div>
+        <button
+          onClick={() => setShowInvite(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#d4af37]/20 text-[#d4af37] hover:bg-[#d4af37]/30 transition-colors text-sm font-medium"
+        >
+          <UserPlus className="h-4 w-4" />
+          Invite User
+        </button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total Users', value: stats.total, icon: Users, color: 'text-white' },
+          { label: 'Total', value: stats.total, icon: Users, color: 'text-white' },
           { label: 'Active', value: stats.active, icon: UserCheck, color: 'text-green-400' },
+          { label: 'Pending', value: stats.pending, icon: Clock, color: 'text-amber-400' },
           { label: 'Inactive', value: stats.inactive, icon: UserX, color: 'text-gray-400' },
         ].map(s => (
           <div key={s.label} className="card-premium p-4">
@@ -170,16 +222,21 @@ export default function PeoplePage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-[#64748b] uppercase">Role</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-[#64748b] uppercase">Agency</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-[#64748b] uppercase">Status</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-[#64748b] uppercase">Last Login</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-[#64748b] uppercase">Last Seen</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-[#64748b] uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map(u => {
                   const isEditing = editingUser === u.id;
+                  const status = u.status || (u.is_active ? 'active' : 'inactive');
+                  const isInactive = status === 'inactive';
 
                   return (
-                    <tr key={u.id} className="border-b border-[#2d3a52]/50 hover:bg-[#2d3a52]/10 transition-colors">
+                    <tr
+                      key={u.id}
+                      className={`border-b border-[#2d3a52]/50 hover:bg-[#2d3a52]/10 transition-colors ${isInactive ? 'opacity-40' : ''}`}
+                    >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           {u.avatar_url ? (
@@ -208,7 +265,9 @@ export default function PeoplePage() {
                             ))}
                           </select>
                         ) : (
-                          <span className="text-xs text-[#94a3b8]">{ROLE_LABELS[u.role] || u.role}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded ${ROLE_COLORS[u.role] || ROLE_COLORS.officer}`}>
+                            {ROLE_LABELS[u.role] || u.role}
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -228,14 +287,14 @@ export default function PeoplePage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs px-2 py-0.5 rounded ${u.is_active ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
-                          {u.is_active ? 'Active' : 'Inactive'}
+                        <span className={`text-xs px-2 py-0.5 rounded ${STATUS_STYLES[status] || STATUS_STYLES.active}`}>
+                          {status === 'pending' ? 'Pending' : status === 'inactive' ? 'Inactive' : 'Active'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-xs text-[#64748b]">
-                        {u.last_login
-                          ? new Date(u.last_login).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-                          : 'Never'}
+                        {u.last_seen_at || u.last_login
+                          ? new Date(u.last_seen_at || u.last_login!).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                          : status === 'pending' ? 'Never signed in' : 'Never'}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
@@ -280,7 +339,7 @@ export default function PeoplePage() {
                 {filtered.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-4 py-12 text-center text-[#64748b]">
-                      {users.length === 0 ? 'No users yet. Users are created when they sign in with Google.' : 'No users match your search.'}
+                      {users.length === 0 ? 'No users yet.' : 'No users match your search.'}
                     </td>
                   </tr>
                 )}
@@ -289,6 +348,15 @@ export default function PeoplePage() {
           </div>
         )}
       </div>
+
+      {/* Invite Modal */}
+      {showInvite && (
+        <InviteModal
+          onClose={() => setShowInvite(false)}
+          onSuccess={() => { showToast('User invited'); fetchUsers(); }}
+          onError={(msg) => showToast(msg, 'error')}
+        />
+      )}
 
       {/* Toast */}
       {toast && (
@@ -299,6 +367,132 @@ export default function PeoplePage() {
           {toast.message}
         </div>
       )}
+    </div>
+  );
+}
+
+function InviteModal({
+  onClose,
+  onSuccess,
+  onError,
+}: {
+  onClose: () => void;
+  onSuccess: () => void;
+  onError: (msg: string) => void;
+}) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('officer');
+  const [agency, setAgency] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !email.trim()) return;
+
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          role,
+          agency: agency || null,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        onSuccess();
+        onClose();
+      } else {
+        onError(data.error || 'Failed to invite user');
+      }
+    } catch {
+      onError('Failed to invite user');
+    }
+    setSubmitting(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="card-premium w-full max-w-md p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-white">Invite User</h2>
+          <button onClick={onClose} className="p-1 rounded text-[#64748b] hover:text-white transition-colors">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <p className="text-xs text-[#64748b]">
+          The user will appear as &quot;pending&quot; until they sign in with their Google account.
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs text-[#94a3b8] mb-1.5">Full Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="John Smith"
+              required
+              className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-[#94a3b8] mb-1.5">Email (Google account)</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="john@agency.gov.gy"
+              required
+              className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-[#94a3b8] mb-1.5">Role</label>
+            <select
+              value={role}
+              onChange={e => setRole(e.target.value)}
+              className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+            >
+              {INVITE_ROLE_OPTIONS.map(r => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs text-[#94a3b8] mb-1.5">Agency</label>
+            <select
+              value={agency}
+              onChange={e => setAgency(e.target.value)}
+              required={role === 'agency_admin'}
+              className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+            >
+              <option value="">
+                {role === 'agency_admin' ? 'Select agency (required)' : 'Select agency (optional)'}
+              </option>
+              {AGENCY_OPTIONS.map(a => (
+                <option key={a.value} value={a.value}>{a.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting || !name.trim() || !email.trim()}
+            className="w-full py-2.5 rounded-lg bg-[#d4af37] text-[#0a1628] font-semibold text-sm hover:bg-[#e5c348] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {submitting ? 'Adding...' : 'Add User'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
