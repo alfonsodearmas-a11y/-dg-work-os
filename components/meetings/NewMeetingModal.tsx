@@ -10,7 +10,9 @@ import {
   Loader2,
   XCircle,
   ArrowLeft,
+  Mic,
 } from 'lucide-react';
+import { MeetingRecorder } from './MeetingRecorder';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -39,6 +41,8 @@ const INITIAL_STEP_STATES: Record<PipelineStep, StepState> = {
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
+type InputMode = 'record' | 'upload';
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModalProps) {
@@ -49,7 +53,10 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
   const [title, setTitle] = useState('');
   const [attendeesStr, setAttendeesStr] = useState('');
 
-  // Step 2: file + pipeline
+  // Input mode toggle
+  const [inputMode, setInputMode] = useState<InputMode>('record');
+
+  // Step 2 (upload mode): file + pipeline
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [stepStates, setStepStates] = useState(INITIAL_STEP_STATES);
   const [pipelineRunning, setPipelineRunning] = useState(false);
@@ -70,6 +77,7 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
     setStep(1);
     setTitle('');
     setAttendeesStr('');
+    setInputMode('record');
     setAudioFile(null);
     setStepStates(INITIAL_STEP_STATES);
     setPipelineRunning(false);
@@ -77,7 +85,7 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
     onClose();
   }, [pipelineRunning, onClose]);
 
-  // ── Pipeline ──────────────────────────────────────────────────────────────
+  // ── Pipeline (upload mode) ──────────────────────────────────────────────
 
   function updateStep(key: PipelineStep, state: StepState) {
     setStepStates((prev) => ({ ...prev, [key]: state }));
@@ -149,9 +157,14 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
     }
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ── Render ──────────────────────────────────────────────────────────────
 
   if (!isOpen) return null;
+
+  const attendees = attendeesStr
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4">
@@ -178,7 +191,7 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
               </button>
             )}
             <h2 className="text-lg font-semibold text-white">
-              {step === 1 ? 'New Meeting' : 'Upload & Process'}
+              {step === 1 ? 'New Meeting' : inputMode === 'record' ? 'Record & Process' : 'Upload & Process'}
             </h2>
           </div>
           <button
@@ -220,6 +233,33 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
                   className="input-premium w-full"
                 />
               </div>
+
+              {/* Mode toggle */}
+              <div className="flex rounded-lg border border-[#2d3a52] overflow-hidden">
+                <button
+                  onClick={() => setInputMode('record')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+                    inputMode === 'record'
+                      ? 'bg-[#d4af37]/10 text-[#d4af37] border-b-2 border-[#d4af37]'
+                      : 'text-[#64748b] hover:text-white'
+                  }`}
+                >
+                  <Mic className="h-4 w-4" />
+                  Record
+                </button>
+                <button
+                  onClick={() => setInputMode('upload')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+                    inputMode === 'upload'
+                      ? 'bg-[#d4af37]/10 text-[#d4af37] border-b-2 border-[#d4af37]'
+                      : 'text-[#64748b] hover:text-white'
+                  }`}
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload
+                </button>
+              </div>
+
               <button
                 onClick={() => setStep(2)}
                 disabled={!title.trim()}
@@ -230,110 +270,124 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
             </>
           )}
 
-          {/* ── Step 2: Upload + Pipeline ────────────────────────────── */}
+          {/* ── Step 2: Record or Upload + Pipeline ─────────────────── */}
           {step === 2 && (
             <>
-              {/* Drop zone — hide once pipeline starts */}
-              {!pipelineRunning && !pipelineError && stepStates.create === 'pending' && (
-                <>
-                  <div
-                    {...getRootProps()}
-                    className={`upload-zone p-6 text-center cursor-pointer ${
-                      isDragActive ? 'drag-over' : ''
-                    }`}
-                  >
-                    <input {...getInputProps()} />
-                    {audioFile ? (
-                      <div>
-                        <FileText className="h-8 w-8 text-[#d4af37] mx-auto mb-2" />
-                        <p className="text-white font-medium truncate">{audioFile.name}</p>
-                        <p className="text-[#64748b] text-sm mt-1">
-                          {(audioFile.size / 1024 / 1024).toFixed(1)} MB — click or drop to replace
-                        </p>
-                      </div>
-                    ) : (
-                      <div>
-                        <Upload
-                          className={`h-8 w-8 mx-auto mb-2 ${
-                            isDragActive ? 'text-[#d4af37]' : 'text-[#64748b]'
-                          }`}
-                        />
-                        <p className="text-white font-medium">
-                          {isDragActive ? 'Drop file here...' : 'Drop audio or video file'}
-                        </p>
-                        <p className="text-[#64748b] text-sm mt-1">Max 25 MB</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={runPipeline}
-                    disabled={!audioFile}
-                    className="btn-gold w-full text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Start Transcription
-                  </button>
-                </>
+              {/* ── RECORD MODE ──────────────────────────────────────── */}
+              {inputMode === 'record' && (
+                <MeetingRecorder
+                  title={title}
+                  attendees={attendees}
+                  onComplete={onComplete}
+                />
               )}
 
-              {/* Pipeline progress */}
-              {(pipelineRunning || pipelineError || stepStates.create !== 'pending') && (
-                <div className="space-y-0">
-                  {PIPELINE_STEPS.map((s, i) => {
-                    const state = stepStates[s.key];
-                    return (
-                      <div key={s.key}>
-                        <div className="flex items-center gap-3 py-2">
-                          {state === 'done' && (
-                            <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
-                          )}
-                          {state === 'active' && (
-                            <Loader2 className="h-5 w-5 text-[#d4af37] animate-spin shrink-0" />
-                          )}
-                          {state === 'pending' && (
-                            <div className="w-5 h-5 rounded-full border-2 border-[#2d3a52] shrink-0" />
-                          )}
-                          {state === 'error' && (
-                            <XCircle className="h-5 w-5 text-red-400 shrink-0" />
-                          )}
-                          <span
-                            className={`text-sm font-medium ${
-                              state === 'done'
-                                ? 'text-emerald-400'
-                                : state === 'active'
-                                  ? 'text-[#d4af37]'
-                                  : state === 'error'
-                                    ? 'text-red-400'
-                                    : 'text-[#64748b]'
-                            }`}
-                          >
-                            {s.label}
-                          </span>
-                        </div>
-                        {i < PIPELINE_STEPS.length - 1 && (
-                          <div
-                            className={`ml-[9px] h-4 w-px ${
-                              state === 'done' ? 'bg-emerald-400/30' : 'bg-[#2d3a52]'
-                            }`}
-                          />
+              {/* ── UPLOAD MODE ──────────────────────────────────────── */}
+              {inputMode === 'upload' && (
+                <>
+                  {/* Drop zone — hide once pipeline starts */}
+                  {!pipelineRunning && !pipelineError && stepStates.create === 'pending' && (
+                    <>
+                      <div
+                        {...getRootProps()}
+                        className={`upload-zone p-6 text-center cursor-pointer ${
+                          isDragActive ? 'drag-over' : ''
+                        }`}
+                      >
+                        <input {...getInputProps()} />
+                        {audioFile ? (
+                          <div>
+                            <FileText className="h-8 w-8 text-[#d4af37] mx-auto mb-2" />
+                            <p className="text-white font-medium truncate">{audioFile.name}</p>
+                            <p className="text-[#64748b] text-sm mt-1">
+                              {(audioFile.size / 1024 / 1024).toFixed(1)} MB — click or drop to replace
+                            </p>
+                          </div>
+                        ) : (
+                          <div>
+                            <Upload
+                              className={`h-8 w-8 mx-auto mb-2 ${
+                                isDragActive ? 'text-[#d4af37]' : 'text-[#64748b]'
+                              }`}
+                            />
+                            <p className="text-white font-medium">
+                              {isDragActive ? 'Drop file here...' : 'Drop audio or video file'}
+                            </p>
+                            <p className="text-[#64748b] text-sm mt-1">Max 25 MB</p>
+                          </div>
                         )}
                       </div>
-                    );
-                  })}
-                </div>
-              )}
 
-              {/* Error */}
-              {pipelineError && (
-                <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-3">
-                  <p className="text-red-400 text-sm">{pipelineError}</p>
-                  <button
-                    onClick={runPipeline}
-                    className="btn-navy text-xs mt-2 px-3 py-1.5"
-                  >
-                    Retry
-                  </button>
-                </div>
+                      <button
+                        onClick={runPipeline}
+                        disabled={!audioFile}
+                        className="btn-gold w-full text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Start Transcription
+                      </button>
+                    </>
+                  )}
+
+                  {/* Pipeline progress */}
+                  {(pipelineRunning || pipelineError || stepStates.create !== 'pending') && (
+                    <div className="space-y-0">
+                      {PIPELINE_STEPS.map((s, i) => {
+                        const state = stepStates[s.key];
+                        return (
+                          <div key={s.key}>
+                            <div className="flex items-center gap-3 py-2">
+                              {state === 'done' && (
+                                <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+                              )}
+                              {state === 'active' && (
+                                <Loader2 className="h-5 w-5 text-[#d4af37] animate-spin shrink-0" />
+                              )}
+                              {state === 'pending' && (
+                                <div className="w-5 h-5 rounded-full border-2 border-[#2d3a52] shrink-0" />
+                              )}
+                              {state === 'error' && (
+                                <XCircle className="h-5 w-5 text-red-400 shrink-0" />
+                              )}
+                              <span
+                                className={`text-sm font-medium ${
+                                  state === 'done'
+                                    ? 'text-emerald-400'
+                                    : state === 'active'
+                                      ? 'text-[#d4af37]'
+                                      : state === 'error'
+                                        ? 'text-red-400'
+                                        : 'text-[#64748b]'
+                                }`}
+                              >
+                                {s.label}
+                              </span>
+                            </div>
+                            {i < PIPELINE_STEPS.length - 1 && (
+                              <div
+                                className={`ml-[9px] h-4 w-px ${
+                                  state === 'done' ? 'bg-emerald-400/30' : 'bg-[#2d3a52]'
+                                }`}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Error */}
+                  {pipelineError && (
+                    <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-3">
+                      <p className="text-red-400 text-sm">{pipelineError}</p>
+                      <button
+                        onClick={runPipeline}
+                        className="btn-navy text-xs mt-2 px-3 py-1.5"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
