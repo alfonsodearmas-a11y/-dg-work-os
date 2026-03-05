@@ -2,6 +2,9 @@
 DROP TABLE IF EXISTS notion_tasks CASCADE;
 DROP TABLE IF EXISTS notion_meetings CASCADE;
 
+-- Drop existing tasks table if it exists (from prior migration attempt)
+DROP TABLE IF EXISTS tasks CASCADE;
+
 -- Native tasks — source of truth
 CREATE TABLE tasks (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),

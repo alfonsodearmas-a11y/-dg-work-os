@@ -7,7 +7,7 @@ import {
   LayoutDashboard,
   Activity,
   FileText,
-  BookOpen,
+  Mic,
   Settings,
   Zap,
   Plane,
@@ -41,7 +41,7 @@ const mainNavItems = [
   { href: '/tasks', label: 'Task Board', icon: CheckSquare },
   { href: '/oversight', label: 'Oversight', icon: Eye },
   { href: '/budget', label: 'Budget 2026', icon: DollarSign },
-  { href: '/meetings', label: 'Meetings', icon: BookOpen },
+  { href: '/meetings', label: 'Meetings', icon: Mic },
   { href: '/documents', label: 'Documents', icon: FileText },
 ];
 

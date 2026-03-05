@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { format } from 'date-fns';
+import Link from 'next/link';
 import {
   RefreshCw,
   Sparkles,
@@ -18,6 +19,8 @@ import {
   Flame,
   Users,
   TrendingDown,
+  Mic,
+  ArrowRight,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -89,6 +92,18 @@ interface MeetingNote {
 
 interface MeetingsData {
   meetings: MeetingNote[];
+}
+
+interface MeetingSummaryAction {
+  id: string;
+  task: string;
+  due_date: string | null;
+  meeting_title: string | null;
+}
+
+interface MeetingSummaryData {
+  meetingsThisWeek: number;
+  actions: MeetingSummaryAction[];
 }
 
 interface BriefingData {
@@ -775,6 +790,62 @@ function IntelSection({ meetings, actions }: { meetings: MeetingsData | null; ac
   );
 }
 
+// ─── Meeting Actions This Week ───────────────────────────────────────────────
+
+function MeetingsWeekSection({ data }: { data: MeetingSummaryData | null }) {
+  if (!data) return <Skeleton className="h-36 rounded-xl" />;
+
+  return (
+    <div className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32] p-4 md:p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2.5">
+          <Mic className="h-5 w-5 text-[#d4af37]" />
+          <h3 className="text-lg font-bold text-white">Meetings</h3>
+        </div>
+        <span className="rounded-lg bg-[#d4af37]/15 text-[#d4af37] font-bold px-3 py-1 text-sm">
+          {data.meetingsThisWeek} this week
+        </span>
+      </div>
+
+      {data.actions.length > 0 ? (
+        <div className="space-y-3 mb-4">
+          <p className="text-xs text-[#64748b] font-bold uppercase tracking-wider">Open Actions Due This Week</p>
+          {data.actions.map(a => (
+            <div
+              key={a.id}
+              className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32] p-4 hover:border-[#2d3a52] transition-all duration-200"
+            >
+              <p className="text-white text-sm font-medium">{a.task}</p>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                {a.meeting_title && (
+                  <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-[#1a2744] text-[#94a3b8] border border-[#2d3a52]/50">
+                    {a.meeting_title}
+                  </span>
+                )}
+                {a.due_date && (
+                  <span className="flex items-center gap-1 text-xs text-[#64748b]">
+                    <Clock className="h-3 w-3" />
+                    {a.due_date}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-[#64748b] text-sm mb-4">No meeting actions due this week.</p>
+      )}
+
+      <Link
+        href="/meetings"
+        className="flex items-center gap-1.5 text-[#d4af37] text-sm font-medium hover:underline"
+      >
+        View all meetings <ArrowRight className="h-3.5 w-3.5" />
+      </Link>
+    </div>
+  );
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export function BriefingDashboard() {
@@ -782,6 +853,7 @@ export function BriefingDashboard() {
   const [actions, setActions] = useState<ActionsData | null>(null);
   const [calendar, setCalendar] = useState<CalendarData | null>(null);
   const [meetings, setMeetings] = useState<MeetingsData | null>(null);
+  const [meetingSummary, setMeetingSummary] = useState<MeetingSummaryData | null>(null);
   const [briefing, setBriefing] = useState<BriefingData | null>(null);
   const [actionsError, setActionsError] = useState<string | null>(null);
   const [calendarError, setCalendarError] = useState<string | null>(null);
@@ -791,10 +863,11 @@ export function BriefingDashboard() {
   const tabsRef = useRef<HTMLDivElement>(null);
 
   const fetchAll = useCallback(async () => {
-    const [actionsP, calendarP, meetingsP] = await Promise.allSettled([
+    const [actionsP, calendarP, meetingsP, meetingSummaryP] = await Promise.allSettled([
       fetch('/api/briefing/actions').then(r => r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))),
       fetch('/api/briefing/calendar').then(r => r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))),
       fetch('/api/briefing/meetings').then(r => r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))),
+      fetch('/api/meetings/summary').then(r => r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))),
     ]);
 
     if (actionsP.status === 'fulfilled') { setActions(actionsP.value); setActionsError(null); }
@@ -805,6 +878,8 @@ export function BriefingDashboard() {
 
     if (meetingsP.status === 'fulfilled') { setMeetings(meetingsP.value); setMeetingsError(null); }
     else setMeetingsError('Failed to load meetings');
+
+    if (meetingSummaryP.status === 'fulfilled') setMeetingSummary(meetingSummaryP.value);
   }, []);
 
   const fetchBriefing = useCallback(async () => {
@@ -892,6 +967,7 @@ export function BriefingDashboard() {
         {activeTab === 'brief' && (
           <div className="space-y-6">
             <ExecutiveBriefHero data={briefing} loading={briefingLoading} stats={stats} calendarToday={calendarTodayCount} />
+            <MeetingsWeekSection data={meetingSummary} />
             {actionsError ? <SectionError message={actionsError} /> : <TriageSection actions={actions} compact />}
             {actions && actions.stale.length > 0 && <StaleSection actions={actions} />}
           </div>

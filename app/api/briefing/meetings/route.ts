@@ -52,10 +52,10 @@ export async function GET() {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     const { data: rows, error } = await supabaseAdmin
-      .from('meeting_minutes')
-      .select('id, title, meeting_date, category, minutes_markdown')
-      .gte('meeting_date', sevenDaysAgo.toISOString())
-      .order('meeting_date', { ascending: false })
+      .from('meetings')
+      .select('id, title, date, summary')
+      .gte('date', sevenDaysAgo.toISOString())
+      .order('date', { ascending: false })
       .limit(10);
 
     if (error) throw error;
@@ -63,10 +63,10 @@ export async function GET() {
     const meetings: MeetingNote[] = (rows || []).map((r: any) => ({
       id: r.id,
       title: r.title,
-      date: r.meeting_date,
-      category: r.category,
-      summary: r.minutes_markdown?.slice(0, 200) || null,
-      relatedAgency: detectAgency(r.title, r.category),
+      date: r.date,
+      category: null,
+      summary: r.summary?.slice(0, 200) || null,
+      relatedAgency: detectAgency(r.title, null),
     }));
 
     const result: MeetingsResponse = {

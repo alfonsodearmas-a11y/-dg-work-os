@@ -1,84 +1,78 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMinutesById, updateMinutes, processOneMeeting, processWithManualTranscript } from '@/lib/meeting-minutes';
-import { createTasksFromActionItems, getActionItemsWithStatus, retryFailedActionItems } from '@/lib/meeting-tasks';
+import { requireRole } from '@/lib/auth-helpers';
+import { supabaseAdmin } from '@/lib/db';
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params;
-    const meeting = await getMinutesById(id);
+  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (result instanceof NextResponse) return result;
 
-    if (!meeting) {
-      return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
-    }
+  const { id } = await params;
 
-    // Enrich with linked action item status
-    const linkedItems = await getActionItemsWithStatus(id);
+  const { data: meeting, error } = await supabaseAdmin
+    .from('meetings')
+    .select('*, meeting_actions(*)')
+    .eq('id', id)
+    .single();
 
-    return NextResponse.json({ ...meeting, linked_action_items: linkedItems });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch meeting' },
-      { status: 500 }
-    );
+  if (error || !meeting) {
+    return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
   }
+
+  return NextResponse.json({ meeting });
 }
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params;
-    const body = await request.json();
+  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (result instanceof NextResponse) return result;
 
-    if (body.minutes_markdown !== undefined) {
-      const updated = await updateMinutes(id, body.minutes_markdown);
-      return NextResponse.json(updated);
-    }
+  const { id } = await params;
+  const body = await request.json();
 
-    if (body.action === 'process') {
-      const result = await processOneMeeting(id);
-      // Also create tasks if processing succeeded
-      if (result.status === 'completed') {
-        try {
-          await createTasksFromActionItems(id);
-        } catch { /* task creation is best-effort */ }
-      }
-      const linkedItems = await getActionItemsWithStatus(id);
-      return NextResponse.json({ ...result, linked_action_items: linkedItems });
-    }
+  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (body.title !== undefined) updates.title = body.title;
+  if (body.attendees !== undefined) updates.attendees = body.attendees;
 
-    if (body.action === 'process_manual' && body.transcript) {
-      const result = await processWithManualTranscript(id, body.transcript);
-      if (result.status === 'completed') {
-        try {
-          await createTasksFromActionItems(id);
-        } catch { /* task creation is best-effort */ }
-      }
-      const linkedItems = await getActionItemsWithStatus(id);
-      return NextResponse.json({ ...result, linked_action_items: linkedItems });
-    }
+  const { data: meeting, error } = await supabaseAdmin
+    .from('meetings')
+    .update(updates)
+    .eq('id', id)
+    .select('*, meeting_actions(*)')
+    .single();
 
-    if (body.action === 'create_tasks') {
-      const taskResult = await createTasksFromActionItems(id);
-      const linkedItems = await getActionItemsWithStatus(id);
-      return NextResponse.json({ taskResult, linked_action_items: linkedItems });
-    }
-
-    if (body.action === 'retry_tasks') {
-      const taskResult = await retryFailedActionItems(id);
-      const linkedItems = await getActionItemsWithStatus(id);
-      return NextResponse.json({ taskResult, linked_action_items: linkedItems });
-    }
-
-    return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Failed to update meeting' },
-      { status: 500 }
-    );
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  if (!meeting) {
+    return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
+  }
+
+  return NextResponse.json({ meeting });
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (result instanceof NextResponse) return result;
+
+  const { id } = await params;
+
+  const { error } = await supabaseAdmin
+    .from('meetings')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
 }

@@ -373,10 +373,10 @@ export async function generateMinutesReadyNotifications(userId: string): Promise
   try {
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: minutes, error } = await supabaseAdmin
-      .from('meeting_minutes')
-      .select('id, title, processed_at')
-      .eq('status', 'completed')
-      .gte('processed_at', oneDayAgo);
+      .from('meetings')
+      .select('id, title, updated_at')
+      .eq('status', 'ANALYZED')
+      .gte('updated_at', oneDayAgo);
 
     if (error || !minutes) return { count: 0, notifications: [] };
 
@@ -391,7 +391,7 @@ export async function generateMinutesReadyNotifications(userId: string): Promise
         reference_type: 'meeting',
         reference_id: m.id,
         reference_url: `/meetings/${m.id}`,
-        scheduled_for: m.processed_at || new Date().toISOString(),
+        scheduled_for: m.updated_at || new Date().toISOString(),
         category: 'meetings',
         source_module: 'calendar',
       });
