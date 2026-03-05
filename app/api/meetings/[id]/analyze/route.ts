@@ -5,7 +5,9 @@ import OpenAI from 'openai';
 
 export const maxDuration = 60;
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 interface AnalysisResult {
   summary: string;
@@ -45,7 +47,7 @@ export async function POST(
       .eq('id', id);
 
     // Call GPT-4o
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       response_format: { type: 'json_object' },
       messages: [

@@ -5,7 +5,9 @@ import OpenAI from 'openai';
 
 export const maxDuration = 120;
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 export async function POST(
   _request: NextRequest,
@@ -52,7 +54,7 @@ export async function POST(
     const audioFile = new File([blob], filename, { type: blob.type || 'audio/webm' });
 
     // Call Whisper
-    const transcription = await openai.audio.transcriptions.create({
+    const transcription = await getOpenAI().audio.transcriptions.create({
       model: 'whisper-1',
       file: audioFile,
       response_format: 'verbose_json',
