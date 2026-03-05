@@ -1,19 +1,20 @@
-import Anthropic from '@anthropic-ai/sdk';
+// TEMPORARY: Swapped from Anthropic to OpenAI GPT-4o. Revert when Anthropic quota restored.
+import OpenAI from 'openai';
 import type { GPLAnalysis, GWIAnalysis, PendingApplication } from './pending-applications-types';
 
 const CONFIG = {
-  MODEL: 'claude-opus-4-5-20250929',
+  MODEL: 'gpt-4o',
   MAX_TOKENS: 8192,
   TEMPERATURE: 0.3,
 };
 
-let client: Anthropic | null = null;
+let client: OpenAI | null = null;
 
-function getClient(): Anthropic {
+function getClient(): OpenAI {
   if (!client) {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
-    client = new Anthropic({ apiKey });
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) throw new Error('OPENAI_API_KEY not set');
+    client = new OpenAI({ apiKey });
   }
   return client;
 }
@@ -67,7 +68,7 @@ function buildGWICsv(records: PendingApplication[]): string {
 // ── GPL Deep Analysis ────────────────────────────────────────────────────────
 
 export async function generateGPLDeepAnalysis(records: PendingApplication[], analysis: GPLAnalysis) {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.OPENAI_API_KEY) {
     return { success: false, error: 'AI analysis not configured (missing API key)' };
   }
 
@@ -138,14 +139,14 @@ Respond in JSON:
 }`;
 
   try {
-    const response = await getClient().messages.create({
+    const response = await getClient().chat.completions.create({
       model: CONFIG.MODEL,
-      max_tokens: CONFIG.MAX_TOKENS,
+      max_completion_tokens: CONFIG.MAX_TOKENS,
       temperature: CONFIG.TEMPERATURE,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const text = response.content.filter(b => b.type === 'text').map(b => (b as Anthropic.TextBlock).text).join('\n');
+    const text = response.choices[0]?.message?.content || '';
     const parsed = parseJSONResponse(text);
 
     return {
@@ -153,7 +154,7 @@ Respond in JSON:
       executiveSummary: String(parsed.executiveSummary || ''),
       sections: Array.isArray(parsed.sections) ? parsed.sections : [],
       recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
-      usage: { promptTokens: response.usage?.input_tokens, completionTokens: response.usage?.output_tokens },
+      usage: { promptTokens: response.usage?.prompt_tokens, completionTokens: response.usage?.completion_tokens },
     };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };
@@ -163,7 +164,7 @@ Respond in JSON:
 // ── GWI Deep Analysis ────────────────────────────────────────────────────────
 
 export async function generateGWIDeepAnalysis(records: PendingApplication[], analysis: GWIAnalysis) {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.OPENAI_API_KEY) {
     return { success: false, error: 'AI analysis not configured (missing API key)' };
   }
 
@@ -219,14 +220,14 @@ Respond in JSON:
 }`;
 
   try {
-    const response = await getClient().messages.create({
+    const response = await getClient().chat.completions.create({
       model: CONFIG.MODEL,
-      max_tokens: CONFIG.MAX_TOKENS,
+      max_completion_tokens: CONFIG.MAX_TOKENS,
       temperature: CONFIG.TEMPERATURE,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const text = response.content.filter(b => b.type === 'text').map(b => (b as Anthropic.TextBlock).text).join('\n');
+    const text = response.choices[0]?.message?.content || '';
     const parsed = parseJSONResponse(text);
 
     return {
@@ -234,7 +235,7 @@ Respond in JSON:
       executiveSummary: String(parsed.executiveSummary || ''),
       sections: Array.isArray(parsed.sections) ? parsed.sections : [],
       recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
-      usage: { promptTokens: response.usage?.input_tokens, completionTokens: response.usage?.output_tokens },
+      usage: { promptTokens: response.usage?.prompt_tokens, completionTokens: response.usage?.completion_tokens },
     };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };

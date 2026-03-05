@@ -1,20 +1,21 @@
-import Anthropic from '@anthropic-ai/sdk';
+// TEMPORARY: Swapped from Anthropic to OpenAI GPT-4o. Revert when Anthropic quota restored.
+import OpenAI from 'openai';
 
 const CONFIG = {
-  MODEL: 'claude-sonnet-4-5-20250929',
+  MODEL: 'gpt-4o',
   MAX_TOKENS: 4096,
   TEMPERATURE: 0.3,
 };
 
-let anthropicClient: Anthropic | null = null;
+let openaiClient: OpenAI | null = null;
 
-function getClient(): Anthropic {
-  if (!anthropicClient) {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) throw new Error('ANTHROPIC_API_KEY environment variable is not set');
-    anthropicClient = new Anthropic({ apiKey });
+function getClient(): OpenAI {
+  if (!openaiClient) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) throw new Error('OPENAI_API_KEY environment variable is not set');
+    openaiClient = new OpenAI({ apiKey });
   }
-  return anthropicClient;
+  return openaiClient;
 }
 
 function buildAnalysisPrompt(metrics: any[], date: string): string {
@@ -85,26 +86,26 @@ function parseAnalysisResponse(response: string) {
 export async function analyzeMetrics(metrics: any[], date: string, options: { includeRaw?: boolean } = {}) {
   const startTime = Date.now();
   try {
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
       return { success: false, error: 'AI analysis not configured (missing API key)', skipped: true };
     }
     const client = getClient();
     const prompt = buildAnalysisPrompt(metrics, date);
 
-    const response = await client.messages.create({
+    const response = await client.chat.completions.create({
       model: CONFIG.MODEL,
-      max_tokens: CONFIG.MAX_TOKENS,
+      max_completion_tokens: CONFIG.MAX_TOKENS,
       temperature: CONFIG.TEMPERATURE,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const responseText = response.content.filter(b => b.type === 'text').map(b => (b as any).text).join('\n');
+    const responseText = response.choices[0]?.message?.content || '';
     const analysis = parseAnalysisResponse(responseText);
 
     return {
       success: true,
       analysis,
-      meta: { model: CONFIG.MODEL, processingTimeMs: Date.now() - startTime, promptTokens: response.usage?.input_tokens, completionTokens: response.usage?.output_tokens },
+      meta: { model: CONFIG.MODEL, processingTimeMs: Date.now() - startTime, promptTokens: response.usage?.prompt_tokens, completionTokens: response.usage?.completion_tokens },
       rawResponse: options.includeRaw ? responseText : undefined,
     };
   } catch (error: any) {
@@ -187,13 +188,13 @@ IMPORTANT for executiveBriefing:
 export async function generateGPLBriefing(context: GPLBriefingContext) {
   const startTime = Date.now();
   try {
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
       return { success: false, error: 'AI analysis not configured', executiveBriefing: { headline: 'AI analysis is not available.', sections: [] }, criticalAlerts: [], stationConcerns: [], recommendations: [] };
     }
     const client = getClient();
     const prompt = buildGPLPrompt(context);
-    const response = await client.messages.create({ model: CONFIG.MODEL, max_tokens: CONFIG.MAX_TOKENS, temperature: CONFIG.TEMPERATURE, messages: [{ role: 'user', content: prompt }] });
-    const responseText = response.content.filter(b => b.type === 'text').map(b => (b as any).text).join('\n');
+    const response = await client.chat.completions.create({ model: CONFIG.MODEL, max_completion_tokens: CONFIG.MAX_TOKENS, temperature: CONFIG.TEMPERATURE, messages: [{ role: 'user', content: prompt }] });
+    const responseText = response.choices[0]?.message?.content || '';
 
     let parsed;
     try {
@@ -225,7 +226,7 @@ export async function generateGPLBriefing(context: GPLBriefingContext) {
       criticalAlerts: parsed.criticalAlerts || [],
       stationConcerns: parsed.stationConcerns || [],
       recommendations: parsed.recommendations || [],
-      usage: { promptTokens: response.usage?.input_tokens, completionTokens: response.usage?.output_tokens },
+      usage: { promptTokens: response.usage?.prompt_tokens, completionTokens: response.usage?.completion_tokens },
     };
   } catch (error: any) {
     return { success: false, error: error.message, executiveBriefing: { headline: `AI analysis failed: ${error.message}`, sections: [] }, criticalAlerts: [], stationConcerns: [], recommendations: [] };
@@ -234,9 +235,9 @@ export async function generateGPLBriefing(context: GPLBriefingContext) {
 
 export async function healthCheck() {
   try {
-    if (!process.env.ANTHROPIC_API_KEY) return { healthy: false, configured: false, error: 'ANTHROPIC_API_KEY not set' };
+    if (!process.env.OPENAI_API_KEY) return { healthy: false, configured: false, error: 'OPENAI_API_KEY not set' };
     const client = getClient();
-    await client.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 10, messages: [{ role: 'user', content: 'Respond with "OK"' }] });
+    await client.chat.completions.create({ model: 'gpt-4o-mini', max_completion_tokens: 10, messages: [{ role: 'user', content: 'Respond with "OK"' }] });
     return { healthy: true, configured: true, model: CONFIG.MODEL };
   } catch (error: any) {
     return { healthy: false, configured: true, error: error.message };

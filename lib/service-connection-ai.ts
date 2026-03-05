@@ -1,11 +1,11 @@
 // Service Connection AI Analysis
-// Claude-powered efficiency analysis for service connections.
+// TEMPORARY: Swapped from Anthropic to OpenAI GPT-4o. Revert when Anthropic quota restored.
 
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 import type { EfficiencyMetrics, ServiceConnection, AIInsight } from './service-connection-types';
 
-const MODEL = 'claude-opus-4-6-20250929';
+const MODEL = 'gpt-4o';
 const MAX_TOKENS = 8192;
 const TEMPERATURE = 0.3;
 
@@ -129,23 +129,20 @@ export async function generateEfficiencyAnalysis(
   metrics: EfficiencyMetrics,
   connections: ServiceConnection[]
 ): Promise<AIInsight> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('OPENAI_API_KEY not set');
 
-  const client = new Anthropic({ apiKey });
+  const client = new OpenAI({ apiKey });
   const prompt = buildPrompt(metrics, connections);
 
-  const response = await client.messages.create({
+  const response = await client.chat.completions.create({
     model: MODEL,
-    max_tokens: MAX_TOKENS,
+    max_completion_tokens: MAX_TOKENS,
     temperature: TEMPERATURE,
     messages: [{ role: 'user', content: prompt }],
   });
 
-  const text = response.content
-    .filter(b => b.type === 'text')
-    .map(b => b.text)
-    .join('');
+  const text = response.choices[0]?.message?.content || '';
 
   const parsed = parseJSONResponse(text);
   if (!parsed) {

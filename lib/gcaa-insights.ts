@@ -1,11 +1,11 @@
 /**
  * GCAA AI Insights Service
  *
- * Generates comprehensive monthly analysis using Claude Opus.
+ * TEMPORARY: Swapped from Anthropic to OpenAI GPT-4o. Revert when Anthropic quota restored.
  * Caches results in gcaa_ai_insights table.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import crypto from 'crypto';
 import { supabaseAdmin } from './db';
 
@@ -56,7 +56,7 @@ export interface GCAAInsights {
 // -- Config ------------------------------------------------------------------
 
 const AI_CONFIG = {
-  MODEL: 'claude-opus-4-6',
+  MODEL: 'gpt-4o',
   MAX_TOKENS: 8000,
   TEMPERATURE: 0.3,
 } as const;
@@ -195,8 +195,8 @@ export async function generateGCAAInsights(
 ): Promise<GCAAInsights | null> {
   const startTime = Date.now();
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.warn('[gcaa-insights] ANTHROPIC_API_KEY not configured');
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn('[gcaa-insights] OPENAI_API_KEY not configured');
     return null;
   }
 
@@ -228,25 +228,22 @@ export async function generateGCAAInsights(
   console.log('[gcaa-insights] Generating new insights for', month);
 
   try {
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const prompt = buildInsightsPrompt(data);
 
-    const response = await client.messages.create({
+    const response = await client.chat.completions.create({
       model: AI_CONFIG.MODEL,
-      max_tokens: AI_CONFIG.MAX_TOKENS,
+      max_completion_tokens: AI_CONFIG.MAX_TOKENS,
       temperature: AI_CONFIG.TEMPERATURE,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const text = response.content
-      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-      .map(block => block.text)
-      .join('');
+    const text = response.choices[0]?.message?.content || '';
 
     // Parse JSON from response
     const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      throw new Error('Claude did not return valid JSON');
+      throw new Error('AI did not return valid JSON');
     }
 
     const jsonStr = jsonMatch[1] || jsonMatch[0];

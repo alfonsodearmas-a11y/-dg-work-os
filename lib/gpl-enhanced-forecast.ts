@@ -1,17 +1,17 @@
 /**
  * GPL Enhanced Multivariate Forecast Service
  *
- * Uses Claude Opus for rigorous demand forecasting with seasonal decomposition,
+ * TEMPORARY: Swapped from Anthropic to OpenAI GPT-4o. Revert when Anthropic quota restored.
  * 3 scenarios (conservative, most_likely, aggressive), and detailed methodology.
  * Results are cached in gpl_forecast_cache with data-hash invalidation.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { supabaseAdmin } from './db';
 import { createHash } from 'crypto';
 
 const AI_CONFIG = {
-  MODEL: 'claude-opus-4-6',
+  MODEL: 'gpt-4o',
   MAX_TOKENS: 8192,
   TEMPERATURE: 0.2,
 } as const;
@@ -344,29 +344,26 @@ export async function getEnhancedForecast(forceRegenerate = false): Promise<{
     }
 
     // Check API key
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return { success: false, error: 'ANTHROPIC_API_KEY not configured' };
+    if (!process.env.OPENAI_API_KEY) {
+      return { success: false, error: 'OPENAI_API_KEY not configured' };
     }
 
-    // Build prompt and call Claude Opus
+    // Build prompt and call OpenAI GPT-4o
     const prompt = buildEnhancedPrompt(data);
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    console.log(`[enhanced-forecast] Calling Claude Opus with ${data.kpiRows.length} months of data...`);
+    console.log(`[enhanced-forecast] Calling GPT-4o with ${data.kpiRows.length} months of data...`);
 
-    const response = await anthropic.messages.create({
+    const response = await openai.chat.completions.create({
       model: AI_CONFIG.MODEL,
-      max_tokens: AI_CONFIG.MAX_TOKENS,
+      max_completion_tokens: AI_CONFIG.MAX_TOKENS,
       temperature: AI_CONFIG.TEMPERATURE,
       messages: [{ role: 'user', content: prompt }],
     });
 
     const processingTime = Date.now() - startTime;
 
-    const responseText = response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map(b => b.text)
-      .join('\n');
+    const responseText = response.choices[0]?.message?.content || '';
 
     // Parse JSON
     let parsed: any;
@@ -402,8 +399,8 @@ export async function getEnhancedForecast(forceRegenerate = false): Promise<{
         generated_at: new Date().toISOString(),
         model: AI_CONFIG.MODEL,
         processing_time_ms: processingTime,
-        prompt_tokens: response.usage?.input_tokens,
-        completion_tokens: response.usage?.output_tokens,
+        prompt_tokens: response.usage?.prompt_tokens,
+        completion_tokens: response.usage?.completion_tokens,
         data_hash: data.dataHash,
         is_fallback: false,
         data_period: `${data.dataRange.start} to ${data.dataRange.end}`,
@@ -415,12 +412,12 @@ export async function getEnhancedForecast(forceRegenerate = false): Promise<{
     await saveForecastToCache(
       forecast,
       data.dataHash,
-      response.usage?.input_tokens,
-      response.usage?.output_tokens,
+      response.usage?.prompt_tokens,
+      response.usage?.completion_tokens,
       processingTime
     );
 
-    console.log(`[enhanced-forecast] Generated in ${processingTime}ms (${response.usage?.input_tokens}/${response.usage?.output_tokens} tokens)`);
+    console.log(`[enhanced-forecast] Generated in ${processingTime}ms (${response.usage?.prompt_tokens}/${response.usage?.completion_tokens} tokens)`);
 
     return { success: true, forecast, cached: false };
   } catch (err: any) {

@@ -1,6 +1,7 @@
+// TEMPORARY: Swapped from Anthropic to OpenAI GPT-4o. Revert when Anthropic quota restored.
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 
 // In-memory cache — invalidated when row count changes (new upload)
 let cachedAnalysis: { analysis: any; generatedAt: number; rowCount: number } | null = null;
@@ -40,7 +41,7 @@ export async function GET() {
     }
 
     // Check for API key
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({
         success: true,
         hasAnalysis: false,
@@ -107,18 +108,15 @@ Respond in JSON format:
   ]
 }`;
 
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 2048,
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o',
+      max_completion_tokens: 2048,
       temperature: 0.3,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const responseText = response.content
-      .filter(b => b.type === 'text')
-      .map(b => (b as Anthropic.TextBlock).text)
-      .join('\n');
+    const responseText = response.choices[0]?.message?.content || '';
 
     // Parse structured JSON response
     let sections: any[] = [];

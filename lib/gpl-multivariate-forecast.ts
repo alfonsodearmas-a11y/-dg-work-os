@@ -1,16 +1,15 @@
 /**
  * GPL Multivariate Forecast Service
  *
- * Sophisticated scenario-based forecasting using Claude for analytical reasoning.
+ * TEMPORARY: Swapped from Anthropic to OpenAI GPT-4o. Revert when Anthropic quota restored.
  * Produces Conservative and Aggressive scenarios with transparent methodology.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { supabaseAdmin } from './db';
 
-// Claude configuration
 const AI_CONFIG = {
-  MODEL: 'claude-sonnet-4-5-20250929',
+  MODEL: 'gpt-4o',
   MAX_TOKENS: 4096,
   TEMPERATURE: 0.2,
 } as const;
@@ -419,20 +418,20 @@ export async function generateForecast(): Promise<GenerateForecastResponse> {
     }
 
     // Check for API key
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
       console.log('[gpl-multivariate] No API key, using fallback');
       return { success: true, forecast: generateFallbackForecast(historicalData) };
     }
 
-    // Stage 2: Call Claude
-    console.log('[gpl-multivariate] Calling Claude for analysis...');
+    // Stage 2: Call OpenAI GPT-4o
+    console.log('[gpl-multivariate] Calling GPT-4o for analysis...');
     const prompt = buildForecastPrompt(historicalData);
 
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    const response = await anthropic.messages.create({
+    const response = await openai.chat.completions.create({
       model: AI_CONFIG.MODEL,
-      max_tokens: AI_CONFIG.MAX_TOKENS,
+      max_completion_tokens: AI_CONFIG.MAX_TOKENS,
       temperature: AI_CONFIG.TEMPERATURE,
       messages: [{ role: 'user', content: prompt }]
     });
@@ -440,10 +439,7 @@ export async function generateForecast(): Promise<GenerateForecastResponse> {
     const processingTime = Date.now() - startTime;
 
     // Extract response text
-    const responseText = response.content
-      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-      .map(block => block.text)
-      .join('\n');
+    const responseText = response.choices[0]?.message?.content || '';
 
     // Parse JSON response
     let forecast: ForecastResult;
@@ -456,7 +452,7 @@ export async function generateForecast(): Promise<GenerateForecastResponse> {
         throw new Error('No JSON found in response');
       }
     } catch (parseErr) {
-      console.error('[gpl-multivariate] Failed to parse Claude response:', parseErr);
+      console.error('[gpl-multivariate] Failed to parse AI response:', parseErr);
       console.log('[gpl-multivariate] Raw response:', responseText.slice(0, 500));
       return { success: true, forecast: generateFallbackForecast(historicalData) };
     }
@@ -466,8 +462,8 @@ export async function generateForecast(): Promise<GenerateForecastResponse> {
       generatedAt: new Date().toISOString(),
       processingTimeMs: processingTime,
       model: AI_CONFIG.MODEL,
-      inputTokens: response.usage?.input_tokens,
-      outputTokens: response.usage?.output_tokens,
+      inputTokens: response.usage?.prompt_tokens,
+      outputTokens: response.usage?.completion_tokens,
       dataPointsUsed: historicalData.monthlyKPIs.length,
       isFallback: false
     };
