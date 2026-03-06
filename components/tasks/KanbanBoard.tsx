@@ -8,6 +8,8 @@ import {
 import { Task, TaskUpdate, TasksByStatus, TaskTemplate, TaskStatus } from '@/lib/task-types';
 import { KanbanColumn } from './KanbanColumn';
 import { TaskDetailModal } from './TaskDetailModal';
+import { TaskContextMenu } from './TaskContextMenu';
+import { TaskBottomSheet } from './TaskBottomSheet';
 import { CreateEventModal } from '@/components/calendar/CreateEventModal';
 import { useSession } from 'next-auth/react';
 
@@ -20,6 +22,13 @@ const COLUMN_LABELS: Record<string, string> = {
   done: 'Done',
 };
 
+const COLUMN_TAB_STYLES: Record<string, { active: string; dot: string }> = {
+  new: { active: 'border-indigo-400 text-indigo-400', dot: 'bg-indigo-400' },
+  active: { active: 'border-blue-400 text-blue-400', dot: 'bg-blue-400' },
+  blocked: { active: 'border-amber-400 text-amber-400', dot: 'bg-amber-400' },
+  done: { active: 'border-emerald-400 text-emerald-400', dot: 'bg-emerald-400' },
+};
+
 const AGENCIES = ['GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'HAS', 'Hinterland', 'Ministry'];
 const PRIORITIES = ['critical', 'high', 'medium', 'low'] as const;
 
@@ -30,8 +39,21 @@ interface UserOption {
   agency: string | null;
 }
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  return isMobile;
+}
+
 export function KanbanBoard() {
   const { data: session } = useSession();
+  const isMobile = useIsMobile();
+
   const [tasks, setTasks] = useState<TasksByStatus>({
     new: [],
     active: [],
@@ -45,6 +67,14 @@ export function KanbanBoard() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Mobile tab
+  const [mobileTab, setMobileTab] = useState<keyof TasksByStatus>('new');
+
+  // Context menu (desktop)
+  const [contextMenu, setContextMenu] = useState<{ task: Task; position: { x: number; y: number } } | null>(null);
+  // Bottom sheet (mobile)
+  const [bottomSheetTask, setBottomSheetTask] = useState<Task | null>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -107,13 +137,11 @@ export function KanbanBoard() {
     } catch {}
   }, []);
 
-  // Initial fetch
   useEffect(() => {
     fetchTasks();
     fetchUsers();
   }, [fetchTasks, fetchUsers]);
 
-  // Poll every 60 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       setSyncing(true);
@@ -124,7 +152,6 @@ export function KanbanBoard() {
 
   // Update task
   const updateTask = async (taskId: string, updates: TaskUpdate) => {
-    // Optimistic update
     setTasks((prev) => {
       const newTasks = { ...prev };
       for (const status of COLUMNS) {
@@ -176,6 +203,34 @@ export function KanbanBoard() {
     }
   };
 
+  // Move task (from context menu / bottom sheet)
+  const moveTask = useCallback((taskId: string, newStatus: TaskStatus) => {
+    if (newStatus === 'blocked') {
+      // Find source and optimistically move
+      let sourceColumn: keyof TasksByStatus | null = null;
+      for (const col of COLUMNS) {
+        if (tasks[col].some((t) => t.id === taskId)) {
+          sourceColumn = col;
+          break;
+        }
+      }
+      if (sourceColumn && sourceColumn !== 'blocked') {
+        setTasks((prev) => {
+          const task = prev[sourceColumn!].find((t) => t.id === taskId);
+          if (!task) return prev;
+          return {
+            ...prev,
+            [sourceColumn!]: prev[sourceColumn!].filter((t) => t.id !== taskId),
+            blocked: [{ ...task, status: 'blocked' as TaskStatus }, ...prev.blocked],
+          };
+        });
+      }
+      setBlockedPrompt({ taskId, targetStatus: 'blocked' });
+      return;
+    }
+    updateTask(taskId, { status: newStatus });
+  }, [tasks, updateTask]);
+
   // Create task
   const createTask = async () => {
     if (!newTitle.trim()) return;
@@ -222,7 +277,6 @@ export function KanbanBoard() {
     setShowTemplates(false);
   };
 
-  // Apply template
   const applyTemplate = (template: TaskTemplate) => {
     setNewTitle(template.name);
     setNewDescription(template.description || '');
@@ -231,7 +285,6 @@ export function KanbanBoard() {
     setShowTemplates(false);
   };
 
-  // Fetch templates on demand
   const loadTemplates = async () => {
     if (templates.length > 0) {
       setShowTemplates(true);
@@ -245,7 +298,6 @@ export function KanbanBoard() {
     setShowTemplates(true);
   };
 
-  // Standup digest
   const generateStandup = async () => {
     setStandupLoading(true);
     setShowStandup(true);
@@ -260,27 +312,17 @@ export function KanbanBoard() {
     }
   };
 
-  // Native drag-and-drop: track which card is being dragged via dragstart/dragend on document
+  // Native drag-and-drop cleanup
   useEffect(() => {
-    const handleDragStartCapture = (e: DragEvent) => {
-      const taskId = e.dataTransfer?.getData('text/plain');
-      // dataTransfer is not readable in dragstart from document level,
-      // but we set draggingId from the card's own onDragStart via the state below
-    };
-    const handleDragEnd = () => {
-      setDraggingId(null);
-    };
+    const handleDragEnd = () => setDraggingId(null);
     document.addEventListener('dragend', handleDragEnd);
-    return () => {
-      document.removeEventListener('dragend', handleDragEnd);
-    };
+    return () => document.removeEventListener('dragend', handleDragEnd);
   }, []);
 
   // Handle drop from column
   const handleColumnDrop = (taskId: string, targetColumn: string) => {
     if (!taskId) return;
 
-    // Find which column the task is currently in
     let sourceColumn: keyof TasksByStatus | null = null;
     for (const col of COLUMNS) {
       if (tasks[col].some((t) => t.id === taskId)) {
@@ -291,9 +333,7 @@ export function KanbanBoard() {
 
     if (!sourceColumn || sourceColumn === targetColumn) return;
 
-    // If dropping into blocked, prompt for reason
     if (targetColumn === 'blocked') {
-      // Optimistic move first so the card appears in blocked column
       setTasks((prev) => {
         const task = prev[sourceColumn!].find((t) => t.id === taskId);
         if (!task) return prev;
@@ -321,11 +361,16 @@ export function KanbanBoard() {
   };
 
   const cancelBlocked = () => {
-    // Revert by refetching
     fetchTasks();
     setBlockedPrompt(null);
     setBlockedReason('');
   };
+
+  // Open edit modal
+  const openEditModal = useCallback((task: Task) => {
+    setSelectedTask(task);
+    setModalOpen(true);
+  }, []);
 
   // Filter tasks
   const filterTasks = (columnTasks: Task[]): Task[] => {
@@ -339,10 +384,126 @@ export function KanbanBoard() {
   };
 
   const hasActiveFilters = searchQuery || agencyFilter || myTasksOnly;
-
-  // Compute summary stats
   const totalTasks = COLUMNS.reduce((sum, col) => sum + tasks[col].length, 0);
 
+  // --- New Task Form Content ---
+  const newTaskFormContent = (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-white font-medium text-sm">New Task</h3>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadTemplates}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-[#94a3b8] hover:text-white bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37]/50 transition-colors"
+            style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+          >
+            <FileText className="h-3.5 w-3.5" />
+            Use Template
+          </button>
+          <button
+            onClick={resetNewTaskForm}
+            className="p-1.5 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
+            style={{ minWidth: isMobile ? 44 : undefined, minHeight: isMobile ? 44 : undefined }}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {showTemplates && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-3 rounded-lg bg-[#0a1628] border border-[#2d3a52]">
+          {templates.length === 0 && (
+            <p className="text-[#64748b] text-sm col-span-full">Loading templates...</p>
+          )}
+          {templates.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => applyTemplate(t)}
+              className="text-left p-3 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37]/50 transition-colors"
+              style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+            >
+              <p className="text-white text-sm font-medium">{t.name}</p>
+              {t.description && (
+                <p className="text-[#64748b] text-xs mt-1 line-clamp-2">{t.description}</p>
+              )}
+              {t.agency_slug && (
+                <span className="inline-block mt-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#2d3a52] text-[#94a3b8]">
+                  {t.agency_slug.toUpperCase()}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <input
+        type="text"
+        placeholder="Task title..."
+        value={newTitle}
+        onChange={(e) => setNewTitle(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && createTask()}
+        autoFocus
+        className="w-full px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37]"
+        style={{ minHeight: isMobile ? 44 : undefined, fontSize: isMobile ? 16 : undefined }}
+      />
+
+      <textarea
+        placeholder="Description (optional)..."
+        value={newDescription}
+        onChange={(e) => setNewDescription(e.target.value)}
+        rows={2}
+        className="w-full px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] resize-none"
+        style={{ minHeight: isMobile ? 80 : undefined, fontSize: isMobile ? 16 : undefined }}
+      />
+
+      <div className={`grid gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-2 sm:grid-cols-4'}`}>
+        <select
+          value={newAgency}
+          onChange={(e) => setNewAgency(e.target.value)}
+          className="px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
+          style={{ minHeight: isMobile ? 44 : undefined }}
+        >
+          <option value="">No Agency</option>
+          {AGENCIES.map((a) => (
+            <option key={a} value={a}>{a}</option>
+          ))}
+        </select>
+
+        <select
+          value={newPriority}
+          onChange={(e) => setNewPriority(e.target.value)}
+          className="px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
+          style={{ minHeight: isMobile ? 44 : undefined }}
+        >
+          {PRIORITIES.map((p) => (
+            <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
+          ))}
+        </select>
+
+        <input
+          type="date"
+          value={newDueDate}
+          onChange={(e) => setNewDueDate(e.target.value)}
+          className="px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
+          style={{ minHeight: isMobile ? 44 : undefined }}
+        />
+
+        <select
+          value={newAssignee}
+          onChange={(e) => setNewAssignee(e.target.value)}
+          className="px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
+          style={{ minHeight: isMobile ? 44 : undefined }}
+        >
+          <option value="">Assign to me</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>{u.name}{u.agency ? ` (${u.agency})` : ''}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+
+  // --- Loading State ---
   if (loading) {
     return (
       <div className="space-y-4 animate-pulse">
@@ -351,9 +512,9 @@ export function KanbanBoard() {
           <div className="h-10 bg-[#2d3a52] rounded-lg w-24" />
           <div className="h-10 bg-[#2d3a52] rounded-lg w-28" />
         </div>
-        <div className="flex gap-4 overflow-hidden">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="min-w-[280px] flex-1 bg-[#1a2744] rounded-xl border border-[#2d3a52] p-4">
+        <div className={isMobile ? 'space-y-3' : 'flex gap-4 overflow-hidden'}>
+          {Array.from({ length: isMobile ? 2 : 4 }).map((_, i) => (
+            <div key={i} className={`${isMobile ? 'w-full' : 'min-w-[280px] flex-1'} bg-[#1a2744] rounded-xl border border-[#2d3a52] p-4`}>
               <div className="h-5 bg-[#2d3a52] rounded w-24 mb-4" />
               <div className="space-y-3">
                 {Array.from({ length: 3 - i }).map((_, j) => (
@@ -378,6 +539,7 @@ export function KanbanBoard() {
         <button
           onClick={() => { setLoading(true); fetchTasks(); }}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#2d3a52] hover:bg-[#4a5568] text-white rounded-lg text-sm font-medium transition-colors"
+          style={{ minHeight: 44, touchAction: 'manipulation' }}
         >
           <RefreshCw className="w-4 h-4" /> Try Again
         </button>
@@ -388,7 +550,7 @@ export function KanbanBoard() {
   return (
     <div className="space-y-4">
       {/* Summary Stats Bar */}
-      {totalTasks > 0 && (
+      {totalTasks > 0 && !isMobile && (
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <span className="text-[#64748b]">{totalTasks} tasks</span>
           {tasks.new.length > 0 && (
@@ -420,68 +582,76 @@ export function KanbanBoard() {
       )}
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 md:gap-3">
         {/* Search */}
-        <div className="relative flex-1 min-w-[200px] max-w-md">
+        <div className="relative flex-1 min-w-[140px] max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
           <input
             type="text"
             placeholder="Search tasks..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] transition-colors"
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-[#1a2744] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] transition-colors"
+            style={{ minHeight: isMobile ? 44 : undefined, fontSize: isMobile ? 16 : undefined }}
           />
         </div>
 
         {/* My Tasks Toggle */}
         <button
           onClick={() => setMyTasksOnly(!myTasksOnly)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
+          className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border transition-colors ${
             myTasksOnly
               ? 'bg-[#d4af37]/20 border-[#d4af37]/50 text-[#d4af37]'
               : 'bg-[#1a2744] border-[#2d3a52] text-[#94a3b8] hover:border-[#3d4a62]'
           }`}
+          style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
         >
           <User className="h-4 w-4" />
-          My Tasks
+          {!isMobile && 'My Tasks'}
         </button>
 
         {/* Filter Toggle */}
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
+          className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border transition-colors ${
             agencyFilter
               ? 'bg-[#d4af37]/20 border-[#d4af37]/50 text-[#d4af37]'
               : 'bg-[#1a2744] border-[#2d3a52] text-[#94a3b8] hover:border-[#3d4a62]'
           }`}
+          style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
         >
           <Filter className="h-4 w-4" />
-          Filters
+          {!isMobile && 'Filters'}
         </button>
 
-        {/* Standup */}
-        <button
-          onClick={generateStandup}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] text-[#94a3b8] hover:border-[#d4af37]/50 hover:text-white transition-colors"
-        >
-          <Zap className="h-4 w-4" />
-          Standup
-        </button>
+        {/* Standup (desktop only in toolbar) */}
+        {!isMobile && (
+          <button
+            onClick={generateStandup}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] text-[#94a3b8] hover:border-[#d4af37]/50 hover:text-white transition-colors"
+          >
+            <Zap className="h-4 w-4" />
+            Standup
+          </button>
+        )}
 
-        {/* Add Task */}
-        <button
-          onClick={() => setShowNewTask(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#d4af37] text-[#0a1628] font-medium hover:bg-[#c9a432] transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add Task
-        </button>
+        {/* Add Task (desktop only in toolbar) */}
+        {!isMobile && (
+          <button
+            onClick={() => setShowNewTask(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#d4af37] text-[#0a1628] font-medium hover:bg-[#c9a432] transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add Task
+          </button>
+        )}
 
         {/* Sync Button */}
         <button
           onClick={() => { setSyncing(true); fetchTasks(); }}
           disabled={syncing}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] text-[#94a3b8] hover:border-[#3d4a62] transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-[#1a2744] border border-[#2d3a52] text-[#94a3b8] hover:border-[#3d4a62] transition-colors disabled:opacity-50"
+          style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
         >
           <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
         </button>
@@ -493,7 +663,8 @@ export function KanbanBoard() {
           <select
             value={agencyFilter || ''}
             onChange={(e) => setAgencyFilter(e.target.value || null)}
-            className="px-3 py-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
+            className="px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
+            style={{ minHeight: isMobile ? 44 : undefined }}
           >
             <option value="">All Agencies</option>
             {AGENCIES.map((agency) => (
@@ -509,6 +680,7 @@ export function KanbanBoard() {
                 setMyTasksOnly(false);
               }}
               className="flex items-center gap-1 px-2 py-1 rounded text-xs text-[#d4af37] hover:bg-[#d4af37]/10 transition-colors"
+              style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
             >
               <X className="h-3 w-3" />
               Clear filters
@@ -517,117 +689,11 @@ export function KanbanBoard() {
         </div>
       )}
 
-      {/* New Task Form */}
-      {showNewTask && (
-        <div className="p-4 rounded-xl bg-[#1a2744] border border-[#d4af37]/50 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-white font-medium text-sm">New Task</h3>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={loadTemplates}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-[#94a3b8] hover:text-white bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37]/50 transition-colors"
-              >
-                <FileText className="h-3.5 w-3.5" />
-                Use Template
-              </button>
-              <button
-                onClick={resetNewTaskForm}
-                className="p-1.5 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Template selector */}
-          {showTemplates && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-3 rounded-lg bg-[#0a1628] border border-[#2d3a52]">
-              {templates.length === 0 && (
-                <p className="text-[#64748b] text-sm col-span-full">Loading templates...</p>
-              )}
-              {templates.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => applyTemplate(t)}
-                  className="text-left p-3 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37]/50 transition-colors"
-                >
-                  <p className="text-white text-sm font-medium">{t.name}</p>
-                  {t.description && (
-                    <p className="text-[#64748b] text-xs mt-1 line-clamp-2">{t.description}</p>
-                  )}
-                  {t.agency_slug && (
-                    <span className="inline-block mt-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#2d3a52] text-[#94a3b8]">
-                      {t.agency_slug.toUpperCase()}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Title */}
-          <input
-            type="text"
-            placeholder="Task title..."
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && createTask()}
-            autoFocus
-            className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37]"
-          />
-
-          {/* Description */}
-          <textarea
-            placeholder="Description (optional)..."
-            value={newDescription}
-            onChange={(e) => setNewDescription(e.target.value)}
-            rows={2}
-            className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] resize-none"
-          />
-
-          {/* Row: Agency, Priority, Due Date, Assignee */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <select
-              value={newAgency}
-              onChange={(e) => setNewAgency(e.target.value)}
-              className="px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
-            >
-              <option value="">No Agency</option>
-              {AGENCIES.map((a) => (
-                <option key={a} value={a}>{a}</option>
-              ))}
-            </select>
-
-            <select
-              value={newPriority}
-              onChange={(e) => setNewPriority(e.target.value)}
-              className="px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
-            >
-              {PRIORITIES.map((p) => (
-                <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
-              ))}
-            </select>
-
-            <input
-              type="date"
-              value={newDueDate}
-              onChange={(e) => setNewDueDate(e.target.value)}
-              className="px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
-            />
-
-            <select
-              value={newAssignee}
-              onChange={(e) => setNewAssignee(e.target.value)}
-              className="px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
-            >
-              <option value="">Assign to me</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>{u.name}{u.agency ? ` (${u.agency})` : ''}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex justify-end gap-2">
+      {/* New Task Form — Desktop: inline / Mobile: full-screen sheet */}
+      {showNewTask && !isMobile && (
+        <div className="p-4 rounded-xl bg-[#1a2744] border border-[#d4af37]/50">
+          {newTaskFormContent}
+          <div className="flex justify-end gap-2 mt-3">
             <button
               onClick={resetNewTaskForm}
               className="px-4 py-2 rounded-lg text-[#94a3b8] hover:text-white hover:bg-[#2d3a52] transition-colors text-sm"
@@ -646,6 +712,41 @@ export function KanbanBoard() {
         </div>
       )}
 
+      {showNewTask && isMobile && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#0a1628]">
+          {/* Header */}
+          <div className="flex justify-center pt-3 pb-1">
+            <div className="w-9 h-1 rounded-full bg-white/20" />
+          </div>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d3a52]">
+            <h2 className="text-lg font-semibold text-white">New Task</h2>
+            <button
+              onClick={resetNewTaskForm}
+              className="p-2 rounded-lg text-[#64748b] hover:text-white"
+              style={{ minWidth: 44, minHeight: 44, touchAction: 'manipulation' }}
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto px-4 py-4">
+            {newTaskFormContent}
+          </div>
+          {/* Sticky footer */}
+          <div className="px-4 py-3 border-t border-[#2d3a52]" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+            <button
+              onClick={createTask}
+              disabled={!newTitle.trim() || creatingTask}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#d4af37] text-[#0a1628] font-semibold hover:bg-[#c9a432] transition-colors disabled:opacity-50"
+              style={{ minHeight: 48, touchAction: 'manipulation' }}
+            >
+              {creatingTask ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
+              Create Task
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Blocked Reason Prompt */}
       {blockedPrompt && (
         <div className="p-4 rounded-xl bg-[#1a2744] border border-amber-500/50 space-y-3">
@@ -657,15 +758,21 @@ export function KanbanBoard() {
             onKeyDown={(e) => e.key === 'Enter' && confirmBlocked()}
             placeholder="Describe the blocker..."
             autoFocus
-            className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-amber-500"
+            className="w-full px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-amber-500"
+            style={{ minHeight: isMobile ? 44 : undefined, fontSize: isMobile ? 16 : undefined }}
           />
           <div className="flex gap-2 justify-end">
-            <button onClick={cancelBlocked} className="px-3 py-1.5 rounded-lg text-sm text-[#94a3b8] hover:text-white transition-colors">
+            <button
+              onClick={cancelBlocked}
+              className="px-3 py-2 rounded-lg text-sm text-[#94a3b8] hover:text-white transition-colors"
+              style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+            >
               Cancel
             </button>
             <button
               onClick={confirmBlocked}
-              className="px-3 py-1.5 rounded-lg text-sm bg-amber-500 text-[#0a1628] font-medium hover:bg-amber-400 transition-colors"
+              className="px-4 py-2 rounded-lg text-sm bg-amber-500 text-[#0a1628] font-medium hover:bg-amber-400 transition-colors"
+              style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
             >
               Confirm
             </button>
@@ -673,29 +780,102 @@ export function KanbanBoard() {
         </div>
       )}
 
-      {/* Kanban Board */}
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {COLUMNS.map((column) => (
-          <KanbanColumn
-            key={column}
-            id={column}
-            title={COLUMN_LABELS[column] || column}
-            tasks={filterTasks(tasks[column])}
-            draggingId={draggingId}
-            onTaskClick={(task) => {
-              setSelectedTask(task);
-              setModalOpen(true);
-            }}
-            onCalendar={(task) => setCalendarTask(task)}
-            onDrop={handleColumnDrop}
-          />
-        ))}
-      </div>
+      {/* === KANBAN BOARD === */}
+
+      {/* Mobile: Tab Bar */}
+      {isMobile && (
+        <div className="flex overflow-x-auto gap-1 -mx-1 px-1 pb-1 scrollbar-none">
+          {COLUMNS.map((col) => {
+            const isActive = mobileTab === col;
+            const tabStyle = COLUMN_TAB_STYLES[col];
+            const count = filterTasks(tasks[col]).length;
+            return (
+              <button
+                key={col}
+                onClick={() => setMobileTab(col)}
+                className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                  isActive
+                    ? `${tabStyle.active} bg-[#1a2744]`
+                    : 'border-transparent text-[#64748b]'
+                }`}
+                style={{ minHeight: 44, touchAction: 'manipulation' }}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${tabStyle.dot}`} />
+                {COLUMN_LABELS[col]}
+                <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                  isActive ? 'bg-white/10' : 'bg-[#2d3a52]'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Desktop: Multi-column / Mobile: Single column */}
+      {isMobile ? (
+        <KanbanColumn
+          key={mobileTab}
+          id={mobileTab}
+          title={COLUMN_LABELS[mobileTab] || mobileTab}
+          tasks={filterTasks(tasks[mobileTab])}
+          isMobile={true}
+          draggingId={null}
+          onOpenModal={openEditModal}
+          onCalendar={(task) => setCalendarTask(task)}
+          onDrop={handleColumnDrop}
+          onContextMenu={(task, pos) => setContextMenu({ task, position: pos })}
+          onBottomSheet={(task) => setBottomSheetTask(task)}
+        />
+      ) : (
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {COLUMNS.map((column) => (
+            <KanbanColumn
+              key={column}
+              id={column}
+              title={COLUMN_LABELS[column] || column}
+              tasks={filterTasks(tasks[column])}
+              isMobile={false}
+              draggingId={draggingId}
+              onOpenModal={openEditModal}
+              onCalendar={(task) => setCalendarTask(task)}
+              onDrop={handleColumnDrop}
+              onContextMenu={(task, pos) => setContextMenu({ task, position: pos })}
+              onBottomSheet={(task) => setBottomSheetTask(task)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Desktop Context Menu */}
+      {contextMenu && (
+        <TaskContextMenu
+          task={contextMenu.task}
+          position={contextMenu.position}
+          onClose={() => setContextMenu(null)}
+          onEdit={() => openEditModal(contextMenu.task)}
+          onMove={moveTask}
+          onDelete={deleteTask}
+        />
+      )}
+
+      {/* Mobile Bottom Sheet */}
+      {bottomSheetTask && (
+        <TaskBottomSheet
+          task={bottomSheetTask}
+          onClose={() => setBottomSheetTask(null)}
+          onEdit={() => openEditModal(bottomSheetTask)}
+          onMove={moveTask}
+          onDelete={deleteTask}
+        />
+      )}
 
       {/* Task Detail Modal */}
       <TaskDetailModal
         task={selectedTask}
         isOpen={modalOpen}
+        isMobile={isMobile}
         onClose={() => {
           setModalOpen(false);
           setSelectedTask(null);
@@ -751,6 +931,28 @@ export function KanbanBoard() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Mobile FAB */}
+      {isMobile && !showNewTask && (
+        <button
+          onClick={() => setShowNewTask(true)}
+          className="fixed z-40 flex items-center justify-center rounded-full shadow-lg"
+          style={{
+            bottom: 80,
+            right: 20,
+            width: 56,
+            height: 56,
+            background: 'linear-gradient(135deg, #e2c37a, #c9a84c)',
+            color: '#0d1b2e',
+            fontSize: 28,
+            fontWeight: 700,
+            boxShadow: '0 4px 16px rgba(201,168,76,0.4)',
+            touchAction: 'manipulation',
+          }}
+        >
+          +
+        </button>
       )}
     </div>
   );

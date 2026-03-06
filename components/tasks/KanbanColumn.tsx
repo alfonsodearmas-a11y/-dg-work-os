@@ -8,10 +8,13 @@ interface KanbanColumnProps {
   id: string;
   title: string;
   tasks: Task[];
+  isMobile: boolean;
   draggingId: string | null;
-  onTaskClick: (task: Task) => void;
+  onOpenModal: (task: Task) => void;
   onCalendar?: (task: Task) => void;
   onDrop: (taskId: string, targetColumn: string) => void;
+  onContextMenu: (task: Task, position: { x: number; y: number }) => void;
+  onBottomSheet: (task: Task) => void;
 }
 
 const COLUMN_STYLES: Record<string, { dot: string; count: string }> = {
@@ -33,7 +36,7 @@ const COLUMN_STYLES: Record<string, { dot: string; count: string }> = {
   }
 };
 
-export function KanbanColumn({ id, title, tasks, draggingId, onTaskClick, onCalendar, onDrop }: KanbanColumnProps) {
+export function KanbanColumn({ id, title, tasks, isMobile, draggingId, onOpenModal, onCalendar, onDrop, onContextMenu, onBottomSheet }: KanbanColumnProps) {
   const [isOver, setIsOver] = useState(false);
 
   const styles = COLUMN_STYLES[title] || COLUMN_STYLES['New'];
@@ -45,7 +48,6 @@ export function KanbanColumn({ id, title, tasks, draggingId, onTaskClick, onCale
   };
 
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    // Only trigger if leaving the column container itself, not a child
     if (e.currentTarget.contains(e.relatedTarget as Node)) return;
     setIsOver(false);
   };
@@ -60,36 +62,43 @@ export function KanbanColumn({ id, title, tasks, draggingId, onTaskClick, onCale
   };
 
   return (
-    <div className="flex-1 min-w-[280px] max-w-[320px]">
-      {/* Column Header */}
-      <div className="flex items-center justify-between mb-3 px-1">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${styles.dot}`} />
-          <h3 className="text-white font-semibold text-sm">{title}</h3>
+    <div className={isMobile ? 'w-full' : 'flex-1 min-w-[280px] max-w-[320px]'}>
+      {/* Column Header (hidden on mobile — tab bar handles it) */}
+      {!isMobile && (
+        <div className="flex items-center justify-between mb-3 px-1">
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${styles.dot}`} />
+            <h3 className="text-white font-semibold text-sm">{title}</h3>
+          </div>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles.count}`}>
+            {tasks.length}
+          </span>
         </div>
-        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles.count}`}>
-          {tasks.length}
-        </span>
-      </div>
+      )}
 
       {/* Tasks Container */}
       <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
+        {...(!isMobile ? {
+          onDragOver: handleDragOver,
+          onDragLeave: handleDragLeave,
+          onDrop: handleDrop,
+        } : {})}
         className={`space-y-2 p-2 rounded-xl min-h-[200px] transition-colors duration-200 ${
           isOver
             ? 'bg-[#d4af37]/10 border-2 border-dashed border-[#d4af37]/50'
-            : 'bg-[#0a1628]/50 border-2 border-transparent'
+            : isMobile ? '' : 'bg-[#0a1628]/50 border-2 border-transparent'
         }`}
       >
         {tasks.map((task) => (
           <TaskCard
             key={task.id}
             task={task}
-            onClick={() => onTaskClick(task)}
-            onCalendar={onCalendar}
+            isMobile={isMobile}
             isDragging={draggingId === task.id}
+            onOpenModal={() => onOpenModal(task)}
+            onCalendar={onCalendar}
+            onContextMenu={onContextMenu}
+            onBottomSheet={onBottomSheet}
           />
         ))}
 
