@@ -1,5 +1,5 @@
 import { query } from './db-pg';
-import nodemailer from 'nodemailer';
+import { sendEmail } from './email';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -85,33 +85,12 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
 
 // ── Email sending ──────────────────────────────────────────────────────────
 
-function createTransporter() {
-  const port = parseInt(process.env.SMTP_PORT || '465');
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'webmail3.egov.gy',
-    port,
-    secure: port === 465,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_APP_PASSWORD,
-    },
-    tls: { rejectUnauthorized: false },
-  });
-}
-
 export async function sendTaskEmail(to: string, subject: string, html: string): Promise<boolean> {
-  try {
-    const transporter = createTransporter();
-    await transporter.sendMail({
-      from: process.env.SMTP_USER,
-      to,
-      subject,
-      html,
-    });
+  const result = await sendEmail({ to, subject, html });
+  if (result.success) {
     console.log(`[task-email] Sent "${subject}" to ${to}`);
-    return true;
-  } catch (err: any) {
-    console.error(`[task-email] Failed to send "${subject}" to ${to}:`, err.message);
-    return false;
+  } else {
+    console.error(`[task-email] Failed to send "${subject}" to ${to}:`, result.error);
   }
+  return result.success;
 }

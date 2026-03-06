@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, canAssignTasks } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
+import { insertNotification } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -94,6 +95,26 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Notify the assignee when a task is assigned to someone else
+  if (body.assignee_id && canAssignTasks(session.user.role) && body.assignee_id !== session.user.id) {
+    await insertNotification({
+      user_id: body.assignee_id,
+      type: 'task_assigned',
+      title: 'New task assigned to you',
+      body: task.title,
+      icon: 'task',
+      priority: task.priority === 'high' || task.priority === 'urgent' ? 'high' : 'medium',
+      reference_type: 'task',
+      reference_id: task.id,
+      reference_url: '/tasks',
+      scheduled_for: new Date().toISOString(),
+      category: 'tasks',
+      source_module: 'tasks',
+      action_required: true,
+      action_type: 'acknowledge',
+    });
   }
 
   return NextResponse.json({ task });
