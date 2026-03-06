@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  X, Shield, ShieldOff, Archive, RotateCcw, LogOut, Trash2,
+  X, Shield, ShieldOff, Archive, RotateCcw, LogOut, Trash2, Mail,
   ChevronDown, AlertTriangle, Clock, UserCheck, UserX,
 } from 'lucide-react';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
@@ -95,6 +95,7 @@ const AUDIT_LABELS: Record<string, string> = {
   archived: 'archived this user',
   restored: 'restored this user',
   force_signout: 'forced sign-out',
+  resend_invite: 'resent the invite email',
   deleted_permanently: 'permanently deleted this user',
 };
 
@@ -346,6 +347,22 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                 <Field label="Invited">
                   <p className="text-sm text-[#94a3b8]">{formatDate(user.invited_at)}</p>
                 </Field>
+              )}
+              {isDG && status === 'pending' && (
+                <div>
+                  <button
+                    onClick={() => performAction('resend_invite', `Resend invite email to ${user.email}?`)}
+                    disabled={actionLoading === 'resend_invite'}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#d4af37] hover:bg-[#d4af37]/10 transition-colors disabled:opacity-50"
+                  >
+                    {actionLoading === 'resend_invite' ? (
+                      <div className="w-4 h-4 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Mail className="h-4 w-4" />
+                    )}
+                    Resend Invite Email
+                  </button>
+                </div>
               )}
               <Field label="First Login">
                 <p className="text-sm text-[#94a3b8]">{formatDate(user.first_login_at)}</p>

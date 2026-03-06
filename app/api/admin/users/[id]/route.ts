@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
+import { sendInviteEmail } from '@/lib/invite-email';
 import type { Role } from '@/lib/auth';
 
 const VALID_ROLES: Role[] = ['dg', 'minister', 'ps', 'agency_admin', 'officer'];
@@ -75,11 +76,32 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (body.action === 'force_signout') {
     const { data: user } = await supabaseAdmin.from('users').select('email').eq('id', id).single();
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    // Invalidate sessions by updating last_seen_at (NextAuth will re-check on next token refresh)
-    // Since we use NextAuth with JWT, the effective way is to deactivate + reactivate
-    // or simply mark a flag. For now, log the action.
     await logAudit(session.user.id, id, 'force_signout', { email: user.email });
     return NextResponse.json({ success: true, message: 'Sign-out signal sent. User will be signed out on next request.' });
+  }
+
+  if (body.action === 'resend_invite') {
+    const { data: user } = await supabaseAdmin.from('users').select('email, name, status, role, agency').eq('id', id).single();
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (user.status !== 'pending') {
+      return NextResponse.json({ error: 'User has already signed in' }, { status: 400 });
+    }
+
+    const emailResult = await sendInviteEmail({
+      to: user.email,
+      name: user.name || user.email,
+      role: user.role,
+      agency: user.agency,
+      inviterName: session.user.name || 'The Director General',
+    });
+
+    if (!emailResult.success) {
+      return NextResponse.json({ error: emailResult.error || 'Failed to send email' }, { status: 500 });
+    }
+
+    await supabaseAdmin.from('users').update({ invited_at: new Date().toISOString() }).eq('id', id);
+    await logAudit(session.user.id, id, 'resend_invite', { email: user.email });
+    return NextResponse.json({ success: true, message: `Invite email resent to ${user.email}` });
   }
 
   // --- Standard field updates ---

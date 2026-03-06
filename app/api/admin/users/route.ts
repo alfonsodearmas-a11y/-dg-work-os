@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { insertNotification } from '@/lib/notifications';
+import { sendInviteEmail } from '@/lib/invite-email';
 
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps']);
@@ -75,6 +76,15 @@ export async function POST(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Send invite email (best-effort, don't block on failure)
+  await sendInviteEmail({
+    to: newUser.email,
+    name: newUser.name,
+    role: newUser.role,
+    agency: newUser.agency,
+    inviterName: session.user.name || 'The Director General',
+  }).catch(() => {});
 
   // Notify the admin that the invite was sent
   await insertNotification({
