@@ -237,7 +237,7 @@ export function parseGPLBuffer(buffer: Buffer): ParseResult {
       const addressCol = findCol('SERVICE ADDRESS', 'ADDRESS');
       const cityCol = findCol('TOWN', 'CITY');
       const cycleCol = findCol('CYCLE');
-      const dateCreatedCol = findCol('DATE/TIME CREATED', 'DATE CREATED', 'DATE/TIME');
+      const dateCreatedCol = findCol('DATE/TIME CREATED', 'DATE CREATED', 'DATE/TIME', 'DATE APPLICATION WAS MADE', 'DATE APPLICATION');
       const dateCompletedCol = findCol('DATE WORK COMPLETED', 'DATE COMPLETED', 'COMPLETION');
       const currentDateCol = findCol('CURRENT DATE');
       const typeCol = findCol('TYPE OF SERVICE');

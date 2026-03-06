@@ -39,9 +39,12 @@ function computeTrackMetrics(
   const completed = filtered.filter(c => c.status === 'completed');
   const open = filtered.filter(c => c.status === 'open');
 
+  // Floor at 1 day: a physical service connection (meter install, capital works)
+  // cannot complete in 0 calendar days — same-day completions still took ≥1 day.
   const completionDays = completed
     .map(c => c.total_days_to_complete)
-    .filter((d): d is number => d !== null && d >= 0);
+    .filter((d): d is number => d !== null && d >= 0)
+    .map(d => Math.max(d, 1));
 
   const slaTarget = track === 'A' ? SLA_TARGETS.TRACK_A_OVERALL
     : track === 'B' ? SLA_TARGETS.TRACK_B_OVERALL
@@ -128,7 +131,7 @@ export function computeMonthlyVolumes(connections: ServiceConnection[]): Monthly
       if (!monthMap.has(closeMonth)) monthMap.set(closeMonth, { opened: 0, completed: 0, completionDays: [] });
       monthMap.get(closeMonth)!.completed++;
       if (conn.total_days_to_complete !== null && conn.total_days_to_complete >= 0) {
-        monthMap.get(closeMonth)!.completionDays.push(conn.total_days_to_complete);
+        monthMap.get(closeMonth)!.completionDays.push(Math.max(conn.total_days_to_complete, 1));
       }
     }
   }
@@ -153,13 +156,13 @@ export function computeMonthlyVolumes(connections: ServiceConnection[]): Monthly
     const designCompleted = monthCompleted.filter(c => c.track === 'Design');
 
     const trackASla = trackACompleted.length > 0
-      ? Math.round((trackACompleted.filter(c => (c.total_days_to_complete || 0) <= SLA_TARGETS.TRACK_A_OVERALL).length / trackACompleted.length) * 100)
+      ? Math.round((trackACompleted.filter(c => Math.max(c.total_days_to_complete || 0, 1) <= SLA_TARGETS.TRACK_A_OVERALL).length / trackACompleted.length) * 100)
       : null;
     const trackBSla = trackBCompleted.length > 0
-      ? Math.round((trackBCompleted.filter(c => (c.total_days_to_complete || 0) <= SLA_TARGETS.TRACK_B_OVERALL).length / trackBCompleted.length) * 100)
+      ? Math.round((trackBCompleted.filter(c => Math.max(c.total_days_to_complete || 0, 1) <= SLA_TARGETS.TRACK_B_OVERALL).length / trackBCompleted.length) * 100)
       : null;
     const designSla = designCompleted.length > 0
-      ? Math.round((designCompleted.filter(c => (c.total_days_to_complete || 0) <= SLA_TARGETS.DESIGN_OVERALL).length / designCompleted.length) * 100)
+      ? Math.round((designCompleted.filter(c => Math.max(c.total_days_to_complete || 0, 1) <= SLA_TARGETS.DESIGN_OVERALL).length / designCompleted.length) * 100)
       : null;
 
     volumes.push({
@@ -215,7 +218,8 @@ function computeWeightedOverall(
   const allOpen = connections.filter(c => c.status === 'open');
   const allDays = allCompleted
     .map(c => c.total_days_to_complete)
-    .filter((d): d is number => d !== null && d >= 0);
+    .filter((d): d is number => d !== null && d >= 0)
+    .map(d => Math.max(d, 1));
 
   // Weighted SLA: count records within their *own* track's SLA target
   let totalWithinSla = 0;
@@ -223,11 +227,12 @@ function computeWeightedOverall(
   for (const c of allCompleted) {
     if (c.total_days_to_complete === null || c.total_days_to_complete < 0) continue;
     totalWithDays++;
+    const days = Math.max(c.total_days_to_complete, 1);
     const target = c.track === 'A' ? SLA_TARGETS.TRACK_A_OVERALL
       : c.track === 'B' ? SLA_TARGETS.TRACK_B_OVERALL
       : c.track === 'Design' ? SLA_TARGETS.DESIGN_OVERALL
       : SLA_TARGETS.TRACK_B_OVERALL;
-    if (c.total_days_to_complete <= target) totalWithinSla++;
+    if (days <= target) totalWithinSla++;
   }
 
   return {

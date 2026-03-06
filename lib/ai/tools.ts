@@ -293,11 +293,10 @@ async function executeLogMeeting(input: Record<string, unknown>, userId: string)
     .from('meetings')
     .insert({
       title: input.title,
-      meeting_date: input.meeting_date,
+      date: input.meeting_date || new Date().toISOString(),
       attendees: input.attendees || [],
       summary: input.notes || null,
-      status: 'completed',
-      created_by: userId,
+      status: 'ANALYZED',
     })
     .select('id, title')
     .single();
@@ -347,9 +346,15 @@ async function executeSendNotification(input: Record<string, unknown>) {
     .insert({
       user_id: user.id,
       title: input.title,
-      message: input.message,
+      body: String(input.message || ''),
       type: 'ai_notification',
-      read: false,
+      category: 'system',
+      priority: 'medium',
+      scheduled_for: new Date().toISOString(),
+      source_module: 'ai-assistant',
+      action_required: false,
+      icon: 'bot',
+      metadata: {},
     });
 
   if (error) throw error;

@@ -316,9 +316,9 @@ async function fetchRecentMeetings(): Promise<RawContextData['meetings']> {
 
     const { data: meetings } = await supabaseAdmin
       .from('meetings')
-      .select('id, title, meeting_date, status, attendees, summary')
-      .gte('meeting_date', thirtyDaysAgo.toISOString().slice(0, 10))
-      .order('meeting_date', { ascending: false })
+      .select('id, title, date, status, attendees, summary')
+      .gte('date', thirtyDaysAgo.toISOString().slice(0, 10))
+      .order('date', { ascending: false })
       .limit(20);
 
     if (!meetings) return [];
@@ -326,8 +326,8 @@ async function fetchRecentMeetings(): Promise<RawContextData['meetings']> {
     // Fetch action items for these meetings
     const meetingIds = meetings.map(m => m.id);
     const { data: actions } = await supabaseAdmin
-      .from('meeting_action_items')
-      .select('meeting_id, description, assignee, status, due_date')
+      .from('meeting_actions')
+      .select('meeting_id, task, owner, due_date, done')
       .in('meeting_id', meetingIds);
 
     const actionsByMeeting = new Map<string, typeof actions>();
@@ -340,14 +340,14 @@ async function fetchRecentMeetings(): Promise<RawContextData['meetings']> {
     return meetings.map(m => ({
       id: m.id,
       title: m.title,
-      meeting_date: m.meeting_date,
+      meeting_date: m.date,
       status: m.status,
       attendees: m.attendees,
       summary: m.summary,
       action_items: (actionsByMeeting.get(m.id) || []).map(a => ({
-        description: a.description,
-        assignee: a.assignee,
-        status: a.status,
+        description: a.task,
+        assignee: a.owner,
+        status: a.done ? 'completed' : 'pending',
         due_date: a.due_date,
       })),
     }));
@@ -356,96 +356,77 @@ async function fetchRecentMeetings(): Promise<RawContextData['meetings']> {
 
 async function fetchBudgetSummary(): Promise<RawContextData['budget']> {
   try {
-    const { data: sectors } = await supabaseAdmin
-      .from('budget_sectors')
-      .select('sector_name, total_allocated, total_actual')
-      .order('total_allocated', { ascending: false });
+    const { getSummary } = await import('@/lib/budget-db');
+    const summary = getSummary();
 
-    const { data: agencies } = await supabaseAdmin
-      .from('budget_agencies')
-      .select('agency_name, total_allocated, total_actual')
-      .order('total_allocated', { ascending: false });
-
-    if (!sectors && !agencies) return null;
-
-    const sectorData = (sectors || []).map(s => ({
-      sector: s.sector_name,
-      allocated: Number(s.total_allocated) || 0,
-      actual: Number(s.total_actual) || 0,
-      variance_pct: s.total_allocated ? ((Number(s.total_actual) - Number(s.total_allocated)) / Number(s.total_allocated)) * 100 : 0,
+    const sectorData = summary.sectors.map((s: any) => ({
+      sector: s.label,
+      allocated: s.total || 0,
+      actual: 0,  // Budget DB is estimates only, no actuals
+      variance_pct: 0,
     }));
 
-    const agencyData = (agencies || []).map(a => ({
-      agency: a.agency_name,
-      allocated: Number(a.total_allocated) || 0,
-      actual: Number(a.total_actual) || 0,
-      variance_pct: a.total_allocated ? ((Number(a.total_actual) - Number(a.total_allocated)) / Number(a.total_allocated)) * 100 : 0,
-    }));
-
-    const totalAllocated = sectorData.reduce((s, x) => s + x.allocated, 0);
-    const totalActual = sectorData.reduce((s, x) => s + x.actual, 0);
-
-    return { sectors: sectorData, agencies: agencyData, total_allocated: totalAllocated, total_actual: totalActual };
+    return {
+      sectors: sectorData,
+      total_allocated: summary.grand_total || 0,
+      total_actual: 0,
+    };
   } catch { return null; }
 }
 
 async function fetchServiceConnectionStats(): Promise<RawContextData['serviceConnections']> {
   try {
-    const { data: stats } = await supabaseAdmin
-      .from('service_connection_stats')
-      .select('*')
-      .order('stat_date', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const { data: open } = await supabaseAdmin
+      .from('service_connections')
+      .select('track, first_seen_date, status')
+      .eq('status', 'open')
+      .not('is_legacy', 'eq', true);
 
-    if (!stats) {
-      // Try aggregating from service_connections table directly
-      const { data: pending } = await supabaseAdmin
-        .from('service_connections')
-        .select('track, status, days_pending')
-        .in('status', ['pending', 'in_progress']);
+    if (!open || open.length === 0) return null;
 
-      if (!pending || pending.length === 0) return null;
+    const now = Date.now();
+    const trackA = open.filter(c => c.track === 'A');
+    const trackB = open.filter(c => c.track === 'B');
 
-      const trackA = pending.filter(p => p.track === 'A');
-      const trackB = pending.filter(p => p.track === 'B');
-      const allDays = pending.map(p => Number(p.days_pending) || 0);
-      const avgDays = allDays.length > 0 ? allDays.reduce((s, d) => s + d, 0) / allDays.length : 0;
-
-      return {
-        total_pending: pending.length,
-        track_a_pending: trackA.length,
-        track_b_pending: trackB.length,
-        avg_days_pending: Math.round(avgDays),
-        overdue_count: pending.filter(p => (Number(p.days_pending) || 0) > 30).length,
-      };
-    }
+    const daysPending = open.map(c => {
+      if (!c.first_seen_date) return 0;
+      return Math.round((now - new Date(c.first_seen_date).getTime()) / (1000 * 60 * 60 * 24));
+    });
+    const avgDays = daysPending.length > 0 ? daysPending.reduce((s, d) => s + d, 0) / daysPending.length : 0;
 
     return {
-      total_pending: stats.total_pending,
-      track_a_pending: stats.track_a_pending,
-      track_b_pending: stats.track_b_pending,
-      avg_days_pending: stats.avg_days_pending,
-      overdue_count: stats.overdue_count,
+      total_pending: open.length,
+      track_a_pending: trackA.length,
+      track_b_pending: trackB.length,
+      avg_days_pending: Math.round(avgDays),
+      overdue_count: daysPending.filter(d => d > 30).length,
     };
   } catch { return null; }
 }
 
 async function fetchOversightData(): Promise<RawContextData['oversight']> {
   try {
-    const { data } = await supabaseAdmin
-      .from('oversight_items')
-      .select('title, agency, published_date, item_type, status')
-      .order('published_date', { ascending: false })
-      .limit(20);
+    const fs = await import('fs');
+    const path = await import('path');
+    const filePath = path.join(process.cwd(), 'scraper', 'output', 'oversight-highlights-latest.json');
+    if (!fs.existsSync(filePath)) return [];
 
-    return (data || []).map(d => ({
-      title: d.title,
-      agency: d.agency,
-      date: d.published_date,
-      type: d.item_type,
-      status: d.status,
-    }));
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    const data = JSON.parse(raw);
+
+    const items: RawContextData['oversight'] = [];
+    for (const category of ['overdue', 'delayed', 'atRisk', 'endingSoon'] as const) {
+      for (const p of (data[category] || []).slice(0, 5)) {
+        items.push({
+          title: p.projectName || p.name || 'Unknown',
+          agency: p.subAgency || p.agency || undefined,
+          date: p.projectEndDate || p.endDate || undefined,
+          type: category,
+          status: p.completionPercent != null ? `${p.completionPercent}% complete` : undefined,
+        });
+      }
+    }
+    return items;
   } catch { return []; }
 }
 
@@ -471,8 +452,9 @@ async function fetchNotificationSummary(): Promise<RawContextData['notifications
   try {
     const { data: unread, count } = await supabaseAdmin
       .from('notifications')
-      .select('title, type, agency, created_at', { count: 'exact' })
-      .eq('read', false)
+      .select('title, type, category, created_at', { count: 'exact' })
+      .is('read_at', null)
+      .is('dismissed_at', null)
       .order('created_at', { ascending: false })
       .limit(10);
 
@@ -481,7 +463,7 @@ async function fetchNotificationSummary(): Promise<RawContextData['notifications
       recent: (unread || []).map(n => ({
         title: n.title,
         type: n.type,
-        agency: n.agency,
+        agency: n.category,
         created_at: n.created_at,
       })),
     };
@@ -492,7 +474,7 @@ async function fetchPeopleList(): Promise<RawContextData['people']> {
   try {
     const { data } = await supabaseAdmin
       .from('users')
-      .select('id, name, email, role, agency, active')
+      .select('id, name, email, role, agency, is_active')
       .order('name');
 
     return (data || []).map(u => ({
@@ -501,7 +483,7 @@ async function fetchPeopleList(): Promise<RawContextData['people']> {
       email: u.email,
       role: u.role,
       agency: u.agency,
-      active: u.active,
+      active: u.is_active,
     }));
   } catch { return []; }
 }

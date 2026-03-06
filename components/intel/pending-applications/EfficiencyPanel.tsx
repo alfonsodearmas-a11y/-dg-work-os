@@ -133,9 +133,9 @@ function OverviewSection({ metrics }: { metrics: EfficiencyMetrics }) {
 
       {/* Track A vs B vs Design */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <TrackCard title="Track A — Fast-Track" subtitle="Meter installation (target ≤3d)" track={metrics.trackA} color="#10b981" />
-        <TrackCard title="Track B — Networks" subtitle="Capital works execution (target ≤30d)" track={metrics.trackB} color="#f59e0b" />
-        <TrackCard title="Design — Estimates" subtitle="Capital contribution quotes (target ≤12d)" track={metrics.design} color="#8b5cf6" />
+        <TrackCard title="Track A — Fast-Track" subtitle="Meter installation (target ≤3d)" track={metrics.trackA} color="#10b981" tooltip={TRACK_TOOLTIPS['Track A']} />
+        <TrackCard title="Track B — Networks" subtitle="Capital works execution (target ≤30d)" track={metrics.trackB} color="#f59e0b" tooltip={TRACK_TOOLTIPS['Track B']} />
+        <TrackCard title="Design — Estimates" subtitle="Capital contribution quotes (target ≤12d)" track={metrics.design} color="#8b5cf6" tooltip={TRACK_TOOLTIPS['Design']} />
       </div>
 
       {/* Stage Duration Chart */}
@@ -481,8 +481,9 @@ function OrdersSection() {
               <option value="">All Status</option><option value="open">Open</option><option value="completed">Completed</option><option value="legacy_excluded">Legacy</option>
             </select>
             <select value={track} onChange={e => { setTrack(e.target.value); setPage(1); }}
-              className="px-3 py-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:border-[#d4af37] focus:outline-none">
-              <option value="">All Tracks</option><option value="A">Track A</option><option value="B">Track B</option><option value="Design">Design</option><option value="unknown">Unknown</option>
+              className="px-3 py-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:border-[#d4af37] focus:outline-none"
+              title={track === 'A' ? TRACK_TOOLTIPS['Track A'] : track === 'B' ? TRACK_TOOLTIPS['Track B'] : track === 'Design' ? TRACK_TOOLTIPS['Design'] : 'Filter by connection track (A = meter only, B = capital works, Design = estimation phase)'}>
+              <option value="">All Tracks</option><option value="A">Track A — Meter Only</option><option value="B">Track B — Capital Works</option><option value="Design">Design — Estimates</option><option value="unknown">Unknown</option>
             </select>
             {(status || track || search) && (
               <button onClick={() => { setStatus(''); setTrack(''); setSearch(''); setSearchInput(''); setPage(1); }} className="text-xs text-[#d4af37] hover:text-[#f0d060]">Clear</button>
@@ -506,7 +507,7 @@ function OrdersSection() {
                     <th className="text-left py-2 text-[#64748b] font-medium text-xs">Customer</th>
                     <th className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">SO #</th>
                     <th className="text-left py-2 text-[#64748b] font-medium text-xs">Stage</th>
-                    <th className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Track</th>
+                    <th className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell cursor-help" title="Track A = meter installation only (≤3d). Track B = capital works required (≤30d). Design = estimation phase (≤12d).">Track</th>
                     <th className="text-right py-2 text-[#64748b] font-medium text-xs">Days</th>
                     <th className="text-right py-2 text-[#64748b] font-medium text-xs">Status</th>
                   </tr>
@@ -550,7 +551,14 @@ function OrderRowInner({ order, name, days, expanded, onToggle }: {
         <td className="py-2.5"><div className="text-white text-xs font-medium">{name}</div><div className="text-[10px] text-[#64748b]">{order.customer_reference}</div></td>
         <td className="py-2.5 text-[#94a3b8] text-xs hidden md:table-cell">{order.service_order_number || '—'}</td>
         <td className="py-2.5 text-[#94a3b8] text-xs">{order.current_stage || '—'}</td>
-        <td className="py-2.5 text-xs hidden md:table-cell"><span className={order.track === 'A' ? 'text-emerald-400' : order.track === 'B' ? 'text-amber-400' : order.track === 'Design' ? 'text-purple-400' : 'text-[#64748b]'}>{order.track === 'A' ? 'Track A' : order.track === 'B' ? 'Track B' : order.track === 'Design' ? 'Design' : '—'}</span></td>
+        <td className="py-2.5 text-xs hidden md:table-cell">
+          <span
+            className={`cursor-help ${order.track === 'A' ? 'text-emerald-400' : order.track === 'B' ? 'text-amber-400' : order.track === 'Design' ? 'text-purple-400' : 'text-[#64748b]'}`}
+            title={order.track === 'A' ? TRACK_TOOLTIPS['Track A'] : order.track === 'B' ? TRACK_TOOLTIPS['Track B'] : order.track === 'Design' ? TRACK_TOOLTIPS['Design'] : undefined}
+          >
+            {order.track === 'A' ? 'Track A' : order.track === 'B' ? 'Track B' : order.track === 'Design' ? 'Design' : '—'}
+          </span>
+        </td>
         <td className="py-2.5 text-right text-xs text-[#94a3b8]">{days !== null ? `${days}d` : '—'}</td>
         <td className="py-2.5 text-right"><span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${STATUS_COLORS[order.status] || ''}`}>{order.status}</span></td>
       </tr>
@@ -602,12 +610,24 @@ function KPICard({ icon: Icon, label, value, sub, color }: { icon: React.Element
   );
 }
 
-function TrackCard({ title, subtitle, track, color }: { title: string; subtitle: string; track: { completedCount: number; avgDays: number; medianDays: number; slaPct: number; slaTarget: number; openCount: number }; color: string }) {
+const TRACK_TOOLTIPS: Record<string, string> = {
+  'Track A': 'Track A — Standard connections that only require meter installation. No infrastructure or capital works needed. SLA: ≤3 days.',
+  'Track B': 'Track B — Complex connections requiring capital works (line extensions, transformer upgrades, pole installations) before the meter can be installed. Stages: Design → Execution → Metering. SLA: ≤30 days.',
+  'Design': 'Design — Connections currently in the design/estimation phase before capital works begin (quotations, capital contribution assessments). SLA: ≤12 days.',
+};
+
+function TrackCard({ title, subtitle, track, color, tooltip }: { title: string; subtitle: string; track: { completedCount: number; avgDays: number; medianDays: number; slaPct: number; slaTarget: number; openCount: number }; color: string; tooltip?: string }) {
   return (
-    <div className="card-premium p-4">
+    <div className="card-premium p-4 group relative" title={tooltip}>
       <div className="flex items-center gap-2 mb-3">
         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-        <div><h4 className="text-sm font-semibold text-white">{title}</h4><p className="text-[10px] text-[#64748b]">{subtitle}</p></div>
+        <div>
+          <h4 className="text-sm font-semibold text-white flex items-center gap-1.5">
+            {title}
+            {tooltip && <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-[#64748b]/50 text-[9px] text-[#64748b] font-normal cursor-help">?</span>}
+          </h4>
+          <p className="text-[10px] text-[#64748b]">{subtitle}</p>
+        </div>
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div><div className="text-lg font-bold text-white">{track.completedCount}</div><div className="text-[10px] text-[#64748b]">completed</div></div>
