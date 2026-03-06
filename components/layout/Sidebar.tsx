@@ -35,7 +35,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const mainNavItems = [
-  { href: '/', label: 'Daily Briefing', icon: LayoutDashboard },
+  { href: '/', label: 'Mission Control', icon: LayoutDashboard },
   { href: '/intel', label: 'Agency Intel', icon: Activity },
   { href: '/tasks', label: 'Tasks', icon: CheckSquare },
   { href: '/oversight', label: 'Oversight', icon: Eye },

@@ -12,7 +12,7 @@ import {
 import { useSidebar } from './SidebarContext';
 
 const tabs = [
-  { href: '/', label: 'Briefing', icon: LayoutDashboard },
+  { href: '/', label: 'Control', icon: LayoutDashboard },
   { href: '/intel', label: 'Intel', icon: Activity },
   { href: '/projects', label: 'Projects', icon: FolderKanban },
   { href: '/meetings', label: 'Meetings', icon: BookOpen },

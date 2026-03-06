@@ -1,10 +1,22 @@
-import { BriefingDashboard } from '@/components/briefing/BriefingDashboard';
-import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { auth } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { getMissionControlData, generateStaticBriefing } from '@/lib/data/mission-control';
+import { MissionControlView } from '@/components/mission-control/MissionControlView';
 
-export default function Home() {
+export const dynamic = 'force-dynamic';
+
+export default async function Home() {
+  const session = await auth();
+  if (!session?.user?.id) redirect('/login');
+
+  const data = await getMissionControlData(session.user.id);
+  const briefing = generateStaticBriefing(data);
+
   return (
-    <ErrorBoundary fallbackTitle="Failed to load Daily Briefing">
-      <BriefingDashboard />
-    </ErrorBoundary>
+    <MissionControlView
+      data={data}
+      briefing={briefing}
+      userName={session.user.name}
+    />
   );
 }
