@@ -1,7 +1,5 @@
 'use client';
 
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { Calendar, CalendarPlus, GripVertical } from 'lucide-react';
 import { Task } from '@/lib/task-types';
 import { format, isToday, isPast, parseISO } from 'date-fns';
@@ -10,6 +8,7 @@ interface TaskCardProps {
   task: Task;
   onClick: () => void;
   onCalendar?: (task: Task) => void;
+  isDragging?: boolean;
 }
 
 const AGENCY_COLORS: Record<string, string> = {
@@ -36,21 +35,7 @@ function getInitials(name: string | null): string {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 }
 
-export function TaskCard({ task, onClick, onCalendar }: TaskCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: task.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
+export function TaskCard({ task, onClick, onCalendar, isDragging }: TaskCardProps) {
   const getDueDateColor = () => {
     if (!task.due_date) return 'text-[#64748b]';
     const date = parseISO(task.due_date);
@@ -68,10 +53,15 @@ export function TaskCard({ task, onClick, onCalendar }: TaskCardProps) {
 
   const isOverdue = task.due_date && task.status !== 'done' && isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date));
 
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+    e.dataTransfer.setData('text/plain', task.id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
   return (
     <div
-      ref={setNodeRef}
-      style={style}
+      draggable
+      onDragStart={handleDragStart}
       className={`group relative rounded-xl border border-[#2d3a52] bg-gradient-to-b from-[#1a2744] to-[#0f1d32] p-3 cursor-pointer
         hover:border-[#d4af37]/50 hover:shadow-lg hover:shadow-[#d4af37]/5 transition-all duration-200
         ${isDragging ? 'opacity-50 scale-105 shadow-2xl border-[#d4af37]' : ''}`}
@@ -79,8 +69,6 @@ export function TaskCard({ task, onClick, onCalendar }: TaskCardProps) {
     >
       {/* Drag Handle */}
       <div
-        {...attributes}
-        {...listeners}
         className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
         onClick={(e) => e.stopPropagation()}
       >

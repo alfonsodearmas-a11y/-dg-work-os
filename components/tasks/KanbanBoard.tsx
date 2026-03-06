@@ -2,24 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  DndContext,
-  DragEndEvent,
-  DragOverEvent,
-  DragStartEvent,
-  DragOverlay,
-  closestCorners,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import { arrayMove } from '@dnd-kit/sortable';
-import {
   RefreshCw, Plus, Search, Filter, X, Loader2, AlertTriangle,
   CheckSquare, Clock, Inbox, User, Zap, FileText,
 } from 'lucide-react';
 import { Task, TaskUpdate, TasksByStatus, TaskTemplate, TaskStatus } from '@/lib/task-types';
 import { KanbanColumn } from './KanbanColumn';
-import { TaskCard } from './TaskCard';
 import { TaskDetailModal } from './TaskDetailModal';
 import { CreateEventModal } from '@/components/calendar/CreateEventModal';
 import { useSession } from 'next-auth/react';
@@ -55,7 +42,7 @@ export function KanbanBoard() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
-  const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -91,12 +78,6 @@ export function KanbanBoard() {
   // Blocked reason prompt
   const [blockedPrompt, setBlockedPrompt] = useState<{ taskId: string; targetStatus: TaskStatus } | null>(null);
   const [blockedReason, setBlockedReason] = useState('');
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
-    })
-  );
 
   // Fetch tasks
   const fetchTasks = useCallback(async () => {
@@ -279,72 +260,54 @@ export function KanbanBoard() {
     }
   };
 
-  // Drag handlers
-  const handleDragStart = (event: DragStartEvent) => {
-    const task = findTask(event.active.id as string);
-    setActiveTask(task || null);
-  };
+  // Native drag-and-drop: track which card is being dragged via dragstart/dragend on document
+  useEffect(() => {
+    const handleDragStartCapture = (e: DragEvent) => {
+      const taskId = e.dataTransfer?.getData('text/plain');
+      // dataTransfer is not readable in dragstart from document level,
+      // but we set draggingId from the card's own onDragStart via the state below
+    };
+    const handleDragEnd = () => {
+      setDraggingId(null);
+    };
+    document.addEventListener('dragend', handleDragEnd);
+    return () => {
+      document.removeEventListener('dragend', handleDragEnd);
+    };
+  }, []);
 
-  const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (!over) return;
+  // Handle drop from column
+  const handleColumnDrop = (taskId: string, targetColumn: string) => {
+    if (!taskId) return;
 
-    const activeId = active.id as string;
-    const overId = over.id as string;
-
-    const activeColumn = findColumn(activeId);
-    const overColumn = COLUMNS.includes(overId as keyof TasksByStatus)
-      ? (overId as keyof TasksByStatus)
-      : findColumn(overId);
-
-    if (!activeColumn || !overColumn || activeColumn === overColumn) return;
-
-    setTasks((prev) => {
-      const activeItems = [...prev[activeColumn]];
-      const overItems = [...prev[overColumn]];
-      const activeIndex = activeItems.findIndex((t) => t.id === activeId);
-      const [movedTask] = activeItems.splice(activeIndex, 1);
-      return {
-        ...prev,
-        [activeColumn]: activeItems,
-        [overColumn]: [...overItems, movedTask],
-      };
-    });
-  };
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveTask(null);
-    if (!over) return;
-
-    const activeId = active.id as string;
-    const overId = over.id as string;
-
-    const activeColumn = findColumn(activeId);
-    const overColumn = COLUMNS.includes(overId as keyof TasksByStatus)
-      ? (overId as keyof TasksByStatus)
-      : findColumn(overId);
-
-    if (!activeColumn || !overColumn) return;
-
-    if (activeColumn !== overColumn) {
-      // If dropping into blocked, prompt for reason
-      if (overColumn === 'blocked') {
-        setBlockedPrompt({ taskId: activeId, targetStatus: 'blocked' });
-        return;
-      }
-      await updateTask(activeId, { status: overColumn });
-    } else {
-      const items = tasks[activeColumn];
-      const activeIndex = items.findIndex((t) => t.id === activeId);
-      const overIndex = items.findIndex((t) => t.id === overId);
-      if (activeIndex !== overIndex) {
-        setTasks((prev) => ({
-          ...prev,
-          [activeColumn]: arrayMove(prev[activeColumn], activeIndex, overIndex),
-        }));
+    // Find which column the task is currently in
+    let sourceColumn: keyof TasksByStatus | null = null;
+    for (const col of COLUMNS) {
+      if (tasks[col].some((t) => t.id === taskId)) {
+        sourceColumn = col;
+        break;
       }
     }
+
+    if (!sourceColumn || sourceColumn === targetColumn) return;
+
+    // If dropping into blocked, prompt for reason
+    if (targetColumn === 'blocked') {
+      // Optimistic move first so the card appears in blocked column
+      setTasks((prev) => {
+        const task = prev[sourceColumn!].find((t) => t.id === taskId);
+        if (!task) return prev;
+        return {
+          ...prev,
+          [sourceColumn!]: prev[sourceColumn!].filter((t) => t.id !== taskId),
+          blocked: [{ ...task, status: 'blocked' as TaskStatus }, ...prev.blocked],
+        };
+      });
+      setBlockedPrompt({ taskId, targetStatus: 'blocked' });
+      return;
+    }
+
+    updateTask(taskId, { status: targetColumn as TaskStatus });
   };
 
   const confirmBlocked = async () => {
@@ -362,23 +325,6 @@ export function KanbanBoard() {
     fetchTasks();
     setBlockedPrompt(null);
     setBlockedReason('');
-  };
-
-  const findTask = (id: string): Task | undefined => {
-    for (const status of COLUMNS) {
-      const task = tasks[status].find((t) => t.id === id);
-      if (task) return task;
-    }
-    return undefined;
-  };
-
-  const findColumn = (taskId: string): keyof TasksByStatus | null => {
-    for (const status of COLUMNS) {
-      if (tasks[status].some((t) => t.id === taskId)) {
-        return status;
-      }
-    }
-    return null;
   };
 
   // Filter tasks
@@ -728,37 +674,23 @@ export function KanbanBoard() {
       )}
 
       {/* Kanban Board */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {COLUMNS.map((column) => (
-            <KanbanColumn
-              key={column}
-              id={column}
-              title={COLUMN_LABELS[column] || column}
-              tasks={filterTasks(tasks[column])}
-              onTaskClick={(task) => {
-                setSelectedTask(task);
-                setModalOpen(true);
-              }}
-              onCalendar={(task) => setCalendarTask(task)}
-            />
-          ))}
-        </div>
-
-        <DragOverlay>
-          {activeTask && (
-            <div className="rotate-3 scale-105">
-              <TaskCard task={activeTask} onClick={() => {}} />
-            </div>
-          )}
-        </DragOverlay>
-      </DndContext>
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {COLUMNS.map((column) => (
+          <KanbanColumn
+            key={column}
+            id={column}
+            title={COLUMN_LABELS[column] || column}
+            tasks={filterTasks(tasks[column])}
+            draggingId={draggingId}
+            onTaskClick={(task) => {
+              setSelectedTask(task);
+              setModalOpen(true);
+            }}
+            onCalendar={(task) => setCalendarTask(task)}
+            onDrop={handleColumnDrop}
+          />
+        ))}
+      </div>
 
       {/* Task Detail Modal */}
       <TaskDetailModal

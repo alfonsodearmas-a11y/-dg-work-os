@@ -1,7 +1,6 @@
 'use client';
 
-import { useDroppable } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useState } from 'react';
 import { Task } from '@/lib/task-types';
 import { TaskCard } from './TaskCard';
 
@@ -9,8 +8,10 @@ interface KanbanColumnProps {
   id: string;
   title: string;
   tasks: Task[];
+  draggingId: string | null;
   onTaskClick: (task: Task) => void;
   onCalendar?: (task: Task) => void;
+  onDrop: (taskId: string, targetColumn: string) => void;
 }
 
 const COLUMN_STYLES: Record<string, { dot: string; count: string }> = {
@@ -32,10 +33,31 @@ const COLUMN_STYLES: Record<string, { dot: string; count: string }> = {
   }
 };
 
-export function KanbanColumn({ id, title, tasks, onTaskClick, onCalendar }: KanbanColumnProps) {
-  const { setNodeRef, isOver } = useDroppable({ id });
+export function KanbanColumn({ id, title, tasks, draggingId, onTaskClick, onCalendar, onDrop }: KanbanColumnProps) {
+  const [isOver, setIsOver] = useState(false);
 
   const styles = COLUMN_STYLES[title] || COLUMN_STYLES['New'];
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setIsOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    // Only trigger if leaving the column container itself, not a child
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsOver(false);
+    const taskId = e.dataTransfer.getData('text/plain');
+    if (taskId) {
+      onDrop(taskId, id);
+    }
+  };
 
   return (
     <div className="flex-1 min-w-[280px] max-w-[320px]">
@@ -52,26 +74,24 @@ export function KanbanColumn({ id, title, tasks, onTaskClick, onCalendar }: Kanb
 
       {/* Tasks Container */}
       <div
-        ref={setNodeRef}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
         className={`space-y-2 p-2 rounded-xl min-h-[200px] transition-colors duration-200 ${
           isOver
             ? 'bg-[#d4af37]/10 border-2 border-dashed border-[#d4af37]/50'
             : 'bg-[#0a1628]/50 border-2 border-transparent'
         }`}
       >
-        <SortableContext
-          items={tasks.map((t) => t.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          {tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onClick={() => onTaskClick(task)}
-              onCalendar={onCalendar}
-            />
-          ))}
-        </SortableContext>
+        {tasks.map((task) => (
+          <TaskCard
+            key={task.id}
+            task={task}
+            onClick={() => onTaskClick(task)}
+            onCalendar={onCalendar}
+            isDragging={draggingId === task.id}
+          />
+        ))}
 
         {tasks.length === 0 && (
           <div className="flex items-center justify-center h-24 text-[#64748b] text-sm">
