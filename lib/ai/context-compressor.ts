@@ -92,6 +92,12 @@ function assembleMinimal(raw: RawContextData): string {
   // Calendar today
   lines.push(`CALENDAR: ${raw.todayEvents.length} events today`);
 
+  // Extended sources (minimal summaries)
+  if (raw.meetings.length > 0) lines.push(`MEETINGS: ${raw.meetings.length} recent`);
+  if (raw.budget?.total_allocated) lines.push(`BUDGET: Allocated=$${fmtM(raw.budget.total_allocated)}, Actual=$${fmtM(raw.budget.total_actual || 0)}`);
+  if (raw.serviceConnections?.total_pending) lines.push(`SERVICE_CONN: ${raw.serviceConnections.total_pending} pending`);
+  if (raw.people.length > 0) lines.push(`TEAM: ${raw.people.filter(p => p.active).length} active users`);
+
   return lines.join('\n');
 }
 
@@ -175,6 +181,33 @@ function assembleFocused(raw: RawContextData, currentPage: string): string {
       const time = ev.all_day ? 'All day' : ev.start_time ? format(parseISO(ev.start_time), 'h:mm a') : '??';
       lines.push(`- ${time}: ${ev.title}`);
     }
+  }
+
+  // Meetings (compact)
+  if (raw.meetings.length > 0) {
+    const pendingActions = raw.meetings.flatMap(m => m.action_items?.filter(a => a.status !== 'completed') || []);
+    lines.push(`\n== MEETINGS: ${raw.meetings.length} recent, ${pendingActions.length} pending actions ==`);
+    if (currentPage.startsWith('/meetings')) {
+      for (const m of raw.meetings.slice(0, 5)) {
+        lines.push(`- ${m.meeting_date}: ${m.title} (${m.status})`);
+      }
+    }
+  }
+
+  // Budget (compact)
+  if (raw.budget?.total_allocated) {
+    lines.push(`\n== BUDGET: Allocated $${fmtM(raw.budget.total_allocated)}, Actual $${fmtM(raw.budget.total_actual || 0)} ==`);
+  }
+
+  // Service connections (compact)
+  if (raw.serviceConnections?.total_pending) {
+    lines.push(`\nSERVICE CONNECTIONS: ${raw.serviceConnections.total_pending} pending, ${raw.serviceConnections.overdue_count || 0} overdue`);
+  }
+
+  // People
+  if (raw.people.length > 0) {
+    const active = raw.people.filter(p => p.active);
+    lines.push(`\nTEAM: ${active.length} active — ${active.map(p => `${p.name} (${p.role})`).join(', ')}`);
   }
 
   // Page context

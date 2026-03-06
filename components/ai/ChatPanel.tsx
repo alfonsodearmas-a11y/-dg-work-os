@@ -2,12 +2,12 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { X, Minus, Trash2, ArrowUp, Loader2, Sparkles, ExternalLink, RotateCcw, AlertTriangle, Zap, WifiOff } from 'lucide-react';
+import { X, Minus, Trash2, ArrowUp, Loader2, Sparkles, ExternalLink, RotateCcw, AlertTriangle, Zap, WifiOff, Check, Ban, Play } from 'lucide-react';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { tryLocalAnswer } from '@/lib/ai/local-answers';
 import { saveToOffline, getFromOffline } from '@/lib/offline/offline-store';
-import type { MetricSnapshot, ModelTier, ChatStreamEvent } from '@/lib/ai/types';
+import type { MetricSnapshot, ModelTier, ChatStreamEvent, AIActionProposal } from '@/lib/ai/types';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -17,6 +17,8 @@ interface ChatMessage {
   timestamp: Date;
   suggestions?: string[];
   actions?: Array<{ label: string; route: string }>;
+  pendingAction?: AIActionProposal;
+  actionResult?: { success: boolean; message: string };
   interrupted?: boolean;
   isError?: boolean;
   tier?: ModelTier;
@@ -44,6 +46,18 @@ const DEFAULT_SUGGESTIONS = [
 ];
 
 const PAGE_SUGGESTIONS: Record<string, Array<{ emoji: string; text: string }>> = {
+  '/': [
+    { emoji: '\u{2600}\u{FE0F}', text: 'What needs my attention today?' },
+    { emoji: '\u{1F4CB}', text: 'Summarize outstanding tasks across all agencies' },
+    { emoji: '\u{23F0}', text: 'What tasks are overdue?' },
+    { emoji: '\u{1F4CA}', text: 'Brief me on all agencies' },
+  ],
+  '/admin/tasks': [
+    { emoji: '\u{1F3AF}', text: 'What needs my attention today?' },
+    { emoji: '\u{1F4CB}', text: 'Summarize outstanding tasks across all agencies' },
+    { emoji: '\u{26A0}\u{FE0F}', text: 'Which tasks are blocked and why?' },
+    { emoji: '\u{1F4C5}', text: "What's due this week?" },
+  ],
   '/intel/gwi': [
     { emoji: '\u{1F4CA}', text: "Summarize GWI's financial performance" },
     { emoji: '\u{1F4B0}', text: 'Why are only 46% of customers paying on time?' },
@@ -51,10 +65,22 @@ const PAGE_SUGGESTIONS: Record<string, Array<{ emoji: string; text: string }>> =
     { emoji: '\u{2705}', text: "Is GWI's complaint resolution improving?" },
   ],
   '/intel/gpl': [
-    { emoji: '\u{26A1}', text: 'Which stations need attention?' },
-    { emoji: '\u{1F50B}', text: 'Is reserve margin adequate?' },
+    { emoji: '\u{26A1}', text: 'Show me generation performance this week' },
+    { emoji: '\u{1F50B}', text: 'Which feeders have the most outages?' },
     { emoji: '\u{1F4C9}', text: 'Analyze system loss trends' },
     { emoji: '\u{1F3D7}\u{FE0F}', text: 'GPL infrastructure project status' },
+  ],
+  '/intel/cjia': [
+    { emoji: '\u{2708}\u{FE0F}', text: 'How is passenger traffic trending?' },
+    { emoji: '\u{1F4CA}', text: 'What is on-time performance this month?' },
+    { emoji: '\u{1F4B0}', text: 'CJIA revenue breakdown' },
+    { emoji: '\u{26A0}\u{FE0F}', text: 'Any operational issues to flag?' },
+  ],
+  '/intel/gcaa': [
+    { emoji: '\u{1F6E9}\u{FE0F}', text: 'What is the compliance rate?' },
+    { emoji: '\u{1F50D}', text: 'Inspection status summary' },
+    { emoji: '\u{26A0}\u{FE0F}', text: 'Any safety incidents to review?' },
+    { emoji: '\u{1F4CA}', text: 'GCAA performance overview' },
   ],
   '/projects': [
     { emoji: '\u{26A0}\u{FE0F}', text: 'Which delayed projects are most critical?' },
@@ -62,11 +88,41 @@ const PAGE_SUGGESTIONS: Record<string, Array<{ emoji: string; text: string }>> =
     { emoji: '\u{1F4B0}', text: "What's the total delayed project value?" },
     { emoji: '\u{1F4CA}', text: 'Compare agency project execution' },
   ],
-  '/': [
-    { emoji: '\u{2600}\u{FE0F}', text: 'What needs my attention today?' },
-    { emoji: '\u{1F4C5}', text: "Summarize this week's schedule" },
+  '/meetings': [
+    { emoji: '\u{1F4DD}', text: 'What decisions came out of last week\'s meetings?' },
+    { emoji: '\u{2705}', text: 'Draft follow-up actions from recent meetings' },
+    { emoji: '\u{1F4C5}', text: 'What meetings are coming up this week?' },
+    { emoji: '\u{1F50D}', text: 'Summarize outstanding action items' },
+  ],
+  '/budget': [
+    { emoji: '\u{1F4B0}', text: 'Where are we against 2026 budget targets?' },
+    { emoji: '\u{26A0}\u{FE0F}', text: 'Flag any agencies with underspend risk' },
+    { emoji: '\u{1F4CA}', text: 'Compare allocations vs actuals across agencies' },
+    { emoji: '\u{1F4C8}', text: 'Which budget lines have the largest variances?' },
+  ],
+  '/oversight': [
+    { emoji: '\u{1F50D}', text: 'What oversight issues need my attention?' },
+    { emoji: '\u{26A0}\u{FE0F}', text: 'Any new filings or reports to review?' },
+    { emoji: '\u{1F4CA}', text: 'Oversight compliance summary' },
+    { emoji: '\u{1F4CB}', text: 'Cross-agency oversight trends' },
+  ],
+  '/documents': [
+    { emoji: '\u{1F4C4}', text: 'What documents were uploaded recently?' },
+    { emoji: '\u{1F50D}', text: 'Search documents for capital programme updates' },
+    { emoji: '\u{1F4CB}', text: 'Summarize key document findings' },
+    { emoji: '\u{1F4CA}', text: 'Documents by agency and category' },
+  ],
+  '/tasks': [
     { emoji: '\u{23F0}', text: 'What tasks are overdue?' },
-    { emoji: '\u{1F4CB}', text: 'Brief me on all agencies' },
+    { emoji: '\u{1F4CB}', text: 'Tasks by agency breakdown' },
+    { emoji: '\u{26A0}\u{FE0F}', text: 'Which tasks are blocked?' },
+    { emoji: '\u{2705}', text: 'What was completed this week?' },
+  ],
+  '/intel/pending-applications': [
+    { emoji: '\u{1F4CA}', text: 'Service connection backlog summary' },
+    { emoji: '\u{26A0}\u{FE0F}', text: 'Track A vs Track B SLA compliance' },
+    { emoji: '\u{1F4C8}', text: 'Application processing trends' },
+    { emoji: '\u{1F50D}', text: 'Which areas have the longest wait times?' },
   ],
 };
 
@@ -81,17 +137,23 @@ const PLACEHOLDERS = [
 ];
 
 const PAGE_NAMES: Record<string, string> = {
-  '/': 'Daily Briefing',
+  '/': 'Mission Control',
   '/intel': 'Agency Intel',
   '/intel/gpl': 'GPL Dashboard',
   '/intel/gwi': 'GWI Dashboard',
   '/intel/cjia': 'CJIA Dashboard',
   '/intel/gcaa': 'GCAA Dashboard',
+  '/intel/pending-applications': 'Service Connections',
   '/projects': 'Project Tracker',
   '/documents': 'Document Vault',
   '/calendar': 'Calendar',
+  '/meetings': 'Meetings',
+  '/budget': 'Budget 2026',
+  '/oversight': 'Oversight',
   '/admin': 'Admin',
-  '/tasks': 'Tasks',
+  '/admin/tasks': 'Command Centre',
+  '/admin/people': 'People',
+  '/tasks': 'Task Board',
 };
 
 const AGENCY_ROUTES: Record<string, string> = {
@@ -165,11 +227,46 @@ function renderInline(text: string, onAgencyClick?: (route: string) => void): Re
   return nodes;
 }
 
+function MarkdownTable({ rows, onAgencyClick }: { rows: string[][]; onAgencyClick?: (route: string) => void }) {
+  if (rows.length < 2) return null;
+  const headers = rows[0];
+  const bodyRows = rows.slice(1);
+
+  return (
+    <div className="overflow-x-auto my-3 rounded-lg border border-white/10">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="bg-white/5 border-b border-white/10">
+            {headers.map((h, i) => (
+              <th key={i} className="px-3 py-2 text-left text-[#d4af37] font-semibold whitespace-nowrap">
+                {renderInline(h.trim(), onAgencyClick)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {bodyRows.map((row, ri) => (
+            <tr key={ri} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
+              {row.map((cell, ci) => (
+                <td key={ci} className="px-3 py-2 text-white/80 whitespace-nowrap">
+                  {renderInline(cell.trim(), onAgencyClick)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function MarkdownContent({ text, onAgencyClick }: { text: string; onAgencyClick?: (route: string) => void }) {
   const blocks = text.split('\n');
   const elements: React.ReactNode[] = [];
   let listItems: React.ReactNode[] = [];
   let listType: 'ul' | 'ol' | null = null;
+  let tableRows: string[][] = [];
+  let inTable = false;
   let key = 0;
 
   const flushList = () => {
@@ -185,8 +282,32 @@ function MarkdownContent({ text, onAgencyClick }: { text: string; onAgencyClick?
     }
   };
 
+  const flushTable = () => {
+    if (tableRows.length > 0) {
+      elements.push(<MarkdownTable key={key++} rows={tableRows} onAgencyClick={onAgencyClick} />);
+      tableRows = [];
+      inTable = false;
+    }
+  };
+
   for (const line of blocks) {
     const trimmed = line.trim();
+
+    // Table detection: lines with | separators
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      flushList();
+      // Skip separator rows (|---|---|)
+      if (/^\|[\s\-:|]+\|$/.test(trimmed)) {
+        inTable = true;
+        continue;
+      }
+      const cells = trimmed.slice(1, -1).split('|');
+      tableRows.push(cells);
+      inTable = true;
+      continue;
+    } else if (inTable) {
+      flushTable();
+    }
 
     if (!trimmed) { flushList(); continue; }
 
@@ -220,6 +341,7 @@ function MarkdownContent({ text, onAgencyClick }: { text: string; onAgencyClick?
   }
 
   flushList();
+  flushTable();
   return <div className="space-y-0.5">{elements}</div>;
 }
 
@@ -301,6 +423,76 @@ function parseActions(text: string): { clean: string; actions: Array<{ label: st
   return { clean: clean.trim(), actions };
 }
 
+// ── Action Confirmation Card ─────────────────────────────────────────────────
+
+function ActionCard({
+  action,
+  onExecute,
+  onCancel,
+  result,
+  executing,
+}: {
+  action: AIActionProposal;
+  onExecute: () => void;
+  onCancel: () => void;
+  result?: { success: boolean; message: string };
+  executing?: boolean;
+}) {
+  return (
+    <div
+      className="my-3 rounded-xl overflow-hidden"
+      style={{ border: '1px solid rgba(212, 175, 55, 0.4)', background: 'rgba(212, 175, 55, 0.05)' }}
+    >
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-[#d4af37]/20">
+        <Play className="h-4 w-4 text-[#d4af37]" />
+        <span className="text-sm font-semibold text-[#d4af37]">{action.display.title}</span>
+      </div>
+      <div className="px-4 py-3 space-y-2">
+        <p className="text-sm text-white/80">{action.display.description}</p>
+        {action.display.details.length > 0 && (
+          <div className="space-y-1">
+            {action.display.details.map((d, i) => (
+              <div key={i} className="flex gap-2 text-xs">
+                <span className="text-white/40 min-w-[80px]">{d.label}:</span>
+                <span className="text-white/70">{d.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      {result ? (
+        <div className={`flex items-center gap-2 px-4 py-2.5 border-t ${result.success ? 'border-emerald-500/20 bg-emerald-500/10' : 'border-red-500/20 bg-red-500/10'}`}>
+          {result.success ? (
+            <Check className="h-4 w-4 text-emerald-400" />
+          ) : (
+            <Ban className="h-4 w-4 text-red-400" />
+          )}
+          <span className={`text-xs ${result.success ? 'text-emerald-300' : 'text-red-300'}`}>{result.message}</span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 px-4 py-2.5 border-t border-[#d4af37]/20">
+          <button
+            onClick={onExecute}
+            disabled={executing}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/40 hover:bg-[#d4af37]/30 disabled:opacity-50"
+          >
+            {executing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+            {executing ? 'Executing...' : 'Execute'}
+          </button>
+          <button
+            onClick={onCancel}
+            disabled={executing}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all bg-white/5 text-white/50 border border-white/10 hover:bg-white/10 disabled:opacity-50"
+          >
+            <Ban className="h-3 w-3" />
+            Cancel
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Component ───────────────────────────────────────────────────────────
 
 export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
@@ -314,6 +506,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
   const [forceDeep, setForceDeep] = useState(false);
   const [budgetPct, setBudgetPct] = useState(0);
   const [snapshot, setSnapshot] = useState<MetricSnapshot | null>(null);
+  const [executingAction, setExecutingAction] = useState(false);
 
   const pathname = usePathname();
   const router = useRouter();
@@ -323,7 +516,6 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const lastSentRef = useRef<string>('');
-  const autoBriefingFired = useRef(false);
   const touchStartY = useRef(0);
   const snapshotFetched = useRef(false);
 
@@ -340,8 +532,17 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
   const suggestions = useMemo(() => {
     if (PAGE_SUGGESTIONS[pathname]) return PAGE_SUGGESTIONS[pathname];
     if (pathname.startsWith('/projects')) return PAGE_SUGGESTIONS['/projects'];
+    if (pathname.startsWith('/intel/pending-applications')) return PAGE_SUGGESTIONS['/intel/pending-applications'];
     if (pathname.startsWith('/intel/gwi')) return PAGE_SUGGESTIONS['/intel/gwi'];
     if (pathname.startsWith('/intel/gpl')) return PAGE_SUGGESTIONS['/intel/gpl'];
+    if (pathname.startsWith('/intel/cjia')) return PAGE_SUGGESTIONS['/intel/cjia'];
+    if (pathname.startsWith('/intel/gcaa')) return PAGE_SUGGESTIONS['/intel/gcaa'];
+    if (pathname.startsWith('/intel')) return DEFAULT_SUGGESTIONS;
+    if (pathname.startsWith('/meetings')) return PAGE_SUGGESTIONS['/meetings'];
+    if (pathname.startsWith('/budget')) return PAGE_SUGGESTIONS['/budget'];
+    if (pathname.startsWith('/oversight')) return PAGE_SUGGESTIONS['/oversight'];
+    if (pathname.startsWith('/documents')) return PAGE_SUGGESTIONS['/documents'];
+    if (pathname.startsWith('/admin/tasks')) return PAGE_SUGGESTIONS['/admin/tasks'];
     return DEFAULT_SUGGESTIONS;
   }, [pathname]);
 
@@ -416,7 +617,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
 
   // ── Send Message ──
 
-  const sendMessage = useCallback(async (text: string, isAutoBriefing = false) => {
+  const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return;
 
     const userMessage: ChatMessage = { role: 'user', content: text.trim(), timestamp: new Date() };
@@ -539,24 +740,57 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
               if (!contextWarning && (accumulated.includes('data sources unavailable') || (accumulated.includes('unavailable') && accumulated.includes('data')))) {
                 setContextWarning(true);
               }
+            } else if (event.type === 'tool_use') {
+              // AI proposed an action — add text so far as a message, then action card
+              if (accumulated.trim()) {
+                const { clean: c1, suggestions: sug } = parseSuggestions(accumulated);
+                const { clean: c2, actions: navActions } = parseActions(c1);
+                setMessages(prev => [...prev, {
+                  role: 'assistant', content: c2, timestamp: new Date(),
+                  suggestions: sug, actions: navActions,
+                  tier: responseTier, tierLabel: responseTierLabel,
+                  cached: responseCached, local: responseLocal,
+                }]);
+                accumulated = '';
+                setStreamingText('');
+              }
+              // Add action proposal as a separate message
+              setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: '',
+                timestamp: new Date(),
+                pendingAction: event.action,
+                tier: responseTier,
+                tierLabel: responseTierLabel,
+              }]);
             } else if (event.type === 'done') {
               const { clean: c1, suggestions: sug } = parseSuggestions(accumulated);
               const { clean: c2, actions } = parseActions(c1);
-              setMessages(prev => [...prev, {
-                role: 'assistant', content: c2, timestamp: new Date(),
-                suggestions: sug, actions,
-                tier: event.tier, tierLabel: event.tier_label,
-                cached: event.cached, local: event.local,
-              }]);
+              // Only add a text message if there's content (might have been drained by tool_use)
+              if (c2.trim()) {
+                setMessages(prev => [...prev, {
+                  role: 'assistant', content: c2, timestamp: new Date(),
+                  suggestions: sug, actions,
+                  tier: event.tier, tierLabel: event.tier_label,
+                  cached: event.cached, local: event.local,
+                }]);
+              } else if (sug.length > 0) {
+                // Attach suggestions to the last assistant message
+                setMessages(prev => {
+                  const updated = [...prev];
+                  for (let idx = updated.length - 1; idx >= 0; idx--) {
+                    if (updated[idx].role === 'assistant') {
+                      updated[idx] = { ...updated[idx], suggestions: sug };
+                      break;
+                    }
+                  }
+                  return updated;
+                });
+              }
               setStreamingText('');
               setStreamingMeta(null);
               setIsStreaming(false);
               streamComplete = true;
-
-              // Update budget from usage
-              if (event.usage) {
-                // Approximate budget — actual comes from server
-              }
             } else if (event.type === 'error') {
               throw new Error(event.error);
             }
@@ -604,29 +838,6 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
     }
   }, [isStreaming, messages, pathname, contextWarning, forceDeep, snapshot]);
 
-  // Fire auto-briefing on first open each day
-  useEffect(() => {
-    if (!isOpen || autoBriefingFired.current || messages.length > 0 || isStreaming) return;
-
-    const today = new Date().toISOString().slice(0, 10);
-    const storageKey = `ai-briefing-${today}`;
-
-    try {
-      if (sessionStorage.getItem(storageKey)) return;
-    } catch { return; }
-
-    autoBriefingFired.current = true;
-
-    const hour = new Date().getHours();
-    const greeting = hour < 12
-      ? 'Good morning. What needs my attention today?'
-      : 'What needs my attention right now?';
-
-    try { sessionStorage.setItem(storageKey, 'true'); } catch { /* noop */ }
-
-    setTimeout(() => sendMessage(greeting, true), 500);
-  }, [isOpen, messages.length, isStreaming, sendMessage]);
-
   // ── Handlers ──
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -645,9 +856,15 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
   }, []);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       sendMessage(input);
+    } else if (e.key === 'Enter' && !e.shiftKey) {
+      // Plain Enter sends for single-line inputs, shift+enter for newline
+      if (!input.includes('\n') && input.trim().length > 0) {
+        e.preventDefault();
+        sendMessage(input);
+      }
     }
   }, [input, sendMessage]);
 
@@ -669,6 +886,41 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
     router.push(route);
     onClose();
   }, [router, onClose]);
+
+  // ── Action Execution ──
+
+  const handleExecuteAction = useCallback(async (msgIndex: number) => {
+    const msg = messages[msgIndex];
+    if (!msg?.pendingAction) return;
+
+    setExecutingAction(true);
+    try {
+      const res = await fetch('/api/ai/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tool_name: msg.pendingAction.tool_name,
+          tool_input: msg.pendingAction.tool_input,
+        }),
+      });
+      const result = await res.json();
+      setMessages(prev => prev.map((m, i) =>
+        i === msgIndex ? { ...m, actionResult: result } : m
+      ));
+    } catch (err: any) {
+      setMessages(prev => prev.map((m, i) =>
+        i === msgIndex ? { ...m, actionResult: { success: false, message: err.message || 'Failed to execute' } } : m
+      ));
+    } finally {
+      setExecutingAction(false);
+    }
+  }, [messages]);
+
+  const handleCancelAction = useCallback((msgIndex: number) => {
+    setMessages(prev => prev.map((m, i) =>
+      i === msgIndex ? { ...m, actionResult: { success: false, message: 'Cancelled by user' } } : m
+    ));
+  }, []);
 
   // Mobile swipe-to-close
   const handleTouchStart = useCallback((e: React.TouchEvent) => { touchStartY.current = e.touches[0].clientY; }, []);
@@ -824,8 +1076,19 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
                       style={{ borderRadius: '16px 16px 16px 4px' }}
                     >
                       {msg.queued && <WifiOff className="h-4 w-4 text-amber-400 mb-2" />}
-                      <MarkdownContent text={msg.content} onAgencyClick={handleAgencyClick} />
+                      {msg.content && <MarkdownContent text={msg.content} onAgencyClick={handleAgencyClick} />}
                     </div>
+
+                    {/* Action confirmation card */}
+                    {msg.pendingAction && (
+                      <ActionCard
+                        action={msg.pendingAction}
+                        onExecute={() => handleExecuteAction(i)}
+                        onCancel={() => handleCancelAction(i)}
+                        result={msg.actionResult}
+                        executing={executingAction}
+                      />
+                    )}
 
                     {/* Interrupted indicator + Retry */}
                     {msg.interrupted && (
@@ -965,7 +1228,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
             </button>
           </div>
           <p className="text-[10px] text-white/20 text-center mt-2 mb-1">
-            Powered by Anthropic {'\u00B7'} Smart model routing
+            {'\u2318'}+Enter to send {'\u00B7'} Powered by Anthropic
           </p>
         </div>
       </div>

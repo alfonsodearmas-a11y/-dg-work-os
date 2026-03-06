@@ -19,10 +19,14 @@ interface AgencySummaryProps {
 }
 
 function formatCurrency(value: number): string {
-  if (value >= 1e9) {
+  const abs = Math.abs(value);
+  if (abs >= 1e12) {
+    return `$${(value / 1e12).toFixed(1)}T`;
+  }
+  if (abs >= 1e9) {
     return `$${(value / 1e9).toFixed(1)}B`;
   }
-  if (value >= 1e6) {
+  if (abs >= 1e6) {
     return `$${(value / 1e6).toFixed(1)}M`;
   }
   return `$${value.toLocaleString()}`;
@@ -38,7 +42,7 @@ export function AgencySummary({ data }: AgencySummaryProps) {
           <TableHead className="text-right">Done</TableHead>
           <TableHead className="text-right">Active</TableHead>
           <TableHead className="text-right">Delayed</TableHead>
-          <TableHead className="text-right">Value</TableHead>
+          <TableHead className="text-right min-w-[7rem]">Value</TableHead>
           <TableHead className="text-right">Avg. Completion</TableHead>
         </TableRow>
       </TableHeader>
@@ -60,7 +64,7 @@ export function AgencySummary({ data }: AgencySummaryProps) {
                 <span className="text-gray-400">0</span>
               )}
             </TableCell>
-            <TableCell className="text-right">{formatCurrency(row.total_value)}</TableCell>
+            <TableCell className="text-right whitespace-nowrap">{formatCurrency(row.total_value)}</TableCell>
             <TableCell className="text-right">
               <div className="flex items-center justify-end space-x-2">
                 <div className="w-16 bg-gray-200 rounded-full h-2">

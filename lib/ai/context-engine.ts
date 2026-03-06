@@ -307,19 +307,225 @@ async function fetchGCAALatest(): Promise<Record<string, any> | null> {
   } catch { return null; }
 }
 
+// ── New Data Source Fetchers ─────────────────────────────────────────────────
+
+async function fetchRecentMeetings(): Promise<RawContextData['meetings']> {
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const { data: meetings } = await supabaseAdmin
+      .from('meetings')
+      .select('id, title, meeting_date, status, attendees, summary')
+      .gte('meeting_date', thirtyDaysAgo.toISOString().slice(0, 10))
+      .order('meeting_date', { ascending: false })
+      .limit(20);
+
+    if (!meetings) return [];
+
+    // Fetch action items for these meetings
+    const meetingIds = meetings.map(m => m.id);
+    const { data: actions } = await supabaseAdmin
+      .from('meeting_action_items')
+      .select('meeting_id, description, assignee, status, due_date')
+      .in('meeting_id', meetingIds);
+
+    const actionsByMeeting = new Map<string, typeof actions>();
+    for (const a of actions || []) {
+      const existing = actionsByMeeting.get(a.meeting_id) || [];
+      existing.push(a);
+      actionsByMeeting.set(a.meeting_id, existing);
+    }
+
+    return meetings.map(m => ({
+      id: m.id,
+      title: m.title,
+      meeting_date: m.meeting_date,
+      status: m.status,
+      attendees: m.attendees,
+      summary: m.summary,
+      action_items: (actionsByMeeting.get(m.id) || []).map(a => ({
+        description: a.description,
+        assignee: a.assignee,
+        status: a.status,
+        due_date: a.due_date,
+      })),
+    }));
+  } catch { return []; }
+}
+
+async function fetchBudgetSummary(): Promise<RawContextData['budget']> {
+  try {
+    const { data: sectors } = await supabaseAdmin
+      .from('budget_sectors')
+      .select('sector_name, total_allocated, total_actual')
+      .order('total_allocated', { ascending: false });
+
+    const { data: agencies } = await supabaseAdmin
+      .from('budget_agencies')
+      .select('agency_name, total_allocated, total_actual')
+      .order('total_allocated', { ascending: false });
+
+    if (!sectors && !agencies) return null;
+
+    const sectorData = (sectors || []).map(s => ({
+      sector: s.sector_name,
+      allocated: Number(s.total_allocated) || 0,
+      actual: Number(s.total_actual) || 0,
+      variance_pct: s.total_allocated ? ((Number(s.total_actual) - Number(s.total_allocated)) / Number(s.total_allocated)) * 100 : 0,
+    }));
+
+    const agencyData = (agencies || []).map(a => ({
+      agency: a.agency_name,
+      allocated: Number(a.total_allocated) || 0,
+      actual: Number(a.total_actual) || 0,
+      variance_pct: a.total_allocated ? ((Number(a.total_actual) - Number(a.total_allocated)) / Number(a.total_allocated)) * 100 : 0,
+    }));
+
+    const totalAllocated = sectorData.reduce((s, x) => s + x.allocated, 0);
+    const totalActual = sectorData.reduce((s, x) => s + x.actual, 0);
+
+    return { sectors: sectorData, agencies: agencyData, total_allocated: totalAllocated, total_actual: totalActual };
+  } catch { return null; }
+}
+
+async function fetchServiceConnectionStats(): Promise<RawContextData['serviceConnections']> {
+  try {
+    const { data: stats } = await supabaseAdmin
+      .from('service_connection_stats')
+      .select('*')
+      .order('stat_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!stats) {
+      // Try aggregating from service_connections table directly
+      const { data: pending } = await supabaseAdmin
+        .from('service_connections')
+        .select('track, status, days_pending')
+        .in('status', ['pending', 'in_progress']);
+
+      if (!pending || pending.length === 0) return null;
+
+      const trackA = pending.filter(p => p.track === 'A');
+      const trackB = pending.filter(p => p.track === 'B');
+      const allDays = pending.map(p => Number(p.days_pending) || 0);
+      const avgDays = allDays.length > 0 ? allDays.reduce((s, d) => s + d, 0) / allDays.length : 0;
+
+      return {
+        total_pending: pending.length,
+        track_a_pending: trackA.length,
+        track_b_pending: trackB.length,
+        avg_days_pending: Math.round(avgDays),
+        overdue_count: pending.filter(p => (Number(p.days_pending) || 0) > 30).length,
+      };
+    }
+
+    return {
+      total_pending: stats.total_pending,
+      track_a_pending: stats.track_a_pending,
+      track_b_pending: stats.track_b_pending,
+      avg_days_pending: stats.avg_days_pending,
+      overdue_count: stats.overdue_count,
+    };
+  } catch { return null; }
+}
+
+async function fetchOversightData(): Promise<RawContextData['oversight']> {
+  try {
+    const { data } = await supabaseAdmin
+      .from('oversight_items')
+      .select('title, agency, published_date, item_type, status')
+      .order('published_date', { ascending: false })
+      .limit(20);
+
+    return (data || []).map(d => ({
+      title: d.title,
+      agency: d.agency,
+      date: d.published_date,
+      type: d.item_type,
+      status: d.status,
+    }));
+  } catch { return []; }
+}
+
+async function fetchRecentDocuments(): Promise<RawContextData['documents']> {
+  try {
+    const { data } = await supabaseAdmin
+      .from('documents')
+      .select('id, title, category, agency, created_at')
+      .order('created_at', { ascending: false })
+      .limit(30);
+
+    return (data || []).map(d => ({
+      id: d.id,
+      title: d.title,
+      category: d.category,
+      agency: d.agency,
+      uploaded_at: d.created_at,
+    }));
+  } catch { return []; }
+}
+
+async function fetchNotificationSummary(): Promise<RawContextData['notifications']> {
+  try {
+    const { data: unread, count } = await supabaseAdmin
+      .from('notifications')
+      .select('title, type, agency, created_at', { count: 'exact' })
+      .eq('read', false)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    return {
+      unread_count: count || 0,
+      recent: (unread || []).map(n => ({
+        title: n.title,
+        type: n.type,
+        agency: n.agency,
+        created_at: n.created_at,
+      })),
+    };
+  } catch { return { unread_count: 0, recent: [] }; }
+}
+
+async function fetchPeopleList(): Promise<RawContextData['people']> {
+  try {
+    const { data } = await supabaseAdmin
+      .from('users')
+      .select('id, name, email, role, agency, active')
+      .order('name');
+
+    return (data || []).map(u => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      agency: u.agency,
+      active: u.active,
+    }));
+  } catch { return []; }
+}
+
 // ── Page Descriptions ────────────────────────────────────────────────────────
 
 const PAGE_DESCRIPTIONS: Record<string, string> = {
-  '/': 'Daily Briefing — overview of tasks, calendar, and alerts',
+  '/': 'Mission Control — overview of tasks, calendar, and alerts',
   '/intel': 'Agency Intel Overview — comparison of all agencies',
   '/intel/gpl': 'GPL Deep Dive — power generation, stations, KPIs, forecasts',
   '/intel/gwi': 'GWI Deep Dive — water utility metrics and financials',
   '/intel/cjia': 'CJIA Deep Dive — airport passenger analytics',
   '/intel/gcaa': 'GCAA Deep Dive — civil aviation compliance',
+  '/intel/pending-applications': 'GPL Service Connections — Track A/B applications, SLA compliance',
   '/projects': 'PSIP Project Tracker — infrastructure project oversight',
   '/documents': 'Document Vault — uploaded documents and AI analysis',
   '/admin': 'Admin Portal — user management and data entry',
+  '/admin/tasks': 'Command Centre — task management across all agencies',
+  '/admin/people': 'People — user management, roles, and invites',
   '/calendar': 'Calendar — schedule and meetings',
+  '/meetings': 'Meetings — meeting records, transcripts, action items',
+  '/budget': 'Budget 2026 — allocations, actuals, variances by agency',
+  '/oversight': 'Oversight — compliance and oversight.gov.gy data',
+  '/tasks': 'Task Board — kanban task management',
 };
 
 export { PAGE_DESCRIPTIONS };
@@ -341,6 +547,10 @@ export async function assembleRawData(): Promise<RawContextData> {
     portfolioResult, delayedResult,
     tasksResult,
     todayEventsResult, weekEventsResult,
+    meetingsResult, budgetResult,
+    serviceConnResult, oversightResult,
+    documentsResult, notificationsResult,
+    peopleResult,
   ] = await Promise.allSettled([
     fetchGWILatest(),
     fetchGWIInsights(),
@@ -351,9 +561,21 @@ export async function assembleRawData(): Promise<RawContextData> {
     fetchGCAALatest(),
     getPortfolioSummary(),
     getDelayedProjects(),
-    supabaseAdmin.from('tasks').select('title, status, due_date, agency').neq('status', 'done').then(r => r.data || []),
+    supabaseAdmin.from('tasks')
+      .select('id, title, status, priority, due_date, agency, assigned_to')
+      .neq('status', 'done')
+      .order('due_date', { ascending: true, nullsFirst: false })
+      .limit(200)
+      .then(r => r.data || []),
     fetchTodayEvents(),
     fetchWeekEvents(),
+    fetchRecentMeetings(),
+    fetchBudgetSummary(),
+    fetchServiceConnectionStats(),
+    fetchOversightData(),
+    fetchRecentDocuments(),
+    fetchNotificationSummary(),
+    fetchPeopleList(),
   ]);
 
   const gwi = gwiReport.status === 'fulfilled' ? gwiReport.value : null;
@@ -368,9 +590,21 @@ export async function assembleRawData(): Promise<RawContextData> {
   const tasks = tasksResult.status === 'fulfilled' ? tasksResult.value : [];
   const todayEvents = todayEventsResult.status === 'fulfilled' ? todayEventsResult.value : [];
   const weekEvents = weekEventsResult.status === 'fulfilled' ? weekEventsResult.value : [];
+  const meetings = meetingsResult.status === 'fulfilled' ? meetingsResult.value : [];
+  const budget = budgetResult.status === 'fulfilled' ? budgetResult.value : null;
+  const serviceConn = serviceConnResult.status === 'fulfilled' ? serviceConnResult.value : null;
+  const oversight = oversightResult.status === 'fulfilled' ? oversightResult.value : [];
+  const documents = documentsResult.status === 'fulfilled' ? documentsResult.value : [];
+  const notifications = notificationsResult.status === 'fulfilled' ? notificationsResult.value : { unread_count: 0, recent: [] };
+  const people = peopleResult.status === 'fulfilled' ? peopleResult.value : [];
 
   if (tasksResult.status === 'rejected') gaps.push('Tasks database unavailable');
   if (todayEventsResult.status === 'rejected') gaps.push('Google Calendar unavailable');
+  if (meetingsResult.status === 'rejected') gaps.push('Meetings data unavailable');
+  if (budgetResult.status === 'rejected') gaps.push('Budget data unavailable');
+
+  // Build a people lookup for assigning names to task assignees
+  const peopleLookup = new Map(people.map(p => [p.id, p.name]));
 
   const gplHealth = computeGPLHealth(gpl.summary, gpl.stations, gplKpi.kpis);
   const gwiHealth = computeGWIHealth(gwi);
@@ -395,10 +629,14 @@ export async function assembleRawData(): Promise<RawContextData> {
     portfolio,
     delayed,
     tasks: tasks.map((t: any) => ({
+      id: t.id,
       title: t.title,
       status: t.status,
+      priority: t.priority,
       due_date: t.due_date,
       agency: t.agency,
+      assigned_to: t.assigned_to,
+      assigned_to_name: t.assigned_to ? peopleLookup.get(t.assigned_to) || null : null,
     })),
     todayEvents: todayEvents.map((ev: CalendarEvent) => ({
       title: ev.title,
@@ -418,6 +656,13 @@ export async function assembleRawData(): Promise<RawContextData> {
       gcaa: gcaaHealth,
     },
     gaps,
+    meetings,
+    budget,
+    serviceConnections: serviceConn,
+    oversight,
+    documents,
+    notifications,
+    people,
   };
 
   rawDataCache = { data, timestamp: Date.now() };
@@ -680,6 +925,82 @@ export function formatFullContext(raw: RawContextData, currentPage: string): str
     for (const [day, evs] of Object.entries(byDay)) {
       const titles = evs.map(e => e.title).join(', ');
       lines.push(`- ${day}: ${evs.length} events — ${titles}`);
+    }
+  }
+
+  // ── Meetings Section ──
+  if (raw.meetings.length > 0) {
+    lines.push('\n== RECENT MEETINGS ==');
+    for (const m of raw.meetings.slice(0, 15)) {
+      const date = m.meeting_date ? format(parseISO(m.meeting_date), 'MMM d, yyyy') : 'Unknown';
+      const actionCount = m.action_items?.length || 0;
+      const pendingActions = m.action_items?.filter(a => a.status !== 'completed').length || 0;
+      lines.push(`- ${date}: ${m.title} (${m.status})${actionCount > 0 ? ` — ${actionCount} actions (${pendingActions} pending)` : ''}`);
+      if (m.summary && (currentPage.startsWith('/meetings') || currentPage === '/')) {
+        lines.push(`  Summary: ${m.summary.slice(0, 200)}`);
+      }
+    }
+    const allPendingActions = raw.meetings.flatMap(m => m.action_items?.filter(a => a.status !== 'completed') || []);
+    if (allPendingActions.length > 0 && (currentPage.startsWith('/meetings') || currentPage === '/')) {
+      lines.push('\nPENDING MEETING ACTIONS:');
+      allPendingActions.slice(0, 15).forEach((a, i) => {
+        lines.push(`${i + 1}. ${a.description}${a.assignee ? ` — assigned: ${a.assignee}` : ''}${a.due_date ? ` — due: ${a.due_date}` : ''}`);
+      });
+    }
+  }
+
+  // ── Budget Section ──
+  if (raw.budget) {
+    lines.push('\n== BUDGET 2026 ==');
+    if (raw.budget.total_allocated) {
+      lines.push(`Total: Allocated ${$(raw.budget.total_allocated)}, Actual ${$(raw.budget.total_actual || 0)}, Variance ${((raw.budget.total_actual || 0) - raw.budget.total_allocated) > 0 ? '+' : ''}${$(((raw.budget.total_actual || 0) - raw.budget.total_allocated))}`);
+    }
+    if (raw.budget.agencies && (currentPage.startsWith('/budget') || currentPage === '/')) {
+      for (const a of raw.budget.agencies.slice(0, 10)) {
+        lines.push(`  ${a.agency}: Allocated ${$(a.allocated)}, Actual ${$(a.actual)}, ${a.variance_pct > 0 ? '+' : ''}${a.variance_pct.toFixed(1)}%`);
+      }
+    }
+  }
+
+  // ── Service Connections Section ──
+  if (raw.serviceConnections) {
+    const sc = raw.serviceConnections;
+    lines.push('\n== SERVICE CONNECTIONS ==');
+    lines.push(`Pending: ${sc.total_pending || 0} total (Track A: ${sc.track_a_pending || 0}, Track B: ${sc.track_b_pending || 0})`);
+    if (sc.avg_days_pending) lines.push(`Average wait: ${sc.avg_days_pending} days`);
+    if (sc.overdue_count) lines.push(`Overdue (>30 days): ${sc.overdue_count}`);
+  }
+
+  // ── Oversight Section ──
+  if (raw.oversight.length > 0 && (currentPage.startsWith('/oversight') || currentPage === '/')) {
+    lines.push('\n== OVERSIGHT ==');
+    for (const item of raw.oversight.slice(0, 10)) {
+      lines.push(`- ${item.date || ''}: ${item.title}${item.agency ? ` (${item.agency})` : ''}${item.status ? ` — ${item.status}` : ''}`);
+    }
+  }
+
+  // ── Documents Section ──
+  if (raw.documents.length > 0 && (currentPage.startsWith('/documents') || currentPage === '/')) {
+    lines.push('\n== RECENT DOCUMENTS ==');
+    for (const doc of raw.documents.slice(0, 10)) {
+      lines.push(`- ${doc.title}${doc.category ? ` [${doc.category}]` : ''}${doc.agency ? ` (${doc.agency})` : ''}`);
+    }
+  }
+
+  // ── Notifications Section ──
+  if (raw.notifications.unread_count > 0) {
+    lines.push(`\n== NOTIFICATIONS: ${raw.notifications.unread_count} unread ==`);
+    for (const n of raw.notifications.recent.slice(0, 5)) {
+      lines.push(`- ${n.title}${n.agency ? ` (${n.agency})` : ''}`);
+    }
+  }
+
+  // ── People / Team ──
+  if (raw.people.length > 0) {
+    const active = raw.people.filter(p => p.active);
+    lines.push(`\n== TEAM: ${active.length} active users ==`);
+    for (const p of active) {
+      lines.push(`- ${p.name} (${p.role}${p.agency ? `, ${p.agency}` : ''})`);
     }
   }
 

@@ -10,12 +10,14 @@ import { getCachedResponse, cacheResponse } from '@/lib/ai/response-cache';
 import { getTokenBudgetStatus, logUsage } from '@/lib/ai/token-budget';
 import { compressHistory } from '@/lib/ai/history-compressor';
 import { tryLocalAnswer } from '@/lib/ai/local-answers';
+import { getAnthropicTools, buildActionProposal } from '@/lib/ai/tools';
 import { ModelTier, MODEL_IDS, MAX_TOKENS, TIER_LABELS, MetricSnapshot, ChatStreamEvent } from '@/lib/ai/types';
+import { auth } from '@/lib/auth';
 
 // ── Rate Limiting (in-memory, per-session) ───────────────────────────────────
 
 const rateLimits = new Map<string, { count: number; windowStart: number }>();
-const RATE_LIMIT = 20;
+const RATE_LIMIT = 30;
 const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
 function checkRateLimit(sessionId: string): { allowed: boolean; remaining: number } {
@@ -87,13 +89,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get authenticated user
+    const session = await auth();
+    const userId = session?.user?.id || 'anonymous';
+
     // Parse request
     const body = await request.json();
     const {
       message,
       conversation_history = [],
       current_page = '/',
-      session_id = 'anonymous',
+      session_id = 'dg-session',
       force_deep = false,
       snapshot = null,
     } = body as {
@@ -116,7 +122,7 @@ export async function POST(request: NextRequest) {
     const rateCheck = checkRateLimit(session_id);
     if (!rateCheck.allowed) {
       return new Response(
-        JSON.stringify({ error: 'Rate limit exceeded — max 20 messages per hour', remaining: 0 }),
+        JSON.stringify({ error: 'Rate limit exceeded — max 30 messages per hour', remaining: 0 }),
         { status: 429, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -126,7 +132,6 @@ export async function POST(request: NextRequest) {
     if (snapshot && !force_deep) {
       const local = tryLocalAnswer(message, snapshot);
       if (local) {
-        // Log as local answer
         logUsage(session_id, 'haiku', 'local', 0, 0, 'local_answer', current_page, false, true);
 
         const encoder = new TextEncoder();
@@ -170,7 +175,6 @@ export async function POST(request: NextRequest) {
             })));
             controller.enqueue(encoder.encode(sseEvent({ type: 'text', text: cached.response_text })));
 
-            // Append suggestions/actions as comment tags so ChatPanel can parse them
             if (cached.suggestions && cached.suggestions.length > 0) {
               controller.enqueue(encoder.encode(sseEvent({
                 type: 'text',
@@ -256,20 +260,25 @@ export async function POST(request: NextRequest) {
     // ── Step 7: Build system prompt ──
 
     const today = format(new Date(), 'EEEE, MMMM d, yyyy');
-    const pageDesc = current_page === '/' ? 'Daily Briefing' : current_page;
+    const pageDesc = current_page === '/' ? 'Mission Control' : current_page;
     const systemPrompt = getSystemPrompt(tier, today, pageDesc, contextStr);
 
-    // ── Step 8: Stream with tier-appropriate model ──
+    // ── Step 8: Stream with tier-appropriate model + tools ──
 
     const modelId = MODEL_IDS[tier];
     const maxTokens = MAX_TOKENS[tier];
 
     const anthropic = new Anthropic({ apiKey });
+
+    // Include tools for sonnet/opus (not haiku — too simple for actions)
+    const tools = tier !== 'haiku' ? getAnthropicTools() : undefined;
+
     const stream = anthropic.messages.stream({
       model: modelId,
       max_tokens: maxTokens,
       system: systemPrompt,
       messages,
+      ...(tools ? { tools } : {}),
     });
 
     const encoder = new TextEncoder();
@@ -285,14 +294,40 @@ export async function POST(request: NextRequest) {
         })));
 
         let accumulated = '';
+        let pendingToolUse: { id: string; name: string; input: string } | null = null;
 
         try {
           for await (const event of stream) {
-            if (event.type === 'content_block_delta') {
+            if (event.type === 'content_block_start') {
+              if (event.content_block.type === 'tool_use') {
+                pendingToolUse = {
+                  id: event.content_block.id,
+                  name: event.content_block.name,
+                  input: '',
+                };
+              }
+            } else if (event.type === 'content_block_delta') {
               const delta = event.delta;
               if ('text' in delta) {
                 accumulated += delta.text;
                 controller.enqueue(encoder.encode(sseEvent({ type: 'text', text: delta.text })));
+              } else if ('partial_json' in delta && pendingToolUse) {
+                pendingToolUse.input += delta.partial_json;
+              }
+            } else if (event.type === 'content_block_stop') {
+              if (pendingToolUse) {
+                // Parse tool input and send as action proposal
+                try {
+                  const toolInput = JSON.parse(pendingToolUse.input || '{}');
+                  const proposal = buildActionProposal(pendingToolUse.name, toolInput);
+                  controller.enqueue(encoder.encode(sseEvent({
+                    type: 'tool_use',
+                    action: proposal,
+                  })));
+                } catch (e) {
+                  console.error('[ai/chat] Tool parse error:', e);
+                }
+                pendingToolUse = null;
               }
             } else if (event.type === 'message_stop') {
               const finalMessage = await stream.finalMessage();
@@ -302,10 +337,13 @@ export async function POST(request: NextRequest) {
               // ── Step 9: Log usage ──
               logUsage(session_id, tier, modelId, inputTokens, outputTokens, queryType, current_page, false, false);
 
-              // ── Step 10: Cache response (haiku/sonnet only) ──
-              const { clean: c1, suggestions } = parseSuggestionsFromText(accumulated);
-              const { clean: c2, actions } = parseActionsFromText(c1);
-              cacheResponse(message, current_page, tier, c2, suggestions, actions, inputTokens, outputTokens);
+              // ── Step 10: Cache response (haiku/sonnet only, skip if tool_use) ──
+              const hasToolUse = finalMessage.content.some(b => b.type === 'tool_use');
+              if (!hasToolUse) {
+                const { clean: c1, suggestions } = parseSuggestionsFromText(accumulated);
+                const { clean: c2, actions } = parseActionsFromText(c1);
+                cacheResponse(message, current_page, tier, c2, suggestions, actions, inputTokens, outputTokens);
+              }
 
               controller.enqueue(encoder.encode(sseEvent({
                 type: 'done',

@@ -29,6 +29,17 @@ const HAIKU_PATTERNS: Array<{ re: RegExp; type: string }> = [
   { re: /^(what|what's|whats)\s+(is|are)\s+(on\s+)?(my|the)\s+(calendar|schedule)\s+(today|this week)/i, type: 'schedule_lookup' },
 ];
 
+// Sonnet minimum — action intents (need tool use, which haiku doesn't get)
+const SONNET_MIN_PATTERNS: Array<{ re: RegExp; type: string }> = [
+  { re: /\b(create|add|make|assign)\s+(a\s+)?(new\s+)?task/i, type: 'action_create_task' },
+  { re: /\b(mark|set|update|change)\s+.*(as|to)\s+(done|completed|in.?progress|blocked|not.?started)/i, type: 'action_update_task' },
+  { re: /\b(save|draft|generate|write)\s+.*(document|briefing|memo|report|note)/i, type: 'action_save_document' },
+  { re: /\b(log|record|create)\s+.*(meeting|call|session)/i, type: 'action_log_meeting' },
+  { re: /\b(flag|escalate|alert)\s+/i, type: 'action_flag' },
+  { re: /\b(send|notify|remind)\s+/i, type: 'action_notify' },
+  { re: /\bfollow.?up\s+(action|task)s?\s+(from|for)/i, type: 'action_create_task' },
+];
+
 // Opus patterns — complex analysis, strategic questions, comparisons, multi-agency
 const OPUS_PATTERNS: Array<{ re: RegExp; type: string }> = [
   { re: /compare\s+(all\s+)?(agency|agencies)/i, type: 'cross_agency_analysis' },
@@ -51,6 +62,13 @@ export function classifyQuery(message: string): ClassifyResult {
   for (const { re, type } of OPUS_PATTERNS) {
     if (re.test(trimmed)) {
       return { tier: 'opus', queryType: type };
+    }
+  }
+
+  // Check Sonnet minimum (action intents)
+  for (const { re, type } of SONNET_MIN_PATTERNS) {
+    if (re.test(trimmed)) {
+      return { tier: 'sonnet', queryType: type };
     }
   }
 

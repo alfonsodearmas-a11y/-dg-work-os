@@ -92,6 +92,7 @@ function fmtCurrency(value: number | string | null | undefined): string {
   const num = typeof value === 'string' ? parseFloat(value.replace(/[$,]/g, '')) : Number(value);
   if (isNaN(num)) return '-';
   const abs = Math.abs(num);
+  if (abs >= 1e12) return `$${(num / 1e12).toFixed(1)}T`;
   if (abs >= 1e9) return `$${(num / 1e9).toFixed(1)}B`;
   if (abs >= 1e6) return `$${(num / 1e6).toFixed(1)}M`;
   if (abs >= 1e3) return `$${(num / 1e3).toFixed(1)}K`;
@@ -907,10 +908,10 @@ export default function ProjectsPage() {
                         <span className="text-white font-semibold">{a.total}</span>
                         <span className="text-[#64748b] ml-1 text-xs">projects</span>
                       </div>
-                      <div className="text-right w-20">
-                        <span className="text-[#d4af37] font-semibold">{fmtCurrency(a.total_value)}</span>
+                      <div className="text-right w-28 shrink-0">
+                        <span className="text-[#d4af37] font-semibold whitespace-nowrap">{fmtCurrency(a.total_value)}</span>
                       </div>
-                      <div className="flex items-center gap-3 text-xs" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center gap-3 text-xs shrink-0" onClick={e => e.stopPropagation()}>
                         {a.delayed > 0 && (
                           <button onClick={() => expandWithStatus('Delayed')} className="text-red-400 hover:text-red-300 hover:underline">
                             {a.delayed} delayed
@@ -932,7 +933,7 @@ export default function ProjectsPage() {
                     {/* Mobile stats row — compact */}
                     <div className="md:hidden flex items-center gap-2 text-xs">
                       <span className="text-white font-semibold">{a.total}</span>
-                      <span className="text-[#d4af37] font-semibold">{fmtCurrency(a.total_value)}</span>
+                      <span className="text-[#d4af37] font-semibold shrink-0 whitespace-nowrap">{fmtCurrency(a.total_value)}</span>
                       {a.delayed > 0 && <span className="text-red-400">{a.delayed}!</span>}
                       <ChevronDown className={`h-4 w-4 text-[#64748b] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                     </div>
@@ -1338,7 +1339,7 @@ function KpiCard({
       <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg ${c.bg} flex items-center justify-center mb-2 md:mb-3`}>
         <Icon className={`h-4 w-4 md:h-5 md:w-5 ${c.text}`} />
       </div>
-      <p className={`text-xl md:text-2xl font-bold ${c.text}`}>{value}</p>
+      <p className={`text-xl md:text-2xl font-bold ${c.text} whitespace-nowrap`}>{value}</p>
       <p className="text-[#64748b] text-[11px] md:text-xs mt-1">{label}</p>
     </div>
   );

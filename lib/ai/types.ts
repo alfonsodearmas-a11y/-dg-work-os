@@ -11,9 +11,9 @@ export const MODEL_IDS: Record<ModelTier, string> = {
 };
 
 export const MAX_TOKENS: Record<ModelTier, number> = {
-  haiku: 1024,
-  sonnet: 2048,
-  opus: 4096,
+  haiku: 2048,
+  sonnet: 4096,
+  opus: 8192,
 };
 
 export const TIER_LABELS: Record<ModelTier, string> = {
@@ -132,7 +132,7 @@ export interface ChatErrorEvent {
   error: string;
 }
 
-export type ChatStreamEvent = ChatMetaEvent | ChatTextEvent | ChatDoneEvent | ChatErrorEvent;
+export type ChatStreamEvent = ChatMetaEvent | ChatTextEvent | ChatDoneEvent | ChatErrorEvent | ChatToolUseEvent | ChatActionResultEvent;
 
 // ── Raw Context Data (from context-engine) ──
 
@@ -162,10 +162,14 @@ export interface RawContextData {
   } | null;
   delayed: Array<Record<string, any>>;
   tasks: Array<{
+    id?: string;
     title: string;
     status: string;
+    priority?: string | null;
     due_date?: string | null;
     agency?: string | null;
+    assigned_to?: string | null;
+    assigned_to_name?: string | null;
   }>;
   todayEvents: Array<{
     title: string;
@@ -185,4 +189,83 @@ export interface RawContextData {
     gcaa: AgencyHealth;
   };
   gaps: string[];
+  // ── Extended data sources ──
+  meetings: Array<{
+    id: string;
+    title: string;
+    meeting_date: string;
+    status: string;
+    attendees?: string[];
+    summary?: string | null;
+    action_items?: Array<{ description: string; assignee?: string; status?: string; due_date?: string }>;
+  }>;
+  budget: {
+    sectors?: Array<{ sector: string; allocated: number; actual: number; variance_pct: number }>;
+    agencies?: Array<{ agency: string; allocated: number; actual: number; variance_pct: number }>;
+    total_allocated?: number;
+    total_actual?: number;
+  } | null;
+  serviceConnections: {
+    total_pending?: number;
+    track_a_pending?: number;
+    track_b_pending?: number;
+    avg_days_pending?: number;
+    overdue_count?: number;
+    monthly_trend?: Array<{ month: string; received: number; completed: number }>;
+  } | null;
+  oversight: Array<{
+    title: string;
+    agency?: string;
+    date?: string;
+    type?: string;
+    status?: string;
+  }>;
+  documents: Array<{
+    id: string;
+    title: string;
+    category?: string;
+    agency?: string;
+    uploaded_at?: string;
+  }>;
+  notifications: {
+    unread_count: number;
+    recent: Array<{ title: string; type?: string; agency?: string; created_at?: string }>;
+  };
+  people: Array<{
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    agency?: string | null;
+    active: boolean;
+  }>;
+}
+
+// ── AI Tool Use / Action Types ──
+
+export interface AIToolDefinition {
+  name: string;
+  description: string;
+  input_schema: Record<string, unknown>;
+}
+
+export interface AIActionProposal {
+  tool_name: string;
+  tool_input: Record<string, unknown>;
+  display: {
+    title: string;
+    description: string;
+    details: Array<{ label: string; value: string }>;
+  };
+}
+
+export interface ChatToolUseEvent {
+  type: 'tool_use';
+  action: AIActionProposal;
+}
+
+export interface ChatActionResultEvent {
+  type: 'action_result';
+  success: boolean;
+  message: string;
 }
