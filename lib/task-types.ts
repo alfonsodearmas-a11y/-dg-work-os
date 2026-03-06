@@ -48,3 +48,24 @@ export interface TaskTemplate {
   priority: string;
   checklist: Array<{ label: string; done: boolean }> | null;
 }
+
+export interface Subtask {
+  id: string;
+  task_id: string;
+  title: string;
+  done: boolean;
+  position: number;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface TaskActivity {
+  id: string;
+  task_id: string;
+  user_id: string | null;
+  user_name?: string | null;
+  action: string;
+  old_value: string | null;
+  new_value: string | null;
+  created_at: string;
+}

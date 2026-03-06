@@ -1,11 +1,10 @@
 /**
  * GCAA AI Insights Service
  *
- * TEMPORARY: Swapped from Anthropic to OpenAI GPT-4o. Revert when Anthropic quota restored.
  * Caches results in gcaa_ai_insights table.
  */
 
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import crypto from 'crypto';
 import { supabaseAdmin } from './db';
 
@@ -56,7 +55,7 @@ export interface GCAAInsights {
 // -- Config ------------------------------------------------------------------
 
 const AI_CONFIG = {
-  MODEL: 'gpt-4o',
+  MODEL: 'claude-sonnet-4-5-20250929',
   MAX_TOKENS: 8000,
   TEMPERATURE: 0.3,
 } as const;
@@ -195,8 +194,8 @@ export async function generateGCAAInsights(
 ): Promise<GCAAInsights | null> {
   const startTime = Date.now();
 
-  if (!process.env.OPENAI_API_KEY) {
-    console.warn('[gcaa-insights] OPENAI_API_KEY not configured');
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.warn('[gcaa-insights] ANTHROPIC_API_KEY not configured');
     return null;
   }
 
@@ -228,17 +227,16 @@ export async function generateGCAAInsights(
   console.log('[gcaa-insights] Generating new insights for', month);
 
   try {
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const prompt = buildInsightsPrompt(data);
 
-    const response = await client.chat.completions.create({
+    const response = await client.messages.create({
       model: AI_CONFIG.MODEL,
-      max_completion_tokens: AI_CONFIG.MAX_TOKENS,
-      temperature: AI_CONFIG.TEMPERATURE,
+      max_tokens: AI_CONFIG.MAX_TOKENS,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const text = response.choices[0]?.message?.content || '';
+    const text = response.content[0].type === 'text' ? response.content[0].text : '';
 
     // Parse JSON from response
     const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);

@@ -1,15 +1,20 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   RefreshCw, Plus, Search, Filter, X, Loader2, AlertTriangle,
   CheckSquare, Clock, Inbox, User, Zap, FileText,
+  LayoutGrid, List, SlidersHorizontal, ArrowUpDown,
 } from 'lucide-react';
 import { Task, TaskUpdate, TasksByStatus, TaskTemplate, TaskStatus } from '@/lib/task-types';
 import { KanbanColumn } from './KanbanColumn';
 import { TaskDetailModal } from './TaskDetailModal';
+import { TaskDetailPanel } from './TaskDetailPanel';
 import { TaskContextMenu } from './TaskContextMenu';
 import { TaskBottomSheet } from './TaskBottomSheet';
+import { BulkActionBar } from './BulkActionBar';
+import { TaskListView, SortField, SortDir, sortTasks } from './TaskListView';
+import { QuickAddTask } from './QuickAddTask';
 import { CreateEventModal } from '@/components/calendar/CreateEventModal';
 import { useSession } from 'next-auth/react';
 
@@ -39,6 +44,9 @@ interface UserOption {
   agency: string | null;
 }
 
+type ViewMode = 'board' | 'list';
+type DueDateFilter = 'any' | 'overdue' | 'this_week' | 'this_month';
+
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -48,6 +56,31 @@ function useIsMobile() {
     return () => window.removeEventListener('resize', check);
   }, []);
   return isMobile;
+}
+
+function isThisWeek(dateStr: string): boolean {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay());
+  startOfWeek.setHours(0, 0, 0, 0);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 7);
+  return d >= startOfWeek && d < endOfWeek;
+}
+
+function isThisMonth(dateStr: string): boolean {
+  const d = new Date(dateStr);
+  const now = new Date();
+  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+}
+
+function isOverdueDate(dateStr: string): boolean {
+  const d = new Date(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  return d < today;
 }
 
 export function KanbanBoard() {
@@ -68,6 +101,14 @@ export function KanbanBoard() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
+  // View mode
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('dg-task-view') as ViewMode) || 'board';
+    }
+    return 'board';
+  });
+
   // Mobile tab
   const [mobileTab, setMobileTab] = useState<keyof TasksByStatus>('new');
 
@@ -78,9 +119,22 @@ export function KanbanBoard() {
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [agencyFilter, setAgencyFilter] = useState<string | null>(null);
+  const [agencyFilter, setAgencyFilter] = useState<string[]>([]);
+  const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [assigneeFilter, setAssigneeFilter] = useState<string | null>(null);
+  const [dueDateFilter, setDueDateFilter] = useState<DueDateFilter>('any');
   const [showFilters, setShowFilters] = useState(false);
   const [myTasksOnly, setMyTasksOnly] = useState(false);
+
+  // Sort
+  const [sortField, setSortField] = useState<SortField>('due_date');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [showSortMenu, setShowSortMenu] = useState(false);
+
+  // Multi-select
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const selectionMode = selectedIds.size > 0;
 
   // New task form
   const [showNewTask, setShowNewTask] = useState(false);
@@ -92,6 +146,9 @@ export function KanbanBoard() {
   const [newDescription, setNewDescription] = useState('');
   const [creatingTask, setCreatingTask] = useState(false);
   const [calendarTask, setCalendarTask] = useState<Task | null>(null);
+
+  // Quick add per column
+  const [quickAddColumn, setQuickAddColumn] = useState<TaskStatus | null>(null);
 
   // Users for assignee dropdown
   const [users, setUsers] = useState<UserOption[]>([]);
@@ -108,6 +165,15 @@ export function KanbanBoard() {
   // Blocked reason prompt
   const [blockedPrompt, setBlockedPrompt] = useState<{ taskId: string; targetStatus: TaskStatus } | null>(null);
   const [blockedReason, setBlockedReason] = useState('');
+
+  // Task detail panel
+  const [panelTask, setPanelTask] = useState<Task | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+
+  // Persist view mode
+  useEffect(() => {
+    localStorage.setItem('dg-task-view', viewMode);
+  }, [viewMode]);
 
   // Fetch tasks
   const fetchTasks = useCallback(async () => {
@@ -150,6 +216,20 @@ export function KanbanBoard() {
     return () => clearInterval(interval);
   }, [fetchTasks]);
 
+  // Toggle selection
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
   // Update task
   const updateTask = async (taskId: string, updates: TaskUpdate) => {
     setTasks((prev) => {
@@ -173,6 +253,11 @@ export function KanbanBoard() {
       return newTasks;
     });
 
+    // Also update panelTask if it's the one being edited
+    if (panelTask && panelTask.id === taskId) {
+      setPanelTask(prev => prev ? { ...prev, ...updates } : null);
+    }
+
     try {
       await fetch(`/api/tasks/${taskId}`, {
         method: 'PATCH',
@@ -194,6 +279,11 @@ export function KanbanBoard() {
       }
       return newTasks;
     });
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.delete(taskId);
+      return next;
+    });
 
     try {
       await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
@@ -203,10 +293,75 @@ export function KanbanBoard() {
     }
   };
 
+  // Bulk update
+  const bulkUpdate = async (updates: Record<string, unknown>) => {
+    const ids = Array.from(selectedIds);
+    // Optimistic update
+    setTasks(prev => {
+      const newTasks = { ...prev };
+      for (const status of COLUMNS) {
+        newTasks[status] = newTasks[status].map(t => {
+          if (!selectedIds.has(t.id)) return t;
+          const updated = { ...t };
+          if (updates.status) (updated as Record<string, unknown>).status = updates.status;
+          if (updates.agency !== undefined) (updated as Record<string, unknown>).agency = updates.agency;
+          if (updates.due_date !== undefined) (updated as Record<string, unknown>).due_date = updates.due_date;
+          return updated as Task;
+        });
+      }
+      // If status changed, move tasks between columns
+      if (updates.status) {
+        const targetStatus = updates.status as keyof TasksByStatus;
+        for (const status of COLUMNS) {
+          if (status === targetStatus) continue;
+          const moving = newTasks[status].filter(t => selectedIds.has(t.id));
+          newTasks[status] = newTasks[status].filter(t => !selectedIds.has(t.id));
+          newTasks[targetStatus] = [...moving.map(t => ({ ...t, status: targetStatus })), ...newTasks[targetStatus]];
+        }
+      }
+      return newTasks;
+    });
+
+    clearSelection();
+
+    try {
+      await fetch('/api/tasks/bulk', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskIds: ids, updates }),
+      });
+    } catch {
+      fetchTasks();
+    }
+  };
+
+  // Bulk delete
+  const bulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    // Optimistic: remove selected tasks
+    setTasks(prev => {
+      const newTasks = { ...prev };
+      for (const status of COLUMNS) {
+        newTasks[status] = newTasks[status].filter(t => !selectedIds.has(t.id));
+      }
+      return newTasks;
+    });
+    clearSelection();
+
+    try {
+      await fetch('/api/tasks/bulk', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskIds: ids }),
+      });
+    } catch {
+      fetchTasks();
+    }
+  };
+
   // Move task (from context menu / bottom sheet)
   const moveTask = useCallback((taskId: string, newStatus: TaskStatus) => {
     if (newStatus === 'blocked') {
-      // Find source and optimistically move
       let sourceColumn: keyof TasksByStatus | null = null;
       for (const col of COLUMNS) {
         if (tasks[col].some((t) => t.id === taskId)) {
@@ -229,11 +384,12 @@ export function KanbanBoard() {
       return;
     }
     updateTask(taskId, { status: newStatus });
-  }, [tasks, updateTask]);
+  }, [tasks, updateTask]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Create task
-  const createTask = async () => {
-    if (!newTitle.trim()) return;
+  const createTask = async (overrides?: { title: string; status: TaskStatus; priority: string; due_date?: string; assignee_id?: string }) => {
+    const title = overrides?.title || newTitle.trim();
+    if (!title) return;
 
     setCreatingTask(true);
     try {
@@ -241,24 +397,27 @@ export function KanbanBoard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: newTitle,
-          description: newDescription || undefined,
-          agency: newAgency || undefined,
-          priority: newPriority,
-          due_date: newDueDate || undefined,
-          assignee_id: newAssignee || undefined,
+          title,
+          description: overrides ? undefined : (newDescription || undefined),
+          agency: overrides ? undefined : (newAgency || undefined),
+          priority: overrides?.priority || newPriority,
+          due_date: overrides?.due_date || newDueDate || undefined,
+          assignee_id: overrides?.assignee_id || newAssignee || undefined,
+          status: overrides?.status || 'new',
         }),
       });
       const data = await res.json();
 
       if (data.task) {
+        const targetStatus = (overrides?.status || 'new') as keyof TasksByStatus;
         setTasks((prev) => ({
           ...prev,
-          new: [data.task, ...prev.new],
+          [targetStatus]: [data.task, ...prev[targetStatus]],
         }));
       }
 
-      resetNewTaskForm();
+      if (!overrides) resetNewTaskForm();
+      setQuickAddColumn(null);
     } catch (error) {
       console.error('Failed to create task:', error);
     } finally {
@@ -366,25 +525,98 @@ export function KanbanBoard() {
     setBlockedReason('');
   };
 
-  // Open edit modal
-  const openEditModal = useCallback((task: Task) => {
-    setSelectedTask(task);
-    setModalOpen(true);
+  // Open detail panel (for list view clicks and double-clicks)
+  const openPanel = useCallback((task: Task) => {
+    setPanelTask(task);
+    setPanelOpen(true);
   }, []);
 
+  // Open edit modal (keep for backward compat with context menu)
+  const openEditModal = useCallback((task: Task) => {
+    openPanel(task);
+  }, [openPanel]);
+
+  // Handle sort toggle
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
+
   // Filter tasks
-  const filterTasks = (columnTasks: Task[]): Task[] => {
+  const filterTasks = useCallback((columnTasks: Task[]): Task[] => {
     return columnTasks.filter((task) => {
       const matchesSearch = !searchQuery ||
         task.title.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesAgency = !agencyFilter || task.agency === agencyFilter;
+      const matchesAgency = agencyFilter.length === 0 || (task.agency && agencyFilter.includes(task.agency));
+      const matchesPriority = priorityFilter.length === 0 || (task.priority && priorityFilter.includes(task.priority));
       const matchesMy = !myTasksOnly || task.owner_user_id === session?.user?.id;
-      return matchesSearch && matchesAgency && matchesMy;
+      const matchesAssignee = !assigneeFilter || task.owner_user_id === assigneeFilter;
+
+      let matchesDueDate = true;
+      if (dueDateFilter === 'overdue') {
+        matchesDueDate = !!task.due_date && task.status !== 'done' && isOverdueDate(task.due_date);
+      } else if (dueDateFilter === 'this_week') {
+        matchesDueDate = !!task.due_date && isThisWeek(task.due_date);
+      } else if (dueDateFilter === 'this_month') {
+        matchesDueDate = !!task.due_date && isThisMonth(task.due_date);
+      }
+
+      let matchesStatus = true;
+      if (statusFilter.length > 0) {
+        matchesStatus = statusFilter.includes(task.status);
+      }
+
+      return matchesSearch && matchesAgency && matchesPriority && matchesMy && matchesAssignee && matchesDueDate && matchesStatus;
     });
+  }, [searchQuery, agencyFilter, priorityFilter, myTasksOnly, assigneeFilter, dueDateFilter, statusFilter, session?.user?.id]);
+
+  // All tasks flat
+  const allTasks = useMemo(() => {
+    const all: Task[] = [];
+    for (const col of COLUMNS) {
+      all.push(...tasks[col]);
+    }
+    return all;
+  }, [tasks]);
+
+  // Filtered tasks (for list view)
+  const filteredAllTasks = useMemo(() => filterTasks(allTasks), [allTasks, filterTasks]);
+
+  const hasActiveFilters = searchQuery || agencyFilter.length > 0 || priorityFilter.length > 0 || myTasksOnly || assigneeFilter || dueDateFilter !== 'any' || statusFilter.length > 0;
+  const totalTasks = COLUMNS.reduce((sum, col) => sum + tasks[col].length, 0);
+
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setAgencyFilter([]);
+    setPriorityFilter([]);
+    setStatusFilter([]);
+    setAssigneeFilter(null);
+    setDueDateFilter('any');
+    setMyTasksOnly(false);
   };
 
-  const hasActiveFilters = searchQuery || agencyFilter || myTasksOnly;
-  const totalTasks = COLUMNS.reduce((sum, col) => sum + tasks[col].length, 0);
+  // Active filter pills
+  const filterPills: { label: string; onClear: () => void }[] = [];
+  for (const a of agencyFilter) {
+    filterPills.push({ label: `Agency: ${a}`, onClear: () => setAgencyFilter(prev => prev.filter(x => x !== a)) });
+  }
+  for (const p of priorityFilter) {
+    filterPills.push({ label: `Priority: ${p}`, onClear: () => setPriorityFilter(prev => prev.filter(x => x !== p)) });
+  }
+  for (const s of statusFilter) {
+    filterPills.push({ label: `Status: ${s}`, onClear: () => setStatusFilter(prev => prev.filter(x => x !== s)) });
+  }
+  if (dueDateFilter !== 'any') {
+    filterPills.push({ label: `Due: ${dueDateFilter.replace('_', ' ')}`, onClear: () => setDueDateFilter('any') });
+  }
+  if (assigneeFilter) {
+    const userName = users.find(u => u.id === assigneeFilter)?.name || 'Unknown';
+    filterPills.push({ label: `Assignee: ${userName}`, onClear: () => setAssigneeFilter(null) });
+  }
 
   // --- New Task Form Content ---
   const newTaskFormContent = (
@@ -583,6 +815,34 @@ export function KanbanBoard() {
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2 md:gap-3">
+        {/* View Toggle */}
+        <div className="flex rounded-lg border border-[#2d3a52] overflow-hidden">
+          <button
+            onClick={() => setViewMode('board')}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${
+              viewMode === 'board'
+                ? 'bg-[#2d3a52] text-white'
+                : 'bg-[#1a2744] text-[#64748b] hover:text-[#94a3b8]'
+            }`}
+            style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+          >
+            <LayoutGrid className="h-4 w-4" />
+            {!isMobile && 'Board'}
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${
+              viewMode === 'list'
+                ? 'bg-[#2d3a52] text-white'
+                : 'bg-[#1a2744] text-[#64748b] hover:text-[#94a3b8]'
+            }`}
+            style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+          >
+            <List className="h-4 w-4" />
+            {!isMobile && 'List'}
+          </button>
+        </div>
+
         {/* Search */}
         <div className="relative flex-1 min-w-[140px] max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
@@ -614,15 +874,55 @@ export function KanbanBoard() {
         <button
           onClick={() => setShowFilters(!showFilters)}
           className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border transition-colors ${
-            agencyFilter
+            hasActiveFilters
               ? 'bg-[#d4af37]/20 border-[#d4af37]/50 text-[#d4af37]'
               : 'bg-[#1a2744] border-[#2d3a52] text-[#94a3b8] hover:border-[#3d4a62]'
           }`}
           style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
         >
-          <Filter className="h-4 w-4" />
+          <SlidersHorizontal className="h-4 w-4" />
           {!isMobile && 'Filters'}
         </button>
+
+        {/* Sort (for list view or always) */}
+        <div className="relative">
+          <button
+            onClick={() => setShowSortMenu(!showSortMenu)}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg border bg-[#1a2744] border-[#2d3a52] text-[#94a3b8] hover:border-[#3d4a62] transition-colors"
+            style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+          >
+            <ArrowUpDown className="h-4 w-4" />
+            {!isMobile && 'Sort'}
+          </button>
+          {showSortMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowSortMenu(false)} />
+              <div className="absolute top-full right-0 mt-1 z-50 rounded-xl bg-[#142238] border border-[#2d3a52] shadow-xl py-1 min-w-[180px]">
+                {([
+                  { field: 'due_date', label: 'Due Date' },
+                  { field: 'priority', label: 'Priority' },
+                  { field: 'created_at', label: 'Created' },
+                  { field: 'owner_name', label: 'Assignee' },
+                  { field: 'agency', label: 'Agency' },
+                ] as { field: SortField; label: string }[]).map(opt => (
+                  <button
+                    key={opt.field}
+                    onClick={() => { handleSort(opt.field); setShowSortMenu(false); }}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 text-sm text-left transition-colors ${
+                      sortField === opt.field ? 'text-[#d4af37] bg-[#d4af37]/5' : 'text-[#e2e8f0] hover:bg-[#1a2744]'
+                    }`}
+                    style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+                  >
+                    {opt.label}
+                    {sortField === opt.field && (
+                      <span className="text-xs text-[#d4af37]">{sortDir === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Standup (desktop only in toolbar) */}
         {!isMobile && (
@@ -657,35 +957,152 @@ export function KanbanBoard() {
         </button>
       </div>
 
-      {/* Filter Bar */}
-      {showFilters && (
-        <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-[#1a2744] border border-[#2d3a52]">
-          <select
-            value={agencyFilter || ''}
-            onChange={(e) => setAgencyFilter(e.target.value || null)}
-            className="px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
-            style={{ minHeight: isMobile ? 44 : undefined }}
+      {/* Filter Pills */}
+      {filterPills.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {filterPills.map((pill, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/30"
+            >
+              {pill.label}
+              <button
+                onClick={pill.onClear}
+                className="hover:text-white transition-colors"
+                style={{ touchAction: 'manipulation' }}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+          <button
+            onClick={clearAllFilters}
+            className="text-xs text-[#64748b] hover:text-white transition-colors"
+            style={{ touchAction: 'manipulation' }}
           >
-            <option value="">All Agencies</option>
-            {AGENCIES.map((agency) => (
-              <option key={agency} value={agency}>{agency}</option>
-            ))}
-          </select>
+            Clear all
+          </button>
+        </div>
+      )}
 
-          {hasActiveFilters && (
+      {/* Filter Panel */}
+      {showFilters && (
+        <div className="p-4 rounded-xl bg-[#1a2744] border border-[#2d3a52] space-y-4">
+          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5'}`}>
+            {/* Agency multi-select */}
+            <div>
+              <label className="block text-xs font-medium text-[#94a3b8] mb-1.5">Agency</label>
+              <div className="space-y-1 max-h-[160px] overflow-y-auto">
+                {AGENCIES.map(a => (
+                  <label key={a} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#0a1628] cursor-pointer transition-colors" style={{ minHeight: isMobile ? 44 : undefined }}>
+                    <input
+                      type="checkbox"
+                      checked={agencyFilter.includes(a)}
+                      onChange={() => setAgencyFilter(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])}
+                      className="w-3.5 h-3.5 rounded border-[#2d3a52] accent-[#d4af37]"
+                    />
+                    <span className="text-sm text-[#e2e8f0]">{a}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Assignee */}
+            <div>
+              <label className="block text-xs font-medium text-[#94a3b8] mb-1.5">Assignee</label>
+              <select
+                value={assigneeFilter || ''}
+                onChange={(e) => setAssigneeFilter(e.target.value || null)}
+                className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
+                style={{ minHeight: isMobile ? 44 : undefined }}
+              >
+                <option value="">All</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Priority multi-select */}
+            <div>
+              <label className="block text-xs font-medium text-[#94a3b8] mb-1.5">Priority</label>
+              <div className="space-y-1">
+                {PRIORITIES.map(p => (
+                  <label key={p} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#0a1628] cursor-pointer transition-colors" style={{ minHeight: isMobile ? 44 : undefined }}>
+                    <input
+                      type="checkbox"
+                      checked={priorityFilter.includes(p)}
+                      onChange={() => setPriorityFilter(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])}
+                      className="w-3.5 h-3.5 rounded border-[#2d3a52] accent-[#d4af37]"
+                    />
+                    <span className="text-sm text-[#e2e8f0] capitalize">{p}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Due Date filter */}
+            <div>
+              <label className="block text-xs font-medium text-[#94a3b8] mb-1.5">Due Date</label>
+              <div className="space-y-1">
+                {([
+                  { value: 'any', label: 'Any' },
+                  { value: 'overdue', label: 'Overdue' },
+                  { value: 'this_week', label: 'This week' },
+                  { value: 'this_month', label: 'This month' },
+                ] as { value: DueDateFilter; label: string }[]).map(opt => (
+                  <label key={opt.value} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#0a1628] cursor-pointer transition-colors" style={{ minHeight: isMobile ? 44 : undefined }}>
+                    <input
+                      type="radio"
+                      name="dueDateFilter"
+                      checked={dueDateFilter === opt.value}
+                      onChange={() => setDueDateFilter(opt.value)}
+                      className="w-3.5 h-3.5 accent-[#d4af37]"
+                    />
+                    <span className="text-sm text-[#e2e8f0]">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Status filter */}
+            <div>
+              <label className="block text-xs font-medium text-[#94a3b8] mb-1.5">Status</label>
+              <div className="space-y-1">
+                {(['new', 'active', 'blocked', 'done'] as const).map(s => (
+                  <label key={s} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#0a1628] cursor-pointer transition-colors" style={{ minHeight: isMobile ? 44 : undefined }}>
+                    <input
+                      type="checkbox"
+                      checked={statusFilter.includes(s)}
+                      onChange={() => setStatusFilter(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
+                      className="w-3.5 h-3.5 rounded border-[#2d3a52] accent-[#d4af37]"
+                    />
+                    <span className="text-sm text-[#e2e8f0] capitalize">{s}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-[#2d3a52]">
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="flex items-center gap-1 px-2 py-1 rounded text-xs text-[#d4af37] hover:bg-[#d4af37]/10 transition-colors"
+                style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+              >
+                <X className="h-3 w-3" />
+                Clear filters
+              </button>
+            )}
             <button
-              onClick={() => {
-                setSearchQuery('');
-                setAgencyFilter(null);
-                setMyTasksOnly(false);
-              }}
-              className="flex items-center gap-1 px-2 py-1 rounded text-xs text-[#d4af37] hover:bg-[#d4af37]/10 transition-colors"
+              onClick={() => setShowFilters(false)}
+              className="px-3 py-1.5 rounded-lg text-xs text-[#94a3b8] hover:text-white bg-[#0a1628] border border-[#2d3a52] transition-colors ml-auto"
               style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
             >
-              <X className="h-3 w-3" />
-              Clear filters
+              Close
             </button>
-          )}
+          </div>
         </div>
       )}
 
@@ -701,7 +1118,7 @@ export function KanbanBoard() {
               Cancel
             </button>
             <button
-              onClick={createTask}
+              onClick={() => createTask()}
               disabled={!newTitle.trim() || creatingTask}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#d4af37] text-[#0a1628] font-medium hover:bg-[#c9a432] transition-colors disabled:opacity-50 text-sm"
             >
@@ -714,7 +1131,6 @@ export function KanbanBoard() {
 
       {showNewTask && isMobile && (
         <div className="fixed inset-0 z-50 flex flex-col bg-[#0a1628]">
-          {/* Header */}
           <div className="flex justify-center pt-3 pb-1">
             <div className="w-9 h-1 rounded-full bg-white/20" />
           </div>
@@ -728,14 +1144,12 @@ export function KanbanBoard() {
               <X className="h-5 w-5" />
             </button>
           </div>
-          {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto px-4 py-4">
             {newTaskFormContent}
           </div>
-          {/* Sticky footer */}
           <div className="px-4 py-3 border-t border-[#2d3a52]" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
             <button
-              onClick={createTask}
+              onClick={() => createTask()}
               disabled={!newTitle.trim() || creatingTask}
               className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#d4af37] text-[#0a1628] font-semibold hover:bg-[#c9a432] transition-colors disabled:opacity-50"
               style={{ minHeight: 48, touchAction: 'manipulation' }}
@@ -780,72 +1194,119 @@ export function KanbanBoard() {
         </div>
       )}
 
-      {/* === KANBAN BOARD === */}
+      {/* === MAIN CONTENT: BOARD or LIST === */}
+      {viewMode === 'board' ? (
+        <>
+          {/* Mobile: Tab Bar */}
+          {isMobile && (
+            <div className="flex overflow-x-auto gap-1 -mx-1 px-1 pb-1 scrollbar-none">
+              {COLUMNS.map((col) => {
+                const isActive = mobileTab === col;
+                const tabStyle = COLUMN_TAB_STYLES[col];
+                const count = filterTasks(tasks[col]).length;
+                return (
+                  <button
+                    key={col}
+                    onClick={() => setMobileTab(col)}
+                    className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                      isActive
+                        ? `${tabStyle.active} bg-[#1a2744]`
+                        : 'border-transparent text-[#64748b]'
+                    }`}
+                    style={{ minHeight: 44, touchAction: 'manipulation' }}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${tabStyle.dot}`} />
+                    {COLUMN_LABELS[col]}
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                      isActive ? 'bg-white/10' : 'bg-[#2d3a52]'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
-      {/* Mobile: Tab Bar */}
-      {isMobile && (
-        <div className="flex overflow-x-auto gap-1 -mx-1 px-1 pb-1 scrollbar-none">
-          {COLUMNS.map((col) => {
-            const isActive = mobileTab === col;
-            const tabStyle = COLUMN_TAB_STYLES[col];
-            const count = filterTasks(tasks[col]).length;
-            return (
-              <button
-                key={col}
-                onClick={() => setMobileTab(col)}
-                className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                  isActive
-                    ? `${tabStyle.active} bg-[#1a2744]`
-                    : 'border-transparent text-[#64748b]'
-                }`}
-                style={{ minHeight: 44, touchAction: 'manipulation' }}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${tabStyle.dot}`} />
-                {COLUMN_LABELS[col]}
-                <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                  isActive ? 'bg-white/10' : 'bg-[#2d3a52]'
-                }`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Desktop: Multi-column / Mobile: Single column */}
-      {isMobile ? (
-        <KanbanColumn
-          key={mobileTab}
-          id={mobileTab}
-          title={COLUMN_LABELS[mobileTab] || mobileTab}
-          tasks={filterTasks(tasks[mobileTab])}
-          isMobile={true}
-          draggingId={null}
-          onOpenModal={openEditModal}
-          onCalendar={(task) => setCalendarTask(task)}
-          onDrop={handleColumnDrop}
-          onContextMenu={(task, pos) => setContextMenu({ task, position: pos })}
-          onBottomSheet={(task) => setBottomSheetTask(task)}
-        />
+          {/* Desktop: Multi-column / Mobile: Single column */}
+          {isMobile ? (
+            <>
+              <KanbanColumn
+                key={mobileTab}
+                id={mobileTab}
+                title={COLUMN_LABELS[mobileTab] || mobileTab}
+                tasks={filterTasks(tasks[mobileTab])}
+                isMobile={true}
+                draggingId={null}
+                selectedIds={selectedIds}
+                selectionMode={selectionMode}
+                onToggleSelect={toggleSelect}
+                onOpenModal={openEditModal}
+                onCalendar={(task) => setCalendarTask(task)}
+                onDrop={handleColumnDrop}
+                onContextMenu={(task, pos) => setContextMenu({ task, position: pos })}
+                onBottomSheet={(task) => setBottomSheetTask(task)}
+              />
+              {/* Mobile quick add at bottom of active tab */}
+              {quickAddColumn === mobileTab && (
+                <QuickAddTask
+                  status={mobileTab as TaskStatus}
+                  isMobile={true}
+                  users={users}
+                  onAdd={async (data) => { await createTask(data); }}
+                  onCancel={() => setQuickAddColumn(null)}
+                />
+              )}
+            </>
+          ) : (
+            <div className="flex gap-4 overflow-x-auto pb-4">
+              {COLUMNS.map((column) => (
+                <div key={column} className="flex-1 min-w-[280px] max-w-[320px]">
+                  <KanbanColumn
+                    id={column}
+                    title={COLUMN_LABELS[column] || column}
+                    tasks={filterTasks(tasks[column])}
+                    isMobile={false}
+                    draggingId={draggingId}
+                    selectedIds={selectedIds}
+                    selectionMode={selectionMode}
+                    onToggleSelect={toggleSelect}
+                    onOpenModal={openEditModal}
+                    onCalendar={(task) => setCalendarTask(task)}
+                    onDrop={handleColumnDrop}
+                    onContextMenu={(task, pos) => setContextMenu({ task, position: pos })}
+                    onBottomSheet={(task) => setBottomSheetTask(task)}
+                    onQuickAdd={(status) => setQuickAddColumn(quickAddColumn === status ? null : status)}
+                  />
+                  {quickAddColumn === column && (
+                    <div className="mt-2 px-2">
+                      <QuickAddTask
+                        status={column as TaskStatus}
+                        isMobile={false}
+                        users={users}
+                        onAdd={async (data) => { await createTask(data); }}
+                        onCancel={() => setQuickAddColumn(null)}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {COLUMNS.map((column) => (
-            <KanbanColumn
-              key={column}
-              id={column}
-              title={COLUMN_LABELS[column] || column}
-              tasks={filterTasks(tasks[column])}
-              isMobile={false}
-              draggingId={draggingId}
-              onOpenModal={openEditModal}
-              onCalendar={(task) => setCalendarTask(task)}
-              onDrop={handleColumnDrop}
-              onContextMenu={(task, pos) => setContextMenu({ task, position: pos })}
-              onBottomSheet={(task) => setBottomSheetTask(task)}
-            />
-          ))}
-        </div>
+        /* LIST VIEW */
+        <TaskListView
+          tasks={filteredAllTasks}
+          isMobile={isMobile}
+          selectedIds={selectedIds}
+          selectionMode={selectionMode}
+          onToggleSelect={toggleSelect}
+          onOpenPanel={openPanel}
+          sortField={sortField}
+          sortDir={sortDir}
+          onSort={handleSort}
+        />
       )}
 
       {/* Desktop Context Menu */}
@@ -871,7 +1332,21 @@ export function KanbanBoard() {
         />
       )}
 
-      {/* Task Detail Modal */}
+      {/* Task Detail Panel (replaces modal) */}
+      <TaskDetailPanel
+        task={panelTask}
+        isOpen={panelOpen}
+        isMobile={isMobile}
+        onClose={() => {
+          setPanelOpen(false);
+          setPanelTask(null);
+        }}
+        onUpdate={updateTask}
+        onDelete={deleteTask}
+        users={users}
+      />
+
+      {/* Legacy Task Detail Modal (kept for backward compat but panel is primary) */}
       <TaskDetailModal
         task={selectedTask}
         isOpen={modalOpen}
@@ -934,7 +1409,7 @@ export function KanbanBoard() {
       )}
 
       {/* Mobile FAB */}
-      {isMobile && !showNewTask && (
+      {isMobile && !showNewTask && !selectionMode && (
         <button
           onClick={() => setShowNewTask(true)}
           className="fixed z-40 flex items-center justify-center rounded-full shadow-lg"
@@ -954,6 +1429,16 @@ export function KanbanBoard() {
           +
         </button>
       )}
+
+      {/* Bulk Action Bar */}
+      <BulkActionBar
+        count={selectedIds.size}
+        isMobile={isMobile}
+        users={users}
+        onClear={clearSelection}
+        onBulkUpdate={bulkUpdate}
+        onBulkDelete={bulkDelete}
+      />
     </div>
   );
 }

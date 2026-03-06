@@ -1,8 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { Task } from '@/lib/task-types';
+import { Plus } from 'lucide-react';
+import { Task, TaskStatus } from '@/lib/task-types';
 import { TaskCard } from './TaskCard';
+
+interface UserOption {
+  id: string;
+  name: string;
+  role: string;
+  agency: string | null;
+}
 
 interface KanbanColumnProps {
   id: string;
@@ -10,11 +18,15 @@ interface KanbanColumnProps {
   tasks: Task[];
   isMobile: boolean;
   draggingId: string | null;
+  selectedIds: Set<string>;
+  selectionMode: boolean;
+  onToggleSelect: (id: string) => void;
   onOpenModal: (task: Task) => void;
   onCalendar?: (task: Task) => void;
   onDrop: (taskId: string, targetColumn: string) => void;
   onContextMenu: (task: Task, position: { x: number; y: number }) => void;
   onBottomSheet: (task: Task) => void;
+  onQuickAdd?: (status: TaskStatus) => void;
 }
 
 const COLUMN_STYLES: Record<string, { dot: string; count: string }> = {
@@ -36,10 +48,17 @@ const COLUMN_STYLES: Record<string, { dot: string; count: string }> = {
   }
 };
 
-export function KanbanColumn({ id, title, tasks, isMobile, draggingId, onOpenModal, onCalendar, onDrop, onContextMenu, onBottomSheet }: KanbanColumnProps) {
+export function KanbanColumn({
+  id, title, tasks, isMobile, draggingId,
+  selectedIds, selectionMode, onToggleSelect,
+  onOpenModal, onCalendar, onDrop, onContextMenu, onBottomSheet,
+  onQuickAdd,
+}: KanbanColumnProps) {
   const [isOver, setIsOver] = useState(false);
 
   const styles = COLUMN_STYLES[title] || COLUMN_STYLES['New'];
+
+  const allSelected = tasks.length > 0 && tasks.every(t => selectedIds.has(t.id));
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -61,12 +80,28 @@ export function KanbanColumn({ id, title, tasks, isMobile, draggingId, onOpenMod
     }
   };
 
+  const handleSelectAll = () => {
+    if (allSelected) {
+      tasks.forEach(t => { if (selectedIds.has(t.id)) onToggleSelect(t.id); });
+    } else {
+      tasks.forEach(t => { if (!selectedIds.has(t.id)) onToggleSelect(t.id); });
+    }
+  };
+
   return (
     <div className={isMobile ? 'w-full' : 'flex-1 min-w-[280px] max-w-[320px]'}>
       {/* Column Header (hidden on mobile — tab bar handles it) */}
       {!isMobile && (
         <div className="flex items-center justify-between mb-3 px-1">
           <div className="flex items-center gap-2">
+            {selectionMode && (
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={handleSelectAll}
+                className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
+              />
+            )}
             <div className={`w-2 h-2 rounded-full ${styles.dot}`} />
             <h3 className="text-white font-semibold text-sm">{title}</h3>
           </div>
@@ -95,6 +130,9 @@ export function KanbanColumn({ id, title, tasks, isMobile, draggingId, onOpenMod
             task={task}
             isMobile={isMobile}
             isDragging={draggingId === task.id}
+            isSelected={selectedIds.has(task.id)}
+            selectionMode={selectionMode}
+            onToggleSelect={onToggleSelect}
             onOpenModal={() => onOpenModal(task)}
             onCalendar={onCalendar}
             onContextMenu={onContextMenu}
@@ -106,6 +144,17 @@ export function KanbanColumn({ id, title, tasks, isMobile, draggingId, onOpenMod
           <div className="flex items-center justify-center h-24 text-[#64748b] text-sm">
             No tasks
           </div>
+        )}
+
+        {/* Quick Add button at bottom of column */}
+        {!isMobile && onQuickAdd && (
+          <button
+            onClick={() => onQuickAdd(id as TaskStatus)}
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs text-[#64748b] hover:text-[#d4af37] hover:bg-[#d4af37]/5 border border-transparent hover:border-[#d4af37]/20 transition-all"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add task
+          </button>
         )}
       </div>
     </div>

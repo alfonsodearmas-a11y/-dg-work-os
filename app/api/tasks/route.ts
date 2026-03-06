@@ -104,6 +104,15 @@ export async function POST(request: NextRequest) {
   const owner = task.owner as { id: string; name: string } | null;
   const flatTask = { ...task, owner_name: owner?.name || null, owner: undefined };
 
+  // Log activity
+  await supabaseAdmin.from('task_activity').insert({
+    task_id: task.id,
+    user_id: session.user.id,
+    action: 'created',
+    old_value: null,
+    new_value: null,
+  });
+
   // Notify the assignee when a task is assigned to someone else
   if (body.assignee_id && canAssignTasks(session.user.role) && body.assignee_id !== session.user.id) {
     await insertNotification({

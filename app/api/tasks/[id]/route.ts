@@ -71,6 +71,32 @@ export async function PATCH(
   const owner = updated.owner as { id: string; name: string } | null;
   const flatTask = { ...updated, owner_name: owner?.name || null, owner: undefined };
 
+  // Log activity for key field changes
+  const activityEntries: Array<{ task_id: string; user_id: string; action: string; old_value: string | null; new_value: string | null }> = [];
+
+  if (body.status !== undefined && body.status !== task.status) {
+    activityEntries.push({
+      task_id: id,
+      user_id: session.user.id,
+      action: `moved_to_${body.status}`,
+      old_value: task.status,
+      new_value: body.status,
+    });
+  }
+  if (body.due_date !== undefined) {
+    activityEntries.push({
+      task_id: id,
+      user_id: session.user.id,
+      action: 'due_date_changed',
+      old_value: null,
+      new_value: body.due_date || 'cleared',
+    });
+  }
+
+  if (activityEntries.length > 0) {
+    await supabaseAdmin.from('task_activity').insert(activityEntries);
+  }
+
   // Notify DG when a task is moved to blocked
   if (body.status === 'blocked' && task.status !== 'blocked') {
     // Find DG user(s) to notify

@@ -1,11 +1,10 @@
 /**
  * GPL Forecast AI Service
  *
- * TEMPORARY: Swapped from Anthropic to OpenAI GPT-4o. Revert when Anthropic quota restored.
  * Generates strategic briefings based on computed forecast data.
  */
 
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import { supabaseAdmin } from './db';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -140,7 +139,7 @@ interface FullAnalysisResult {
 // ── Config ─────────────────────────────────────────────────────────────────────
 
 const AI_CONFIG = {
-  MODEL: 'gpt-4o',
+  MODEL: 'claude-sonnet-4-5-20250929',
   MAX_TOKENS: 6000,
   TEMPERATURE: 0.3,
 } as const;
@@ -333,8 +332,8 @@ function parseBriefingSections(text: string): BriefingSections {
 export async function generateStrategicBriefing(forecastData: ForecastData): Promise<BriefingResult> {
   const startTime = Date.now();
 
-  if (!process.env.OPENAI_API_KEY) {
-    console.warn('[gpl-forecast-ai] OPENAI_API_KEY not configured');
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.warn('[gpl-forecast-ai] ANTHROPIC_API_KEY not configured');
     return {
       success: false,
       error: 'AI analysis not configured',
@@ -342,7 +341,7 @@ export async function generateStrategicBriefing(forecastData: ForecastData): Pro
   }
 
   try {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     // Get data point counts via Supabase
     const { count: dailyDataPoints, error: dailyCountError } = await supabaseAdmin
@@ -380,16 +379,15 @@ export async function generateStrategicBriefing(forecastData: ForecastData): Pro
 
     console.log('[gpl-forecast-ai] Generating strategic briefing...');
 
-    const response = await openai.chat.completions.create({
+    const response = await anthropic.messages.create({
       model: AI_CONFIG.MODEL,
-      max_completion_tokens: AI_CONFIG.MAX_TOKENS,
-      temperature: AI_CONFIG.TEMPERATURE,
+      max_tokens: AI_CONFIG.MAX_TOKENS,
       messages: [{ role: 'user', content: prompt }],
     });
 
     const processingTime = Date.now() - startTime;
 
-    const responseText = response.choices[0]?.message?.content || '';
+    const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
 
     // Parse sections from response
     const sections = parseBriefingSections(responseText);
@@ -410,8 +408,8 @@ export async function generateStrategicBriefing(forecastData: ForecastData): Pro
         essequibo_assessment: sections.essequiboAssessment,
         recommendations: JSON.stringify(sections.recommendations),
         raw_response: JSON.stringify(response),
-        prompt_tokens: response.usage?.prompt_tokens,
-        completion_tokens: response.usage?.completion_tokens,
+        prompt_tokens: response.usage?.input_tokens,
+        completion_tokens: response.usage?.output_tokens,
         processing_time_ms: processingTime,
       });
     if (insertError) {
@@ -425,8 +423,8 @@ export async function generateStrategicBriefing(forecastData: ForecastData): Pro
       briefing: responseText,
       sections,
       usage: {
-        promptTokens: response.usage?.prompt_tokens,
-        completionTokens: response.usage?.completion_tokens,
+        promptTokens: response.usage?.input_tokens,
+        completionTokens: response.usage?.output_tokens,
       },
       processingTimeMs: processingTime,
     };

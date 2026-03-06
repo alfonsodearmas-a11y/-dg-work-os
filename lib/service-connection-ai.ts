@@ -1,11 +1,10 @@
 // Service Connection AI Analysis
-// TEMPORARY: Swapped from Anthropic to OpenAI GPT-4o. Revert when Anthropic quota restored.
 
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import type { EfficiencyMetrics, ServiceConnection, AIInsight } from './service-connection-types';
 
-const MODEL = 'gpt-4o';
+const MODEL = 'claude-sonnet-4-5-20250929';
 const MAX_TOKENS = 8192;
 const TEMPERATURE = 0.3;
 
@@ -129,20 +128,19 @@ export async function generateEfficiencyAnalysis(
   metrics: EfficiencyMetrics,
   connections: ServiceConnection[]
 ): Promise<AIInsight> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('OPENAI_API_KEY not set');
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
 
-  const client = new OpenAI({ apiKey });
+  const client = new Anthropic({ apiKey });
   const prompt = buildPrompt(metrics, connections);
 
-  const response = await client.chat.completions.create({
+  const response = await client.messages.create({
     model: MODEL,
-    max_completion_tokens: MAX_TOKENS,
-    temperature: TEMPERATURE,
+    max_tokens: MAX_TOKENS,
     messages: [{ role: 'user', content: prompt }],
   });
 
-  const text = response.choices[0]?.message?.content || '';
+  const text = response.content[0].type === 'text' ? response.content[0].text : '';
 
   const parsed = parseJSONResponse(text);
   if (!parsed) {

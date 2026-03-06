@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 
 export const maxDuration = 60;
 
-function getOpenAI() {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getAnthropic() {
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 }
 
 interface AnalysisResult {
@@ -110,26 +110,23 @@ export async function POST(
       .update({ status: 'ANALYZING', updated_at: new Date().toISOString() })
       .eq('id', id);
 
-    // Call GPT-4o
-    const completion = await getOpenAI().chat.completions.create({
-      model: 'gpt-4o',
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content: `You are an executive assistant for Alfonso De Armas, Director General of Guyana's Ministry of Public Utilities and Aviation, overseeing GPL, GWI, CJIA, GCAA, MARAD, HECI and Hinterland Airstrips. Analyze the transcript and return ONLY valid JSON:
+    // Call Claude
+    const completion = await getAnthropic().messages.create({
+      model: 'claude-opus-4-5-20250514',
+      max_tokens: 4096,
+      system: `You are an executive assistant for Alfonso De Armas, Director General of Guyana's Ministry of Public Utilities and Aviation, overseeing GPL, GWI, CJIA, GCAA, MARAD, HECI and Hinterland Airstrips. Analyze the transcript and return ONLY valid JSON:
 {
   "summary": "2-3 sentence executive summary in ministerial tone",
   "decisions": ["Decision 1"],
   "actionItems": [{ "task": "...", "owner": "...", "dueDate": "YYYY-MM-DD or null" }]
 }`,
-        },
+      messages: [
         { role: 'user', content: meeting.transcript_text },
       ],
     });
 
-    const raw = completion.choices[0].message.content;
-    if (!raw) throw new Error('Empty response from GPT-4o');
+    const raw = completion.content[0].type === 'text' ? completion.content[0].text : '';
+    if (!raw) throw new Error('Empty response from Claude');
 
     const analysis: AnalysisResult = JSON.parse(raw);
 

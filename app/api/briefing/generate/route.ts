@@ -1,11 +1,10 @@
-// TEMPORARY: Swapped from Anthropic to OpenAI GPT-4o. Revert when Anthropic quota restored.
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import { GET as getActions } from '../actions/route';
 import { GET as getCalendar } from '../calendar/route';
 import { GET as getMeetings } from '../meetings/route';
 
-const MODEL = 'gpt-4o';
+const MODEL = 'claude-sonnet-4-5-20250929';
 
 const SYSTEM_PROMPT = `You are the AI briefing assistant for the Director General of the Ministry of Public Utilities and Aviation, Guyana. You produce a concise, direct morning briefing. The DG oversees 7 agencies: GPL (power), GWI (water), CJIA (airport), GCAA (civil aviation), MARAD (maritime), HECI (hinterland electrification), and HAS (hinterland airstrips).
 
@@ -182,17 +181,17 @@ export async function GET() {
   const userMessage = buildUserMessage(sourceData);
 
   try {
-    const openai = new OpenAI();
-    const response = await openai.chat.completions.create({
+    const anthropic = new Anthropic();
+    const response = await anthropic.messages.create({
       model: MODEL,
-      max_completion_tokens: 512,
+      max_tokens: 512,
+      system: SYSTEM_PROMPT,
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userMessage },
       ],
     });
 
-    const briefing = response.choices[0]?.message?.content || '';
+    const briefing = response.content[0].type === 'text' ? response.content[0].text : '';
 
     const result: BriefingResponse = {
       briefing,
@@ -204,7 +203,7 @@ export async function GET() {
 
     return NextResponse.json(result);
   } catch (err) {
-    console.error('[Briefing Generate] OpenAI API failed, using fallback:', err);
+    console.error('[Briefing Generate] Claude API failed, using fallback:', err);
 
     const result: BriefingResponse = {
       briefing: buildFallbackBriefing(sourceData),

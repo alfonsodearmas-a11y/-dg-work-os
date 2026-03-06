@@ -1,15 +1,14 @@
 /**
  * GPL Multivariate Forecast Service
  *
- * TEMPORARY: Swapped from Anthropic to OpenAI GPT-4o. Revert when Anthropic quota restored.
  * Produces Conservative and Aggressive scenarios with transparent methodology.
  */
 
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import { supabaseAdmin } from './db';
 
 const AI_CONFIG = {
-  MODEL: 'gpt-4o',
+  MODEL: 'claude-sonnet-4-5-20250929',
   MAX_TOKENS: 4096,
   TEMPERATURE: 0.2,
 } as const;
@@ -418,28 +417,27 @@ export async function generateForecast(): Promise<GenerateForecastResponse> {
     }
 
     // Check for API key
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.ANTHROPIC_API_KEY) {
       console.log('[gpl-multivariate] No API key, using fallback');
       return { success: true, forecast: generateFallbackForecast(historicalData) };
     }
 
-    // Stage 2: Call OpenAI GPT-4o
-    console.log('[gpl-multivariate] Calling GPT-4o for analysis...');
+    // Stage 2: Call Claude for analysis
+    console.log('[gpl-multivariate] Calling Claude for analysis...');
     const prompt = buildForecastPrompt(historicalData);
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    const response = await openai.chat.completions.create({
+    const response = await anthropic.messages.create({
       model: AI_CONFIG.MODEL,
-      max_completion_tokens: AI_CONFIG.MAX_TOKENS,
-      temperature: AI_CONFIG.TEMPERATURE,
+      max_tokens: AI_CONFIG.MAX_TOKENS,
       messages: [{ role: 'user', content: prompt }]
     });
 
     const processingTime = Date.now() - startTime;
 
     // Extract response text
-    const responseText = response.choices[0]?.message?.content || '';
+    const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
 
     // Parse JSON response
     let forecast: ForecastResult;
@@ -462,8 +460,8 @@ export async function generateForecast(): Promise<GenerateForecastResponse> {
       generatedAt: new Date().toISOString(),
       processingTimeMs: processingTime,
       model: AI_CONFIG.MODEL,
-      inputTokens: response.usage?.prompt_tokens,
-      outputTokens: response.usage?.completion_tokens,
+      inputTokens: response.usage?.input_tokens,
+      outputTokens: response.usage?.output_tokens,
       dataPointsUsed: historicalData.monthlyKPIs.length,
       isFallback: false
     };

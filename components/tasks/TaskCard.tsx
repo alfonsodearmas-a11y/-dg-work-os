@@ -10,6 +10,9 @@ interface TaskCardProps {
   task: Task;
   isMobile: boolean;
   isDragging?: boolean;
+  isSelected?: boolean;
+  selectionMode?: boolean;
+  onToggleSelect?: (id: string) => void;
   onOpenModal: () => void;
   onCalendar?: (task: Task) => void;
   onContextMenu: (task: Task, position: { x: number; y: number }) => void;
@@ -47,7 +50,7 @@ function getInitials(name: string | null): string {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 }
 
-export function TaskCard({ task, isMobile, isDragging, onOpenModal, onCalendar, onContextMenu, onBottomSheet }: TaskCardProps) {
+export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode, onToggleSelect, onOpenModal, onCalendar, onContextMenu, onBottomSheet }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipRect, setTooltipRect] = useState<DOMRect | null>(null);
@@ -75,8 +78,14 @@ export function TaskCard({ task, isMobile, isDragging, onOpenModal, onCalendar, 
 
   // Click handling
   const handleClick = useCallback((e: React.MouseEvent) => {
-    // Don't trigger if click came from a button inside
-    if ((e.target as HTMLElement).closest('button')) return;
+    // Don't trigger if click came from a button or checkbox inside
+    if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('input[type="checkbox"]')) return;
+
+    // If in selection mode, toggle selection
+    if (selectionMode && onToggleSelect) {
+      onToggleSelect(task.id);
+      return;
+    }
 
     if (isMobile) {
       setExpanded(prev => !prev);
@@ -100,7 +109,7 @@ export function TaskCard({ task, isMobile, isDragging, onOpenModal, onCalendar, 
       setShowTooltip(false);
       onOpenModal();
     }
-  }, [isMobile, onOpenModal]);
+  }, [isMobile, selectionMode, onToggleSelect, task.id, onOpenModal]);
 
   // Right-click context menu (desktop)
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -111,12 +120,18 @@ export function TaskCard({ task, isMobile, isDragging, onOpenModal, onCalendar, 
     onContextMenu(task, { x: e.clientX, y: e.clientY });
   }, [isMobile, task, onContextMenu]);
 
-  // Long press (mobile)
+  // Long press (mobile) — enters selection mode
   const handleTouchStart = useCallback(() => {
     longPressTimerRef.current = setTimeout(() => {
-      onBottomSheet(task);
+      if (selectionMode) {
+        // Already in selection mode, handled by tap
+      } else if (onToggleSelect) {
+        onToggleSelect(task.id);
+      } else {
+        onBottomSheet(task);
+      }
     }, 500);
-  }, [task, onBottomSheet]);
+  }, [task, selectionMode, onToggleSelect, onBottomSheet]);
 
   const cancelLongPress = useCallback(() => {
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
@@ -160,7 +175,7 @@ export function TaskCard({ task, isMobile, isDragging, onOpenModal, onCalendar, 
     <>
       <div
         ref={cardRef}
-        draggable={!isMobile}
+        draggable={!isMobile && !selectionMode}
         onDragStart={handleDragStart}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
@@ -171,12 +186,41 @@ export function TaskCard({ task, isMobile, isDragging, onOpenModal, onCalendar, 
         onTouchMove={cancelLongPress}
         className={`group relative rounded-xl border bg-gradient-to-b from-[#1a2744] to-[#0f1d32] p-3 cursor-pointer
           hover:border-[#d4af37]/50 hover:shadow-lg hover:shadow-[#d4af37]/5 transition-all duration-200
-          ${isDragging ? 'opacity-50 scale-105 shadow-2xl !border-[#d4af37]' : 'border-[#2d3a52]'}
-          ${expanded ? `border-l-2 ${priorityBorder} !bg-[#1e2d4a]` : ''}`}
+          ${isDragging ? 'opacity-50 scale-105 shadow-2xl !border-[#d4af37]' : ''}
+          ${isSelected ? 'border-l-2 border-l-[#d4af37] !bg-[#1e2d4a] border-[#d4af37]/40' : 'border-[#2d3a52]'}
+          ${expanded && !isSelected ? `border-l-2 ${priorityBorder} !bg-[#1e2d4a]` : ''}`}
         style={{ touchAction: 'manipulation' }}
       >
-        {/* Drag Handle (desktop only) */}
+        {/* Selection Checkbox */}
         {!isMobile && (
+          <div
+            className={`absolute left-1.5 top-1.5 z-10 transition-opacity ${
+              selectionMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={!!isSelected}
+              onChange={() => onToggleSelect?.(task.id)}
+              onClick={(e) => e.stopPropagation()}
+              className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
+            />
+          </div>
+        )}
+        {isMobile && selectionMode && (
+          <div className="absolute left-1.5 top-1.5 z-10">
+            <input
+              type="checkbox"
+              checked={!!isSelected}
+              onChange={() => onToggleSelect?.(task.id)}
+              onClick={(e) => e.stopPropagation()}
+              className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
+            />
+          </div>
+        )}
+
+        {/* Drag Handle (desktop only, hidden in selection mode) */}
+        {!isMobile && !selectionMode && (
           <div
             className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
             onClick={(e) => e.stopPropagation()}
@@ -185,31 +229,31 @@ export function TaskCard({ task, isMobile, isDragging, onOpenModal, onCalendar, 
           </div>
         )}
 
-        {/* ··· Menu Button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isMobile) {
-              onBottomSheet(task);
-            } else {
-              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-              onContextMenu(task, { x: rect.right, y: rect.bottom });
-            }
-          }}
-          className={`absolute right-2 top-2 p-1.5 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-all z-10 ${
-            isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-          }`}
-          style={{ minWidth: 28, minHeight: 28, touchAction: 'manipulation' }}
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </button>
+        {/* ... Menu Button */}
+        {!selectionMode && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isMobile) {
+                onBottomSheet(task);
+              } else {
+                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                onContextMenu(task, { x: rect.right, y: rect.bottom });
+              }
+            }}
+            className={`absolute right-2 top-2 p-1.5 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-all z-10 ${
+              isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+            }`}
+            style={{ minWidth: 28, minHeight: 28, touchAction: 'manipulation' }}
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+        )}
 
-        <div className={isMobile ? 'pr-8' : 'pl-4 pr-8'}>
+        <div className={`${isMobile ? (selectionMode ? 'pl-6 pr-2' : 'pr-8') : (selectionMode ? 'pl-6 pr-2' : 'pl-4 pr-8')}`}>
           {/* Title row with priority dot */}
           <div className="flex items-start gap-2 mb-2">
-            {task.priority && (
-              <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${PRIORITY_DOT[task.priority] || PRIORITY_DOT.medium}`} />
-            )}
+            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${task.priority ? (PRIORITY_DOT[task.priority] || PRIORITY_DOT.medium) : 'bg-[#3d4a62]'}`} />
             {expanded ? (
               <h4 className="text-white font-medium text-sm leading-snug flex-1">
                 {task.title}
@@ -230,19 +274,21 @@ export function TaskCard({ task, isMobile, isDragging, onOpenModal, onCalendar, 
             )}
           </div>
 
-          {/* Badges Row */}
-          <div className="flex flex-wrap gap-1.5 mb-2">
-            {task.agency && (
-              <span className={`px-2 py-0.5 rounded text-xs font-medium border ${AGENCY_COLORS[task.agency] || 'bg-[#2d3a52] text-[#94a3b8] border-[#3d4a62]'}`}>
-                {task.agency}
-              </span>
-            )}
-            {task.role && (
-              <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#2d3a52] text-[#94a3b8]">
-                {task.role}
-              </span>
-            )}
-          </div>
+          {/* Badges Row — only rendered when at least one badge exists */}
+          {(task.agency || task.role) && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {task.agency && (
+                <span className={`px-2 py-0.5 rounded text-xs font-medium border ${AGENCY_COLORS[task.agency] || 'bg-[#2d3a52] text-[#94a3b8] border-[#3d4a62]'}`}>
+                  {task.agency}
+                </span>
+              )}
+              {task.role && (
+                <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#2d3a52] text-[#94a3b8]">
+                  {task.role}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Expanded: extra details */}
           {expanded && (
@@ -268,7 +314,7 @@ export function TaskCard({ task, isMobile, isDragging, onOpenModal, onCalendar, 
                 <div className={`flex items-center gap-1 ${getDueDateColor()}`}>
                   <Calendar className="h-3 w-3" />
                   <span>{formatDueDate()}</span>
-                  {isOverdue && <span className="text-red-400">↑</span>}
+                  {isOverdue && <span className="text-red-400">&uarr;</span>}
                 </div>
               )}
             </div>
@@ -278,7 +324,7 @@ export function TaskCard({ task, isMobile, isDragging, onOpenModal, onCalendar, 
                   {getInitials(task.owner_name)}
                 </div>
               )}
-              {onCalendar && !isMobile && (
+              {onCalendar && !isMobile && !selectionMode && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onCalendar(task); }}
                   onMouseDown={(e) => e.stopPropagation()}
@@ -294,7 +340,7 @@ export function TaskCard({ task, isMobile, isDragging, onOpenModal, onCalendar, 
       </div>
 
       {/* Hover Tooltip (desktop only) */}
-      {!isMobile && (
+      {!isMobile && !selectionMode && (
         <TaskTooltip task={task} cardRect={tooltipRect} visible={showTooltip} />
       )}
     </>
