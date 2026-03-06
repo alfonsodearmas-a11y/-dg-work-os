@@ -1,0 +1,47 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/db';
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const stages = searchParams.get('stages')?.split(',') ?? [];
+
+    // Get snapshots ordered by date
+    const { data: snapshots, error: snapError } = await supabaseAdmin
+      .from('gpl_snapshots')
+      .select('id, snapshot_date, track_a_outstanding, track_a_completed, track_b_design_outstanding, track_b_execution_outstanding, track_b_design_completed, track_b_execution_completed, track_b_total_outstanding, warning_count')
+      .order('snapshot_date', { ascending: true })
+      .limit(limit);
+
+    if (snapError) {
+      return NextResponse.json({ error: snapError.message }, { status: 500 });
+    }
+
+    if (!snapshots || snapshots.length === 0) {
+      return NextResponse.json({ snapshots: [], metrics: [] });
+    }
+
+    const snapshotIds = snapshots.map(s => s.id);
+
+    // Get all metrics for these snapshots
+    let metricsQuery = supabaseAdmin
+      .from('gpl_snapshot_metrics')
+      .select('*')
+      .in('snapshot_id', snapshotIds);
+
+    if (stages.length > 0) {
+      metricsQuery = metricsQuery.in('stage', stages);
+    }
+
+    const { data: metrics } = await metricsQuery;
+
+    return NextResponse.json({
+      snapshots: snapshots ?? [],
+      metrics: metrics ?? [],
+    });
+  } catch (err) {
+    console.error('[gpl/sc-trending] Error:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

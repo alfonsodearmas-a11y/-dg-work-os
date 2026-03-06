@@ -6,6 +6,7 @@ import { useAgencyData } from '@/hooks/useAgencyData';
 import { GPLDetail } from '@/components/intel/GPLDetail';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PendingConnectionsCard } from '@/components/intel/PendingConnectionsCard';
+import { GPLModule } from '@/components/intel/gpl/GPLModule';
 
 export default function GPLIntelPage() {
   const { rawData, isLoading, loadGPLByDate } = useAgencyData();
@@ -31,7 +32,10 @@ export default function GPLIntelPage() {
         </div>
       </div>
 
-      {/* Pending Connections */}
+      {/* Service Connection Efficiency Module */}
+      <GPLModule />
+
+      {/* Pending Connections (legacy) */}
       <PendingConnectionsCard agency="GPL" />
 
       {/* Content */}
