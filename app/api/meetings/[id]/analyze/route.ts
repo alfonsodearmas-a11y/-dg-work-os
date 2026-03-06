@@ -174,7 +174,7 @@ export async function POST(
         .insert({
           title: action.task as string,
           description: `From meeting: ${meeting.title}`,
-          status: 'not_started',
+          status: 'new',
           priority: 'medium',
           due_date: (action.due_date as string) || null,
           role: 'Meeting Action Item',

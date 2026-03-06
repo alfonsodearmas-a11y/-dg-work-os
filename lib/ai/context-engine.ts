@@ -351,7 +351,7 @@ export async function assembleRawData(): Promise<RawContextData> {
     fetchGCAALatest(),
     getPortfolioSummary(),
     getDelayedProjects(),
-    supabaseAdmin.from('tasks').select('title, status, due_date, agency').neq('status', 'completed').then(r => r.data || []),
+    supabaseAdmin.from('tasks').select('title, status, due_date, agency').neq('status', 'done').then(r => r.data || []),
     fetchTodayEvents(),
     fetchWeekEvents(),
   ]);

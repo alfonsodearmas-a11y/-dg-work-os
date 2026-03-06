@@ -115,7 +115,7 @@ async function fetchOpenTaskCount(): Promise<number> {
   const { count, error } = await supabaseAdmin
     .from('tasks')
     .select('id', { count: 'exact', head: true })
-    .neq('status', 'completed');
+    .neq('status', 'done');
 
   if (error) throw error;
   return count ?? 0;
@@ -127,7 +127,7 @@ async function fetchOverdueTaskCount(): Promise<number> {
     .from('tasks')
     .select('id', { count: 'exact', head: true })
     .lt('due_date', today)
-    .neq('status', 'completed');
+    .neq('status', 'done');
 
   if (error) throw error;
   return count ?? 0;
@@ -169,7 +169,7 @@ async function fetchMyTasks(userId: string): Promise<MyTask[]> {
     .from('tasks')
     .select('id, title, priority, due_date, status')
     .eq('owner_user_id', userId)
-    .neq('status', 'completed')
+    .neq('status', 'done')
     .order('due_date', { ascending: true })
     .limit(4);
 

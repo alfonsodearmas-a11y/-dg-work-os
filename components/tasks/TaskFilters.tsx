@@ -31,8 +31,8 @@ const PRIORITIES = [
 const STATUSES = [
   { value: '', label: 'All Statuses' },
   { value: 'new', label: 'New' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'delayed', label: 'Delayed' },
+  { value: 'active', label: 'Active' },
+  { value: 'blocked', label: 'Blocked' },
   { value: 'done', label: 'Done' },
 ];
 

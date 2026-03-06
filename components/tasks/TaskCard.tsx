@@ -2,7 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Calendar, CalendarPlus, GripVertical, User } from 'lucide-react';
+import { Calendar, CalendarPlus, GripVertical } from 'lucide-react';
 import { Task } from '@/lib/task-types';
 import { format, isToday, isPast, parseISO } from 'date-fns';
 
@@ -13,22 +13,28 @@ interface TaskCardProps {
 }
 
 const AGENCY_COLORS: Record<string, string> = {
-  'GPL': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-  'GWI': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  'HECI': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  'CJIA': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-  'MARAD': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
-  'GCAA': 'bg-rose-500/20 text-rose-400 border-rose-500/30',
-  'HAS': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  'Ministry': 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+  'GPL': 'border-[#4a82f5]/40 bg-[#4a82f5]/15 text-[#4a82f5]',
+  'GWI': 'border-[#00c875]/40 bg-[#00c875]/15 text-[#00c875]',
+  'GCAA': 'border-[#a25ddc]/40 bg-[#a25ddc]/15 text-[#a25ddc]',
+  'CJIA': 'border-[#fb9d3b]/40 bg-[#fb9d3b]/15 text-[#fb9d3b]',
+  'HECI': 'border-[#579bfc]/40 bg-[#579bfc]/15 text-[#579bfc]',
+  'MARAD': 'border-[#00cec9]/40 bg-[#00cec9]/15 text-[#00cec9]',
+  'Hinterland': 'border-[#2da44e]/40 bg-[#2da44e]/15 text-[#2da44e]',
+  'HAS': 'border-orange-500/40 bg-orange-500/15 text-orange-400',
+  'Ministry': 'border-indigo-500/40 bg-indigo-500/15 text-indigo-400',
 };
 
-const PRIORITY_COLORS: Record<string, string> = {
-  urgent: 'bg-red-500/20 text-red-400',
-  high: 'bg-amber-500/20 text-amber-400',
-  medium: 'bg-blue-500/20 text-blue-400',
-  low: 'bg-[#4a5568]/20 text-[#94a3b8]',
+const PRIORITY_DOT: Record<string, string> = {
+  critical: 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]',
+  high: 'bg-red-500',
+  medium: 'bg-amber-500',
+  low: 'bg-[#64748b]',
 };
+
+function getInitials(name: string | null): string {
+  if (!name) return '?';
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
 
 export function TaskCard({ task, onClick, onCalendar }: TaskCardProps) {
   const {
@@ -48,7 +54,7 @@ export function TaskCard({ task, onClick, onCalendar }: TaskCardProps) {
   const getDueDateColor = () => {
     if (!task.due_date) return 'text-[#64748b]';
     const date = parseISO(task.due_date);
-    if (isPast(date) && !isToday(date)) return 'text-red-400';
+    if (task.status !== 'done' && isPast(date) && !isToday(date)) return 'text-red-400';
     if (isToday(date)) return 'text-[#d4af37]';
     return 'text-[#64748b]';
   };
@@ -59,6 +65,8 @@ export function TaskCard({ task, onClick, onCalendar }: TaskCardProps) {
     if (isToday(date)) return 'Today';
     return format(date, 'MMM d');
   };
+
+  const isOverdue = task.due_date && task.status !== 'done' && isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date));
 
   return (
     <div
@@ -80,21 +88,21 @@ export function TaskCard({ task, onClick, onCalendar }: TaskCardProps) {
       </div>
 
       <div className="pl-4">
-        {/* Title */}
-        <h4 className="text-white font-medium text-sm leading-tight mb-2 line-clamp-2">
-          {task.title}
-        </h4>
+        {/* Title row with priority dot */}
+        <div className="flex items-start gap-2 mb-2">
+          {task.priority && (
+            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${PRIORITY_DOT[task.priority] || PRIORITY_DOT.medium}`} />
+          )}
+          <h4 className="text-white font-medium text-sm leading-tight line-clamp-2 flex-1">
+            {task.title}
+          </h4>
+        </div>
 
         {/* Badges Row */}
         <div className="flex flex-wrap gap-1.5 mb-2">
           {task.agency && (
             <span className={`px-2 py-0.5 rounded text-xs font-medium border ${AGENCY_COLORS[task.agency] || 'bg-[#2d3a52] text-[#94a3b8] border-[#3d4a62]'}`}>
               {task.agency}
-            </span>
-          )}
-          {task.priority && (
-            <span className={`px-2 py-0.5 rounded text-xs font-medium ${PRIORITY_COLORS[task.priority]}`}>
-              {task.priority}
             </span>
           )}
           {task.role && (
@@ -111,19 +119,27 @@ export function TaskCard({ task, onClick, onCalendar }: TaskCardProps) {
               <div className={`flex items-center gap-1 ${getDueDateColor()}`}>
                 <Calendar className="h-3 w-3" />
                 <span>{formatDueDate()}</span>
+                {isOverdue && <span className="text-red-400">↑</span>}
               </div>
             )}
           </div>
-          {onCalendar && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onCalendar(task); }}
-              onMouseDown={(e) => e.stopPropagation()}
-              className="p-1 rounded text-[#64748b] hover:text-[#d4af37] hover:bg-[#d4af37]/10 transition-colors opacity-0 group-hover:opacity-100"
-              title="Add to Calendar"
-            >
-              <CalendarPlus className="h-3.5 w-3.5" />
-            </button>
-          )}
+          <div className="flex items-center gap-1.5">
+            {task.owner_name && (
+              <div className="w-5 h-5 rounded-full bg-[#2d3a52] flex items-center justify-center text-[9px] font-bold text-[#94a3b8] shrink-0" title={task.owner_name}>
+                {getInitials(task.owner_name)}
+              </div>
+            )}
+            {onCalendar && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onCalendar(task); }}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="p-1 rounded text-[#64748b] hover:text-[#d4af37] hover:bg-[#d4af37]/10 transition-colors opacity-0 group-hover:opacity-100"
+                title="Add to Calendar"
+              >
+                <CalendarPlus className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

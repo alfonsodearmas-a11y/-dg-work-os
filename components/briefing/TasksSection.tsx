@@ -17,11 +17,11 @@ import { format, isPast, isToday, isWithinInterval, addDays, parseISO } from 'da
 interface Task {
   id: string;
   title: string;
-  status: 'not_started' | 'in_progress' | 'blocked' | 'completed';
+  status: 'new' | 'active' | 'blocked' | 'done';
   due_date: string | null;
   agency: string | null;
   role: string | null;
-  priority: 'low' | 'medium' | 'high' | 'urgent' | null;
+  priority: 'low' | 'medium' | 'high' | 'critical' | null;
 }
 
 interface TasksSectionProps {
@@ -35,7 +35,7 @@ type FilterType = 'All' | 'Overdue' | 'Due Today' | 'This Week' | 'By Agency';
 const AGENCIES = ['GPL', 'GWI', 'CJIA', 'GCAA', 'MARAD', 'HAS', 'HECI', 'MOPUA'];
 
 function isOverdue(task: Task): boolean {
-  if (!task.due_date || task.status === 'completed') return false;
+  if (!task.due_date || task.status === 'done') return false;
   const due = parseISO(task.due_date);
   return isPast(due) && !isToday(due);
 }
@@ -79,21 +79,21 @@ function formatDueDate(task: Task): { label: string; className: string } {
 }
 
 const statusStyles: Record<string, string> = {
-  not_started: 'bg-[#4a5568]/30 text-[#94a3b8]',
-  in_progress: 'bg-blue-500/20 text-blue-400',
+  new: 'bg-[#4a5568]/30 text-[#94a3b8]',
+  active: 'bg-blue-500/20 text-blue-400',
   blocked: 'bg-amber-500/20 text-amber-400',
-  completed: 'bg-emerald-500/20 text-emerald-400',
+  done: 'bg-emerald-500/20 text-emerald-400',
 };
 
 const statusLabels: Record<string, string> = {
-  not_started: 'Not Started',
-  in_progress: 'In Progress',
+  new: 'New',
+  active: 'Active',
   blocked: 'Blocked',
-  completed: 'Completed',
+  done: 'Done',
 };
 
 const priorityDot: Record<string, string> = {
-  urgent: 'bg-red-500',
+  critical: 'bg-red-500',
   high: 'bg-amber-500',
   medium: 'bg-blue-500',
   low: 'bg-[#4a5568]',
@@ -121,13 +121,13 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
       case 'Overdue':
         return tasks.filter(isOverdue);
       case 'Due Today':
-        return tasks.filter((t) => t.status !== 'completed' && isDueToday(t));
+        return tasks.filter((t) => t.status !== 'done' && isDueToday(t));
       case 'This Week':
-        return tasks.filter((t) => t.status !== 'completed' && isDueThisWeek(t));
+        return tasks.filter((t) => t.status !== 'done' && isDueThisWeek(t));
       case 'All':
       case 'By Agency':
       default:
-        return tasks.filter((t) => t.status !== 'completed');
+        return tasks.filter((t) => t.status !== 'done');
     }
   }, [tasks, activeFilter]);
 
@@ -196,7 +196,7 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
           agency: newAgency || null,
           priority: newPriority || null,
           due_date: newDueDate || null,
-          status: 'not_started',
+          status: 'new',
         }),
       });
 
@@ -234,7 +234,7 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold text-white">TASKS</h2>
           <span className="bg-[#d4af37]/20 text-[#d4af37] text-xs font-bold px-2 py-0.5 rounded-full">
-            {tasks.filter((t) => t.status !== 'completed').length}
+            {tasks.filter((t) => t.status !== 'done').length}
           </span>
         </div>
         <button
@@ -277,7 +277,7 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
               className={inputClasses}
             >
               <option value="">Priority (optional)</option>
-              <option value="urgent">Urgent</option>
+              <option value="critical">Critical</option>
               <option value="high">High</option>
               <option value="medium">Medium</option>
               <option value="low">Low</option>

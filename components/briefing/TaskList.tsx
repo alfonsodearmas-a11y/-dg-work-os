@@ -34,7 +34,7 @@ export function TaskList({ tasks, showOverdueInfo, showDueDate, onEdit }: TaskLi
             <input
               type="checkbox"
               className="h-4 w-4 text-blue-600 rounded border-gray-300"
-              checked={task.status === 'completed'}
+              checked={task.status === 'done'}
               readOnly
             />
           </div>
@@ -49,14 +49,14 @@ export function TaskList({ tasks, showOverdueInfo, showDueDate, onEdit }: TaskLi
               {task.role && (
                 <Badge variant="default">{task.role}</Badge>
               )}
-              {(task.priority === 'urgent' || task.priority === 'high') && (
-                <Badge variant="danger">{task.priority === 'urgent' ? 'Urgent' : 'High'}</Badge>
+              {(task.priority === 'critical' || task.priority === 'high') && (
+                <Badge variant="danger">{task.priority === 'critical' ? 'Critical' : 'High'}</Badge>
               )}
               {task.priority === 'medium' && (
                 <Badge variant="warning">Medium</Badge>
               )}
-              {task.status && task.status !== 'not_started' && (
-                <Badge variant={task.status === 'completed' ? 'success' : 'default'}>{task.status.replace('_', ' ')}</Badge>
+              {task.status && task.status !== 'new' && (
+                <Badge variant={task.status === 'done' ? 'success' : 'default'}>{task.status.replace('_', ' ')}</Badge>
               )}
             </div>
           </div>

@@ -19,13 +19,13 @@ interface TaskEditModalProps {
 }
 
 const statuses = [
-  { value: 'not_started', label: 'Not Started' },
-  { value: 'in_progress', label: 'In Progress' },
+  { value: 'new', label: 'New' },
+  { value: 'active', label: 'Active' },
   { value: 'blocked', label: 'Blocked' },
-  { value: 'completed', label: 'Completed' },
+  { value: 'done', label: 'Done' },
 ];
 const priorities = [
-  { value: 'urgent', label: 'Urgent' },
+  { value: 'critical', label: 'Critical' },
   { value: 'high', label: 'High' },
   { value: 'medium', label: 'Medium' },
   { value: 'low', label: 'Low' },
@@ -34,7 +34,7 @@ const agencies = ['GPL', 'GWI', 'HECI', 'MARAD', 'GCAA', 'CJIA', 'HAS', 'MOPUA']
 
 export function TaskEditModal({ task, onClose, onSave }: TaskEditModalProps) {
   const [dueDate, setDueDate] = useState(task.due_date || '');
-  const [status, setStatus] = useState(task.status || 'not_started');
+  const [status, setStatus] = useState(task.status || 'new');
   const [priority, setPriority] = useState(task.priority || '');
   const [agency, setAgency] = useState(task.agency || '');
   const [saving, setSaving] = useState(false);

@@ -17,8 +17,8 @@ export async function GET(request: NextRequest) {
 
   let query = supabaseAdmin
     .from('tasks')
-    .select('*')
-    .order('due_date', { ascending: true });
+    .select('*, owner:users!owner_user_id(id, name)')
+    .order('due_date', { ascending: true, nullsFirst: false });
 
   // Scope by role
   if (session.user.role === 'officer') {
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   if (agency) query = query.eq('agency', agency);
   if (overdue === 'true') {
     const today = new Date().toISOString().split('T')[0];
-    query = query.lt('due_date', today).neq('status', 'completed');
+    query = query.lt('due_date', today).neq('status', 'done');
   }
 
   const { data, error } = await query;
@@ -39,18 +39,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Group by status for kanban view
-  const grouped = {
-    not_started: [] as any[],
-    in_progress: [] as any[],
-    blocked: [] as any[],
-    completed: [] as any[],
+  // Flatten the joined owner name and group by status
+  interface TaskRow { status: string; [key: string]: unknown }
+  const grouped: Record<string, TaskRow[]> = {
+    new: [],
+    active: [],
+    blocked: [],
+    done: [],
   };
 
-  for (const task of data || []) {
-    const col = grouped[task.status as keyof typeof grouped];
+  for (const t of data || []) {
+    const owner = t.owner as { id: string; name: string } | null;
+    const task: TaskRow = { ...t, owner_name: owner?.name || null, owner: undefined };
+    const col = grouped[task.status];
     if (col) col.push(task);
-    else grouped.not_started.push(task);
+    else grouped.new.push(task);
   }
 
   return NextResponse.json({
@@ -81,7 +84,7 @@ export async function POST(request: NextRequest) {
     .insert({
       title: body.title,
       description: body.description || null,
-      status: body.status || 'not_started',
+      status: body.status || 'new',
       priority: body.priority || 'medium',
       due_date: body.due_date || null,
       agency: body.agency || null,
@@ -90,12 +93,16 @@ export async function POST(request: NextRequest) {
       assigned_by_user_id: body.assignee_id && canAssignTasks(session.user.role) ? session.user.id : null,
       source_meeting_id: body.source_meeting_id || null,
     })
-    .select()
+    .select('*, owner:users!owner_user_id(id, name)')
     .single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Flatten owner
+  const owner = task.owner as { id: string; name: string } | null;
+  const flatTask = { ...task, owner_name: owner?.name || null, owner: undefined };
 
   // Notify the assignee when a task is assigned to someone else
   if (body.assignee_id && canAssignTasks(session.user.role) && body.assignee_id !== session.user.id) {
@@ -105,7 +112,7 @@ export async function POST(request: NextRequest) {
       title: 'New task assigned to you',
       body: task.title,
       icon: 'task',
-      priority: task.priority === 'high' || task.priority === 'urgent' ? 'high' : 'medium',
+      priority: task.priority === 'high' || task.priority === 'critical' ? 'high' : 'medium',
       reference_type: 'task',
       reference_id: task.id,
       reference_url: '/tasks',
@@ -117,5 +124,5 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  return NextResponse.json({ task });
+  return NextResponse.json({ task: flatTask });
 }

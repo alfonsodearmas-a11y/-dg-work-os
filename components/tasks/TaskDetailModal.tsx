@@ -4,39 +4,47 @@ import { useState, useEffect } from 'react';
 import { X, Trash2, Loader2 } from 'lucide-react';
 import { Task, TaskUpdate } from '@/lib/task-types';
 
+interface UserOption {
+  id: string;
+  name: string;
+  role: string;
+  agency: string | null;
+}
+
 interface TaskDetailModalProps {
   task: Task | null;
   isOpen: boolean;
   onClose: () => void;
   onUpdate: (taskId: string, updates: TaskUpdate) => Promise<void>;
   onDelete: (taskId: string) => Promise<void>;
+  users?: UserOption[];
 }
 
 const STATUSES = [
-  { value: 'not_started', label: 'Not Started' },
-  { value: 'in_progress', label: 'In Progress' },
+  { value: 'new', label: 'New' },
+  { value: 'active', label: 'Active' },
   { value: 'blocked', label: 'Blocked' },
-  { value: 'completed', label: 'Completed' },
+  { value: 'done', label: 'Done' },
 ] as const;
 
-const AGENCIES = ['GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'HAS', 'Ministry'] as const;
+const AGENCIES = ['GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'HAS', 'Hinterland', 'Ministry'] as const;
 const ROLES = ['Ministry', 'GWI Board', 'NCN Board', 'UG', 'City Council', 'Meeting Action Item'] as const;
 
 const PRIORITIES = [
-  { value: 'urgent', label: 'Urgent' },
+  { value: 'critical', label: 'Critical' },
   { value: 'high', label: 'High' },
   { value: 'medium', label: 'Medium' },
   { value: 'low', label: 'Low' },
 ] as const;
 
 const PRIORITY_ACTIVE_STYLES: Record<string, string> = {
-  urgent: 'bg-red-500/20 text-red-400 border border-red-500/50',
+  critical: 'bg-red-500/20 text-red-400 border border-red-500/50',
   high: 'bg-amber-500/20 text-amber-400 border border-amber-500/50',
   medium: 'bg-blue-500/20 text-blue-400 border border-blue-500/50',
   low: 'bg-[#4a5568]/20 text-[#94a3b8] border border-[#4a5568]/50',
 };
 
-export function TaskDetailModal({ task, isOpen, onClose, onUpdate, onDelete }: TaskDetailModalProps) {
+export function TaskDetailModal({ task, isOpen, onClose, onUpdate, onDelete, users }: TaskDetailModalProps) {
   const [formData, setFormData] = useState<TaskUpdate>({});
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -49,7 +57,8 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate, onDelete }: T
         due_date: task.due_date,
         agency: task.agency,
         role: task.role,
-        priority: task.priority
+        priority: task.priority,
+        blocked_reason: task.blocked_reason,
       });
     }
   }, [task]);
@@ -119,7 +128,7 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate, onDelete }: T
               Status
             </label>
             <select
-              value={formData.status || 'not_started'}
+              value={formData.status || 'new'}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as TaskUpdate['status'] })}
               className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white focus:outline-none focus:border-[#d4af37] transition-colors"
             >
@@ -128,6 +137,22 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate, onDelete }: T
               ))}
             </select>
           </div>
+
+          {/* Blocked Reason (shown when status is blocked) */}
+          {formData.status === 'blocked' && (
+            <div>
+              <label className="block text-sm font-medium text-amber-400 mb-1.5">
+                Blocked Reason
+              </label>
+              <input
+                type="text"
+                value={formData.blocked_reason || ''}
+                onChange={(e) => setFormData({ ...formData, blocked_reason: e.target.value })}
+                placeholder="What's blocking this task?"
+                className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-amber-500/30 text-white placeholder-[#64748b] focus:outline-none focus:border-amber-500 transition-colors"
+              />
+            </div>
+          )}
 
           {/* Due Date */}
           <div>
@@ -175,6 +200,18 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate, onDelete }: T
               </select>
             </div>
           </div>
+
+          {/* Assignee (read-only display + info) */}
+          {task.owner_name && (
+            <div>
+              <label className="block text-sm font-medium text-[#94a3b8] mb-1.5">
+                Assigned To
+              </label>
+              <div className="px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm">
+                {task.owner_name}
+              </div>
+            </div>
+          )}
 
           {/* Priority */}
           <div>

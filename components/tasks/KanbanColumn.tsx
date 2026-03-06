@@ -14,11 +14,11 @@ interface KanbanColumnProps {
 }
 
 const COLUMN_STYLES: Record<string, { dot: string; count: string }> = {
-  'Not Started': {
-    dot: 'bg-[#94a3b8]',
-    count: 'bg-[#4a5568]/20 text-[#94a3b8]'
+  'New': {
+    dot: 'bg-indigo-400',
+    count: 'bg-indigo-500/20 text-indigo-400'
   },
-  'In Progress': {
+  'Active': {
     dot: 'bg-blue-400',
     count: 'bg-blue-500/20 text-blue-400'
   },
@@ -26,7 +26,7 @@ const COLUMN_STYLES: Record<string, { dot: string; count: string }> = {
     dot: 'bg-amber-400',
     count: 'bg-amber-500/20 text-amber-400'
   },
-  'Completed': {
+  'Done': {
     dot: 'bg-emerald-400',
     count: 'bg-emerald-500/20 text-emerald-400'
   }
@@ -35,7 +35,7 @@ const COLUMN_STYLES: Record<string, { dot: string; count: string }> = {
 export function KanbanColumn({ id, title, tasks, onTaskClick, onCalendar }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
-  const styles = COLUMN_STYLES[title] || COLUMN_STYLES['Not Started'];
+  const styles = COLUMN_STYLES[title] || COLUMN_STYLES['New'];
 
   return (
     <div className="flex-1 min-w-[280px] max-w-[320px]">

@@ -5,7 +5,7 @@ import { supabaseAdmin } from '@/lib/db';
 
 const AGENCIES = ['GPL', 'GWI', 'CJIA', 'GCAA', 'MARAD', 'HECI', 'PPDI', 'Cross-Agency', 'HAS'] as const;
 
-const PRIORITY_WEIGHT: Record<string, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
+const PRIORITY_WEIGHT: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
 
 let cache: { data: ActionsResponse; expiry: number } | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -61,7 +61,7 @@ export async function GET() {
     const { data: rows, error } = await supabaseAdmin
       .from('tasks')
       .select('id, title, agency, due_date, priority, status, updated_at')
-      .neq('status', 'completed')
+      .neq('status', 'done')
       .order('due_date', { ascending: true });
 
     if (error) throw error;

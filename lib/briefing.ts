@@ -50,7 +50,7 @@ async function fetchTasks(userId: string, role: Role): Promise<Task[]> {
   let query = supabaseAdmin
     .from('tasks')
     .select('id, title, status, due_date, agency, role, priority, created_at')
-    .neq('status', 'completed')
+    .neq('status', 'done')
     .order('due_date', { ascending: true });
 
   // Scope by role

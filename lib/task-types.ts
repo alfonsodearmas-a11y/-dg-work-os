@@ -1,15 +1,21 @@
 // Shared task types for the native tasks system
 
+export type TaskStatus = 'new' | 'active' | 'blocked' | 'done';
+export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
+
 export interface Task {
   id: string;
   title: string;
   description: string | null;
-  status: 'not_started' | 'in_progress' | 'completed' | 'blocked';
-  priority: 'low' | 'medium' | 'high' | 'urgent' | null;
+  status: TaskStatus;
+  priority: TaskPriority | null;
   due_date: string | null;
   agency: string | null;
   role: string | null;
+  blocked_reason: string | null;
+  completed_at: string | null;
   owner_user_id: string;
+  owner_name: string | null;
   assigned_by_user_id: string | null;
   source_meeting_id: string | null;
   created_at: string;
@@ -19,16 +25,26 @@ export interface Task {
 export interface TaskUpdate {
   title?: string;
   description?: string;
-  status?: Task['status'];
-  priority?: Task['priority'] | null;
+  status?: TaskStatus;
+  priority?: TaskPriority | null;
   due_date?: string | null;
   agency?: string | null;
   role?: string | null;
+  blocked_reason?: string | null;
 }
 
 export type TasksByStatus = {
-  not_started: Task[];
-  in_progress: Task[];
+  new: Task[];
+  active: Task[];
   blocked: Task[];
-  completed: Task[];
+  done: Task[];
 };
+
+export interface TaskTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  agency_slug: string | null;
+  priority: string;
+  checklist: Array<{ label: string; done: boolean }> | null;
+}

@@ -288,7 +288,7 @@ export async function generateTaskNotifications(userId: string): Promise<{ count
     const { data: tasks, error: tasksErr } = await supabaseAdmin
       .from('tasks')
       .select('id, title, agency, due_date, status')
-      .neq('status', 'completed');
+      .neq('status', 'done');
 
     if (tasksErr) throw tasksErr;
 

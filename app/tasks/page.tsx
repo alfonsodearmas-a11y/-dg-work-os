@@ -21,8 +21,8 @@ export default function TasksPage() {
             <CheckSquare className="h-4 w-4 md:h-5 md:w-5 text-[#d4af37]" />
           </div>
           <div>
-            <h1 className="text-lg md:text-xl font-bold text-white">Task Board</h1>
-            <p className="text-xs md:text-sm text-[#64748b]">Manage your tasks</p>
+            <h1 className="text-lg md:text-xl font-bold text-white">Command Centre</h1>
+            <p className="text-xs md:text-sm text-[#64748b]">Task management</p>
           </div>
         </div>
       </div>

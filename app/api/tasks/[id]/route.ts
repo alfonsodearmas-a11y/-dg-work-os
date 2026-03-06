@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
+import { insertNotification } from '@/lib/notifications';
 
 export async function PATCH(
   request: NextRequest,
@@ -16,7 +17,7 @@ export async function PATCH(
   // Ownership check
   const { data: task } = await supabaseAdmin
     .from('tasks')
-    .select('owner_user_id, assigned_by_user_id')
+    .select('owner_user_id, assigned_by_user_id, status')
     .eq('id', id)
     .single();
 
@@ -40,19 +41,68 @@ export async function PATCH(
   if (body.due_date !== undefined) updates.due_date = body.due_date;
   if (body.agency !== undefined) updates.agency = body.agency;
   if (body.role !== undefined) updates.role = body.role;
+  if (body.blocked_reason !== undefined) updates.blocked_reason = body.blocked_reason;
+
+  // Track completed_at
+  if (body.status === 'done' && task.status !== 'done') {
+    updates.completed_at = new Date().toISOString();
+  }
+  if (body.status && body.status !== 'done') {
+    updates.completed_at = null;
+  }
+
+  // Clear blocked_reason when moving out of blocked
+  if (body.status && body.status !== 'blocked' && task.status === 'blocked') {
+    updates.blocked_reason = null;
+  }
 
   const { data: updated, error } = await supabaseAdmin
     .from('tasks')
     .update(updates)
     .eq('id', id)
-    .select()
+    .select('*, owner:users!owner_user_id(id, name)')
     .single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ task: updated });
+  // Flatten owner
+  const owner = updated.owner as { id: string; name: string } | null;
+  const flatTask = { ...updated, owner_name: owner?.name || null, owner: undefined };
+
+  // Notify DG when a task is moved to blocked
+  if (body.status === 'blocked' && task.status !== 'blocked') {
+    // Find DG user(s) to notify
+    const { data: dgUsers } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('role', 'dg')
+      .eq('is_active', true);
+
+    for (const dg of dgUsers || []) {
+      if (dg.id !== session.user.id) {
+        await insertNotification({
+          user_id: dg.id,
+          type: 'task_blocked',
+          title: `Task blocked: ${updated.title}`,
+          body: body.blocked_reason || 'No reason provided',
+          icon: 'task',
+          priority: 'high',
+          reference_type: 'task',
+          reference_id: id,
+          reference_url: '/tasks',
+          scheduled_for: new Date().toISOString(),
+          category: 'tasks',
+          source_module: 'tasks',
+          action_required: true,
+          action_type: 'review',
+        });
+      }
+    }
+  }
+
+  return NextResponse.json({ task: flatTask });
 }
 
 export async function DELETE(
@@ -76,11 +126,11 @@ export async function DELETE(
     return NextResponse.json({ error: 'Task not found' }, { status: 404 });
   }
 
-  // Only DG can delete anything; owner can delete if not_started
+  // Only DG can delete anything; owner can delete if new
   const isDG = session.user.role === 'dg';
-  const isOwnerNotStarted = task.owner_user_id === session.user.id && task.status === 'not_started';
+  const isOwnerNew = task.owner_user_id === session.user.id && task.status === 'new';
 
-  if (!isDG && !isOwnerNotStarted) {
+  if (!isDG && !isOwnerNew) {
     return NextResponse.json({ error: 'Not authorized to delete this task' }, { status: 403 });
   }
 
