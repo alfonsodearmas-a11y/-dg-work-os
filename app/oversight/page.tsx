@@ -288,7 +288,7 @@ function MultiSelect({
   function toggle(val: string) { onChange(selected.includes(val) ? selected.filter(v => v !== val) : [...selected, val]); }
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(!open)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none flex items-center gap-2 min-w-[130px]">
+      <button onClick={() => setOpen(!open)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none flex items-center gap-2 w-full md:min-w-[130px] md:w-auto">
         <span className="truncate">{selected.length ? `${label} (${selected.length})` : label}</span>
         <ChevronDown className={`h-3.5 w-3.5 text-[#64748b] shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -450,6 +450,13 @@ function ProjectSlidePanel({ project, onClose, userRole, onEscalate, onRefreshLi
     fetch(`/api/projects/${project.id}/summary`).then(r => r.json()).then(d => { if (d?.summary) setSummary(d); }).catch(() => {});
   }, [project.id]);
 
+  // Lock body scroll on mobile when panel is open
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   async function generateSummary(force = false) {
     setLoadingSummary(true);
     try { const res = await fetch(`/api/projects/${project.id}/summary`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ force }) }); const d = await res.json(); if (d?.summary) setSummary(d); } catch {}
@@ -471,13 +478,13 @@ function ProjectSlidePanel({ project, onClose, userRole, onEscalate, onRefreshLi
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-xl bg-[#0f1d32] border-l border-[#2d3a52] shadow-2xl overflow-y-auto">
-        <div className="sticky top-0 z-10 bg-[#0f1d32] border-b border-[#2d3a52] px-5 py-4 flex items-center justify-between">
+      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm touch-none" onClick={onClose} />
+      <div className="fixed inset-0 md:inset-auto md:right-0 md:top-0 md:bottom-0 z-50 w-full md:max-w-xl bg-[#0f1d32] md:border-l border-[#2d3a52] shadow-2xl overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="sticky top-0 z-10 bg-[#0f1d32] border-b border-[#2d3a52] px-4 md:px-5 py-4 flex items-center justify-between">
           <h2 className="text-white font-semibold text-lg truncate pr-4">Project Detail</h2>
           <button onClick={onClose} className="text-[#64748b] hover:text-white"><X className="h-5 w-5" /></button>
         </div>
-        <div className="p-5 space-y-6">
+        <div className="p-4 md:p-5 space-y-5 md:space-y-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
           {project.escalated && (
             <div className="flex items-start gap-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30">
               <ShieldAlert className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
@@ -568,7 +575,7 @@ function ProjectSlidePanel({ project, onClose, userRole, onEscalate, onRefreshLi
               {project.remarks && (
                 <div>
                   <span className="text-[#64748b] text-xs">Remarks</span>
-                  <p className="text-[#94a3b8] text-xs mt-1 leading-relaxed whitespace-pre-wrap line-clamp-4">{project.remarks}</p>
+                  <p className="text-[#94a3b8] text-xs mt-1 leading-relaxed whitespace-pre-wrap md:line-clamp-4">{project.remarks}</p>
                 </div>
               )}
             </div>
@@ -734,7 +741,7 @@ function BulkActionBar({ count, onUpdateStatus, onUpdateHealth, onAssignOfficer,
   const [showAssign, setShowAssign] = useState(false);
   function closeAll() { setShowStatus(false); setShowHealth(false); setShowAssign(false); }
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-[#1a2744] border border-[#d4af37]/40 rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3 flex-wrap">
+    <div className="fixed bottom-0 left-0 right-0 md:bottom-4 md:left-1/2 md:right-auto md:-translate-x-1/2 z-40 bg-[#1a2744] border-t md:border border-[#d4af37]/40 md:rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-2 md:gap-3 flex-wrap justify-center">
       <span className="text-[#d4af37] font-semibold text-sm">{count} selected</span>
       <div className="relative">
         <button onClick={() => { closeAll(); setShowStatus(!showStatus); }} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1">Status <ChevronDown className="h-3 w-3" /></button>
@@ -822,7 +829,7 @@ export default function OversightPage() {
   const [officers, setOfficers] = useState<{ id: string; name: string }[]>([]);
 
   // UI
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [escalateTarget, setEscalateTarget] = useState<Project | null>(null);
   const [showSaveFilter, setShowSaveFilter] = useState(false);
@@ -1083,7 +1090,36 @@ export default function OversightPage() {
               {/* Agency Breakdown */}
               <div className="bg-[#1a2744] border border-[#2d3a52] rounded-xl overflow-hidden">
                 <div className="flex items-center gap-3 p-4 border-b border-[#2d3a52]"><div className="w-8 h-8 rounded-lg bg-[#d4af37]/20 flex items-center justify-center"><Building2 className="h-4 w-4 text-[#d4af37]" /></div><span className="text-white font-medium">Agency Breakdown</span></div>
-                <div className="overflow-x-auto">
+                {/* Mobile: card layout */}
+                <div className="md:hidden divide-y divide-[#2d3a52]/50">
+                  {oversightData.agencyBreakdown.map(a => {
+                    const isExp = expandedAgency === a.agency;
+                    const agencyProjects = projectsByAgency[a.agency] || [];
+                    return (
+                      <div key={a.agency}>
+                        <button onClick={() => setExpandedAgency(isExp ? null : a.agency)} className={`w-full p-3 flex items-center gap-3 transition-colors ${isExp ? 'bg-[#2d3a52]/30' : ''}`}>
+                          <ChevronRight className={`h-3.5 w-3.5 text-[#64748b] shrink-0 transition-transform duration-200 ${isExp ? 'rotate-90' : ''}`} />
+                          <div className="flex-1 min-w-0 text-left">
+                            <p className="text-white font-medium text-sm">{a.agency || '-'}</p>
+                            <div className="flex items-center gap-3 mt-1 text-xs">
+                              <span className="text-[#94a3b8]">{a.projectCount} projects</span>
+                              <span className="text-[#d4af37] font-mono">{a.totalValueDisplay || formatCurrency(a.totalValue)}</span>
+                            </div>
+                          </div>
+                          {a.avgCompletion != null && (
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <div className="w-12 h-1.5 bg-[#2d3a52] rounded-full"><div className="h-full rounded-full bg-[#d4af37]" style={{ width: `${a.avgCompletion}%` }} /></div>
+                              <span className="text-[#94a3b8] font-mono text-xs">{a.avgCompletion}%</span>
+                            </div>
+                          )}
+                        </button>
+                        {isExp && <div className="bg-[#0a1628]/60 border-t border-[#2d3a52]/50">{agencyProjects.length > 0 ? <div className="max-h-[400px] overflow-y-auto">{agencyProjects.map((item, i) => <ProjectRow key={item.project.id || item.project.p3Id || i} project={item.project} tag={item.tag} />)}</div> : <p className="px-4 py-6 text-[#64748b] text-sm text-center">No flagged projects for this agency</p>}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Desktop: table layout */}
+                <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead><tr className="text-[#64748b] text-xs uppercase tracking-wider"><th className="text-left px-4 py-3 w-6"></th><th className="text-left px-4 py-3">Agency</th><th className="text-right px-4 py-3">Projects</th><th className="text-right px-4 py-3">Total Value</th><th className="text-right px-4 py-3">Avg Completion</th></tr></thead>
                     <tbody>
@@ -1094,7 +1130,7 @@ export default function OversightPage() {
                           <Fragment key={a.agency}>
                             <tr onClick={() => setExpandedAgency(isExp ? null : a.agency)} className={`border-t border-[#2d3a52]/50 hover:bg-[#2d3a52]/20 cursor-pointer transition-colors ${isExp ? 'bg-[#2d3a52]/30' : ''}`}>
                               <td className="pl-4 py-3 w-6"><ChevronRight className={`h-3.5 w-3.5 text-[#64748b] transition-transform duration-200 ${isExp ? 'rotate-90' : ''}`} /></td>
-                              <td className="px-4 py-3"><span className="text-white font-medium">{a.agency || '-'}</span>{a.agencyFull && a.agencyFull !== a.agency && <span className="text-[#64748b] text-xs ml-2 hidden md:inline">{a.agencyFull}</span>}</td>
+                              <td className="px-4 py-3"><span className="text-white font-medium">{a.agency || '-'}</span>{a.agencyFull && a.agencyFull !== a.agency && <span className="text-[#64748b] text-xs ml-2">{a.agencyFull}</span>}</td>
                               <td className="px-4 py-3 text-[#94a3b8] text-right">{a.projectCount}</td>
                               <td className="px-4 py-3 text-[#d4af37] text-right font-mono">{a.totalValueDisplay || formatCurrency(a.totalValue)}</td>
                               <td className="px-4 py-3 text-right">{a.avgCompletion != null ? <div className="flex items-center justify-end gap-2"><div className="w-16 h-1.5 bg-[#2d3a52] rounded-full"><div className="h-full rounded-full bg-[#d4af37]" style={{ width: `${a.avgCompletion}%` }} /></div><span className="text-[#94a3b8] font-mono text-xs">{a.avgCompletion}%</span></div> : <span className="text-[#64748b]">-</span>}</td>
@@ -1165,30 +1201,29 @@ export default function OversightPage() {
             </button>
             {showFilters && (
               <div className="px-4 pb-4 space-y-3 border-t border-[#2d3a52]">
-                <div className="pt-3 flex flex-wrap items-end gap-3">
+                <div className="pt-3 grid grid-cols-2 md:flex md:flex-wrap md:items-end gap-3">
                   <MultiSelect label="Agency" options={AGENCY_OPTIONS.map(a => ({ value: a, label: a }))} selected={agencies} onChange={setAgencies} />
                   <MultiSelect label="Status" options={STATUS_OPTIONS.map(s => ({ value: s, label: s }))} selected={statuses} onChange={setStatuses} />
                   <MultiSelect label="Region" options={REGION_OPTIONS} selected={regions} onChange={setRegions} />
                   <MultiSelect label="Health" options={HEALTH_OPTIONS.map(h => ({ value: h.value, label: h.label }))} selected={healths} onChange={setHealths} renderOption={opt => <span className="flex items-center gap-2 text-white"><span className={`w-2 h-2 rounded-full ${HEALTH_DOT[opt.value] || ''}`} />{opt.label}</span>} />
-                  <div className="flex items-center gap-1">
-                    <input type="number" placeholder="Min $" value={budgetMin} onChange={e => setBudgetMin(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-2 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none w-24" />
+                  <div className="flex items-center gap-1 col-span-2 md:col-span-1">
+                    <input type="number" placeholder="Min $" value={budgetMin} onChange={e => setBudgetMin(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-2 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none w-full md:w-24" />
                     <span className="text-[#64748b] text-xs">-</span>
-                    <input type="number" placeholder="Max $" value={budgetMax} onChange={e => setBudgetMax(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-2 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none w-24" />
+                    <input type="number" placeholder="Max $" value={budgetMax} onChange={e => setBudgetMax(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-2 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none w-full md:w-24" />
                   </div>
-                  <input type="text" list="contractor-list" value={contractor} onChange={e => setContractor(e.target.value)} placeholder="Contractor..." className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none w-40" />
+                  <input type="text" list="contractor-list" value={contractor} onChange={e => setContractor(e.target.value)} placeholder="Contractor..." className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none col-span-2 md:col-span-1 md:w-40" />
                   <datalist id="contractor-list">{contractors.slice(0, 50).map(c => <option key={c} value={c} />)}</datalist>
-                  <div className="relative flex-1 min-w-[180px]">
+                  <div className="relative col-span-2 md:col-span-1 md:flex-1 md:min-w-[180px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
                     <input type="text" placeholder="Search projects..." value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-[#0a1628] border border-[#2d3a52] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none" />
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="grid grid-cols-2 md:flex md:flex-wrap md:items-center gap-3">
                   <select value={dateField} onChange={e => setDateField(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none"><option value="project_end_date">End Date</option><option value="start_date">Start Date</option><option value="updated_at">Last Updated</option></select>
-                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none" />
-                  <span className="text-[#64748b] text-xs">to</span>
-                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none" />
                   <select value={sort} onChange={e => setSort(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none"><option value="value">Sort: Value</option><option value="completion">Sort: Completion %</option><option value="end_date">Sort: End Date</option><option value="agency">Sort: Agency</option><option value="name">Sort: Name</option><option value="health">Sort: Health</option></select>
-                  <div className="flex-1" />
+                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none" />
+                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none" />
+                  <div className="hidden md:block flex-1" />
                   {hasActiveFilters && (
                     <>
                       <button onClick={() => setShowSaveFilter(true)} className="text-[#d4af37] text-xs flex items-center gap-1 hover:text-[#e5c04b]"><BookmarkPlus className="h-3.5 w-3.5" /> Save Preset</button>
@@ -1212,15 +1247,15 @@ export default function OversightPage() {
           </div>
 
           {/* Project count + View Toggle */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               {hasActiveFilters ? (
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 text-sm">
-                  <Filter className="h-3.5 w-3.5 text-[#d4af37]" />
-                  <span className="text-[#d4af37]">Showing {psipSummary?.total_projects || totalCount} projects</span>
-                  <button onClick={clearFilters} className="ml-1 text-[#d4af37]/60 hover:text-[#d4af37]"><X className="h-3.5 w-3.5" /></button>
+                <div className="inline-flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 text-xs md:text-sm min-w-0">
+                  <Filter className="h-3.5 w-3.5 text-[#d4af37] shrink-0" />
+                  <span className="text-[#d4af37] truncate">{psipSummary?.total_projects || totalCount} projects</span>
+                  <button onClick={clearFilters} className="text-[#d4af37]/60 hover:text-[#d4af37] shrink-0"><X className="h-3.5 w-3.5" /></button>
                 </div>
-              ) : psipSummary && <span className="text-[#64748b] text-sm">{psipSummary.total_projects} projects</span>}
+              ) : psipSummary && <span className="text-[#64748b] text-xs md:text-sm">{psipSummary.total_projects} projects</span>}
             </div>
             <div className="flex items-center gap-1 bg-[#0a1628] border border-[#2d3a52] rounded-lg p-0.5">
               <button onClick={() => setViewMode('list')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'list' ? 'bg-[#d4af37]/20 text-[#d4af37]' : 'text-[#64748b] hover:text-white'}`}><List className="h-3.5 w-3.5 inline mr-1" />List</button>
@@ -1232,6 +1267,75 @@ export default function OversightPage() {
           {/* Project View */}
           {viewMode === 'timeline' ? <TimelineView projects={projects} groupBy={timelineGroupBy} /> : (
             <>
+              {/* ── Mobile card layout ── */}
+              {isMobile ? (
+                <div className="card-premium overflow-hidden">
+                  {/* Select all header */}
+                  <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#2d3a52]">
+                    <button onClick={toggleSelectAll} className="flex items-center gap-2 text-[#64748b] hover:text-white text-xs">
+                      {selectedIds.size === projects.length && projects.length > 0 ? <CheckSquare className="h-4 w-4 text-[#d4af37]" /> : <Square className="h-4 w-4" />}
+                      Select all
+                    </button>
+                  </div>
+                  <div className="divide-y divide-[#2d3a52]/50">
+                    {loadingProjects ? Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="p-3 animate-pulse space-y-2">
+                        <div className="h-4 bg-[#2d3a52] rounded w-3/4" />
+                        <div className="h-3 bg-[#2d3a52] rounded w-1/2" />
+                        <div className="h-3 bg-[#2d3a52] rounded w-1/3" />
+                      </div>
+                    ))
+                    : projects.length === 0 ? (
+                      <div className="px-4 py-12 text-center text-[#64748b]">No projects match your filters.</div>
+                    )
+                    : projects.map(p => {
+                        const ss = STATUS_STYLES[p.status] || STATUS_STYLES['Not Started'];
+                        const isSelected = selectedIds.has(p.id);
+                        const displayName = p.short_name || p.project_name || '-';
+                        return (
+                          <div key={p.id} onClick={() => setSelectedProject(p)} className={`p-3 cursor-pointer transition-colors active:bg-[#1a2744]/60 ${p.escalated ? 'bg-red-500/5 border-l-2 border-l-red-500' : ''} ${isSelected ? 'bg-[#d4af37]/5' : ''}`}>
+                            <div className="flex items-start gap-2.5">
+                              <button onClick={e => { e.stopPropagation(); toggleSelect(p.id); }} className="text-[#64748b] hover:text-white mt-0.5 shrink-0">
+                                {isSelected ? <CheckSquare className="h-4 w-4 text-[#d4af37]" /> : <Square className="h-4 w-4" />}
+                              </button>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-white text-sm font-medium truncate" title={p.project_name || ''}>{displayName}</p>
+                                <div className="flex items-center gap-2 flex-wrap mt-1.5">
+                                  <Badge variant={ss.variant}>{ss.label}</Badge>
+                                  <HealthDot health={p.health} />
+                                  {p.project_status && p.project_status !== ss.label?.toUpperCase() && <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${p.project_status === 'DELAYED' ? 'bg-red-500/20 text-red-400' : p.project_status === 'COMMENCED' ? 'bg-blue-500/20 text-blue-400' : p.project_status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400' : p.project_status === 'AWARDED' ? 'bg-green-500/20 text-green-400' : p.project_status === 'ROLLOVER' ? 'bg-amber-500/20 text-amber-400' : 'bg-[#2d3a52] text-[#94a3b8]'}`}>{p.project_status}</span>}
+                                  {p.escalated && <ShieldAlert className="h-3.5 w-3.5 text-red-400" />}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-[#64748b]">
+                                  <span className="text-[#d4af37] font-medium">{p.sub_agency || '-'}</span>
+                                  <span>{fmtRegion(p.region)}</span>
+                                  <span className="text-[#d4af37] font-mono">{fmtCurrency(p.contract_value)}</span>
+                                </div>
+                                {/* Funding preview */}
+                                {(p.balance_remaining != null || p.total_distributed != null || p.total_expended != null) && (
+                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs">
+                                    {p.total_distributed != null && <span className="text-[#94a3b8]">Distributed: <span className="text-white font-medium">{fmtCurrency(p.total_distributed)}</span></span>}
+                                    {p.total_expended != null && <span className="text-[#94a3b8]">Expended: <span className="text-white font-medium">{fmtCurrency(p.total_expended)}</span></span>}
+                                    {p.balance_remaining != null && <span className="text-[#94a3b8]">Balance: <span className="text-white font-medium">{fmtCurrency(p.balance_remaining)}</span></span>}
+                                  </div>
+                                )}
+                                {/* Remarks preview */}
+                                {p.remarks && (
+                                  <p className="text-[#64748b] text-xs mt-1 line-clamp-2 italic">{p.remarks}</p>
+                                )}
+                                <div className="flex items-center justify-between mt-2">
+                                  <span className={`text-xs ${p.status === 'Delayed' ? 'text-red-400 font-semibold' : 'text-[#94a3b8]'}`}>{fmtDate(p.project_end_date)}</span>
+                                  <ProgressBar pct={p.completion_pct} />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              ) : (
+              /* ── Desktop table layout ── */
               <div className="card-premium overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -1273,6 +1377,7 @@ export default function OversightPage() {
                   </table>
                 </div>
               </div>
+              )}
               {totalPages > 1 && (
                 <div className="flex flex-wrap items-center justify-between px-2 md:px-4 py-3 gap-2">
                   <span className="text-[#64748b] text-xs md:text-sm">{(page - 1) * limit + 1}-{Math.min(page * limit, totalCount)} of {totalCount}</span>
