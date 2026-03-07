@@ -8,11 +8,30 @@ export interface ProjectRow {
   sub_agency: string | null;
   project_name: string;
   region: string | null;
+  tender_board_type: string | null;
   contract_value: number | null;
   contractor: string | null;
   project_end_date: string | null;   // ISO date string
   completion_pct: number;
   has_images: number;
+  // Detail fields (from oversight detail page / scraper JSON)
+  balance_remaining: number | null;
+  remarks: string | null;
+  project_status: string | null;
+  extension_reason: string | null;
+  extension_date: string | null;
+  project_extended: boolean;
+}
+
+export interface FundingRow {
+  project_id: string;
+  date_distributed: string | null;
+  payment_type: string | null;
+  amount_distributed: number | null;
+  amount_expended: number | null;
+  distributed_balance: number | null;
+  funding_remarks: string | null;
+  contract_ref: string | null;
 }
 
 export interface ParseResult {
@@ -154,11 +173,19 @@ export function parseProjectsExcelWithDebug(buffer: Buffer): ParseResult {
       sub_agency: subAgency,
       project_name: String(r[3] || '').trim(),
       region: clean(r[4]),
+      tender_board_type: clean(r[5]) && /^[A-Z]+$/.test(String(r[5]).trim()) ? clean(r[5]) : null,
       contract_value: contractValue,
       contractor: clean(r[6]),
       project_end_date: parseDateDMY(r[7]),
       completion_pct: completionPct,
       has_images: parseInt(String(r[9] || '0'), 10) || 0,
+      // Detail fields not available from Excel — populated by JSON upload
+      balance_remaining: null,
+      remarks: null,
+      project_status: null,
+      extension_reason: null,
+      extension_date: null,
+      project_extended: false,
     };
 
     projects.push(project);

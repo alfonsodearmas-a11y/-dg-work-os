@@ -6,7 +6,8 @@ import Link from 'next/link';
 import {
   ArrowLeft, Building2, Calendar, DollarSign, Clock,
   MapPin, User, FileText, AlertTriangle, TrendingUp,
-  CheckCircle, Camera,
+  CheckCircle, Camera, Banknote, MessageSquare, RefreshCw,
+  ChevronDown, ChevronUp,
 } from 'lucide-react';
 
 const AGENCY_NAMES: Record<string, string> = {
@@ -56,13 +57,17 @@ export default function ProjectDetailPage() {
   const params = useParams();
   const projectId = params.id as string;
   const [project, setProject] = useState<any>(null);
+  const [funding, setFunding] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fundingOpen, setFundingOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/projects/${projectId}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(d => setProject(d))
+    Promise.all([
+      fetch(`/api/projects/${projectId}`).then(r => r.ok ? r.json() : null),
+      fetch(`/api/projects/${projectId}/funding`).then(r => r.ok ? r.json() : []).catch(() => []),
+    ])
+      .then(([p, f]) => { setProject(p); setFunding(f); })
       .finally(() => setLoading(false));
   }, [projectId]);
 
@@ -218,8 +223,144 @@ export default function ProjectDetailPage() {
             <h2 className="text-lg font-semibold text-white">Contractor</h2>
           </div>
           <p className="text-white text-xl font-semibold">{project.contractor || 'Not assigned'}</p>
+          {project.tender_board_type && (
+            <p className="text-[#64748b] text-sm mt-2">Tender Board: {project.tender_board_type}</p>
+          )}
         </div>
       </div>
+
+      {/* Oversight Detail Fields */}
+      {(project.project_status || project.balance_remaining != null || project.remarks || project.project_extended) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Financial Details */}
+          <div className="card-premium p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <Banknote className="h-5 w-5 text-[#d4af37]" />
+              <h2 className="text-lg font-semibold text-white">Financial Details</h2>
+            </div>
+            <div className="space-y-4 text-sm">
+              {project.project_status && (
+                <div>
+                  <p className="text-[#64748b]">Oversight Status</p>
+                  <span className={`inline-block mt-1 px-3 py-1 rounded-lg text-sm font-medium ${
+                    project.project_status === 'DELAYED' ? 'bg-red-500/20 text-red-400'
+                    : project.project_status === 'COMMENCED' ? 'bg-blue-500/20 text-blue-400'
+                    : project.project_status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400'
+                    : 'bg-[#2d3a52] text-[#94a3b8]'
+                  }`}>
+                    {project.project_status}
+                  </span>
+                </div>
+              )}
+              {project.balance_remaining != null && (
+                <div>
+                  <p className="text-[#64748b]">Balance Remaining</p>
+                  <p className="text-white font-medium mt-1">{fmtCurrency(project.balance_remaining)}</p>
+                </div>
+              )}
+              {project.contract_value != null && project.balance_remaining != null && (
+                <div>
+                  <p className="text-[#64748b]">Amount Spent</p>
+                  <p className="text-white font-medium mt-1">
+                    {fmtCurrency(project.contract_value - project.balance_remaining)}
+                    <span className="text-[#64748b] ml-2">
+                      ({Math.round(((project.contract_value - project.balance_remaining) / project.contract_value) * 100)}% of contract)
+                    </span>
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Extension Info */}
+          <div className="card-premium p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <RefreshCw className="h-5 w-5 text-[#d4af37]" />
+              <h2 className="text-lg font-semibold text-white">Extension Status</h2>
+            </div>
+            <div className="space-y-4 text-sm">
+              <div>
+                <p className="text-[#64748b]">Extended</p>
+                <p className={`font-medium mt-1 ${project.project_extended ? 'text-amber-400' : 'text-emerald-400'}`}>
+                  {project.project_extended ? 'Yes' : 'No'}
+                </p>
+              </div>
+              {project.extension_date && (
+                <div>
+                  <p className="text-[#64748b]">New Deadline</p>
+                  <p className="text-white font-medium mt-1">{fmtDate(project.extension_date)}</p>
+                </div>
+              )}
+              {project.extension_reason && (
+                <div>
+                  <p className="text-[#64748b]">Extension Reason</p>
+                  <p className="text-[#94a3b8] mt-1 leading-relaxed">{project.extension_reason}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remarks */}
+      {project.remarks && (
+        <div className="card-premium p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <MessageSquare className="h-5 w-5 text-[#d4af37]" />
+            <h2 className="text-lg font-semibold text-white">Remarks</h2>
+          </div>
+          <p className="text-[#94a3b8] text-sm leading-relaxed whitespace-pre-wrap">{project.remarks}</p>
+        </div>
+      )}
+
+      {/* Funding Distributions */}
+      {funding.length > 0 && (
+        <div className="card-premium p-6">
+          <button
+            onClick={() => setFundingOpen(!fundingOpen)}
+            className="flex items-center justify-between w-full"
+          >
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-[#d4af37]" />
+              <h2 className="text-lg font-semibold text-white">
+                Funding Distributions ({funding.length})
+              </h2>
+            </div>
+            {fundingOpen
+              ? <ChevronUp className="h-5 w-5 text-[#64748b]" />
+              : <ChevronDown className="h-5 w-5 text-[#64748b]" />
+            }
+          </button>
+          {fundingOpen && (
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[#2d3a52] text-[#64748b]">
+                    <th className="text-left py-2 pr-4">Date</th>
+                    <th className="text-left py-2 pr-4">Type</th>
+                    <th className="text-right py-2 pr-4">Distributed</th>
+                    <th className="text-right py-2 pr-4">Expended</th>
+                    <th className="text-right py-2 pr-4">Balance</th>
+                    <th className="text-left py-2">Ref</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {funding.map((f: any, i: number) => (
+                    <tr key={f.id || i} className="border-b border-[#2d3a52]/50 text-[#94a3b8]">
+                      <td className="py-2 pr-4">{f.date_distributed ? fmtDate(f.date_distributed) : '-'}</td>
+                      <td className="py-2 pr-4">{f.payment_type || '-'}</td>
+                      <td className="py-2 pr-4 text-right text-white font-medium">{fmtCurrency(f.amount_distributed)}</td>
+                      <td className="py-2 pr-4 text-right">{fmtCurrency(f.amount_expended)}</td>
+                      <td className="py-2 pr-4 text-right">{fmtCurrency(f.distributed_balance)}</td>
+                      <td className="py-2 font-mono text-xs">{f.contract_ref || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Metadata */}
       <div className="text-sm text-[#64748b] text-center">

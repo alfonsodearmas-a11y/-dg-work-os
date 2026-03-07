@@ -30,6 +30,7 @@ export interface Project {
   project_name: string | null;
   short_name: string | null;
   region: string | null;
+  tender_board_type: string | null;
   contract_value: number | null;
   contractor: string | null;
   project_end_date: string | null;
@@ -43,8 +44,28 @@ export interface Project {
   assigned_to: string | null;
   start_date: string | null;
   status_override: string | null;
+  // Detail fields from oversight scraper
+  balance_remaining: number | null;
+  remarks: string | null;
+  project_status: string | null;
+  extension_reason: string | null;
+  extension_date: string | null;
+  project_extended: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface FundingDistribution {
+  id: string;
+  project_id: string;
+  date_distributed: string | null;
+  payment_type: string | null;
+  amount_distributed: number | null;
+  amount_expended: number | null;
+  distributed_balance: number | null;
+  funding_remarks: string | null;
+  contract_ref: string | null;
+  created_at: string;
 }
 
 export interface ProjectNote {
@@ -203,6 +224,14 @@ function enrichProject(row: any): Project {
     assigned_to: row.assigned_to || null,
     start_date: row.start_date || null,
     status_override: row.status_override || null,
+    // Detail fields
+    balance_remaining: row.balance_remaining ?? null,
+    remarks: row.remarks || null,
+    project_status: row.project_status || null,
+    extension_reason: row.extension_reason || null,
+    extension_date: row.extension_date || null,
+    project_extended: row.project_extended || false,
+    tender_board_type: row.tender_board_type || null,
   };
 }
 
@@ -624,4 +653,16 @@ export async function recalculateAllHealth(): Promise<{ updated: number; total: 
   }
 
   return { updated: updates.length, total: data.length, breakdown };
+}
+
+// ── Funding Distributions ─────────────────────────────────────────────────
+
+export async function getProjectFunding(projectId: string): Promise<FundingDistribution[]> {
+  const { data } = await supabaseAdmin
+    .from('funding_distributions')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('date_distributed', { ascending: true });
+
+  return (data || []) as FundingDistribution[];
 }
