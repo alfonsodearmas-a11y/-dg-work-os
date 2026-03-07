@@ -104,6 +104,18 @@ export interface SavedFilter {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
+// Cap at $100B GYD — values above this are data-entry errors from Excel upload
+const OUTLIER_CAP = 1e11;
+
+function safeContractValue(raw: any): number | null {
+  if (raw === null || raw === undefined) return null;
+  const num = Number(raw);
+  if (isNaN(num) || num <= 0) return null;
+  // Values above $100B are data corruption (concatenated IDs, etc.)
+  if (num > OUTLIER_CAP) return null;
+  return num;
+}
+
 function enrichProject(row: any): Project {
   const completionPct = Number(row.completion_pct) || 0;
   const endDate = row.project_end_date || null;
@@ -118,6 +130,7 @@ function enrichProject(row: any): Project {
 
   return {
     ...row,
+    contract_value: safeContractValue(row.contract_value),
     completion_pct: completionPct,
     status,
     days_overdue: daysOverdue,
@@ -167,8 +180,7 @@ export async function getPortfolioSummary(filters?: {
   for (const row of rows) {
     const pct = Number(row.completion_pct) || 0;
     const status = computeStatus(pct, row.project_end_date, row.status_override);
-    const raw = Number(row.contract_value) || 0;
-    const value = raw > 1e11 ? 0 : raw;
+    const value = safeContractValue(row.contract_value) || 0;
     const agency = row.sub_agency || 'MOPUA';
     const health = row.health || 'green';
 

@@ -7,7 +7,8 @@ import { ArrowLeft, AlertTriangle, TrendingUp, ChevronRight } from 'lucide-react
 function fmtCurrency(value: number | string | null | undefined): string {
   if (value === null || value === undefined || value === '-') return '-';
   const num = typeof value === 'string' ? parseFloat(value.replace(/[$,]/g, '')) : Number(value);
-  if (isNaN(num)) return '-';
+  if (isNaN(num) || num <= 0) return '-';
+  if (num > 1e11) return '-';
   const abs = Math.abs(num);
   if (abs >= 1e9) return `$${(num / 1e9).toFixed(1)}B`;
   if (abs >= 1e6) return `$${(num / 1e6).toFixed(1)}M`;

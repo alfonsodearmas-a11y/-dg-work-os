@@ -157,9 +157,10 @@ const HEALTH_DOT: Record<string, string> = {
 function fmtCurrency(value: number | string | null | undefined): string {
   if (value === null || value === undefined || value === '-') return '-';
   const num = typeof value === 'string' ? parseFloat(value.replace(/[$,]/g, '')) : Number(value);
-  if (isNaN(num)) return '-';
+  if (isNaN(num) || num <= 0) return '-';
+  // Cap outlier values — anything above $100B GYD is data corruption
+  if (num > 1e11) return '-';
   const abs = Math.abs(num);
-  if (abs >= 1e12) return `$${(num / 1e12).toFixed(1)}T`;
   if (abs >= 1e9) return `$${(num / 1e9).toFixed(1)}B`;
   if (abs >= 1e6) return `$${(num / 1e6).toFixed(1)}M`;
   if (abs >= 1e3) return `$${(num / 1e3).toFixed(1)}K`;
@@ -595,8 +596,11 @@ function ProjectSlidePanel({
               </p>
             </div>
             <div>
-              <span className="text-[#64748b] text-xs">Executing Agency</span>
-              <p className="text-white">{project.executing_agency || '-'}</p>
+              <span className="text-[#64748b] text-xs">Agency</span>
+              <p className="text-white">{project.sub_agency || project.executing_agency || '-'}</p>
+              {project.executing_agency && project.sub_agency && project.executing_agency !== project.sub_agency && (
+                <p className="text-[#4a5568] text-[10px] mt-0.5">under {project.executing_agency}</p>
+              )}
             </div>
             {project.days_overdue > 0 && (
               <div>
