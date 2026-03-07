@@ -5,9 +5,13 @@ import { useSession } from 'next-auth/react';
 import {
   Search, Users, UserCheck, UserX, UserPlus, Shield, ShieldOff,
   CheckCircle, AlertTriangle, X, Clock, Archive, ChevronDown,
-  ArrowUpDown, Filter, Trash2, MoreHorizontal,
+  ArrowUpDown, Filter, Trash2, MoreHorizontal, Lock, Activity,
 } from 'lucide-react';
 import { UserDetailDrawer } from '@/components/admin/UserDetailDrawer';
+import { PermissionsPanel } from '@/components/admin/PermissionsPanel';
+import { AccessControlPanel } from '@/components/admin/AccessControlPanel';
+import { ActivityLogPanel } from '@/components/admin/ActivityLogPanel';
+import { usePermissions } from '@/hooks/usePeople';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 
 interface User {
@@ -29,6 +33,7 @@ interface User {
 }
 
 type Tab = 'active' | 'archived';
+type TopTab = 'directory' | 'permissions' | 'access' | 'activity';
 type SortField = 'name' | 'role' | 'agency' | 'status' | 'last_seen';
 type SortDir = 'asc' | 'desc';
 
@@ -102,6 +107,16 @@ export default function PeoplePage() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showInvite, setShowInvite] = useState(false);
   const [tab, setTab] = useState<Tab>('active');
+  const [topTab, setTopTab] = useState<TopTab>('directory');
+
+  // Permissions system
+  const {
+    permissions: myPermissions,
+    roles: rolesData,
+    allPermissions: allPermsData,
+    hasPermission,
+    loading: permsLoading,
+  } = usePermissions();
 
   // Filters
   const [filterRole, setFilterRole] = useState<string>('');
@@ -316,7 +331,7 @@ export default function PeoplePage() {
             {stats.active} active · {stats.pending} pending · {stats.suspended > 0 ? `${stats.suspended} suspended · ` : ''}{stats.archived} archived
           </p>
         </div>
-        {isDG && (
+        {isDG && topTab === 'directory' && (
           <button
             onClick={() => setShowInvite(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#d4af37]/20 text-[#d4af37] hover:bg-[#d4af37]/30 transition-colors text-sm font-medium"
@@ -326,6 +341,55 @@ export default function PeoplePage() {
           </button>
         )}
       </div>
+
+      {/* Top-level tabs */}
+      <div className="flex items-center gap-1 border-b border-[#2d3a52]">
+        {([
+          { key: 'directory', label: 'Directory', icon: Users },
+          { key: 'permissions', label: 'Permissions', icon: Shield },
+          { key: 'access', label: 'Access Control', icon: Lock },
+          { key: 'activity', label: 'Activity', icon: Activity },
+        ] as const).map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTopTab(t.key)}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              topTab === t.key ? 'border-[#d4af37] text-[#d4af37]' : 'border-transparent text-[#64748b] hover:text-white'
+            }`}
+          >
+            <t.icon className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{t.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Permission Matrix Tab */}
+      {topTab === 'permissions' && (
+        <PermissionsPanel
+          roles={rolesData}
+          allPermissions={allPermsData}
+          myPermissions={myPermissions}
+          myRole={session?.user?.role || 'officer'}
+          loading={permsLoading}
+        />
+      )}
+
+      {/* Access Control Tab */}
+      {topTab === 'access' && (
+        <AccessControlPanel
+          members={users as any}
+          myPermissions={myPermissions}
+          loading={loading}
+        />
+      )}
+
+      {/* Activity Log Tab */}
+      {topTab === 'activity' && (
+        <ActivityLogPanel hasPermission={hasPermission('audit.read')} />
+      )}
+
+      {/* Directory Tab */}
+      {topTab !== 'directory' ? null : <>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -626,6 +690,8 @@ export default function PeoplePage() {
           </div>
         )}
       </div>
+
+      </>}
 
       {/* User Detail Drawer */}
       <UserDetailDrawer
