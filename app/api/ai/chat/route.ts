@@ -10,7 +10,7 @@ import { getCachedResponse, cacheResponse } from '@/lib/ai/response-cache';
 import { getTokenBudgetStatus, logUsage } from '@/lib/ai/token-budget';
 import { compressHistory } from '@/lib/ai/history-compressor';
 import { tryLocalAnswer } from '@/lib/ai/local-answers';
-import { getAnthropicTools, buildActionProposal } from '@/lib/ai/tools';
+import { getAnthropicTools, buildActionProposal, isQueryTool, executeQueryTool } from '@/lib/ai/tools';
 import { ModelTier, MODEL_IDS, MAX_TOKENS, TIER_LABELS, MetricSnapshot, ChatStreamEvent } from '@/lib/ai/types';
 import { auth } from '@/lib/auth';
 
@@ -263,100 +263,183 @@ export async function POST(request: NextRequest) {
     const pageDesc = current_page === '/' ? 'Mission Control' : current_page;
     const systemPrompt = getSystemPrompt(tier, today, pageDesc, contextStr);
 
-    // ── Step 8: Stream with tier-appropriate model + tools ──
+    // ── Step 8: Stream with tool use loop ──
 
     const modelId = MODEL_IDS[tier];
     const maxTokens = MAX_TOKENS[tier];
-
     const anthropic = new Anthropic({ apiKey });
-
-    // Include tools for sonnet/opus (not haiku — too simple for actions)
     const tools = tier !== 'haiku' ? getAnthropicTools() : undefined;
-
-    const stream = anthropic.messages.stream({
-      model: modelId,
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages,
-      ...(tools ? { tools } : {}),
-    });
 
     const encoder = new TextEncoder();
     const readable = new ReadableStream({
       async start(controller) {
-        // Send meta event first
         controller.enqueue(encoder.encode(sseEvent({
-          type: 'meta',
-          tier,
-          tier_label: TIER_LABELS[tier],
-          cached: false,
-          local: false,
+          type: 'meta', tier, tier_label: TIER_LABELS[tier], cached: false, local: false,
         })));
 
-        let accumulated = '';
-        let pendingToolUse: { id: string; name: string; input: string } | null = null;
+        // Tool use loop: Claude may call tools, we execute and feed results back
+        let apiMessages: Anthropic.MessageParam[] = messages.map(m => ({
+          role: m.role,
+          content: m.content,
+        }));
+        let toolCallCount = 0;
+        const MAX_TOOL_CALLS = 8;
+        let totalInputTokens = 0;
+        let totalOutputTokens = 0;
 
         try {
-          for await (const event of stream) {
-            if (event.type === 'content_block_start') {
-              if (event.content_block.type === 'tool_use') {
-                pendingToolUse = {
-                  id: event.content_block.id,
-                  name: event.content_block.name,
-                  input: '',
-                };
-              }
-            } else if (event.type === 'content_block_delta') {
-              const delta = event.delta;
-              if ('text' in delta) {
-                accumulated += delta.text;
-                controller.enqueue(encoder.encode(sseEvent({ type: 'text', text: delta.text })));
-              } else if ('partial_json' in delta && pendingToolUse) {
-                pendingToolUse.input += delta.partial_json;
-              }
-            } else if (event.type === 'content_block_stop') {
-              if (pendingToolUse) {
-                // Parse tool input and send as action proposal
-                try {
-                  const toolInput = JSON.parse(pendingToolUse.input || '{}');
-                  const proposal = buildActionProposal(pendingToolUse.name, toolInput);
-                  controller.enqueue(encoder.encode(sseEvent({
-                    type: 'tool_use',
-                    action: proposal,
-                  })));
-                } catch (e) {
-                  console.error('[ai/chat] Tool parse error:', e);
+          while (toolCallCount <= MAX_TOOL_CALLS) {
+            // Make the API call — stream text, collect tool_use blocks
+            const stream = anthropic.messages.stream({
+              model: modelId,
+              max_tokens: maxTokens,
+              system: systemPrompt,
+              messages: apiMessages,
+              ...(tools ? { tools } : {}),
+            });
+
+            let accumulated = '';
+            let toolUseBlocks: Array<{ id: string; name: string; input: string }> = [];
+            let pendingToolUse: { id: string; name: string; input: string } | null = null;
+
+            for await (const event of stream) {
+              if (event.type === 'content_block_start') {
+                if (event.content_block.type === 'tool_use') {
+                  pendingToolUse = {
+                    id: event.content_block.id,
+                    name: event.content_block.name,
+                    input: '',
+                  };
                 }
-                pendingToolUse = null;
+              } else if (event.type === 'content_block_delta') {
+                const delta = event.delta;
+                if ('text' in delta) {
+                  accumulated += delta.text;
+                  controller.enqueue(encoder.encode(sseEvent({ type: 'text', text: delta.text })));
+                } else if ('partial_json' in delta && pendingToolUse) {
+                  pendingToolUse.input += delta.partial_json;
+                }
+              } else if (event.type === 'content_block_stop') {
+                if (pendingToolUse) {
+                  toolUseBlocks.push(pendingToolUse);
+                  pendingToolUse = null;
+                }
               }
-            } else if (event.type === 'message_stop') {
-              const finalMessage = await stream.finalMessage();
-              const inputTokens = finalMessage.usage?.input_tokens || 0;
-              const outputTokens = finalMessage.usage?.output_tokens || 0;
+            }
 
-              // ── Step 9: Log usage ──
-              logUsage(session_id, tier, modelId, inputTokens, outputTokens, queryType, current_page, false, false);
+            const finalMessage = await stream.finalMessage();
+            totalInputTokens += finalMessage.usage?.input_tokens || 0;
+            totalOutputTokens += finalMessage.usage?.output_tokens || 0;
 
-              // ── Step 10: Cache response (haiku/sonnet only, skip if tool_use) ──
-              const hasToolUse = finalMessage.content.some(b => b.type === 'tool_use');
-              if (!hasToolUse) {
+            // If no tool_use blocks, we're done
+            if (toolUseBlocks.length === 0) {
+              // Log usage
+              logUsage(session_id, tier, modelId, totalInputTokens, totalOutputTokens, queryType, current_page, false, false);
+
+              // Cache if no tool use happened in any turn
+              if (toolCallCount === 0) {
                 const { clean: c1, suggestions } = parseSuggestionsFromText(accumulated);
                 const { clean: c2, actions } = parseActionsFromText(c1);
-                cacheResponse(message, current_page, tier, c2, suggestions, actions, inputTokens, outputTokens);
+                cacheResponse(message, current_page, tier, c2, suggestions, actions, totalInputTokens, totalOutputTokens);
               }
 
               controller.enqueue(encoder.encode(sseEvent({
-                type: 'done',
-                tier,
-                tier_label: TIER_LABELS[tier],
-                cached: false,
-                local: false,
-                usage: { input_tokens: inputTokens, output_tokens: outputTokens },
+                type: 'done', tier, tier_label: TIER_LABELS[tier], cached: false, local: false,
+                usage: { input_tokens: totalInputTokens, output_tokens: totalOutputTokens },
                 remaining: rateCheck.remaining,
               })));
               controller.close();
+              return;
             }
+
+            // Process tool_use blocks
+            const toolResults: Anthropic.ToolResultBlockParam[] = [];
+            let hasActionTool = false;
+
+            for (const block of toolUseBlocks) {
+              toolCallCount++;
+              let toolInput: Record<string, unknown>;
+              try {
+                toolInput = JSON.parse(block.input || '{}');
+              } catch {
+                toolInput = {};
+              }
+
+              if (isQueryTool(block.name)) {
+                // Auto-execute query tools — they're read-only
+                const result = await executeQueryTool(block.name, toolInput);
+                toolResults.push({
+                  type: 'tool_result',
+                  tool_use_id: block.id,
+                  content: result,
+                });
+              } else {
+                // Action tool — send confirmation to UI, do NOT auto-execute
+                hasActionTool = true;
+                const proposal = buildActionProposal(block.name, toolInput);
+                controller.enqueue(encoder.encode(sseEvent({
+                  type: 'tool_use',
+                  action: proposal,
+                })));
+                // Send a "declined" result back to Claude so it doesn't hang
+                toolResults.push({
+                  type: 'tool_result',
+                  tool_use_id: block.id,
+                  content: 'Action proposed to user for confirmation. Do not retry. Wait for user to approve or cancel.',
+                });
+              }
+            }
+
+            // If we had action tools, finish the stream — user needs to confirm
+            if (hasActionTool) {
+              logUsage(session_id, tier, modelId, totalInputTokens, totalOutputTokens, queryType, current_page, false, false);
+              controller.enqueue(encoder.encode(sseEvent({
+                type: 'done', tier, tier_label: TIER_LABELS[tier], cached: false, local: false,
+                usage: { input_tokens: totalInputTokens, output_tokens: totalOutputTokens },
+                remaining: rateCheck.remaining,
+              })));
+              controller.close();
+              return;
+            }
+
+            // All tools were queries — feed results back to Claude for the next turn
+            // Build the assistant message content blocks for the API
+            const assistantContent: Anthropic.ContentBlockParam[] = [];
+            if (accumulated) {
+              assistantContent.push({ type: 'text', text: accumulated });
+            }
+            for (const block of toolUseBlocks) {
+              let parsedInput: Record<string, unknown>;
+              try { parsedInput = JSON.parse(block.input || '{}'); } catch { parsedInput = {}; }
+              assistantContent.push({
+                type: 'tool_use',
+                id: block.id,
+                name: block.name,
+                input: parsedInput,
+              });
+            }
+
+            apiMessages = [
+              ...apiMessages,
+              { role: 'assistant', content: assistantContent },
+              { role: 'user', content: toolResults },
+            ];
+
+            // Reset for next iteration
+            accumulated = '';
           }
+
+          // If we hit the max tool calls limit
+          controller.enqueue(encoder.encode(sseEvent({
+            type: 'text', text: '\n\n*Reached maximum tool call limit for this turn.*',
+          })));
+          logUsage(session_id, tier, modelId, totalInputTokens, totalOutputTokens, queryType, current_page, false, false);
+          controller.enqueue(encoder.encode(sseEvent({
+            type: 'done', tier, tier_label: TIER_LABELS[tier], cached: false, local: false,
+            usage: { input_tokens: totalInputTokens, output_tokens: totalOutputTokens },
+            remaining: rateCheck.remaining,
+          })));
+          controller.close();
         } catch (err: any) {
           const errorMsg = err.message || 'Stream error';
           console.error('[ai/chat] Stream error:', errorMsg);

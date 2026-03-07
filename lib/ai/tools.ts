@@ -1,9 +1,98 @@
 import { supabaseAdmin } from '@/lib/db';
 import { AIToolDefinition, AIActionProposal } from './types';
 
-// ── Tool Definitions (passed to Claude API) ─────────────────────────────────
+// ── Tool Categories ──────────────────────────────────────────────────────────
+// "query" tools execute immediately (read-only, no confirmation needed)
+// "action" tools require user confirmation before execution
 
-export const AI_TOOLS: AIToolDefinition[] = [
+type ToolCategory = 'query' | 'action';
+
+interface ToolMeta {
+  category: ToolCategory;
+  definition: AIToolDefinition;
+}
+
+// ── Query Tool Definitions ───────────────────────────────────────────────────
+
+const QUERY_TOOLS: AIToolDefinition[] = [
+  {
+    name: 'lookup_tasks',
+    description: 'Look up tasks from the task database. Use when the user asks about specific tasks, filtered lists, or task details not in the pre-loaded context. Returns up to 50 tasks.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', enum: ['not_started', 'in_progress', 'blocked', 'completed'], description: 'Filter by status (optional)' },
+        agency: { type: 'string', description: 'Filter by agency: GPL, GWI, CJIA, GCAA, MARAD, HECI, General (optional)' },
+        priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'], description: 'Filter by priority (optional)' },
+        search: { type: 'string', description: 'Search term to match against task titles (optional)' },
+        assignee_name: { type: 'string', description: 'Filter by assignee name (partial match, optional)' },
+        overdue_only: { type: 'boolean', description: 'If true, only return tasks past their due date (optional)' },
+        limit: { type: 'number', description: 'Max results (default 30, max 50)' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'lookup_projects',
+    description: 'Look up PSIP infrastructure projects. Use when the user asks about specific projects, filtered project lists, delayed projects by region/agency, or project details.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', enum: ['Complete', 'Delayed', 'In Progress', 'Not Started'], description: 'Filter by computed status (optional)' },
+        agency: { type: 'string', description: 'Filter by executing agency (optional)' },
+        region: { type: 'string', description: 'Filter by region number e.g. "4" or "Region 4" (optional)' },
+        search: { type: 'string', description: 'Search term for project name (optional)' },
+        delayed_only: { type: 'boolean', description: 'If true, only return delayed projects sorted by days overdue (optional)' },
+        sort: { type: 'string', enum: ['value', 'completion', 'end_date', 'agency', 'name'], description: 'Sort field (optional, default: end_date)' },
+        limit: { type: 'number', description: 'Max results (default 30, max 50)' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'search_documents',
+    description: 'Search the Document Vault for uploaded documents (PDFs, reports, briefings). Use when the user asks about document contents, wants to find a specific report, or needs information from uploaded files.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query to match against document titles and summaries' },
+        agency: { type: 'string', description: 'Filter by agency (optional)' },
+        category: { type: 'string', description: 'Filter by category: briefing, report, memo, analysis, minutes (optional)' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'lookup_meetings',
+    description: 'Look up recent meetings and their action items. Use when the user asks about what was discussed, decisions made, or pending action items from meetings.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        search: { type: 'string', description: 'Search term for meeting titles (optional)' },
+        pending_actions_only: { type: 'boolean', description: 'If true, only return meetings with pending (not done) action items (optional)' },
+        limit: { type: 'number', description: 'Max meetings to return (default 15, max 30)' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'lookup_service_connections',
+    description: 'Look up GPL service connection applications and SLA metrics. Use when the user asks about pending applications, processing times, or SLA compliance for Track A/B connections.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        track: { type: 'string', enum: ['A', 'B'], description: 'Filter by track (optional)' },
+        status: { type: 'string', enum: ['open', 'completed'], description: 'Filter by status (optional, default: open)' },
+        limit: { type: 'number', description: 'Max results (default 30, max 50)' },
+      },
+      required: [],
+    },
+  },
+];
+
+// ── Action Tool Definitions (require confirmation) ───────────────────────────
+
+const ACTION_TOOLS: AIToolDefinition[] = [
   {
     name: 'create_task',
     description: 'Create a new task in the system. Use when the user asks to create, add, or assign a task.',
@@ -34,13 +123,13 @@ export const AI_TOOLS: AIToolDefinition[] = [
   },
   {
     name: 'save_document',
-    description: 'Save a generated document or briefing note to the document vault.',
+    description: 'Save a generated document, report, or briefing note to the Document Vault. Use when the user asks you to write and save a report, memo, briefing, analysis, or any document.',
     input_schema: {
       type: 'object',
       properties: {
         title: { type: 'string', description: 'Document title' },
         content: { type: 'string', description: 'Document content (markdown)' },
-        category: { type: 'string', description: 'Category: briefing, report, memo, analysis, minutes' },
+        category: { type: 'string', enum: ['briefing', 'report', 'memo', 'analysis', 'minutes', 'letter'], description: 'Document category' },
         agency: { type: 'string', description: 'Associated agency (optional)' },
       },
       required: ['title', 'content'],
@@ -89,13 +178,28 @@ export const AI_TOOLS: AIToolDefinition[] = [
   },
 ];
 
+// ── Combined Registry ────────────────────────────────────────────────────────
+
+const ALL_TOOLS: ToolMeta[] = [
+  ...QUERY_TOOLS.map(d => ({ category: 'query' as const, definition: d })),
+  ...ACTION_TOOLS.map(d => ({ category: 'action' as const, definition: d })),
+];
+
+export function isQueryTool(toolName: string): boolean {
+  return ALL_TOOLS.some(t => t.definition.name === toolName && t.category === 'query');
+}
+
+export function isActionTool(toolName: string): boolean {
+  return ALL_TOOLS.some(t => t.definition.name === toolName && t.category === 'action');
+}
+
 // ── Convert to Anthropic tool format ────────────────────────────────────────
 
 export function getAnthropicTools() {
-  return AI_TOOLS.map(t => ({
-    name: t.name,
-    description: t.description,
-    input_schema: t.input_schema as { type: 'object'; properties?: Record<string, unknown> },
+  return ALL_TOOLS.map(t => ({
+    name: t.definition.name,
+    description: t.definition.description,
+    input_schema: t.definition.input_schema as { type: 'object'; properties?: Record<string, unknown> },
   }));
 }
 
@@ -174,7 +278,7 @@ export function buildActionProposal(toolName: string, toolInput: Record<string, 
   }
 }
 
-// ── Execute Actions ─────────────────────────────────────────────────────────
+// ── Execute Actions (write operations, called after user confirmation) ──────
 
 export async function executeAction(
   toolName: string,
@@ -204,10 +308,209 @@ export async function executeAction(
   }
 }
 
-// ── Action Implementations ──────────────────────────────────────────────────
+// ── Execute Query Tools (read-only, auto-executed without confirmation) ─────
+
+export async function executeQueryTool(
+  toolName: string,
+  toolInput: Record<string, unknown>,
+): Promise<string> {
+  try {
+    switch (toolName) {
+      case 'lookup_tasks':
+        return await queryTasks(toolInput);
+      case 'lookup_projects':
+        return await queryProjects(toolInput);
+      case 'search_documents':
+        return await queryDocuments(toolInput);
+      case 'lookup_meetings':
+        return await queryMeetings(toolInput);
+      case 'lookup_service_connections':
+        return await queryServiceConnections(toolInput);
+      default:
+        return JSON.stringify({ error: `Unknown query tool: ${toolName}` });
+    }
+  } catch (err: any) {
+    console.error(`[ai/tools] Query tool error (${toolName}):`, err);
+    return JSON.stringify({ error: err.message || 'Query failed' });
+  }
+}
+
+// ── Query Tool Implementations ──────────────────────────────────────────────
+
+async function queryTasks(input: Record<string, unknown>): Promise<string> {
+  const limit = Math.min(Number(input.limit) || 30, 50);
+
+  let query = supabaseAdmin
+    .from('tasks')
+    .select('id, title, status, priority, due_date, agency, assigned_to, description, created_at');
+
+  if (input.status) query = query.eq('status', input.status);
+  if (input.agency) query = query.eq('agency', input.agency);
+  if (input.priority) query = query.eq('priority', input.priority);
+  if (input.search) query = query.ilike('title', `%${input.search}%`);
+
+  if (input.overdue_only) {
+    query = query.lt('due_date', new Date().toISOString().slice(0, 10)).neq('status', 'completed');
+  }
+
+  query = query.order('due_date', { ascending: true, nullsFirst: false }).limit(limit);
+
+  const { data, error } = await query;
+  if (error) return JSON.stringify({ error: error.message });
+
+  let tasks = data || [];
+
+  // Resolve assignee names
+  if (tasks.some(t => t.assigned_to)) {
+    const userIds = [...new Set(tasks.filter(t => t.assigned_to).map(t => t.assigned_to))];
+    const { data: users } = await supabaseAdmin
+      .from('users')
+      .select('id, name')
+      .in('id', userIds);
+    const nameMap = new Map((users || []).map(u => [u.id, u.name]));
+    tasks = tasks.map(t => ({
+      ...t,
+      assigned_to_name: t.assigned_to ? nameMap.get(t.assigned_to) || null : null,
+    }));
+  }
+
+  // Filter by assignee name if provided
+  if (input.assignee_name) {
+    const searchName = String(input.assignee_name).toLowerCase();
+    tasks = tasks.filter(t =>
+      (t as any).assigned_to_name?.toLowerCase().includes(searchName)
+    );
+  }
+
+  return JSON.stringify({ tasks, count: tasks.length });
+}
+
+async function queryProjects(input: Record<string, unknown>): Promise<string> {
+  const { getProjectsList, getDelayedProjects } = await import('@/lib/project-queries');
+
+  if (input.delayed_only) {
+    const delayed = await getDelayedProjects();
+    const limit = Math.min(Number(input.limit) || 30, 50);
+    let filtered = delayed;
+    if (input.agency) {
+      filtered = filtered.filter((p: any) =>
+        (p.sub_agency || p.executing_agency || '').toLowerCase().includes(String(input.agency).toLowerCase())
+      );
+    }
+    if (input.region) {
+      const regionStr = String(input.region).replace(/^Region\s*/i, '');
+      filtered = filtered.filter((p: any) =>
+        String(p.region || '').includes(regionStr)
+      );
+    }
+    return JSON.stringify({ projects: filtered.slice(0, limit), count: filtered.length });
+  }
+
+  const result = await getProjectsList({
+    agency: input.agency ? String(input.agency) : undefined,
+    status: input.status ? String(input.status) : undefined,
+    region: input.region ? String(input.region) : undefined,
+    search: input.search ? String(input.search) : undefined,
+    sort: (input.sort as any) || 'end_date',
+    limit: Math.min(Number(input.limit) || 30, 50),
+  });
+
+  return JSON.stringify({ projects: result.projects, count: result.total });
+}
+
+async function queryDocuments(input: Record<string, unknown>): Promise<string> {
+  const { searchDocuments } = await import('@/lib/document-search');
+  const results = await searchDocuments(String(input.query), {
+    agency: input.agency ? String(input.agency) : undefined,
+    document_type: input.category ? String(input.category) : undefined,
+  });
+  return JSON.stringify({
+    documents: (results || []).map((d: any) => ({
+      id: d.id,
+      title: d.title,
+      category: d.category,
+      agency: d.agency,
+      summary: d.summary?.slice(0, 300),
+      uploaded_at: d.uploaded_at || d.created_at,
+    })),
+    count: (results || []).length,
+  });
+}
+
+async function queryMeetings(input: Record<string, unknown>): Promise<string> {
+  const limit = Math.min(Number(input.limit) || 15, 30);
+
+  let query = supabaseAdmin
+    .from('meetings')
+    .select('id, title, date, status, attendees, summary, decisions, meeting_actions(id, task, owner, due_date, done)')
+    .order('date', { ascending: false })
+    .limit(limit);
+
+  if (input.search) query = query.ilike('title', `%${input.search}%`);
+
+  const { data, error } = await query;
+  if (error) return JSON.stringify({ error: error.message });
+
+  let meetings = data || [];
+
+  if (input.pending_actions_only) {
+    meetings = meetings.filter((m: any) =>
+      m.meeting_actions?.some((a: any) => !a.done)
+    );
+  }
+
+  return JSON.stringify({
+    meetings: meetings.map((m: any) => ({
+      id: m.id,
+      title: m.title,
+      date: m.date,
+      status: m.status,
+      attendees: m.attendees,
+      summary: m.summary?.slice(0, 500),
+      decisions: m.decisions,
+      action_items: (m.meeting_actions || []).map((a: any) => ({
+        task: a.task,
+        owner: a.owner,
+        due_date: a.due_date,
+        done: a.done,
+      })),
+    })),
+    count: meetings.length,
+  });
+}
+
+async function queryServiceConnections(input: Record<string, unknown>): Promise<string> {
+  const limit = Math.min(Number(input.limit) || 30, 50);
+  const status = input.status ? String(input.status) : 'open';
+
+  let query = supabaseAdmin
+    .from('service_connections')
+    .select('id, customer_reference, first_name, last_name, track, status, current_stage, application_date, first_seen_date, region, district, total_days_to_complete')
+    .eq('status', status)
+    .not('is_legacy', 'eq', true)
+    .order('first_seen_date', { ascending: true })
+    .limit(limit);
+
+  if (input.track) query = query.eq('track', input.track);
+
+  const { data, error } = await query;
+  if (error) return JSON.stringify({ error: error.message });
+
+  const now = Date.now();
+  const connections = (data || []).map((c: any) => ({
+    ...c,
+    customer_name: [c.first_name, c.last_name].filter(Boolean).join(' '),
+    days_pending: c.first_seen_date
+      ? Math.round((now - new Date(c.first_seen_date).getTime()) / (1000 * 60 * 60 * 24))
+      : null,
+  }));
+
+  return JSON.stringify({ connections, count: connections.length });
+}
+
+// ── Action Implementations (write operations) ───────────────────────────────
 
 async function executeCreateTask(input: Record<string, unknown>, userId: string) {
-  // Resolve assignee name to ID
   let assigneeId: string | null = null;
   if (input.assignee_name) {
     const { data: user } = await supabaseAdmin
@@ -235,15 +538,11 @@ async function executeCreateTask(input: Record<string, unknown>, userId: string)
     .single();
 
   if (error) throw error;
-
-  // Audit log
   await logAIAction(userId, 'create_task', { task_id: data.id, title: data.title, ...input });
-
   return { success: true, message: `Task "${data.title}" created successfully.` };
 }
 
 async function executeUpdateTaskStatus(input: Record<string, unknown>) {
-  // Find the task by title match
   const { data: tasks } = await supabaseAdmin
     .from('tasks')
     .select('id, title, status')
@@ -254,7 +553,6 @@ async function executeUpdateTaskStatus(input: Record<string, unknown>) {
     return { success: false, message: `No task found matching "${input.task_title}"` };
   }
 
-  // Use exact match if available, otherwise first partial match
   const exact = tasks.find(t => t.title.toLowerCase() === String(input.task_title).toLowerCase());
   const target = exact || tasks[0];
 
@@ -264,7 +562,6 @@ async function executeUpdateTaskStatus(input: Record<string, unknown>) {
     .eq('id', target.id);
 
   if (error) throw error;
-
   return { success: true, message: `Task "${target.title}" updated to ${String(input.status).replace(/_/g, ' ')}.` };
 }
 
@@ -284,7 +581,6 @@ async function executeSaveDocument(input: Record<string, unknown>, userId: strin
 
   if (error) throw error;
   await logAIAction(userId, 'save_document', { document_id: data.id, title: data.title });
-
   return { success: true, message: `Document "${data.title}" saved to Document Vault.` };
 }
 
@@ -303,12 +599,10 @@ async function executeLogMeeting(input: Record<string, unknown>, userId: string)
 
   if (error) throw error;
   await logAIAction(userId, 'log_meeting', { meeting_id: data.id, title: data.title });
-
   return { success: true, message: `Meeting "${data.title}" logged successfully.` };
 }
 
 async function executeCreateFlag(input: Record<string, unknown>, userId: string) {
-  // Create as a high-priority task with flag
   const { data, error } = await supabaseAdmin
     .from('tasks')
     .insert({
@@ -324,12 +618,10 @@ async function executeCreateFlag(input: Record<string, unknown>, userId: string)
 
   if (error) throw error;
   await logAIAction(userId, 'create_flag', { task_id: data.id, ...input });
-
   return { success: true, message: `Issue flagged: "${input.title}"` };
 }
 
 async function executeSendNotification(input: Record<string, unknown>) {
-  // Find recipient
   const { data: user } = await supabaseAdmin
     .from('users')
     .select('id')
@@ -358,7 +650,6 @@ async function executeSendNotification(input: Record<string, unknown>) {
     });
 
   if (error) throw error;
-
   return { success: true, message: `Notification sent to ${input.recipient_name}.` };
 }
 

@@ -126,6 +126,29 @@ const PAGE_SUGGESTIONS: Record<string, Array<{ emoji: string; text: string }>> =
   ],
 };
 
+// ── Slash Commands ──────────────────────────────────────────────────────────
+
+interface SlashCommand {
+  command: string;
+  label: string;
+  description: string;
+  /** If set, sends this text immediately. If function, takes args after the command. */
+  expand: string | ((args: string) => string);
+}
+
+const SLASH_COMMANDS: SlashCommand[] = [
+  { command: '/brief', label: 'Daily Briefing', description: 'Full situational briefing for today', expand: 'Give me a full situational briefing for today. Cover tasks, calendar, agency alerts, and anything that needs my attention.' },
+  { command: '/tasks', label: 'Task Overview', description: 'Overdue, blocked, and due this week', expand: 'Show me a task overview: overdue tasks, blocked tasks, and what is due this week. Group by agency.' },
+  { command: '/projects', label: 'Delayed Projects', description: 'Summary of delayed PSIP projects', expand: 'Give me a delayed project summary across all agencies. Sort by days overdue, include value and region.' },
+  { command: '/meetings', label: 'Meeting Actions', description: 'Pending action items from meetings', expand: 'Summarize recent meetings and list all pending action items that haven\'t been completed yet.' },
+  { command: '/status', label: 'Agency Status', description: '/status [agency] — health check', expand: (args: string) => args ? `Give me a health check and status report for ${args}. Cover key metrics, issues, and what needs attention.` : 'Give me a health check across all agencies. Compare scores and flag anything below target.' },
+  { command: '/report', label: 'Generate Report', description: '/report [topic] — write and save', expand: (args: string) => args ? `Generate a report on ${args}. Use real data, be specific with numbers, and save it to the Document Vault.` : 'What report would you like me to generate? Give me a topic and I\'ll write it with real data and save it.' },
+  { command: '/flag', label: 'Flag Issue', description: '/flag [issue] — flag for attention', expand: (args: string) => args ? `Flag this issue for my attention: ${args}` : 'What issue would you like to flag? Describe the problem.' },
+  { command: '/connections', label: 'Service Connections', description: 'GPL application backlog & SLA', expand: 'Show me the GPL service connection backlog. Break down by Track A and Track B, include SLA compliance and oldest pending applications.' },
+  { command: '/budget', label: 'Budget Status', description: 'Budget vs actuals overview', expand: 'Give me a budget overview: allocations vs actuals across all agencies. Flag any underspend or overspend risks.' },
+  { command: '/docs', label: 'Search Documents', description: '/docs [search] — find in vault', expand: (args: string) => args ? `Search the Document Vault for: ${args}` : 'What would you like to search for in the Document Vault?' },
+];
+
 const PLACEHOLDERS = [
   'Ask about any agency, project, metric...',
   'Why did GWI collections drop 9%?',
@@ -507,6 +530,8 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
   const [budgetPct, setBudgetPct] = useState(0);
   const [snapshot, setSnapshot] = useState<MetricSnapshot | null>(null);
   const [executingAction, setExecutingAction] = useState(false);
+  const [slashFilter, setSlashFilter] = useState<string | null>(null);
+  const [slashIndex, setSlashIndex] = useState(0);
 
   const pathname = usePathname();
   const router = useRouter();
@@ -545,6 +570,14 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
     if (pathname.startsWith('/admin/tasks')) return PAGE_SUGGESTIONS['/admin/tasks'];
     return DEFAULT_SUGGESTIONS;
   }, [pathname]);
+
+  const filteredSlashCommands = useMemo(() => {
+    if (slashFilter === null) return [];
+    const q = slashFilter.toLowerCase();
+    return SLASH_COMMANDS.filter(c =>
+      c.command.toLowerCase().includes(q) || c.label.toLowerCase().includes(q)
+    );
+  }, [slashFilter]);
 
   // ── Fetch snapshot on open ──
 
@@ -841,10 +874,21 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
   // ── Handlers ──
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
+    const val = e.target.value;
+    setInput(val);
     const el = e.target;
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+
+    // Slash command detection: if input starts with /
+    if (val.startsWith('/')) {
+      const firstSpace = val.indexOf(' ');
+      const commandPart = firstSpace === -1 ? val : val.slice(0, firstSpace);
+      setSlashFilter(commandPart);
+      setSlashIndex(0);
+    } else {
+      setSlashFilter(null);
+    }
   }, []);
 
   const handleClear = useCallback(() => {
@@ -855,7 +899,42 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
     setContextWarning(false);
   }, []);
 
+  const selectSlashCommand = useCallback((cmd: SlashCommand) => {
+    // Extract args: everything after the command word
+    const firstSpace = input.indexOf(' ');
+    const args = firstSpace !== -1 ? input.slice(firstSpace + 1).trim() : '';
+
+    const expanded = typeof cmd.expand === 'function' ? cmd.expand(args) : cmd.expand;
+    setSlashFilter(null);
+    setInput('');
+    sendMessage(expanded);
+  }, [input, sendMessage]);
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Slash command navigation
+    if (slashFilter !== null && filteredSlashCommands.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSlashIndex(prev => (prev + 1) % filteredSlashCommands.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSlashIndex(prev => (prev - 1 + filteredSlashCommands.length) % filteredSlashCommands.length);
+        return;
+      }
+      if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+        e.preventDefault();
+        selectSlashCommand(filteredSlashCommands[slashIndex]);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setSlashFilter(null);
+        return;
+      }
+    }
+
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       sendMessage(input);
@@ -866,7 +945,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
         sendMessage(input);
       }
     }
-  }, [input, sendMessage]);
+  }, [input, sendMessage, slashFilter, filteredSlashCommands, slashIndex, selectSlashCommand]);
 
   const handleChipClick = useCallback((text: string) => sendMessage(text), [sendMessage]);
 
@@ -1196,6 +1275,27 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
             )}
           </div>
 
+          {/* Slash command dropdown */}
+          {slashFilter !== null && filteredSlashCommands.length > 0 && (
+            <div className="mb-2 rounded-xl border border-[#d4af37]/20 bg-[#0f1935] overflow-hidden max-h-[240px] overflow-y-auto">
+              {filteredSlashCommands.map((cmd, i) => (
+                <button
+                  key={cmd.command}
+                  onMouseDown={(e) => { e.preventDefault(); selectSlashCommand(cmd); }}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                    i === slashIndex ? 'bg-[#d4af37]/10' : 'hover:bg-white/5'
+                  }`}
+                >
+                  <span className="text-sm font-mono text-[#d4af37] min-w-[110px]">{cmd.command}</span>
+                  <span className="flex flex-col min-w-0">
+                    <span className="text-sm text-white/80 truncate">{cmd.label}</span>
+                    <span className="text-[11px] text-white/40 truncate">{cmd.description}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="relative">
             <textarea
               ref={textareaRef}
@@ -1228,7 +1328,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
             </button>
           </div>
           <p className="text-[10px] text-white/20 text-center mt-2 mb-1">
-            {'\u2318'}+Enter to send {'\u00B7'} Powered by Anthropic
+            Type <span className="text-white/30">/</span> for commands {'\u00B7'} {'\u2318'}+Enter to send
           </p>
         </div>
       </div>

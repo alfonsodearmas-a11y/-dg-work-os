@@ -38,6 +38,14 @@ const SONNET_MIN_PATTERNS: Array<{ re: RegExp; type: string }> = [
   { re: /\b(flag|escalate|alert)\s+/i, type: 'action_flag' },
   { re: /\b(send|notify|remind)\s+/i, type: 'action_notify' },
   { re: /\bfollow.?up\s+(action|task)s?\s+(from|for)/i, type: 'action_create_task' },
+  // Query tool triggers — need sonnet (haiku doesn't get tools)
+  { re: /\b(search|find|look\s*up)\s+.*(document|vault|report|memo)/i, type: 'query_documents' },
+  { re: /\b(show|list|find)\s+.*(task|tasks)\s+.*(assigned|for|by)\b/i, type: 'query_tasks' },
+  { re: /\bpending\s+action\s+items/i, type: 'query_meetings' },
+  { re: /\bservice\s+connection\s+(backlog|applications?|pending)/i, type: 'query_connections' },
+  { re: /\b(delayed|overdue)\s+project.*\b(region|agency|sort|value)/i, type: 'query_projects' },
+  { re: /\bgroup\s+by\s+agency/i, type: 'query_grouped' },
+  { re: /\bsave\s+it\s+to\s+(the\s+)?document\s+vault/i, type: 'action_save_document' },
 ];
 
 // Opus patterns — complex analysis, strategic questions, comparisons, multi-agency
