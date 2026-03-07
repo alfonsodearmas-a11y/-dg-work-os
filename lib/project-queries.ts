@@ -83,7 +83,9 @@ export async function getPortfolioSummary(): Promise<PortfolioSummary> {
   for (const row of rows) {
     const pct = Number(row.completion_pct) || 0;
     const status = computeStatus(pct, row.project_end_date);
-    const value = Number(row.contract_value) || 0;
+    const raw = Number(row.contract_value) || 0;
+    // Cap at $100B — values above this are data entry errors (e.g. duplicated digits from Excel upload)
+    const value = raw > 1e11 ? 0 : raw;
     const agency = row.sub_agency || 'MOPUA';
 
     totalValue += value;

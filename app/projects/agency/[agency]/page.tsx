@@ -76,7 +76,10 @@ export default function AgencyPage() {
     inProgress: projects.filter(p => p.status === 'In Progress').length,
     delayed: projects.filter(p => p.status === 'Delayed').length,
     complete: projects.filter(p => p.status === 'Complete').length,
-    totalValue: projects.reduce((s, p) => s + (Number(p.contract_value) || 0), 0),
+    totalValue: projects.reduce((s, p) => {
+      const v = Number(p.contract_value) || 0;
+      return s + (v > 1e11 ? 0 : v);
+    }, 0),
   };
 
   const tabs = [

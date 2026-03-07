@@ -805,7 +805,7 @@ export default function ProjectsPage() {
 
       {/* ── Portfolio Summary KPI Cards ── */}
       {summary && (
-        <div className={isMobile ? 'scroll-snap-x pb-1' : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4'}>
+        <div className={isMobile ? 'grid grid-cols-2 gap-3 pb-1' : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4'}>
           <KpiCard
             icon={Building2}
             label="Total Projects"
@@ -908,8 +908,8 @@ export default function ProjectsPage() {
                         <span className="text-white font-semibold">{a.total}</span>
                         <span className="text-[#64748b] ml-1 text-xs">projects</span>
                       </div>
-                      <div className="text-right w-28 shrink-0">
-                        <span className="text-[#d4af37] font-semibold whitespace-nowrap">{fmtCurrency(a.total_value)}</span>
+                      <div className="text-right w-28 shrink-0 overflow-hidden">
+                        <span className="text-[#d4af37] font-semibold whitespace-nowrap truncate block">{fmtCurrency(a.total_value)}</span>
                       </div>
                       <div className="flex items-center gap-3 text-xs shrink-0" onClick={e => e.stopPropagation()}>
                         {a.delayed > 0 && (
@@ -931,11 +931,11 @@ export default function ProjectsPage() {
                       <ChevronDown className={`h-4 w-4 text-[#64748b] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                     </div>
                     {/* Mobile stats row — compact */}
-                    <div className="md:hidden flex items-center gap-2 text-xs">
-                      <span className="text-white font-semibold">{a.total}</span>
-                      <span className="text-[#d4af37] font-semibold shrink-0 whitespace-nowrap">{fmtCurrency(a.total_value)}</span>
-                      {a.delayed > 0 && <span className="text-red-400">{a.delayed}!</span>}
-                      <ChevronDown className={`h-4 w-4 text-[#64748b] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                    <div className="md:hidden flex items-center gap-2 text-xs min-w-0 overflow-hidden">
+                      <span className="text-white font-semibold shrink-0">{a.total}</span>
+                      <span className="text-[#d4af37] font-semibold truncate">{fmtCurrency(a.total_value)}</span>
+                      {a.delayed > 0 && <span className="text-red-400 shrink-0">{a.delayed}!</span>}
+                      <ChevronDown className={`h-4 w-4 text-[#64748b] transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
                     </div>
                   </button>
 
@@ -1339,8 +1339,8 @@ function KpiCard({
       <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg ${c.bg} flex items-center justify-center mb-2 md:mb-3`}>
         <Icon className={`h-4 w-4 md:h-5 md:w-5 ${c.text}`} />
       </div>
-      <p className={`text-xl md:text-2xl font-bold ${c.text} whitespace-nowrap`}>{value}</p>
-      <p className="text-[#64748b] text-[11px] md:text-xs mt-1">{label}</p>
+      <p className={`text-lg md:text-2xl font-bold ${c.text} truncate`}>{value}</p>
+      <p className="text-[#64748b] text-xs mt-1">{label}</p>
     </div>
   );
 }
