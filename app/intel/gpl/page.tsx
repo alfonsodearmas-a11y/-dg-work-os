@@ -2,15 +2,9 @@
 
 import { ArrowLeft, Zap } from 'lucide-react';
 import Link from 'next/link';
-import { useAgencyData } from '@/hooks/useAgencyData';
-import { GPLDetail } from '@/components/intel/GPLDetail';
-import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
-import { PendingConnectionsCard } from '@/components/intel/PendingConnectionsCard';
 import { GPLModule } from '@/components/intel/gpl/GPLModule';
 
 export default function GPLIntelPage() {
-  const { rawData, isLoading, loadGPLByDate } = useAgencyData();
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -34,35 +28,6 @@ export default function GPLIntelPage() {
 
       {/* Service Connection Efficiency Module */}
       <GPLModule />
-
-      {/* Pending Connections (legacy) */}
-      <PendingConnectionsCard agency="GPL" />
-
-      {/* Content */}
-      <ErrorBoundary fallbackTitle="Failed to load GPL dashboard">
-        {isLoading ? (
-          <div className="space-y-6 animate-pulse">
-            <div className="flex gap-2 border-b border-[#2d3a52] pb-3">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-9 bg-[#2d3a52] rounded-lg w-24" />
-              ))}
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="card-premium p-5">
-                  <div className="h-8 bg-[#2d3a52] rounded w-16 mb-2" />
-                  <div className="h-4 bg-[#2d3a52] rounded w-24" />
-                </div>
-              ))}
-            </div>
-            <div className="card-premium p-6">
-              <div className="h-48 bg-[#2d3a52] rounded" />
-            </div>
-          </div>
-        ) : (
-          <GPLDetail data={rawData.gpl} onLoadDate={loadGPLByDate} />
-        )}
-      </ErrorBoundary>
     </div>
   );
 }
