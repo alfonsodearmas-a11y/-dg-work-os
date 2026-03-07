@@ -87,18 +87,61 @@ function actionLabel(actionType: string | null | undefined): string {
   }
 }
 
+export function resolveNotificationUrl(n: Notification): string | null {
+  // Use reference_url if it's a meaningful deep link (not just '/')
+  if (n.reference_url && n.reference_url !== '/') return n.reference_url;
+
+  // Fallback: build URL from reference_type + reference_id + metadata
+  const id = n.reference_id;
+  const agency = (n.metadata?.agency as string)?.toLowerCase();
+
+  switch (n.reference_type) {
+    case 'task':
+      return '/tasks';
+    case 'meeting':
+      return id ? `/meetings/${id}` : '/meetings';
+    case 'project':
+      return id ? `/projects/${id}` : '/projects';
+    case 'kpi':
+      return agency ? `/intel/${agency}` : '/intel';
+    case 'oversight':
+      return '/oversight';
+    case 'document':
+      return id ? `/documents/${id}` : '/documents';
+    default:
+      break;
+  }
+
+  // Fallback by category
+  switch (n.category) {
+    case 'meetings': return '/meetings';
+    case 'tasks': return '/tasks';
+    case 'projects': return '/projects';
+    case 'kpi': return '/intel';
+    case 'oversight': return '/oversight';
+    default: return null;
+  }
+}
+
 function NotificationCard({ notification, onRead }: { notification: Notification; onRead: (n: Notification) => void }) {
   const isUnread = !notification.read_at;
+  const hasLink = !!resolveNotificationUrl(notification);
 
   return (
     <button
       onClick={() => onRead(notification)}
-      className="w-full text-left flex gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors group relative"
+      className={`w-full text-left flex gap-3 p-3 rounded-lg transition-all duration-150 group relative cursor-pointer
+        ${isUnread ? 'bg-white/[0.03]' : ''}
+        hover:bg-white/[0.08] active:bg-white/[0.12]`}
     >
-      {/* Priority accent bar */}
+      {/* Priority accent bar — doubles as unread indicator */}
       <div
-        className={`absolute left-0 top-2 bottom-2 w-1 rounded-full ${notification.priority === 'urgent' ? 'animate-pulse-gold' : ''}`}
-        style={{ backgroundColor: priorityColor(notification.priority) }}
+        className={`absolute left-0 top-2 bottom-2 w-1 rounded-full transition-colors ${notification.priority === 'urgent' ? 'animate-pulse-gold' : ''}`}
+        style={{
+          backgroundColor: isUnread
+            ? priorityColor(notification.priority) || '#d4af37'
+            : priorityColor(notification.priority),
+        }}
       />
 
       {/* Icon */}
@@ -108,17 +151,22 @@ function NotificationCard({ notification, onRead }: { notification: Notification
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p className={`text-sm leading-snug ${isUnread ? 'text-white font-medium' : 'text-white/70'}`}>
+        <p className={`text-sm leading-snug ${isUnread ? 'text-white font-medium' : 'text-white/50'}`}>
           {notification.title}
         </p>
         {notification.body && (
-          <p className="text-xs text-white/40 mt-0.5 truncate">{notification.body}</p>
+          <p className={`text-xs mt-0.5 truncate ${isUnread ? 'text-white/40' : 'text-white/25'}`}>{notification.body}</p>
         )}
         <div className="flex items-center gap-2 mt-1">
-          <p className="text-xs text-white/30">{relativeTime(notification.scheduled_for)}</p>
+          <p className={`text-xs ${isUnread ? 'text-white/30' : 'text-white/20'}`}>{relativeTime(notification.scheduled_for)}</p>
           {notification.action_required && (
             <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-[#d4af37]/20 text-[#d4af37]">
               {actionLabel(notification.action_type)}
+            </span>
+          )}
+          {hasLink && (
+            <span className="text-xs text-white/20 opacity-0 group-hover:opacity-100 transition-opacity">
+              Open &rarr;
             </span>
           )}
         </div>
@@ -162,8 +210,9 @@ export function NotificationPanel() {
 
   const handleRead = (n: Notification) => {
     if (!n.read_at) markAsRead(n.id);
-    if (n.reference_url) {
-      router.push(n.reference_url);
+    const url = resolveNotificationUrl(n);
+    if (url) {
+      router.push(url);
       closePanel();
     }
   };

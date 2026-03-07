@@ -5,6 +5,7 @@ import { X, Calendar, CheckSquare, FileText, Building2, BarChart3, Eye, UserChec
 import { useRouter } from 'next/navigation';
 import { useNotifications } from './NotificationProvider';
 import type { Notification } from '@/lib/notifications';
+import { resolveNotificationUrl } from './NotificationPanel';
 
 function ToastIcon({ type, category }: { type: string; category?: string }) {
   if (type === 'meeting_minutes_ready') return <FileText className="h-4 w-4 text-[#3b82f6]" />;
@@ -66,8 +67,9 @@ function SingleToast({
   };
 
   const handleClick = () => {
-    if (notification.reference_url) {
-      router.push(notification.reference_url);
+    const url = resolveNotificationUrl(notification);
+    if (url) {
+      router.push(url);
     }
     onDismiss(notification.id);
   };

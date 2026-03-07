@@ -51,7 +51,7 @@ export async function generateTaskBridgeNotifications(userId: string): Promise<G
         priority: config.priority,
         reference_type: 'task',
         reference_id: row.task_id || row.id,
-        reference_url: '/admin',
+        reference_url: '/admin/tasks',
         scheduled_for: morningSlot,
         category: 'tasks',
         source_module: 'task-management',
