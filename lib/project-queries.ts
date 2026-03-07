@@ -2,7 +2,18 @@ import { supabaseAdmin } from './db';
 
 // ── Status computation (matches SQL generated column logic) ────────────────
 
-export function computeStatus(completionPct: number, endDate: string | null): string {
+export function computeStatus(completionPct: number, endDate: string | null, statusOverride?: string | null): string {
+  if (statusOverride) {
+    const map: Record<string, string> = {
+      not_started: 'Not Started',
+      in_progress: 'In Progress',
+      on_hold: 'On Hold',
+      delayed: 'Delayed',
+      completed: 'Complete',
+      cancelled: 'Cancelled',
+    };
+    return map[statusOverride] || statusOverride;
+  }
   if (completionPct >= 100) return 'Complete';
   if (completionPct > 0 && endDate && new Date(endDate) < new Date()) return 'Delayed';
   if (completionPct > 0) return 'In Progress';
@@ -25,8 +36,38 @@ export interface Project {
   has_images: number;
   status: string;         // computed
   days_overdue: number;   // computed
+  health: 'green' | 'amber' | 'red';
+  escalated: boolean;
+  escalation_reason: string | null;
+  assigned_to: string | null;
+  start_date: string | null;
+  status_override: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ProjectNote {
+  id: string;
+  project_id: string;
+  user_id: string;
+  note_text: string;
+  note_type: 'general' | 'escalation' | 'status_update';
+  created_at: string;
+  user_name?: string;
+  user_role?: string;
+}
+
+export interface ProjectSummary {
+  id: string;
+  project_id: string;
+  summary: {
+    status_snapshot: string;
+    timeline_assessment: string;
+    budget_position: string;
+    key_risks: string[];
+    recommended_actions: string[];
+  };
+  generated_at: string;
 }
 
 export interface AgencySummary {
@@ -48,7 +89,17 @@ export interface PortfolioSummary {
   delayed: number;
   not_started: number;
   delayed_value: number;
+  at_risk: number;
   agencies: AgencySummary[];
+  regions: Record<string, number>;
+}
+
+export interface SavedFilter {
+  id: string;
+  user_id: string;
+  filter_name: string;
+  filter_params: Record<string, any>;
+  created_at: string;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -56,7 +107,7 @@ export interface PortfolioSummary {
 function enrichProject(row: any): Project {
   const completionPct = Number(row.completion_pct) || 0;
   const endDate = row.project_end_date || null;
-  const status = computeStatus(completionPct, endDate);
+  const status = computeStatus(completionPct, endDate, row.status_override);
 
   let daysOverdue = 0;
   if (status === 'Delayed' && endDate) {
@@ -65,34 +116,77 @@ function enrichProject(row: any): Project {
     );
   }
 
-  return { ...row, completion_pct: completionPct, status, days_overdue: daysOverdue };
+  return {
+    ...row,
+    completion_pct: completionPct,
+    status,
+    days_overdue: daysOverdue,
+    health: row.health || 'green',
+    escalated: row.escalated || false,
+    escalation_reason: row.escalation_reason || null,
+    assigned_to: row.assigned_to || null,
+    start_date: row.start_date || null,
+    status_override: row.status_override || null,
+  };
 }
 
 // ── Queries ────────────────────────────────────────────────────────────────
 
-export async function getPortfolioSummary(): Promise<PortfolioSummary> {
-  const { data } = await supabaseAdmin
+export async function getPortfolioSummary(filters?: {
+  agencies?: string[];
+  statuses?: string[];
+  regions?: string[];
+  healths?: string[];
+  budgetMin?: number;
+  budgetMax?: number;
+  contractor?: string;
+  search?: string;
+}): Promise<PortfolioSummary> {
+  let query = supabaseAdmin
     .from('projects')
-    .select('sub_agency, contract_value, completion_pct, project_end_date');
+    .select('sub_agency, contract_value, completion_pct, project_end_date, health, escalated, region, status_override');
 
+  if (filters?.agencies?.length) query = query.in('sub_agency', filters.agencies);
+  if (filters?.regions?.length) query = query.in('region', filters.regions);
+  if (filters?.healths?.length) query = query.in('health', filters.healths);
+  if (filters?.budgetMin != null) query = query.gte('contract_value', filters.budgetMin);
+  if (filters?.budgetMax != null) query = query.lte('contract_value', filters.budgetMax);
+  if (filters?.contractor) query = query.ilike('contractor', `%${filters.contractor}%`);
+  if (filters?.search) {
+    const term = `%${filters.search}%`;
+    query = query.or(`project_name.ilike.${term},contractor.ilike.${term},project_id.ilike.${term}`);
+  }
+
+  const { data } = await query;
   const rows = data || [];
   const agencies: Record<string, AgencySummary> = {};
-  let totalValue = 0;
+  const regionCounts: Record<string, number> = {};
+  let totalValue = 0, atRisk = 0;
   let complete = 0, inProgress = 0, delayed = 0, notStarted = 0, delayedValue = 0;
 
   for (const row of rows) {
     const pct = Number(row.completion_pct) || 0;
-    const status = computeStatus(pct, row.project_end_date);
+    const status = computeStatus(pct, row.project_end_date, row.status_override);
     const raw = Number(row.contract_value) || 0;
-    // Cap at $100B — values above this are data entry errors (e.g. duplicated digits from Excel upload)
     const value = raw > 1e11 ? 0 : raw;
     const agency = row.sub_agency || 'MOPUA';
+    const health = row.health || 'green';
+
+    // Status filter (computed, not in DB)
+    if (filters?.statuses?.length) {
+      if (!filters.statuses.includes(status)) continue;
+    }
 
     totalValue += value;
+    if (health === 'red' || health === 'amber') atRisk++;
     if (status === 'Complete') complete++;
     else if (status === 'Delayed') { delayed++; delayedValue += value; }
     else if (status === 'In Progress') inProgress++;
     else notStarted++;
+
+    // Region counts
+    const reg = row.region || 'Unknown';
+    regionCounts[reg] = (regionCounts[reg] || 0) + 1;
 
     if (!agencies[agency]) {
       agencies[agency] = {
@@ -114,37 +208,83 @@ export async function getPortfolioSummary(): Promise<PortfolioSummary> {
     .map(a => ({ ...a, avg_completion: a.total > 0 ? a.avg_completion / a.total : 0 }))
     .sort((a, b) => b.total - a.total);
 
+  const totalFiltered = complete + inProgress + delayed + notStarted;
+
   return {
-    total_projects: rows.length,
+    total_projects: totalFiltered,
     total_value: totalValue,
     complete,
     in_progress: inProgress,
     delayed,
     not_started: notStarted,
     delayed_value: delayedValue,
+    at_risk: atRisk,
     agencies: agencyList,
+    regions: regionCounts,
   };
 }
 
 export async function getProjectsList(filters: {
+  agencies?: string[];
   agency?: string;
+  statuses?: string[];
   status?: string;
+  regions?: string[];
   region?: string;
+  healths?: string[];
+  budgetMin?: number;
+  budgetMax?: number;
+  contractor?: string;
+  dateField?: string;
+  dateFrom?: string;
+  dateTo?: string;
   search?: string;
   sort?: string;
+  escalatedOnly?: boolean;
   page?: number;
   limit?: number;
 }): Promise<{ projects: Project[]; total: number }> {
   let query = supabaseAdmin.from('projects').select('*', { count: 'exact' });
 
-  if (filters.agency) query = query.eq('sub_agency', filters.agency);
-  if (filters.region) query = query.eq('region', filters.region);
+  // Multi-select agency filter (new) or single agency (backward compat)
+  if (filters.agencies?.length) query = query.in('sub_agency', filters.agencies);
+  else if (filters.agency) query = query.eq('sub_agency', filters.agency);
+
+  // Multi-select region filter (new) or single region (backward compat)
+  if (filters.regions?.length) query = query.in('region', filters.regions);
+  else if (filters.region) query = query.eq('region', filters.region);
+
+  // Health filter
+  if (filters.healths?.length) query = query.in('health', filters.healths);
+
+  // Budget range
+  if (filters.budgetMin != null) query = query.gte('contract_value', filters.budgetMin);
+  if (filters.budgetMax != null) query = query.lte('contract_value', filters.budgetMax);
+
+  // Contractor search
+  if (filters.contractor) query = query.ilike('contractor', `%${filters.contractor}%`);
+
+  // Date range filter
+  if (filters.dateFrom || filters.dateTo) {
+    const col = filters.dateField === 'start_date' ? 'start_date'
+      : filters.dateField === 'updated_at' ? 'updated_at'
+      : 'project_end_date';
+    if (filters.dateFrom) query = query.gte(col, filters.dateFrom);
+    if (filters.dateTo) query = query.lte(col, filters.dateTo);
+  }
+
+  // Escalated only
+  if (filters.escalatedOnly) query = query.eq('escalated', true);
+
+  // Search
   if (filters.search) {
     const term = `%${filters.search}%`;
     query = query.or(`project_name.ilike.${term},contractor.ilike.${term},project_id.ilike.${term}`);
   }
 
-  // Sort
+  // Sort — escalated first, then by chosen field
+  query = query.order('escalated', { ascending: false, nullsFirst: false });
+
   const sortField = filters.sort || 'contract_value';
   const sortMap: Record<string, { col: string; asc: boolean }> = {
     value: { col: 'contract_value', asc: false },
@@ -152,6 +292,8 @@ export async function getProjectsList(filters: {
     end_date: { col: 'project_end_date', asc: true },
     agency: { col: 'sub_agency', asc: true },
     name: { col: 'project_name', asc: true },
+    health: { col: 'health', asc: true },
+    start_date: { col: 'start_date', asc: true },
   };
   const s = sortMap[sortField] || sortMap.value;
   query = query.order(s.col, { ascending: s.asc, nullsFirst: false });
@@ -167,15 +309,15 @@ export async function getProjectsList(filters: {
   let projects = (data || []).map(enrichProject);
 
   // Client-side status filter (status is computed, not a DB column)
-  if (filters.status) {
-    projects = projects.filter(p => p.status === filters.status);
+  const statusFilters = filters.statuses?.length ? filters.statuses : (filters.status ? [filters.status] : []);
+  if (statusFilters.length) {
+    projects = projects.filter(p => statusFilters.includes(p.status));
   }
 
   return { projects, total: count || 0 };
 }
 
 export async function getProjectById(projectId: string): Promise<Project | null> {
-  // Try UUID first, then project_id text
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(projectId);
   const col = isUuid ? 'id' : 'project_id';
 
@@ -199,4 +341,166 @@ export async function getDelayedProjects(): Promise<Project[]> {
     .map(enrichProject)
     .filter(p => p.status === 'Delayed')
     .sort((a, b) => b.days_overdue - a.days_overdue);
+}
+
+// ── Project Notes ──────────────────────────────────────────────────────────
+
+export async function getProjectNotes(projectId: string): Promise<ProjectNote[]> {
+  const { data } = await supabaseAdmin
+    .from('project_notes')
+    .select('*, users!project_notes_user_id_fkey(name, role)')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false });
+
+  return (data || []).map((row: any) => ({
+    id: row.id,
+    project_id: row.project_id,
+    user_id: row.user_id,
+    note_text: row.note_text,
+    note_type: row.note_type,
+    created_at: row.created_at,
+    user_name: row.users?.name || 'Unknown',
+    user_role: row.users?.role || 'officer',
+  }));
+}
+
+export async function addProjectNote(
+  projectId: string,
+  userId: string,
+  noteText: string,
+  noteType: 'general' | 'escalation' | 'status_update' = 'general'
+): Promise<ProjectNote> {
+  const { data, error } = await supabaseAdmin
+    .from('project_notes')
+    .insert({ project_id: projectId, user_id: userId, note_text: noteText, note_type: noteType })
+    .select('*, users!project_notes_user_id_fkey(name, role)')
+    .single();
+
+  if (error) throw error;
+
+  return {
+    id: data.id,
+    project_id: data.project_id,
+    user_id: data.user_id,
+    note_text: data.note_text,
+    note_type: data.note_type,
+    created_at: data.created_at,
+    user_name: data.users?.name || 'Unknown',
+    user_role: data.users?.role || 'officer',
+  };
+}
+
+// ── Project Summary (AI cache) ────────────────────────────────────────────
+
+export async function getProjectSummary(projectId: string): Promise<ProjectSummary | null> {
+  const { data } = await supabaseAdmin
+    .from('project_summaries')
+    .select('*')
+    .eq('project_id', projectId)
+    .single();
+
+  return data || null;
+}
+
+export async function upsertProjectSummary(
+  projectId: string,
+  summary: ProjectSummary['summary']
+): Promise<void> {
+  await supabaseAdmin
+    .from('project_summaries')
+    .upsert(
+      { project_id: projectId, summary, generated_at: new Date().toISOString() },
+      { onConflict: 'project_id' }
+    );
+}
+
+// ── Escalation ────────────────────────────────────────────────────────────
+
+export async function escalateProject(
+  projectId: string,
+  reason: string,
+  userId: string
+): Promise<void> {
+  await supabaseAdmin
+    .from('projects')
+    .update({
+      escalated: true,
+      escalation_reason: reason,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', projectId);
+
+  // Also add as a project note
+  await addProjectNote(projectId, userId, reason, 'escalation');
+}
+
+export async function deescalateProject(projectId: string): Promise<void> {
+  await supabaseAdmin
+    .from('projects')
+    .update({
+      escalated: false,
+      escalation_reason: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', projectId);
+}
+
+// ── Bulk Updates ──────────────────────────────────────────────────────────
+
+export async function bulkUpdateProjects(
+  projectIds: string[],
+  updates: { status_override?: string; health?: string; assigned_to?: string }
+): Promise<void> {
+  await supabaseAdmin
+    .from('projects')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .in('id', projectIds);
+}
+
+// ── Saved Filters ─────────────────────────────────────────────────────────
+
+export async function getSavedFilters(userId: string): Promise<SavedFilter[]> {
+  const { data } = await supabaseAdmin
+    .from('saved_filters')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  return data || [];
+}
+
+export async function saveFilter(
+  userId: string,
+  filterName: string,
+  filterParams: Record<string, any>
+): Promise<SavedFilter> {
+  const { data, error } = await supabaseAdmin
+    .from('saved_filters')
+    .insert({ user_id: userId, filter_name: filterName, filter_params: filterParams })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteFilter(filterId: string, userId: string): Promise<void> {
+  await supabaseAdmin
+    .from('saved_filters')
+    .delete()
+    .eq('id', filterId)
+    .eq('user_id', userId);
+}
+
+// ── Contractors list (for filter dropdown) ────────────────────────────────
+
+export async function getContractors(): Promise<string[]> {
+  const { data } = await supabaseAdmin
+    .from('projects')
+    .select('contractor')
+    .not('contractor', 'is', null)
+    .order('contractor');
+
+  const unique = [...new Set((data || []).map((r: any) => r.contractor).filter(Boolean))];
+  return unique as string[];
 }
