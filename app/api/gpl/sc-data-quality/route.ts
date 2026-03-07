@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
 
     const { data: snapshots, error } = await supabaseAdmin
       .from('gpl_snapshots')
-      .select('id, snapshot_date, data_quality_warnings, warning_count')
+      .select('id, snapshot_date, data_quality_warnings, warning_count, track_a_outstanding, track_a_completed, track_b_design_outstanding, track_b_execution_outstanding, track_b_design_completed, track_b_execution_completed')
       .order('snapshot_date', { ascending: false })
       .limit(limit);
 

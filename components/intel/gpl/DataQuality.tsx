@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import { ChevronDown, ChevronRight, CheckCircle, AlertTriangle, AlertCircle, Info } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -12,9 +12,31 @@ interface QualitySnapshot {
   snapshot_date: string;
   data_quality_warnings: GPLDataWarning[];
   warning_count: number;
+  track_a_outstanding: number;
+  track_a_completed: number;
+  track_b_design_outstanding: number;
+  track_b_execution_outstanding: number;
+  track_b_design_completed: number;
+  track_b_execution_completed: number;
+}
+
+// Each warning type maps to a display row in the issue summary
+interface IssueBucket {
+  key: string;
+  label: string;
+  impact: string;
+  action: string;
+  severity: 'error' | 'warning' | 'info';
+  count: number;
+  warnings: GPLDataWarning[];
 }
 
 function fmtDate(s: string) {
+  const d = new Date(s + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function fmtDateShort(s: string) {
   const d = new Date(s + 'T00:00:00');
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
@@ -25,34 +47,107 @@ function stageLabel(track: string, stage: string): string {
   return 'Capital Works';
 }
 
-// Map internal warning types to plain-language labels
-function warningLabel(type: string): string {
-  switch (type) {
-    case 'reversed_date': return 'Date entry issue';
-    case 'formula_error': return 'Calculation error';
-    case 'backdated_entry': return 'Backdated completion';
-    case 'same_day_completion': return 'Same-day completion';
-    case 'duplicate_within_sheet': return 'Duplicate record';
-    case 'duplicate_cross_stage': return 'Cross-stage duplicate';
-    case 'missing_field': return 'Missing data';
-    case 'reclassification': return 'Sheet classification';
-    case 'summary_mismatch': return 'Count mismatch';
-    default: return type.replace(/_/g, ' ');
-  }
+function totalRecords(snap: QualitySnapshot): number {
+  return snap.track_a_outstanding + snap.track_a_completed
+    + snap.track_b_design_outstanding + snap.track_b_execution_outstanding
+    + snap.track_b_design_completed + snap.track_b_execution_completed;
 }
 
-// Plain-language description for each severity
-function warningDescription(warning: GPLDataWarning): string {
-  if (warning.type === 'reversed_date') {
-    return 'Completion date is before the creation date — likely a data entry error. This record was excluded from statistics.';
+function buildIssueBuckets(warnings: GPLDataWarning[]): IssueBucket[] {
+  const groups = new Map<string, GPLDataWarning[]>();
+  for (const w of warnings) {
+    const existing = groups.get(w.type) || [];
+    existing.push(w);
+    groups.set(w.type, existing);
   }
-  if (warning.type === 'backdated_entry') {
-    return 'Work was completed before the service order was entered in GPL\'s system. Treated as a same-day completion.';
+
+  const buckets: IssueBucket[] = [];
+
+  const sameDays = groups.get('same_day_completion') || [];
+  const backdated = groups.get('backdated_entry') || [];
+  const sameAndBack = [...sameDays, ...backdated];
+  if (sameAndBack.length > 0) {
+    buckets.push({
+      key: 'same_day',
+      label: 'Same-day / backdated completions',
+      impact: 'Treated as 0-day completions, included in statistics',
+      action: 'None needed',
+      severity: 'info',
+      count: sameAndBack.length,
+      warnings: sameAndBack,
+    });
   }
-  if (warning.type === 'same_day_completion') {
-    return 'Application created and completed on the same day due to timestamp ordering. Treated as a same-day completion.';
+
+  const reversed = groups.get('reversed_date') || [];
+  if (reversed.length > 0) {
+    buckets.push({
+      key: 'reversed_date',
+      label: 'Date entry errors (completion before creation by 3+ days)',
+      impact: 'Excluded from on-time rate and averages',
+      action: 'Flag to GPL for correction',
+      severity: 'error',
+      count: reversed.length,
+      warnings: reversed,
+    });
   }
-  return warning.message;
+
+  const dupWithin = groups.get('duplicate_within_sheet') || [];
+  if (dupWithin.length > 0) {
+    buckets.push({
+      key: 'dup_within',
+      label: 'Duplicate records within sheets',
+      impact: 'First occurrence kept, duplicates removed',
+      action: 'Flag to GPL',
+      severity: 'warning',
+      count: dupWithin.length,
+      warnings: dupWithin,
+    });
+  }
+
+  const dupCross = groups.get('duplicate_cross_stage') || [];
+  if (dupCross.length > 0) {
+    buckets.push({
+      key: 'dup_cross',
+      label: 'Cross-stage duplicate accounts',
+      impact: 'Same customer in multiple pipeline stages',
+      action: 'May be legitimate, review if needed',
+      severity: 'warning',
+      count: dupCross.length,
+      warnings: dupCross,
+    });
+  }
+
+  // Catch-all for any other warning types
+  const knownTypes = new Set(['same_day_completion', 'backdated_entry', 'reversed_date', 'duplicate_within_sheet', 'duplicate_cross_stage']);
+  const other: GPLDataWarning[] = [];
+  for (const [type, ws] of groups) {
+    if (!knownTypes.has(type)) other.push(...ws);
+  }
+  if (other.length > 0) {
+    buckets.push({
+      key: 'other',
+      label: 'Other issues',
+      impact: 'See details',
+      action: 'Review',
+      severity: 'warning',
+      count: other.length,
+      warnings: other,
+    });
+  }
+
+  return buckets;
+}
+
+function extractDetailLine(w: GPLDataWarning): string {
+  const d = w.details || {};
+  const acct = d.accountNumber as string || '';
+  const sheet = d.sheetName as string || '';
+  const parts: string[] = [];
+  if (acct) parts.push(acct);
+  if (sheet) parts.push(sheet);
+  if (d.dateCreated && d.dateCompleted) parts.push(`${d.dateCreated} / ${d.dateCompleted}`);
+  if (d.gap != null) parts.push(`${d.gap}d gap`);
+  return parts.length > 0 ? parts.join(' — ') : w.message;
 }
 
 export function DataQuality() {
@@ -89,62 +184,128 @@ export function DataQuality() {
 
   const latest = snapshots[0];
   const warnings = latest?.data_quality_warnings ?? [];
+  const issueBuckets = buildIssueBuckets(warnings);
 
-  // Group warnings by type for the summary line
+  const total = latest ? totalRecords(latest) : 0;
   const errorCount = warnings.filter(w => w.severity === 'error').length;
-  const infoCount = warnings.filter(w => w.type === 'same_day_completion' || w.type === 'backdated_entry').length;
+  const included = total - errorCount;
+  const qualityPct = total > 0 ? ((total - errorCount) / total) * 100 : 100;
+
+  const qualityColor = qualityPct >= 95 ? 'text-emerald-400' : qualityPct >= 85 ? 'text-amber-400' : 'text-red-400';
+  const barColor = qualityPct >= 95 ? 'bg-emerald-500' : qualityPct >= 85 ? 'bg-amber-500' : 'bg-red-500';
 
   return (
     <div className="space-y-6">
-      {/* Section 1: Latest Upload Notes */}
+      {/* Section 1: Upload Summary Card */}
       <div className="card-premium p-4 md:p-6">
-        <h3 className="text-sm font-semibold text-white mb-2">
-          Latest Upload Notes
-          {latest && <span className="text-[#64748b] font-normal ml-2">({fmtDate(latest.snapshot_date)})</span>}
-        </h3>
-        {/* Summary line */}
-        {(infoCount > 0 || errorCount > 0) && (
-          <p className="text-xs text-[#64748b] mb-4">
-            {infoCount > 0 && `${infoCount} same-day/backdated completions detected`}
-            {infoCount > 0 && errorCount > 0 && ' | '}
-            {errorCount > 0 && `${errorCount} records with date entry issues excluded from statistics`}
-          </p>
-        )}
-        {warnings.length === 0 ? (
-          <p className="text-[#64748b] text-sm py-4">No notes for the latest upload.</p>
+        <h3 className="text-sm font-semibold text-white mb-4">Upload Summary</h3>
+        {!latest ? (
+          <p className="text-[#64748b] text-sm py-4">No uploads yet.</p>
         ) : (
-          <div className="space-y-2">
-            {warnings.map((w, i) => (
-              <WarningItem key={i} warning={w} />
-            ))}
+          <div className="flex flex-col md:flex-row md:items-center gap-6">
+            {/* Stats */}
+            <div className="flex-1 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-[#64748b]">Latest Upload</span>
+                <span className="text-white">{fmtDate(latest.snapshot_date)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#64748b]">Records Parsed</span>
+                <span className="text-white">{total.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#64748b]">Included in Statistics</span>
+                <span className="text-white">{included.toLocaleString()}</span>
+              </div>
+              {errorCount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-[#64748b]">Records Excluded</span>
+                  <span className="text-red-400">{errorCount}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Quality Ring */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="relative w-20 h-20">
+                <svg viewBox="0 0 36 36" className="w-20 h-20 -rotate-90">
+                  <circle cx="18" cy="18" r="15.5" fill="none" stroke="#2d3a52" strokeWidth="3" />
+                  <circle
+                    cx="18" cy="18" r="15.5" fill="none"
+                    stroke={qualityPct >= 95 ? '#059669' : qualityPct >= 85 ? '#d4af37' : '#dc2626'}
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeDasharray={`${qualityPct * 0.9738} 100`}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className={`text-lg font-bold ${qualityColor}`}>{qualityPct.toFixed(1)}%</span>
+                </div>
+              </div>
+              <span className="text-[10px] text-[#64748b] uppercase tracking-wider">Data Quality</span>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Section 2: Warning Trend */}
+      {/* Section 2: Issue Summary */}
+      {issueBuckets.length > 0 && (
+        <div className="card-premium p-4 md:p-6">
+          <h3 className="text-sm font-semibold text-white mb-4">Issue Summary</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[#2d3a52]">
+                  <th className="text-left py-2 text-[#64748b] font-medium text-xs">Issue</th>
+                  <th className="text-right py-2 text-[#64748b] font-medium text-xs w-16">Count</th>
+                  <th className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Impact</th>
+                  <th className="text-left py-2 text-[#64748b] font-medium text-xs hidden lg:table-cell">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {issueBuckets.map(bucket => (
+                  <IssueSummaryRow key={bucket.key} bucket={bucket} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Section 3: Quality Trend */}
       {snapshots.length > 1 && (
         <div className="card-premium p-4 md:p-6">
-          <h3 className="text-sm font-semibold text-white mb-4">Issues per Upload</h3>
+          <h3 className="text-sm font-semibold text-white mb-4">Quality Trend</h3>
           <div className="h-36">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
-                data={[...snapshots].reverse().map(s => ({
-                  date: fmtDate(s.snapshot_date),
-                  issues: s.warning_count,
-                }))}
+                data={[...snapshots].reverse().map(s => {
+                  const t = totalRecords(s);
+                  const e = s.data_quality_warnings.filter(w => w.severity === 'error').length;
+                  return {
+                    date: fmtDateShort(s.snapshot_date),
+                    quality: t > 0 ? parseFloat(((t - e) / t * 100).toFixed(1)) : 100,
+                  };
+                })}
                 margin={{ left: 0, right: 10, top: 5, bottom: 5 }}
               >
                 <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 9 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} width={30} />
-                <Tooltip contentStyle={{ background: '#1a2744', border: '1px solid #2d3a52', borderRadius: 8, color: '#fff', fontSize: 12 }} />
-                <Line type="monotone" dataKey="issues" name="Issues" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 3 }} />
+                <YAxis
+                  tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} width={40}
+                  domain={[80, 100]} tickFormatter={v => `${v}%`}
+                />
+                <Tooltip
+                  contentStyle={{ background: '#1a2744', border: '1px solid #2d3a52', borderRadius: 8, color: '#fff', fontSize: 12 }}
+                  formatter={(v: number) => [`${v}%`, 'Data Quality']}
+                />
+                <Line type="monotone" dataKey="quality" name="Quality" stroke="#059669" strokeWidth={2} dot={{ fill: '#059669', r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
       )}
 
-      {/* Section 3: Chronic Delays Watchlist */}
+      {/* Section 4: Chronic Delays Watchlist */}
       <div className="card-premium p-4 md:p-6">
         <h3 className="text-sm font-semibold text-white mb-4">
           Chronic Delays Watchlist
@@ -182,11 +343,11 @@ export function DataQuality() {
                         {stageLabel(o.track, o.stage)}
                       </span>
                     </td>
-                    <td className="py-2 text-[#94a3b8] text-xs hidden md:table-cell">{fmtDate(o.first_seen_date)}</td>
+                    <td className="py-2 text-[#94a3b8] text-xs hidden md:table-cell">{fmtDateShort(o.first_seen_date)}</td>
                     <td className="py-2 text-right text-red-400 text-xs font-medium">{o.latest_days_elapsed}d</td>
                     <td className="py-2 text-right text-[#64748b] text-xs">{o.consecutive_snapshots}</td>
                     <td className="py-2 text-[#94a3b8] text-xs hidden lg:table-cell">
-                      {o.date_created ? fmtDate(o.date_created.split('T')[0]) : '--'}
+                      {o.date_created ? fmtDateShort(o.date_created.split('T')[0]) : '--'}
                     </td>
                   </tr>
                 ))}
@@ -199,31 +360,56 @@ export function DataQuality() {
   );
 }
 
-// ── Sub-components ──────────────────────────────────────────────────────────
+// ── Issue Summary Row with expandable details ────────────────────────────────
 
-function WarningItem({ warning }: { warning: GPLDataWarning }) {
-  const Icon = warning.severity === 'error' ? AlertCircle
-    : warning.severity === 'warning' ? AlertTriangle
+function IssueSummaryRow({ bucket }: { bucket: IssueBucket }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const Icon = bucket.severity === 'error' ? AlertCircle
+    : bucket.severity === 'warning' ? AlertTriangle
     : Info;
-
-  const color = warning.severity === 'error' ? 'text-red-400 bg-red-500/10 border-red-500/30'
-    : warning.severity === 'warning' ? 'text-amber-400 bg-amber-500/10 border-amber-500/30'
-    : 'text-blue-400 bg-blue-500/10 border-blue-500/30';
-
-  const iconColor = warning.severity === 'error' ? 'text-red-400'
-    : warning.severity === 'warning' ? 'text-amber-400'
+  const iconColor = bucket.severity === 'error' ? 'text-red-400'
+    : bucket.severity === 'warning' ? 'text-amber-400'
     : 'text-blue-400';
+  const countColor = bucket.severity === 'error' ? 'text-red-400'
+    : bucket.severity === 'warning' ? 'text-amber-400'
+    : 'text-[#94a3b8]';
 
   return (
-    <div className={`flex items-start gap-2 p-3 rounded-lg border ${color}`}>
-      <Icon className={`h-4 w-4 ${iconColor} shrink-0 mt-0.5`} />
-      <div className="min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-xs font-medium text-white">{warningLabel(warning.type)}</span>
-          <span className={`text-[10px] font-medium uppercase ${iconColor}`}>{warning.severity}</span>
-        </div>
-        <p className="text-xs text-[#94a3b8]">{warningDescription(warning)}</p>
-      </div>
-    </div>
+    <>
+      <tr className="border-b border-[#2d3a52]/50">
+        <td className="py-2.5">
+          <div className="flex items-center gap-2">
+            <Icon className={`h-3.5 w-3.5 ${iconColor} shrink-0`} />
+            <span className="text-white text-xs">{bucket.label}</span>
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="text-[10px] text-[#64748b] hover:text-white transition-colors flex items-center gap-0.5"
+            >
+              {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              <span>{expanded ? 'Hide' : 'Details'}</span>
+            </button>
+          </div>
+        </td>
+        <td className={`py-2.5 text-right font-medium text-xs ${countColor}`}>{bucket.count}</td>
+        <td className="py-2.5 text-[#94a3b8] text-xs hidden md:table-cell">{bucket.impact}</td>
+        <td className="py-2.5 text-[#94a3b8] text-xs hidden lg:table-cell">{bucket.action}</td>
+      </tr>
+      {expanded && (
+        <tr>
+          <td colSpan={4} className="py-0">
+            <div className="bg-[#0f1d32] rounded-lg mx-2 mb-2 p-3">
+              <div className="space-y-1 max-h-40 overflow-y-auto">
+                {bucket.warnings.map((w, i) => (
+                  <div key={i} className="text-[11px] text-[#94a3b8] font-mono">
+                    {extractDetailLine(w)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
