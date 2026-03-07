@@ -69,6 +69,7 @@ interface Project {
   executing_agency: string | null;
   sub_agency: string | null;
   project_name: string | null;
+  short_name: string | null;
   region: string | null;
   contract_value: number | null;
   contractor: string | null;
@@ -1180,17 +1181,18 @@ export default function OversightPage() {
                       : projects.map(p => {
                           const ss = STATUS_STYLES[p.status] || STATUS_STYLES['Not Started'];
                           const isSelected = selectedIds.has(p.id);
+                          const displayName = p.short_name || p.project_name || '-';
                           return (
-                            <tr key={p.id} className={`hover:bg-[#1a2744]/40 cursor-pointer transition-colors ${p.escalated ? 'bg-red-500/5 border-l-2 border-l-red-500' : ''} ${isSelected ? 'bg-[#d4af37]/5' : ''}`}>
+                            <tr key={p.id} onClick={() => setSelectedProject(p)} className={`hover:bg-[#1a2744]/40 cursor-pointer transition-colors ${p.escalated ? 'bg-red-500/5 border-l-2 border-l-red-500' : ''} ${isSelected ? 'bg-[#d4af37]/5' : ''}`}>
                               <td className="px-3 py-3 text-center" onClick={e => e.stopPropagation()}><button onClick={() => toggleSelect(p.id)} className="text-[#64748b] hover:text-white">{isSelected ? <CheckSquare className="h-4 w-4 text-[#d4af37]" /> : <Square className="h-4 w-4" />}</button></td>
-                              <td className="px-3 py-3" onClick={() => setSelectedProject(p)}><div className="flex items-center gap-1.5"><Badge variant={ss.variant}>{ss.label}</Badge>{p.escalated && <ShieldAlert className="h-3.5 w-3.5 text-red-400" />}</div></td>
-                              <td className="px-3 py-3" onClick={() => setSelectedProject(p)}><HealthDot health={p.health} /></td>
-                              <td className="px-4 py-3" onClick={() => setSelectedProject(p)}><span className="text-white line-clamp-2 max-w-[350px]" title={p.project_name || ''}>{p.project_name || '-'}</span></td>
-                              <td className="px-3 py-3" onClick={() => setSelectedProject(p)}><span className="text-[#d4af37] font-medium text-xs">{p.sub_agency || '-'}</span></td>
-                              <td className="px-3 py-3 text-[#94a3b8]" onClick={() => setSelectedProject(p)}>{fmtRegion(p.region)}</td>
-                              <td className="px-3 py-3 text-right" onClick={() => setSelectedProject(p)}><span className="text-[#d4af37] font-mono text-xs">{fmtCurrency(p.contract_value)}</span></td>
-                              <td className="px-3 py-3" onClick={() => setSelectedProject(p)}><span className={p.status === 'Delayed' ? 'text-red-400 font-semibold' : 'text-[#94a3b8]'}>{fmtDate(p.project_end_date)}</span></td>
-                              <td className="px-3 py-3" onClick={() => setSelectedProject(p)}><ProgressBar pct={p.completion_pct} /></td>
+                              <td className="px-3 py-3"><div className="flex items-center gap-1.5"><Badge variant={ss.variant}>{ss.label}</Badge>{p.escalated && <ShieldAlert className="h-3.5 w-3.5 text-red-400" />}</div></td>
+                              <td className="px-3 py-3"><HealthDot health={p.health} /></td>
+                              <td className="px-4 py-3"><span className="text-white truncate block max-w-[300px]" title={p.project_name || ''}>{displayName}</span></td>
+                              <td className="px-3 py-3"><span className="text-[#d4af37] font-medium text-xs">{p.sub_agency || '-'}</span></td>
+                              <td className="px-3 py-3 text-[#94a3b8]">{fmtRegion(p.region)}</td>
+                              <td className="px-3 py-3 text-right"><span className="text-[#d4af37] font-mono text-xs">{fmtCurrency(p.contract_value)}</span></td>
+                              <td className="px-3 py-3"><span className={p.status === 'Delayed' ? 'text-red-400 font-semibold' : 'text-[#94a3b8]'}>{fmtDate(p.project_end_date)}</span></td>
+                              <td className="px-3 py-3"><ProgressBar pct={p.completion_pct} /></td>
                             </tr>
                           );
                         })}

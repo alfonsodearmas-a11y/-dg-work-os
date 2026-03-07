@@ -28,6 +28,7 @@ export interface Project {
   executing_agency: string | null;
   sub_agency: string | null;
   project_name: string | null;
+  short_name: string | null;
   region: string | null;
   contract_value: number | null;
   contractor: string | null;
