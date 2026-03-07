@@ -9,7 +9,10 @@ import { isPast, isToday } from 'date-fns';
 // Called by Vercel cron at 6 AM GYT. Precomputes the metric snapshot and
 // cleans up expired cache entries.
 
-export async function POST(request: NextRequest) {
+// Vercel crons use GET
+export { handlePrecompute as GET };
+
+async function handlePrecompute(request: NextRequest) {
   try {
     // Verify cron secret if configured
     const cronSecret = process.env.CRON_SECRET;
@@ -45,6 +48,10 @@ export async function POST(request: NextRequest) {
     console.error('[ai/precompute] Error:', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
+}
+
+export async function POST(request: NextRequest) {
+  return handlePrecompute(request);
 }
 
 function buildSnapshot(raw: RawContextData): MetricSnapshot {

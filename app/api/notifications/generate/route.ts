@@ -4,7 +4,10 @@ import { supabaseAdmin } from '@/lib/db';
 import { generateAll } from '@/lib/notifications';
 import { sendPushForNotifications } from '@/lib/push';
 
-export async function POST(request: NextRequest) {
+// Vercel crons use GET
+export { handleGenerate as GET };
+
+async function handleGenerate(request: NextRequest) {
   // Auth: either cron secret OR authenticated session
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
@@ -56,4 +59,8 @@ export async function POST(request: NextRequest) {
     console.error('POST /api/notifications/generate error:', err);
     return NextResponse.json({ error: 'Failed to generate notifications' }, { status: 500 });
   }
+}
+
+export async function POST(request: NextRequest) {
+  return handleGenerate(request);
 }

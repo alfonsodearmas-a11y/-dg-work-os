@@ -3,10 +3,15 @@ import { query } from '@/lib/db-pg';
 import { createTaskNotification, sendTaskEmail } from '@/lib/task-notifications';
 import { taskReminderEmail } from '@/lib/task-email-templates';
 
-export async function POST(request: NextRequest) {
-  const secret = request.headers.get('authorization')?.replace('Bearer ', '');
-  if (secret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+// Vercel crons use GET
+export { handleCron as GET };
+
+async function handleCron(request: NextRequest) {
+  if (process.env.CRON_SECRET) {
+    const secret = request.headers.get('authorization')?.replace('Bearer ', '');
+    if (secret !== process.env.CRON_SECRET) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
   }
 
   try {
@@ -31,4 +36,8 @@ export async function POST(request: NextRequest) {
     console.error('[cron/reminders] Error:', error.message);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
+}
+
+export async function POST(request: NextRequest) {
+  return handleCron(request);
 }

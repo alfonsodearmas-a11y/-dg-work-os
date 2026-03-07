@@ -8,13 +8,11 @@ import {
   AlertTriangle,
   TrendingUp,
   Clock,
-  Bell,
-  Calendar,
   Plus,
   Sparkles,
 } from 'lucide-react';
 import { RefreshButton } from './RefreshButton';
-import type { MissionControlData, TodayEvent, MyTask, MCNotification } from '@/lib/data/mission-control';
+import type { MissionControlData } from '@/lib/data/mission-control';
 
 // ── Agency Config ────────────────────────────────────────────────────────────
 
@@ -77,9 +75,7 @@ export function MissionControlView({ data, briefing, userName }: Props) {
   const briefingTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className="flex gap-6 items-start">
-      {/* Main Content */}
-      <div className="flex-1 min-w-0 space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div>
           <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -207,59 +203,18 @@ export function MissionControlView({ data, briefing, userName }: Props) {
             <p className="text-[#64748b] text-sm">Alerts view coming soon.</p>
           </div>
         )}
-      </div>
 
-      {/* Right Panel — Desktop only */}
-      <aside className="hidden xl:flex flex-col gap-4 w-[258px] shrink-0">
-        {/* AI Briefing */}
-        <div className="rounded-xl border border-[#d4af37]/30 bg-gradient-to-br from-[#1a2744] to-[#0f1d35] p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles size={14} className="text-[#d4af37]" />
-            <span className="text-xs font-semibold text-[#d4af37]">Claude</span>
-            <span className="text-[10px] text-[#64748b] ml-auto">{briefingTime}</span>
+        {/* AI Briefing — inline */}
+        {briefing && (
+          <div className="rounded-xl border border-[#d4af37]/30 bg-gradient-to-br from-[#1a2744] to-[#0f1d35] p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles size={14} className="text-[#d4af37]" />
+              <span className="text-xs font-semibold text-[#d4af37]">Claude Briefing</span>
+              <span className="text-[10px] text-[#64748b] ml-auto">{briefingTime}</span>
+            </div>
+            <p className="text-sm text-[#94a3b8] italic leading-relaxed">{briefing}</p>
           </div>
-          <p className="text-xs text-[#94a3b8] italic leading-relaxed">{briefing}</p>
-        </div>
-
-        {/* Schedule */}
-        <PanelSection label="Today's Schedule" icon={<Calendar size={14} />}>
-          {data.todayEvents.length > 0 ? (
-            <div className="space-y-2.5">
-              {data.todayEvents.map(event => (
-                <ScheduleItem key={event.id} event={event} />
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-[#64748b] italic">No events scheduled today.</p>
-          )}
-        </PanelSection>
-
-        {/* My Tasks */}
-        <PanelSection label="My Tasks" icon={<CheckSquare size={14} />}>
-          {data.myTasks.length > 0 ? (
-            <div className="space-y-2">
-              {data.myTasks.map(task => (
-                <TaskItem key={task.id} task={task} />
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-[#64748b] italic">No tasks yet.</p>
-          )}
-        </PanelSection>
-
-        {/* Notifications */}
-        <PanelSection label="Notifications" icon={<Bell size={14} />}>
-          {data.notifications.length > 0 ? (
-            <div className="space-y-2">
-              {data.notifications.map(n => (
-                <NotificationItem key={n.id} notification={n} />
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-[#64748b] italic">All caught up.</p>
-          )}
-        </PanelSection>
-      </aside>
+        )}
     </div>
   );
 }
@@ -404,104 +359,3 @@ function BuildingAgencyCard({ name, fullName, color }: {
   );
 }
 
-function PanelSection({ label, icon, children }: {
-  label: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="glass-card p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-[#64748b]">{icon}</span>
-        <span className="text-[10px] uppercase tracking-wider text-[#64748b] font-semibold">{label}</span>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function ScheduleItem({ event }: { event: TodayEvent }) {
-  const startTime = event.start
-    ? new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : '';
-  const endTime = event.end
-    ? new Date(event.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : '';
-
-  return (
-    <div className="flex gap-2">
-      <div className="text-[10px] text-[#64748b] w-[52px] shrink-0 pt-0.5">
-        {startTime}
-        {endTime && <span className="block">{endTime}</span>}
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs text-white font-medium truncate">{event.title}</p>
-        {event.location && (
-          <p className="text-[10px] text-[#64748b] truncate">{event.location}</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-const PRIORITY_COLORS: Record<string, string> = {
-  urgent: '#dc2626',
-  high: '#fb9d3b',
-  medium: '#d4af37',
-  low: '#64748b',
-};
-
-function TaskItem({ task }: { task: MyTask }) {
-  const dotColor = PRIORITY_COLORS[task.priority || 'medium'] || '#64748b';
-  const dueLabel = task.due_date
-    ? new Date(task.due_date + 'T00:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' })
-    : null;
-
-  return (
-    <div className="flex items-start gap-2">
-      <div className="w-2 h-2 rounded-full mt-1 shrink-0" style={{ backgroundColor: dotColor }} />
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-white truncate">{task.title}</p>
-        {dueLabel && <p className="text-[10px] text-[#64748b]">{dueLabel}</p>}
-      </div>
-    </div>
-  );
-}
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
-const CATEGORY_COLORS: Record<string, string> = {
-  tasks: '#d4af37',
-  meetings: '#4a82f5',
-  kpi: '#059669',
-  projects: '#a25ddc',
-  system: '#64748b',
-};
-
-function NotificationItem({ notification }: { notification: MCNotification }) {
-  const bgColor = CATEGORY_COLORS[notification.category] || '#64748b';
-
-  return (
-    <div className="flex items-start gap-2">
-      <div
-        className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5"
-        style={{ backgroundColor: `${bgColor}20` }}
-      >
-        <Bell size={10} style={{ color: bgColor }} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-white font-medium truncate">{notification.title}</p>
-        <p className="text-[10px] text-[#64748b]">{timeAgo(notification.created_at)}</p>
-      </div>
-    </div>
-  );
-}

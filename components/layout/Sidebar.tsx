@@ -21,6 +21,7 @@ import {
   DollarSign,
   Eye,
   CheckSquare,
+  CalendarDays,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
@@ -41,6 +42,7 @@ const mainNavItems = [
   { href: '/oversight', label: 'Oversight', icon: Eye },
   { href: '/budget', label: 'Budget 2026', icon: DollarSign },
   { href: '/meetings', label: 'Meetings', icon: Mic },
+  { href: '/calendar', label: 'Calendar', icon: CalendarDays },
   { href: '/documents', label: 'Documents', icon: FileText },
 ];
 

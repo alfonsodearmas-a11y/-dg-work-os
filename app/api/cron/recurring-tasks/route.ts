@@ -1,0 +1,96 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/db';
+
+export const dynamic = 'force-dynamic';
+
+function verifyCron(request: NextRequest): boolean {
+  // Vercel crons: no secret needed (Vercel handles auth internally)
+  // External callers: check Authorization header
+  if (!process.env.CRON_SECRET) return true;
+  const secret = request.headers.get('authorization')?.replace('Bearer ', '');
+  return secret === process.env.CRON_SECRET;
+}
+
+async function handleCron(request: NextRequest) {
+  if (!verifyCron(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const { data: templates, error: fetchError } = await supabaseAdmin
+    .from('task_templates')
+    .select('*')
+    .eq('recurrence_enabled', true)
+    .lte('next_occurrence', today)
+    .not('recurrence_rule', 'is', null)
+    .not('next_occurrence', 'is', null);
+
+  if (fetchError) {
+    console.error('[cron/recurring] Fetch error:', fetchError.message);
+    return NextResponse.json({ error: fetchError.message }, { status: 500 });
+  }
+
+  let created = 0;
+
+  for (const template of templates || []) {
+    // Calculate due date from occurrence + offset
+    const occurrence = new Date(template.next_occurrence + 'T00:00:00');
+    const dueDate = new Date(occurrence);
+    dueDate.setDate(dueDate.getDate() + (template.due_offset_days || 5));
+
+    // Create the task
+    const { error: insertError } = await supabaseAdmin
+      .from('tasks')
+      .insert({
+        title: template.name,
+        description: template.description,
+        status: 'new',
+        priority: template.priority || 'medium',
+        agency: template.agency_slug,
+        due_date: dueDate.toISOString().split('T')[0],
+        owner_user_id: template.recurrence_assignee_id,
+      });
+
+    if (insertError) {
+      console.error(`[cron/recurring] Failed for template ${template.id}:`, insertError.message);
+      continue;
+    }
+
+    // Advance next_occurrence
+    const next = new Date(occurrence);
+    switch (template.recurrence_rule) {
+      case 'daily':
+        next.setDate(next.getDate() + 1);
+        break;
+      case 'weekly':
+        next.setDate(next.getDate() + 7);
+        break;
+      case 'biweekly':
+        next.setDate(next.getDate() + 14);
+        break;
+      case 'monthly':
+        next.setMonth(next.getMonth() + 1);
+        break;
+    }
+
+    await supabaseAdmin
+      .from('task_templates')
+      .update({ next_occurrence: next.toISOString().split('T')[0] })
+      .eq('id', template.id);
+
+    created++;
+  }
+
+  return NextResponse.json({ success: true, created, checked: templates?.length || 0 });
+}
+
+// Vercel crons use GET
+export async function GET(request: NextRequest) {
+  return handleCron(request);
+}
+
+// External callers can use POST
+export async function POST(request: NextRequest) {
+  return handleCron(request);
+}

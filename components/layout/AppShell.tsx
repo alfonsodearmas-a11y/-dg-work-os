@@ -8,6 +8,7 @@ import { MobileMenuButton } from './MobileMenuButton';
 import { BottomNav } from './BottomNav';
 import { HeaderDate } from './HeaderDate';
 import { ChatButton } from '@/components/ai/ChatButton';
+import { ActivityPanel } from './ActivityPanel';
 import { NotificationProvider } from '@/components/notifications/NotificationProvider';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { NotificationPanel } from '@/components/notifications/NotificationPanel';
@@ -80,6 +81,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {children}
           </div>
         </main>
+
+        {/* Activity Panel — Desktop only (xl+) */}
+        <ActivityPanel />
       </div>
 
       {/* Mobile Bottom Navigation */}
