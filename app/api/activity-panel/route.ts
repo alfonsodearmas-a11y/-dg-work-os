@@ -38,7 +38,7 @@ export async function GET() {
 
     supabaseAdmin
       .from('notifications')
-      .select('id, title, body, type, category, created_at, reference_url')
+      .select('id, title, body, type, category, created_at, reference_url, reference_type, reference_id, metadata')
       .eq('user_id', userId)
       .is('read_at', null)
       .order('created_at', { ascending: false })

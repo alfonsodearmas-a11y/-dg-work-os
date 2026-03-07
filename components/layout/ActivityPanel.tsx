@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Calendar, CheckSquare, Bell, Clock, ExternalLink } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import type { Notification } from '@/lib/notifications';
+import { resolveNotificationUrl } from '@/components/notifications/NotificationPanel';
 
 interface PanelTask {
   id: string;
@@ -22,15 +24,7 @@ interface PanelEvent {
   location: string | null;
 }
 
-interface PanelNotification {
-  id: string;
-  title: string;
-  body: string;
-  type: string;
-  category: string;
-  created_at: string;
-  reference_url: string | null;
-}
+type PanelNotification = Pick<Notification, 'id' | 'title' | 'body' | 'type' | 'category' | 'created_at' | 'reference_url' | 'reference_type' | 'reference_id' | 'metadata'>;
 
 const PRIORITY_COLORS: Record<string, string> = {
   critical: '#dc2626',
@@ -119,9 +113,13 @@ export function ActivityPanel() {
           {!loaded ? (
             <SkeletonLines count={3} />
           ) : events.length > 0 ? (
-            <div className="space-y-2.5">
+            <div className="space-y-1">
               {events.map(event => (
-                <div key={event.id} className="flex gap-2">
+                <Link
+                  key={event.id}
+                  href="/"
+                  className="flex gap-2 p-1.5 -mx-1.5 rounded-md hover:bg-white/[0.06] active:bg-white/[0.1] transition-colors cursor-pointer"
+                >
                   <div className="text-[10px] text-[#64748b] w-[52px] shrink-0 pt-0.5 font-mono">
                     {formatTime(event.start)}
                   </div>
@@ -131,7 +129,7 @@ export function ActivityPanel() {
                       <p className="text-[10px] text-[#64748b] truncate">{event.location}</p>
                     )}
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           ) : (
@@ -148,7 +146,7 @@ export function ActivityPanel() {
           {!loaded ? (
             <SkeletonLines count={4} />
           ) : tasks.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-0.5">
               {tasks.map(task => {
                 const dotColor = PRIORITY_COLORS[task.priority || 'medium'] || '#64748b';
                 const overdue = isOverdue(task.due_date);
@@ -157,7 +155,11 @@ export function ActivityPanel() {
                   : null;
 
                 return (
-                  <div key={task.id} className="flex items-start gap-2">
+                  <Link
+                    key={task.id}
+                    href="/tasks"
+                    className="flex items-start gap-2 p-1.5 -mx-1.5 rounded-md hover:bg-white/[0.06] active:bg-white/[0.1] transition-colors cursor-pointer"
+                  >
                     <div
                       className="w-2 h-2 rounded-full mt-1.5 shrink-0"
                       style={{ backgroundColor: dotColor }}
@@ -176,7 +178,7 @@ export function ActivityPanel() {
                         )}
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
@@ -193,11 +195,12 @@ export function ActivityPanel() {
           {!loaded ? (
             <SkeletonLines count={3} />
           ) : notifications.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-0.5">
               {notifications.map(n => {
                 const accent = CATEGORY_COLORS[n.category] || '#64748b';
-                return (
-                  <div key={n.id} className="flex items-start gap-2">
+                const url = resolveNotificationUrl(n as Notification);
+                const inner = (
+                  <>
                     <div
                       className="w-5 h-5 rounded flex items-center justify-center shrink-0 mt-0.5"
                       style={{ backgroundColor: `${accent}20` }}
@@ -208,7 +211,13 @@ export function ActivityPanel() {
                       <p className="text-[11px] text-white truncate">{n.title}</p>
                       <p className="text-[10px] text-[#64748b]">{timeAgo(n.created_at)}</p>
                     </div>
-                  </div>
+                  </>
+                );
+                const className = "flex items-start gap-2 p-1.5 -mx-1.5 rounded-md hover:bg-white/[0.06] active:bg-white/[0.1] transition-colors cursor-pointer";
+                return url ? (
+                  <Link key={n.id} href={url} className={className}>{inner}</Link>
+                ) : (
+                  <div key={n.id} className={className}>{inner}</div>
                 );
               })}
             </div>
