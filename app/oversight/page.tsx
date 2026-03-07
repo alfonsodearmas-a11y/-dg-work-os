@@ -9,7 +9,7 @@ import {
   Search, Filter, X, SlidersHorizontal, Upload, DollarSign,
   CheckCircle, CircleDot, List, GanttChart, Flag, Sparkles,
   MessageSquare, Send, Loader2, BookmarkPlus, Bookmark, Trash2,
-  Download, Square, CheckSquare, AlertCircle,
+  Download, Square, CheckSquare, AlertCircle, UserPlus,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -138,11 +138,18 @@ type TabMode = 'alerts' | 'projects';
 
 const AGENCY_OPTIONS = ['GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'MOPUA', 'HAS'];
 const REGION_OPTIONS = [
-  { value: '01', label: 'Region 1' }, { value: '02', label: 'Region 2' },
-  { value: '03', label: 'Region 3' }, { value: '04', label: 'Region 4 (Georgetown)' },
-  { value: '05', label: 'Region 5' }, { value: '06', label: 'Region 6' },
-  { value: '07', label: 'Region 7' }, { value: '08', label: 'Region 8' },
-  { value: '09', label: 'Region 9' }, { value: '10', label: 'Region 10' },
+  { value: '01', label: 'Region 1 – Barima-Waini' },
+  { value: '02', label: 'Region 2 – Pomeroon-Supenaam' },
+  { value: '03', label: 'Region 3 – Essequibo Islands-West Demerara' },
+  { value: '04', label: 'Region 4 – Demerara-Mahaica' },
+  { value: '05', label: 'Region 5 – Mahaica-Berbice' },
+  { value: '06', label: 'Region 6 – East Berbice-Corentyne' },
+  { value: '07', label: 'Region 7 – Cuyuni-Mazaruni' },
+  { value: '08', label: 'Region 8 – Potaro-Siparuni' },
+  { value: '09', label: 'Region 9 – Upper Takutu-Upper Essequibo' },
+  { value: '10', label: 'Region 10 – Upper Demerara-Berbice' },
+  { value: 'GT', label: 'Georgetown' },
+  { value: 'MR', label: 'Multi-Region' },
 ];
 const STATUS_OPTIONS = ['Not Started', 'In Progress', 'On Hold', 'Delayed', 'Complete', 'Cancelled'];
 const HEALTH_OPTIONS = [
@@ -195,6 +202,8 @@ function fmtDate(iso: string | null): string {
 
 function fmtRegion(code: string | null): string {
   if (!code) return '-';
+  if (code === 'GT') return 'Georgetown';
+  if (code === 'MR') return 'Multi-Region';
   const n = parseInt(code, 10);
   return isNaN(n) ? code : `Region ${n}`;
 }
@@ -643,26 +652,35 @@ function PortfolioKpiCard({ icon: Icon, label, value, color, subtitle }: {
 
 // ── Bulk Action Bar ────────────────────────────────────────────────────────
 
-function BulkActionBar({ count, onUpdateStatus, onUpdateHealth, onExport, onClear }: {
-  count: number; onUpdateStatus: (s: string) => void; onUpdateHealth: (h: string) => void; onExport: () => void; onClear: () => void;
+function BulkActionBar({ count, onUpdateStatus, onUpdateHealth, onAssignOfficer, onExport, onClear, officers }: {
+  count: number; onUpdateStatus: (s: string) => void; onUpdateHealth: (h: string) => void; onAssignOfficer: (userId: string | null) => void; onExport: () => void; onClear: () => void; officers: { id: string; name: string }[];
 }) {
   const [showStatus, setShowStatus] = useState(false);
   const [showHealth, setShowHealth] = useState(false);
+  const [showAssign, setShowAssign] = useState(false);
+  function closeAll() { setShowStatus(false); setShowHealth(false); setShowAssign(false); }
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-[#1a2744] border border-[#d4af37]/40 rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-[#1a2744] border border-[#d4af37]/40 rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3 flex-wrap">
       <span className="text-[#d4af37] font-semibold text-sm">{count} selected</span>
       <div className="relative">
-        <button onClick={() => { setShowStatus(!showStatus); setShowHealth(false); }} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1">Status <ChevronDown className="h-3 w-3" /></button>
+        <button onClick={() => { closeAll(); setShowStatus(!showStatus); }} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1">Status <ChevronDown className="h-3 w-3" /></button>
         {showStatus && <div className="absolute bottom-full left-0 mb-2 bg-[#1a2744] border border-[#2d3a52] rounded-lg shadow-xl min-w-[140px]">
           {[{ value: 'not_started', label: 'Not Started' }, { value: 'in_progress', label: 'In Progress' }, { value: 'on_hold', label: 'On Hold' }, { value: 'delayed', label: 'Delayed' }, { value: 'completed', label: 'Complete' }, { value: 'cancelled', label: 'Cancelled' }].map(s =>
-            <button key={s.value} onClick={() => { onUpdateStatus(s.value); setShowStatus(false); }} className="block w-full text-left px-3 py-2 text-sm text-white hover:bg-[#0a1628]/60">{s.label}</button>
+            <button key={s.value} onClick={() => { onUpdateStatus(s.value); closeAll(); }} className="block w-full text-left px-3 py-2 text-sm text-white hover:bg-[#0a1628]/60">{s.label}</button>
           )}
         </div>}
       </div>
       <div className="relative">
-        <button onClick={() => { setShowHealth(!showHealth); setShowStatus(false); }} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1">Health <ChevronDown className="h-3 w-3" /></button>
+        <button onClick={() => { closeAll(); setShowHealth(!showHealth); }} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1">Health <ChevronDown className="h-3 w-3" /></button>
         {showHealth && <div className="absolute bottom-full left-0 mb-2 bg-[#1a2744] border border-[#2d3a52] rounded-lg shadow-xl min-w-[140px]">
-          {HEALTH_OPTIONS.map(h => <button key={h.value} onClick={() => { onUpdateHealth(h.value); setShowHealth(false); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-white hover:bg-[#0a1628]/60"><span className={`w-2 h-2 rounded-full ${h.color}`} />{h.label}</button>)}
+          {HEALTH_OPTIONS.map(h => <button key={h.value} onClick={() => { onUpdateHealth(h.value); closeAll(); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-white hover:bg-[#0a1628]/60"><span className={`w-2 h-2 rounded-full ${h.color}`} />{h.label}</button>)}
+        </div>}
+      </div>
+      <div className="relative">
+        <button onClick={() => { closeAll(); setShowAssign(!showAssign); }} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1"><UserPlus className="h-3 w-3" /> Assign <ChevronDown className="h-3 w-3" /></button>
+        {showAssign && <div className="absolute bottom-full left-0 mb-2 bg-[#1a2744] border border-[#2d3a52] rounded-lg shadow-xl min-w-[180px] max-h-[200px] overflow-y-auto">
+          <button onClick={() => { onAssignOfficer(null); closeAll(); }} className="block w-full text-left px-3 py-2 text-sm text-[#64748b] hover:bg-[#0a1628]/60 italic">Unassign</button>
+          {officers.map(o => <button key={o.id} onClick={() => { onAssignOfficer(o.id); closeAll(); }} className="block w-full text-left px-3 py-2 text-sm text-white hover:bg-[#0a1628]/60">{o.name}</button>)}
         </div>}
       </div>
       <button onClick={onExport} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1"><Download className="h-3 w-3" /> CSV</button>
@@ -727,6 +745,7 @@ export default function OversightPage() {
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [contractors, setContractors] = useState<string[]>([]);
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
+  const [officers, setOfficers] = useState<{ id: string; name: string }[]>([]);
 
   // UI
   const [showFilters, setShowFilters] = useState(true);
@@ -807,6 +826,7 @@ export default function OversightPage() {
     Promise.all([fetchPsipSummary(), fetchProjects()]).finally(() => setPsipLoading(false));
     fetch('/api/projects/contractors').then(r => r.json()).then(d => { if (Array.isArray(d)) setContractors(d); }).catch(() => {});
     fetch('/api/projects/filters').then(r => r.json()).then(d => { if (Array.isArray(d)) setSavedFilters(d); }).catch(() => {});
+    fetch('/api/admin/users').then(r => r.ok ? r.json() : null).then(d => { const users = d?.users; if (Array.isArray(users)) setOfficers(users.filter((u: any) => u.is_active).map((u: any) => ({ id: u.id, name: u.name || u.email }))); }).catch(() => {});
   }, []);
 
   useEffect(() => { if (activeTab === 'projects') fetchProjects(); }, [fetchProjects, activeTab]);
@@ -1194,7 +1214,7 @@ export default function OversightPage() {
       )}
 
       {/* Bulk Action Bar */}
-      {selectedIds.size > 0 && <BulkActionBar count={selectedIds.size} onUpdateStatus={s => handleBulkUpdate({ status_override: s })} onUpdateHealth={h => handleBulkUpdate({ health: h })} onExport={handleExport} onClear={() => setSelectedIds(new Set())} />}
+      {selectedIds.size > 0 && <BulkActionBar count={selectedIds.size} onUpdateStatus={s => handleBulkUpdate({ status_override: s })} onUpdateHealth={h => handleBulkUpdate({ health: h })} onAssignOfficer={userId => handleBulkUpdate({ assigned_to: userId })} onExport={handleExport} onClear={() => setSelectedIds(new Set())} officers={officers} />}
     </div>
   );
 }
