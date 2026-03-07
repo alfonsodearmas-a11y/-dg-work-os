@@ -230,7 +230,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Oversight Detail Fields */}
-      {(project.project_status || project.balance_remaining != null || project.remarks || project.project_extended) && (
+      {(project.project_status || project.balance_remaining != null || project.total_distributed != null || project.total_expended != null || project.remarks || project.project_extended) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Financial Details */}
           <div className="card-premium p-6">
@@ -246,6 +246,8 @@ export default function ProjectDetailPage() {
                     project.project_status === 'DELAYED' ? 'bg-red-500/20 text-red-400'
                     : project.project_status === 'COMMENCED' ? 'bg-blue-500/20 text-blue-400'
                     : project.project_status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400'
+                    : project.project_status === 'AWARDED' ? 'bg-green-500/20 text-green-400'
+                    : project.project_status === 'ROLLOVER' ? 'bg-amber-500/20 text-amber-400'
                     : 'bg-[#2d3a52] text-[#94a3b8]'
                   }`}>
                     {project.project_status}
@@ -265,6 +267,29 @@ export default function ProjectDetailPage() {
                     {fmtCurrency(project.contract_value - project.balance_remaining)}
                     <span className="text-[#64748b] ml-2">
                       ({Math.round(((project.contract_value - project.balance_remaining) / project.contract_value) * 100)}% of contract)
+                    </span>
+                  </p>
+                </div>
+              )}
+              {project.total_distributed != null && (
+                <div>
+                  <p className="text-[#64748b]">Total Distributed</p>
+                  <p className="text-white font-medium mt-1">{fmtCurrency(project.total_distributed)}</p>
+                </div>
+              )}
+              {project.total_expended != null && (
+                <div>
+                  <p className="text-[#64748b]">Total Expended</p>
+                  <p className="text-white font-medium mt-1">{fmtCurrency(project.total_expended)}</p>
+                </div>
+              )}
+              {project.total_distributed != null && project.total_expended != null && project.total_distributed > 0 && (
+                <div>
+                  <p className="text-[#64748b]">Funding Utilization</p>
+                  <p className="text-white font-medium mt-1">
+                    {Math.round((project.total_expended / project.total_distributed) * 100)}%
+                    <span className="text-[#64748b] ml-2">
+                      ({fmtCurrency(project.total_expended)} of {fmtCurrency(project.total_distributed)})
                     </span>
                   </p>
                 </div>

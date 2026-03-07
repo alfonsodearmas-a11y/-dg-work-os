@@ -84,6 +84,15 @@ interface Project {
   assigned_to: string | null;
   start_date: string | null;
   status_override: string | null;
+  // Detail fields from oversight scraper
+  balance_remaining: number | null;
+  remarks: string | null;
+  project_status: string | null;
+  extension_reason: string | null;
+  extension_date: string | null;
+  project_extended: boolean;
+  total_distributed: number | null;
+  total_expended: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -501,6 +510,70 @@ function ProjectSlidePanel({ project, onClose, userRole, onEscalate, onRefreshLi
             </div>
             {project.days_overdue > 0 && <div><span className="text-[#64748b] text-xs">Days Overdue</span><p className="text-red-400 font-semibold">{project.days_overdue} days</p></div>}
           </div>
+
+          {/* Oversight Detail Fields */}
+          {(project.project_status || project.balance_remaining != null || project.total_distributed != null || project.total_expended != null || project.project_extended) && (
+            <div className="space-y-4">
+              {/* Oversight Status Badge */}
+              {project.project_status && (
+                <div>
+                  <span className="text-[#64748b] text-xs">Oversight Status</span>
+                  <div className="mt-1">
+                    <span className={`inline-block px-3 py-1 rounded-lg text-xs font-semibold ${
+                      project.project_status === 'DELAYED' ? 'bg-red-500/20 text-red-400'
+                      : project.project_status === 'COMMENCED' ? 'bg-blue-500/20 text-blue-400'
+                      : project.project_status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400'
+                      : project.project_status === 'AWARDED' ? 'bg-green-500/20 text-green-400'
+                      : project.project_status === 'ROLLOVER' ? 'bg-amber-500/20 text-amber-400'
+                      : project.project_status === 'CANCELLED' ? 'bg-red-500/20 text-red-300'
+                      : 'bg-[#2d3a52] text-[#94a3b8]'
+                    }`}>
+                      {project.project_status}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Financial Summary */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                {project.balance_remaining != null && (
+                  <div><span className="text-[#64748b] text-xs">Balance Remaining</span><p className="text-white font-semibold">{fmtCurrency(project.balance_remaining)}</p></div>
+                )}
+                {project.total_distributed != null && (
+                  <div><span className="text-[#64748b] text-xs">Total Distributed</span><p className="text-white font-semibold">{fmtCurrency(project.total_distributed)}</p></div>
+                )}
+                {project.total_expended != null && (
+                  <div><span className="text-[#64748b] text-xs">Total Expended</span><p className="text-white font-semibold">{fmtCurrency(project.total_expended)}</p></div>
+                )}
+                {project.total_distributed != null && project.total_expended != null && project.total_distributed > 0 && (
+                  <div>
+                    <span className="text-[#64748b] text-xs">Utilization</span>
+                    <p className={`font-semibold ${(project.total_expended / project.total_distributed) > 0.8 ? 'text-emerald-400' : (project.total_expended / project.total_distributed) > 0.5 ? 'text-amber-400' : 'text-red-400'}`}>
+                      {Math.round((project.total_expended / project.total_distributed) * 100)}%
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Extension Info */}
+              {project.project_extended && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm">
+                  <p className="text-amber-400 font-semibold text-xs mb-1">Extension Granted</p>
+                  {project.extension_date && <p className="text-[#94a3b8] text-xs">New deadline: {fmtDate(project.extension_date)}</p>}
+                  {project.extension_reason && <p className="text-[#94a3b8] text-xs mt-1">{project.extension_reason}</p>}
+                </div>
+              )}
+
+              {/* Remarks */}
+              {project.remarks && (
+                <div>
+                  <span className="text-[#64748b] text-xs">Remarks</span>
+                  <p className="text-[#94a3b8] text-xs mt-1 leading-relaxed whitespace-pre-wrap line-clamp-4">{project.remarks}</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {!project.escalated && (
             <button onClick={() => onEscalate(project)} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm hover:bg-red-500/20 transition-colors w-full justify-center">
               <Flag className="h-4 w-4" /> Escalate Project
@@ -1185,7 +1258,7 @@ export default function OversightPage() {
                           return (
                             <tr key={p.id} onClick={() => setSelectedProject(p)} className={`hover:bg-[#1a2744]/40 cursor-pointer transition-colors ${p.escalated ? 'bg-red-500/5 border-l-2 border-l-red-500' : ''} ${isSelected ? 'bg-[#d4af37]/5' : ''}`}>
                               <td className="px-3 py-3 text-center" onClick={e => e.stopPropagation()}><button onClick={() => toggleSelect(p.id)} className="text-[#64748b] hover:text-white">{isSelected ? <CheckSquare className="h-4 w-4 text-[#d4af37]" /> : <Square className="h-4 w-4" />}</button></td>
-                              <td className="px-3 py-3"><div className="flex items-center gap-1.5"><Badge variant={ss.variant}>{ss.label}</Badge>{p.escalated && <ShieldAlert className="h-3.5 w-3.5 text-red-400" />}</div></td>
+                              <td className="px-3 py-3"><div className="flex items-center gap-1.5 flex-wrap"><Badge variant={ss.variant}>{ss.label}</Badge>{p.project_status && p.project_status !== ss.label?.toUpperCase() && <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${p.project_status === 'DELAYED' ? 'bg-red-500/20 text-red-400' : p.project_status === 'COMMENCED' ? 'bg-blue-500/20 text-blue-400' : p.project_status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400' : p.project_status === 'AWARDED' ? 'bg-green-500/20 text-green-400' : p.project_status === 'ROLLOVER' ? 'bg-amber-500/20 text-amber-400' : 'bg-[#2d3a52] text-[#94a3b8]'}`}>{p.project_status}</span>}{p.escalated && <ShieldAlert className="h-3.5 w-3.5 text-red-400" />}</div></td>
                               <td className="px-3 py-3"><HealthDot health={p.health} /></td>
                               <td className="px-4 py-3"><span className="text-white truncate block max-w-[300px]" title={p.project_name || ''}>{displayName}</span></td>
                               <td className="px-3 py-3"><span className="text-[#d4af37] font-medium text-xs">{p.sub_agency || '-'}</span></td>

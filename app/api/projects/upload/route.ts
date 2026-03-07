@@ -6,6 +6,62 @@ import { requireRole } from '@/lib/auth-helpers';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
+// Detail field keys that may or may not be present in an XLSX
+const DETAIL_FIELD_KEYS = [
+  'balance_remaining', 'remarks', 'project_status', 'extension_reason',
+  'extension_date', 'project_extended', 'total_distributed', 'total_expended',
+] as const;
+
+// ── Shared: parse funding_data JSON into FundingRow[] ─────────────────────
+
+function parseFundingJson(
+  projectId: string,
+  raw: string | any[] | undefined | null,
+): FundingRow[] {
+  if (!raw) return [];
+  let rows: { d?: string; t?: string; a?: number; e?: number; b?: number; r?: string; c?: string }[];
+  try {
+    rows = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(rows) || rows.length === 0) return [];
+
+  return rows.map(r => ({
+    project_id: projectId,
+    date_distributed: r.d || null,
+    payment_type: r.t || null,
+    amount_distributed: r.a ?? null,
+    amount_expended: r.e ?? null,
+    distributed_balance: r.b ?? null,
+    funding_remarks: r.r || null,
+    contract_ref: r.c || null,
+  }));
+}
+
+async function upsertFundingRows(fundingRows: FundingRow[], projectIds: string[]) {
+  if (fundingRows.length === 0) return 0;
+
+  // Delete old funding rows for these projects, then insert fresh
+  await supabaseAdmin
+    .from('funding_distributions')
+    .delete()
+    .in('project_id', projectIds);
+
+  // Insert in chunks of 500
+  for (let i = 0; i < fundingRows.length; i += 500) {
+    const chunk = fundingRows.slice(i, i + 500);
+    const { error } = await supabaseAdmin
+      .from('funding_distributions')
+      .insert(chunk);
+    if (error) {
+      console.error('Funding insert error:', error);
+    }
+  }
+
+  return fundingRows.length;
+}
+
 // ── JSON upload (scraped data from oversight.gov.gy) ──────────────────────
 
 interface ScrapedProject {
@@ -57,6 +113,8 @@ async function handleJsonUpload(body: { projects: ScrapedProject[] }) {
     extension_reason: p.extension_reason || null,
     extension_date: p.extension_date || null,
     project_extended: p.project_extended ?? false,
+    total_distributed: p.total_distributed ?? null,
+    total_expended: p.total_expended ?? null,
   }));
 
   // Detect changes
@@ -85,48 +143,14 @@ async function handleJsonUpload(body: { projects: ScrapedProject[] }) {
   const projectIdsWithFunding: string[] = [];
 
   for (const p of body.projects) {
-    if (!p.funding_data) continue;
-    let rows: { d?: string; t?: string; a?: number; e?: number; b?: number; r?: string; c?: string }[];
-    try {
-      rows = typeof p.funding_data === 'string' ? JSON.parse(p.funding_data) : p.funding_data;
-    } catch {
-      continue;
-    }
-    if (!Array.isArray(rows) || rows.length === 0) continue;
-
-    projectIdsWithFunding.push(p.project_id);
-    for (const r of rows) {
-      fundingRows.push({
-        project_id: p.project_id,
-        date_distributed: r.d || null,
-        payment_type: r.t || null,
-        amount_distributed: r.a ?? null,
-        amount_expended: r.e ?? null,
-        distributed_balance: r.b ?? null,
-        funding_remarks: r.r || null,
-        contract_ref: r.c || null,
-      });
+    const rows = parseFundingJson(p.project_id, p.funding_data);
+    if (rows.length > 0) {
+      projectIdsWithFunding.push(p.project_id);
+      fundingRows.push(...rows);
     }
   }
 
-  if (fundingRows.length > 0) {
-    // Delete old funding rows for these projects, then insert fresh
-    await supabaseAdmin
-      .from('funding_distributions')
-      .delete()
-      .in('project_id', projectIdsWithFunding);
-
-    // Insert in chunks of 500
-    for (let i = 0; i < fundingRows.length; i += 500) {
-      const chunk = fundingRows.slice(i, i + 500);
-      const { error: fundingError } = await supabaseAdmin
-        .from('funding_distributions')
-        .insert(chunk);
-      if (fundingError) {
-        console.error('Funding insert error:', fundingError);
-      }
-    }
-  }
+  const fundingCount = await upsertFundingRows(fundingRows, projectIdsWithFunding);
 
   // Record upload
   await supabaseAdmin.from('project_uploads').insert({
@@ -137,12 +161,12 @@ async function handleJsonUpload(body: { projects: ScrapedProject[] }) {
   return NextResponse.json({
     success: true,
     project_count: projects.length,
-    funding_rows: fundingRows.length,
+    funding_rows: fundingCount,
     changes,
   });
 }
 
-// ── Excel upload (legacy) ─────────────────────────────────────────────────
+// ── Excel upload ──────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
   const result = await requireRole(['dg', 'agency_admin']);
@@ -157,7 +181,7 @@ export async function POST(request: NextRequest) {
       return handleJsonUpload(body);
     }
 
-    // Excel upload path (legacy)
+    // Excel upload path
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
@@ -175,7 +199,8 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { projects, agency_counts, total_value, debug } = parseProjectsExcelWithDebug(buffer);
+    const { projects, agency_counts, total_value, funding_data_map, found_headers, debug } =
+      parseProjectsExcelWithDebug(buffer);
 
     if (projects.length === 0) {
       return NextResponse.json({
@@ -192,13 +217,28 @@ export async function POST(request: NextRequest) {
       // First upload — no existing data
     }
 
+    // Determine which detail columns are present in this XLSX.
+    // If a detail column is NOT in the XLSX headers, strip it from the upsert
+    // so we don't overwrite existing data with null.
+    const presentDetailFields = new Set(
+      DETAIL_FIELD_KEYS.filter(key => found_headers.includes(key))
+    );
+
+    const upsertData = projects.map(p => {
+      const obj: Record<string, any> = { ...p, updated_at: new Date().toISOString() };
+      // Remove detail fields that aren't in the XLSX to avoid null-overwriting
+      for (const key of DETAIL_FIELD_KEYS) {
+        if (!presentDetailFields.has(key)) {
+          delete obj[key];
+        }
+      }
+      return obj;
+    });
+
     // Upsert projects (on project_id conflict)
     const { error: upsertError } = await supabaseAdmin
       .from('projects')
-      .upsert(
-        projects.map(p => ({ ...p, updated_at: new Date().toISOString() })),
-        { onConflict: 'project_id', ignoreDuplicates: false }
-      );
+      .upsert(upsertData, { onConflict: 'project_id', ignoreDuplicates: false });
 
     if (upsertError) {
       console.error('Upsert error:', upsertError);
@@ -206,6 +246,20 @@ export async function POST(request: NextRequest) {
         error: 'Database error while saving projects',
       }, { status: 500 });
     }
+
+    // Process funding_data from XLSX into funding_distributions table
+    const fundingRows: FundingRow[] = [];
+    const projectIdsWithFunding: string[] = [];
+
+    for (const [projectId, fdJson] of Object.entries(funding_data_map)) {
+      const rows = parseFundingJson(projectId, fdJson);
+      if (rows.length > 0) {
+        projectIdsWithFunding.push(projectId);
+        fundingRows.push(...rows);
+      }
+    }
+
+    const fundingCount = await upsertFundingRows(fundingRows, projectIdsWithFunding);
 
     // Record upload
     await supabaseAdmin.from('project_uploads').insert({
@@ -218,6 +272,8 @@ export async function POST(request: NextRequest) {
       project_count: projects.length,
       agency_counts,
       total_value,
+      funding_rows: fundingCount,
+      detail_columns_found: [...presentDetailFields],
       changes,
     });
   } catch (error) {

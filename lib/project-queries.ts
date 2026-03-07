@@ -51,6 +51,8 @@ export interface Project {
   extension_reason: string | null;
   extension_date: string | null;
   project_extended: boolean;
+  total_distributed: number | null;
+  total_expended: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -231,6 +233,8 @@ function enrichProject(row: any): Project {
     extension_reason: row.extension_reason || null,
     extension_date: row.extension_date || null,
     project_extended: row.project_extended || false,
+    total_distributed: row.total_distributed ?? null,
+    total_expended: row.total_expended ?? null,
     tender_board_type: row.tender_board_type || null,
   };
 }

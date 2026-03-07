@@ -14,13 +14,15 @@ export interface ProjectRow {
   project_end_date: string | null;   // ISO date string
   completion_pct: number;
   has_images: number;
-  // Detail fields (from oversight detail page / scraper JSON)
+  // Detail fields (from oversight detail page / scraper JSON / XLSX)
   balance_remaining: number | null;
   remarks: string | null;
   project_status: string | null;
   extension_reason: string | null;
   extension_date: string | null;
   project_extended: boolean;
+  total_distributed: number | null;
+  total_expended: number | null;
 }
 
 export interface FundingRow {
@@ -38,6 +40,10 @@ export interface ParseResult {
   projects: ProjectRow[];
   agency_counts: Record<string, number>;
   total_value: number;
+  /** Raw funding_data JSON strings keyed by project_id (from XLSX funding_data column) */
+  funding_data_map: Record<string, string>;
+  /** Normalized header names found in the XLSX (for determining which columns are present) */
+  found_headers: string[];
   debug: {
     sheet: string;
     totalRows: number;
@@ -116,14 +122,26 @@ function clean(value: any): string | null {
   return s || null;
 }
 
+/** Normalize header string to lowercase snake_case for matching */
+function normalizeHeader(h: string): string {
+  return h.toLowerCase().trim()
+    .replace(/[\s\-]+/g, '_')
+    .replace(/[^a-z0-9_]/g, '');
+}
+
 // ── Main parser ────────────────────────────────────────────────────────────
 
 /**
  * Parse the Oversight Project Listings Excel format.
- * Fixed column layout:
+ *
+ * Core fields (columns A-J) are read by position for backwards compatibility:
  *   A: Project ID  B: Executing Agency  C: Sub Agency  D: Project Name
  *   E: Region  F: Contract Value  G: Contractor(s)  H: Project End Date
  *   I: Completion %  J: Has Images
+ *
+ * Detail fields are read by HEADER NAME so they work regardless of column position:
+ *   balance_remaining, remarks, project_status, extension_reason, extension_date,
+ *   total_distributed, total_expended, funding_data
  */
 export function parseProjectsExcel(buffer: Buffer): ProjectRow[] {
   return parseProjectsExcelWithDebug(buffer).projects;
@@ -145,6 +163,8 @@ export function parseProjectsExcelWithDebug(buffer: Buffer): ParseResult {
       projects: [],
       agency_counts: {},
       total_value: 0,
+      funding_data_map: {},
+      found_headers: [],
       debug: { sheet: sheetName, totalRows: 0, headers: [] },
     };
   }
@@ -152,41 +172,88 @@ export function parseProjectsExcelWithDebug(buffer: Buffer): ParseResult {
   // Row 0 is headers, data starts at row 1
   const headers = (rows[0] || []).map((h: any) => String(h || ''));
 
+  // Build header-to-column-index map (normalized names)
+  const headerMap: Record<string, number> = {};
+  const foundHeaders: string[] = [];
+  for (let j = 0; j < headers.length; j++) {
+    const normalized = normalizeHeader(headers[j]);
+    if (normalized) {
+      headerMap[normalized] = j;
+      foundHeaders.push(normalized);
+    }
+  }
+
+  // Helper: get cell value by header name, with optional positional fallback
+  function col(r: any[], name: string, fallbackIdx?: number): any {
+    // Try all common aliases for the header name
+    const idx = headerMap[name];
+    if (idx !== undefined) return r[idx];
+    if (fallbackIdx !== undefined) return r[fallbackIdx];
+    return null;
+  }
+
   const projects: ProjectRow[] = [];
   const agencyCounts: Record<string, number> = {};
+  const fundingDataMap: Record<string, string> = {};
   let totalValue = 0;
 
   for (let i = 1; i < rows.length; i++) {
     const r = rows[i];
     if (!r) continue;
 
-    const projectId = clean(r[0]);
+    // Core fields: try header name first, fall back to positional index
+    const projectId = clean(col(r, 'project_id', 0));
     if (!projectId) continue; // skip empty rows
 
-    const subAgency = clean(r[2]) || 'MOPUA'; // "-" becomes MOPUA
-    const contractValue = parseCurrency(r[5]);
-    const completionPct = parsePercent(r[8]);
+    const subAgency = clean(col(r, 'sub_agency', 2)) || 'MOPUA';
+    const contractValue = parseCurrency(col(r, 'contract_value', 5));
+    const completionPct = parsePercent(
+      col(r, 'completion_pct') ?? col(r, 'completion_percent') ?? r[8]
+    );
 
     const project: ProjectRow = {
       project_id: projectId,
-      executing_agency: clean(r[1]),
+      executing_agency: clean(col(r, 'executing_agency', 1)),
       sub_agency: subAgency,
-      project_name: String(r[3] || '').trim(),
-      region: clean(r[4]),
-      tender_board_type: clean(r[5]) && /^[A-Z]+$/.test(String(r[5]).trim()) ? clean(r[5]) : null,
+      project_name: String(col(r, 'project_name', 3) || '').trim(),
+      region: clean(col(r, 'region', 4)),
+      tender_board_type: (() => {
+        const tbVal = col(r, 'tender_board_type');
+        if (tbVal) return clean(tbVal);
+        // Legacy positional: column F if it looks like an abbreviation
+        const v = clean(r[5]);
+        return v && /^[A-Z]+$/.test(v) ? v : null;
+      })(),
       contract_value: contractValue,
-      contractor: clean(r[6]),
-      project_end_date: parseDateDMY(r[7]),
+      contractor: clean(col(r, 'contractor') ?? col(r, 'contractors') ?? r[6]),
+      project_end_date: parseDateDMY(col(r, 'project_end_date', 7)),
       completion_pct: completionPct,
-      has_images: parseInt(String(r[9] || '0'), 10) || 0,
-      // Detail fields not available from Excel — populated by JSON upload
-      balance_remaining: null,
-      remarks: null,
-      project_status: null,
-      extension_reason: null,
-      extension_date: null,
-      project_extended: false,
+      has_images: parseInt(String(col(r, 'has_images', 9) || '0'), 10) || 0,
+
+      // Detail fields — read by header name (no positional fallback)
+      balance_remaining: parseCurrency(col(r, 'balance_remaining')),
+      remarks: clean(col(r, 'remarks')),
+      project_status: clean(col(r, 'project_status')),
+      extension_reason: clean(col(r, 'extension_reason')),
+      extension_date: clean(col(r, 'extension_date')),
+      project_extended: (() => {
+        const v = col(r, 'project_extended');
+        if (v === true || v === 1) return true;
+        if (typeof v === 'string') return v.toLowerCase() === 'true' || v === '1';
+        return false;
+      })(),
+      total_distributed: parseCurrency(col(r, 'total_distributed')),
+      total_expended: parseCurrency(col(r, 'total_expended')),
     };
+
+    // Collect funding_data JSON strings (will be processed by upload route)
+    const fd = col(r, 'funding_data');
+    if (fd) {
+      const fdStr = String(fd).trim();
+      if (fdStr.startsWith('[') || fdStr.startsWith('{')) {
+        fundingDataMap[projectId] = fdStr;
+      }
+    }
 
     projects.push(project);
     agencyCounts[subAgency] = (agencyCounts[subAgency] || 0) + 1;
@@ -197,6 +264,8 @@ export function parseProjectsExcelWithDebug(buffer: Buffer): ParseResult {
     projects,
     agency_counts: agencyCounts,
     total_value: totalValue,
+    funding_data_map: fundingDataMap,
+    found_headers: foundHeaders,
     debug: { sheet: sheetName, totalRows: rows.length, headers },
   };
 }
