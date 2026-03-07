@@ -12,7 +12,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { OverviewTab } from '@/components/intel/pending-applications/OverviewTab';
-import { GPLAnalysisPanel } from '@/components/intel/pending-applications/GPLAnalysisPanel';
+import { GPLModule } from '@/components/intel/gpl/GPLModule';
 import { GWIAnalysisPanel } from '@/components/intel/pending-applications/GWIAnalysisPanel';
 import { UploadPanel } from '@/components/intel/pending-applications/UploadPanel';
 import { TrendCharts } from '@/components/intel/pending-applications/TrendCharts';
@@ -112,7 +112,7 @@ export default function PendingApplicationsClient({ isDG, userAgency }: Props) {
 
       {/* Tab Content */}
       {activeTab === 'overview' && isDG && <OverviewTab refreshKey={refreshKey} />}
-      {activeTab === 'gpl' && <GPLAnalysisPanel refreshKey={refreshKey} />}
+      {activeTab === 'gpl' && <GPLModule />}
       {activeTab === 'gwi' && isDG && <GWIAnalysisPanel />}
       {activeTab === 'upload' && (
         <UploadPanel
