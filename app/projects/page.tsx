@@ -154,10 +154,12 @@ const HEALTH_DOT: Record<string, string> = {
 
 // ── Formatting ─────────────────────────────────────────────────────────────
 
-function fmtCurrency(value: number | string | null | undefined): string {
+function fmtCurrency(value: number | string | null | undefined, allowZero = false): string {
   if (value === null || value === undefined || value === '-') return '-';
   const num = typeof value === 'string' ? parseFloat(value.replace(/[$,]/g, '')) : Number(value);
-  if (isNaN(num) || num <= 0) return '-';
+  if (isNaN(num)) return '-';
+  if (num === 0) return allowZero ? '$0' : '-';
+  if (num < 0) return '-';
   // Cap outlier values — anything above $100B GYD is data corruption
   if (num > 1e11) return '-';
   const abs = Math.abs(num);
@@ -793,24 +795,33 @@ function TimelineView({ projects, groupBy }: { projects: Project[]; groupBy: 'ag
     red: 'bg-red-500/80',
   };
 
+  // Compute tick interval: aim for ~8-12 labels max
+  const tickMonths = totalDays <= 180 ? 1 : totalDays <= 365 ? 2 : totalDays <= 730 ? 3 : totalDays <= 1460 ? 6 : 12;
+  const ticks: { date: Date; pos: number }[] = [];
+  {
+    const tickStart = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    let cursor = new Date(tickStart);
+    while (cursor.getTime() <= maxDate.getTime()) {
+      const pos = ((cursor.getTime() - minDate.getTime()) / 86400000 / totalDays) * 100;
+      if (pos >= 0 && pos <= 100) ticks.push({ date: new Date(cursor), pos });
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth() + tickMonths, 1);
+    }
+  }
+
   return (
     <div className="card-premium overflow-hidden">
       <div className="overflow-x-auto">
         <div className="min-w-[800px]">
           {/* Header with months */}
           <div className="flex items-center border-b border-[#2d3a52] px-4 py-2 relative">
-            <div className="w-48 shrink-0 text-[#64748b] text-xs font-medium uppercase">Project</div>
+            <div className="w-64 shrink-0 text-[#64748b] text-xs font-medium uppercase">Project</div>
             <div className="flex-1 relative h-6">
-              {/* Month markers */}
-              {Array.from({ length: Math.min(Math.ceil(totalDays / 30), 36) }).map((_, i) => {
-                const d = new Date(minDate.getTime() + i * 30 * 86400000);
-                const pos = (i * 30 / totalDays) * 100;
-                return (
-                  <span key={i} className="absolute text-[10px] text-[#4a5568] whitespace-nowrap" style={{ left: `${pos}%` }}>
-                    {d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
-                  </span>
-                );
-              })}
+              {/* Month markers — spaced by computed interval */}
+              {ticks.map((t, i) => (
+                <span key={i} className="absolute text-[10px] text-[#4a5568] whitespace-nowrap" style={{ left: `${t.pos}%`, transform: 'translateX(-50%)' }}>
+                  {t.date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
+                </span>
+              ))}
             </div>
           </div>
 
@@ -828,9 +839,15 @@ function TimelineView({ projects, groupBy }: { projects: Project[]; groupBy: 'ag
                 const barWidth = Math.max((end || start + 2) - barLeft, 1);
 
                 return (
-                  <div key={p.id} className="flex items-center px-4 py-1.5 border-b border-[#2d3a52]/20 hover:bg-[#1a2744]/30">
-                    <div className="w-48 shrink-0 pr-2">
-                      <p className="text-white text-xs truncate" title={p.project_name || ''}>{p.project_name || '-'}</p>
+                  <div key={p.id} className="flex items-center px-4 py-1.5 border-b border-[#2d3a52]/20 hover:bg-[#1a2744]/30 group/row">
+                    <div className="w-64 shrink-0 pr-2 relative">
+                      <p className="text-white text-xs truncate">{p.project_name || '-'}</p>
+                      {/* Tooltip on hover showing full name */}
+                      {p.project_name && p.project_name.length > 35 && (
+                        <div className="hidden group-hover/row:block absolute left-0 top-full z-20 mt-1 px-3 py-2 bg-[#1a2744] border border-[#2d3a52] rounded-lg shadow-xl text-white text-xs max-w-sm whitespace-normal">
+                          {p.project_name}
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1 relative h-5">
                       {/* Now line */}
@@ -1003,6 +1020,7 @@ export default function ProjectsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [timelineGroupBy, setTimelineGroupBy] = useState<'agency' | 'region'>('agency');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [cardFilter, setCardFilter] = useState<'at_risk' | 'delayed' | 'complete' | 'active' | null>(null);
 
   // Filters — initialized from URL params
   const [agencies, setAgencies] = useState<string[]>(() => searchParams.get('agencies')?.split(',').filter(Boolean) || []);
@@ -1093,7 +1111,33 @@ export default function ProjectsPage() {
   // Reset page on filter change
   useEffect(() => { setPage(1); }, [agencies, statuses, regions, healths, budgetMin, budgetMax, contractor, dateField, dateFrom, dateTo, search, sort]);
 
+  function toggleCardFilter(filter: 'at_risk' | 'delayed' | 'complete' | 'active') {
+    if (cardFilter === filter) {
+      // Clear card filter — restore previous filter state
+      setCardFilter(null);
+      setStatuses([]);
+      setHealths([]);
+    } else {
+      setCardFilter(filter);
+      if (filter === 'delayed') {
+        setStatuses(['Delayed']);
+        setHealths([]);
+      } else if (filter === 'at_risk') {
+        setStatuses([]);
+        setHealths(['amber', 'red']);
+      } else if (filter === 'complete') {
+        setStatuses(['Complete']);
+        setHealths([]);
+      } else if (filter === 'active') {
+        // Show all — clear filters
+        setStatuses([]);
+        setHealths([]);
+      }
+    }
+  }
+
   function clearFilters() {
+    setCardFilter(null);
     setAgencies([]); setStatuses([]); setRegions([]); setHealths([]);
     setBudgetMin(''); setBudgetMax(''); setContractor('');
     setDateField('project_end_date'); setDateFrom(''); setDateTo('');
@@ -1249,17 +1293,47 @@ export default function ProjectsPage() {
       {/* Portfolio Dashboard Cards */}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
-          <KpiCard icon={Building2} label="Active Projects" value={String(summary.total_projects)} color="gold" />
-          <KpiCard icon={DollarSign} label="Portfolio Value" value={fmtCurrency(summary.total_value)} color="gold" />
-          <KpiCard icon={AlertTriangle} label="At Risk" value={String(summary.at_risk)} color="amber" subtitle="Amber + Red health" />
+          <KpiCard
+            icon={Building2}
+            label="Active Projects"
+            value={String(summary.total_projects)}
+            color="gold"
+            onClick={() => toggleCardFilter('active')}
+            active={cardFilter === 'active'}
+          />
+          <KpiCard
+            icon={DollarSign}
+            label="Portfolio Value"
+            value={summary.total_value > 0 ? fmtCurrency(summary.total_value) : 'No values recorded'}
+            color="gold"
+          />
+          <KpiCard
+            icon={AlertTriangle}
+            label="At Risk"
+            value={String(summary.at_risk)}
+            color="amber"
+            subtitle="Amber + Red health"
+            onClick={() => toggleCardFilter('at_risk')}
+            active={cardFilter === 'at_risk'}
+          />
           <KpiCard
             icon={CheckCircle}
             label="Completion Rate"
             value={summary.total_projects > 0 ? `${Math.round((summary.complete / summary.total_projects) * 100)}%` : '0%'}
             color="green"
             subtitle={`${summary.complete} of ${summary.total_projects}`}
+            onClick={() => toggleCardFilter('complete')}
+            active={cardFilter === 'complete'}
           />
-          <KpiCard icon={AlertTriangle} label="Delayed" value={String(summary.delayed)} color="red" subtitle={summary.delayed_value > 0 ? fmtCurrency(summary.delayed_value) : undefined} />
+          <KpiCard
+            icon={AlertTriangle}
+            label="Delayed"
+            value={String(summary.delayed)}
+            color="red"
+            subtitle={summary.delayed_value > 0 ? fmtCurrency(summary.delayed_value) : undefined}
+            onClick={() => toggleCardFilter('delayed')}
+            active={cardFilter === 'delayed'}
+          />
         </div>
       )}
 
@@ -1318,7 +1392,7 @@ export default function ProjectsPage() {
                 label="Status"
                 options={STATUS_OPTIONS.map(s => ({ value: s, label: s }))}
                 selected={statuses}
-                onChange={setStatuses}
+                onChange={v => { setCardFilter(null); setStatuses(v); }}
               />
 
               {/* Region multi-select */}
@@ -1334,7 +1408,7 @@ export default function ProjectsPage() {
                 label="Health"
                 options={HEALTH_OPTIONS.map(h => ({ value: h.value, label: h.label }))}
                 selected={healths}
-                onChange={setHealths}
+                onChange={v => { setCardFilter(null); setHealths(v); }}
                 renderOption={opt => (
                   <span className="flex items-center gap-2 text-white">
                     <span className={`w-2 h-2 rounded-full ${HEALTH_DOT[opt.value] || ''}`} />{opt.label}
