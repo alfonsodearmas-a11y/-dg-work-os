@@ -320,7 +320,7 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
             </div>
             <div className="flex items-center gap-1.5">
               {task.owner_name && !expanded && (
-                <div className="w-5 h-5 rounded-full bg-[#2d3a52] flex items-center justify-center text-[9px] font-bold text-[#94a3b8] shrink-0" title={task.owner_name}>
+                <div className="w-5 h-5 rounded-full bg-[#2d3a52] flex items-center justify-center text-xs font-bold text-[#94a3b8] shrink-0" title={task.owner_name}>
                   {getInitials(task.owner_name)}
                 </div>
               )}

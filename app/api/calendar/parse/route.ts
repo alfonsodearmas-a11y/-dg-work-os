@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
+import { requireRole } from '@/lib/auth-helpers';
 import { parseNaturalLanguageEvent } from '@/lib/calendar-nlp';
 
 export async function POST(request: Request) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const { input } = await request.json();
 

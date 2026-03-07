@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const track = searchParams.get('track');
@@ -33,7 +37,10 @@ export async function GET(request: NextRequest) {
     if (track) query = query.eq('track', track);
     if (stage) query = query.eq('stage', stage);
     if (search) {
-      query = query.or(`customer_name.ilike.%${search}%,account_number.ilike.%${search}%,town_city.ilike.%${search}%`);
+      const sanitized = search.replace(/[%_.*(),"\\]/g, '');
+      if (sanitized) {
+        query = query.or(`customer_name.ilike.%${sanitized}%,account_number.ilike.%${sanitized}%,town_city.ilike.%${sanitized}%`);
+      }
     }
 
     // SLA status filtering
@@ -50,7 +57,8 @@ export async function GET(request: NextRequest) {
     const { data: records, count, error } = await query;
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('[gpl/sc-outstanding] DB error:', error.message);
+      return NextResponse.json({ error: 'Failed to fetch records' }, { status: 500 });
     }
 
     // Get SLA targets for tagging

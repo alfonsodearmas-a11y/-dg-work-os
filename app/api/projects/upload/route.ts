@@ -4,6 +4,8 @@ import { parseProjectsExcelWithDebug } from '@/lib/excel-parser';
 import { detectChanges } from '@/lib/change-detector';
 import { requireRole } from '@/lib/auth-helpers';
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
 export async function POST(request: NextRequest) {
   const result = await requireRole(['dg', 'agency_admin']);
   if (result instanceof NextResponse) return result;
@@ -14,6 +16,15 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ error: 'File exceeds 10 MB limit' }, { status: 400 });
+    }
+
+    const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+    if (!['.xlsx', '.xls'].includes(ext)) {
+      return NextResponse.json({ error: 'Only .xlsx and .xls files are allowed' }, { status: 400 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -45,7 +56,7 @@ export async function POST(request: NextRequest) {
     if (upsertError) {
       console.error('Upsert error:', upsertError);
       return NextResponse.json({
-        error: `Database error: ${upsertError.message}`,
+        error: 'Database error while saving projects',
       }, { status: 500 });
     }
 
@@ -65,7 +76,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json(
-      { error: 'Failed to process Excel file', details: String(error) },
+      { error: 'Failed to process Excel file' },
       { status: 500 }
     );
   }

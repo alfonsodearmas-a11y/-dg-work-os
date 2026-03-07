@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function GET() {
   try {
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    if (authResult instanceof NextResponse) return authResult;
+
     const today = new Date().toISOString().split('T')[0];
 
     const { data, error } = await supabaseAdmin

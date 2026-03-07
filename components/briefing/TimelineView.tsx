@@ -315,7 +315,7 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
                 </div>
               </button>
               {hasConflict && (
-                <p className="text-[10px] text-red-400/80 ml-4 mt-0.5 mb-0.5">
+<p className="text-xs text-red-400/80 ml-4 mt-0.5 mb-0.5">
                   Overlaps with {overlappingNames!.slice(0, 2).join(', ')}{overlappingNames!.length > 2 ? ` +${overlappingNames!.length - 2}` : ''}
                 </p>
               )}
@@ -511,7 +511,7 @@ function CategoryLegend() {
       {(Object.entries(CATEGORY_LABELS) as [EventCategory, { label: string; color: string }][]).map(([, { label, color }]) => (
         <div key={label} className="flex items-center gap-1.5">
           <div className={`w-2.5 h-2.5 rounded-sm ${color}`} />
-          <span className="text-[10px] text-[#64748b]">{label}</span>
+          <span className="text-xs text-[#64748b]">{label}</span>
         </div>
       ))}
     </div>

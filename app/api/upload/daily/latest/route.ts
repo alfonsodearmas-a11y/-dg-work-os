@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
+import { requireRole } from '@/lib/auth-helpers';
 import { query } from '@/lib/db-pg';
 
 export async function GET() {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const uploadResult = await query(
       `SELECT u.*, usr.full_name as uploaded_by_name
@@ -29,6 +33,6 @@ export async function GET() {
       data: { upload, records: valuesResult.rows, analysis: analysisResult.rows[0] || null },
     });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to fetch latest upload' }, { status: 500 });
   }
 }

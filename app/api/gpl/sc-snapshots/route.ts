@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function GET() {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const { data: snapshots, error } = await supabaseAdmin
       .from('gpl_snapshots')
@@ -9,7 +13,7 @@ export async function GET() {
       .order('snapshot_date', { ascending: false });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch snapshots' }, { status: 500 });
     }
 
     return NextResponse.json({ snapshots: snapshots ?? [] });

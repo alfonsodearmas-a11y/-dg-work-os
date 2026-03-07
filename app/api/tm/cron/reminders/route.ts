@@ -7,11 +7,13 @@ import { taskReminderEmail } from '@/lib/task-email-templates';
 export { handleCron as GET };
 
 async function handleCron(request: NextRequest) {
-  if (process.env.CRON_SECRET) {
-    const secret = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (secret !== process.env.CRON_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
+  }
+  const secret = request.headers.get('authorization')?.replace('Bearer ', '') || '';
+  if (secret !== cronSecret) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {

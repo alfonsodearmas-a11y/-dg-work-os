@@ -1,16 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 import type { PendingApplicationStats } from '@/lib/pending-applications-types';
 
 const COLUMNS = 'id,agency,customer_reference,first_name,last_name,telephone,region,district,village_ward,street,lot,event_code,event_description,application_date,days_waiting,data_as_of,pipeline_stage,account_type,service_order_type,service_order_number,account_status,cycle,division_code';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 function mapRow(row: Record<string, unknown>) {
   return {
@@ -117,13 +110,15 @@ function buildStats(rows: Record<string, unknown>[]): PendingApplicationStats {
 
 export async function GET() {
   try {
-    const supabase = getSupabase();
-    const { data: allRows, error } = await supabase
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    if (authResult instanceof NextResponse) return authResult;
+
+    const { data: allRows, error } = await supabaseAdmin
       .from('pending_applications')
       .select(COLUMNS);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch pending applications' }, { status: 500 });
     }
 
     const rows = allRows || [];

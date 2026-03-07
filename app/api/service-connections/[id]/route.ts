@@ -1,23 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const { id } = await params;
-    const supabase = getSupabase();
-
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('service_connections')
       .select('*')
       .eq('id', id)
@@ -30,7 +24,7 @@ export async function GET(
     // Fetch linked order if exists
     let linkedOrder = null;
     if (data.linked_so_number) {
-      const { data: linked } = await supabase
+      const { data: linked } = await supabaseAdmin
         .from('service_connections')
         .select('id, service_order_number, current_stage, status, application_date, total_days_to_complete')
         .eq('service_order_number', data.linked_so_number)

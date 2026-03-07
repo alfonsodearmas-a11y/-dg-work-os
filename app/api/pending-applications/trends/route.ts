@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSnapshots } from '@/lib/pending-applications-snapshots';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    if (authResult instanceof NextResponse) return authResult;
+
     const { searchParams } = request.nextUrl;
     const agencyParam = searchParams.get('agency')?.toUpperCase();
     const limit = Math.min(parseInt(searchParams.get('limit') || '30'), 100);

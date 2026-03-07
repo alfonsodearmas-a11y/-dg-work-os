@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireRole } from '@/lib/auth-helpers';
 import { query } from '@/lib/db-pg';
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ date: string }> }) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const { date } = await params;
 
@@ -32,6 +36,6 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       data: { upload, records: valuesResult.rows, analysis: analysisResult.rows[0] || null },
     });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to fetch daily upload data' }, { status: 500 });
   }
 }

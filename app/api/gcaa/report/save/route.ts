@@ -1,8 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { generateGCAAInsights } from '@/lib/gcaa-insights';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = await request.json();
     const { report_month, compliance_data, inspection_data, registration_data, incident_data } = body;
@@ -31,7 +35,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, error: 'Failed to save report' }, { status: 500 });
     }
 
     // Fire-and-forget: generate AI insights
@@ -41,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    console.error('[gcaa/report/save] Error:', err);
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

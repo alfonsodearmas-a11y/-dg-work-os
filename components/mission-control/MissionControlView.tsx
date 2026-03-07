@@ -210,7 +210,7 @@ export function MissionControlView({ data, briefing, userName }: Props) {
             <div className="flex items-center gap-2 mb-2">
               <Sparkles size={14} className="text-[#d4af37]" />
               <span className="text-xs font-semibold text-[#d4af37]">Claude Briefing</span>
-              <span className="text-[10px] text-[#64748b] ml-auto">{briefingTime}</span>
+              <span className="text-xs text-[#64748b] ml-auto">{briefingTime}</span>
             </div>
             <p className="text-sm text-[#94a3b8] italic leading-relaxed">{briefing}</p>
           </div>
@@ -237,7 +237,7 @@ function StatCard({ label, value, suffix, icon, accent }: {
         >
           {icon}
         </div>
-        <span className="text-[10px] uppercase tracking-wider text-[#64748b] font-semibold">{label}</span>
+        <span className="text-xs uppercase tracking-wider text-[#64748b] font-semibold">{label}</span>
       </div>
       <div className="flex items-baseline gap-1">
         <span className="text-2xl font-bold text-white">{value}</span>
@@ -269,9 +269,9 @@ function LiveAgencyCard({ name, fullName, color, score, kpi, pendingCount }: {
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm font-bold text-white">{name}</p>
-            <p className="text-[10px] text-[#64748b] leading-tight">{fullName}</p>
+            <p className="text-xs text-[#64748b] leading-tight">{fullName}</p>
           </div>
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#059669]/15 text-[#059669]">
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#059669]/15 text-[#059669]">
             Live
           </span>
         </div>
@@ -301,7 +301,7 @@ function LiveAgencyCard({ name, fullName, color, score, kpi, pendingCount }: {
         {kpiEntries.length > 0 && (
           <div className="space-y-1">
             {kpiLabel && (
-              <p className="text-[10px] text-[#64748b] font-medium uppercase tracking-wider">{kpiLabel}</p>
+              <p className="text-xs text-[#64748b] font-medium uppercase tracking-wider">{kpiLabel}</p>
             )}
             <div className="flex gap-3">
               {kpiEntries.map(([key, val]) => (
@@ -340,9 +340,9 @@ function BuildingAgencyCard({ name, fullName, color }: {
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm font-bold text-white">{name}</p>
-            <p className="text-[10px] text-[#64748b] leading-tight">{fullName}</p>
+            <p className="text-xs text-[#64748b] leading-tight">{fullName}</p>
           </div>
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#2d3a52] text-[#64748b]">
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#2d3a52] text-[#64748b]">
             Building
           </span>
         </div>
@@ -353,7 +353,7 @@ function BuildingAgencyCard({ name, fullName, color }: {
 
         <div className="w-full h-1.5 rounded-full bg-[#2d3a52]" />
 
-        <p className="text-[10px] text-[#64748b] italic">Intel panel in development</p>
+        <p className="text-xs text-[#64748b] italic">Intel panel in development</p>
       </div>
     </div>
   );

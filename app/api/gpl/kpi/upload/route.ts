@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { parseKpiCsv } from '@/lib/gpl-kpi-csv-parser';
 import { requireRole, canUploadData } from '@/lib/auth-helpers';
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
 export async function POST(request: NextRequest) {
   const result = await requireRole(['dg', 'agency_admin', 'officer']);
   if (result instanceof NextResponse) return result;
@@ -15,6 +17,13 @@ export async function POST(request: NextRequest) {
     if (!file) {
       return NextResponse.json(
         { success: false, error: 'No CSV file provided' },
+        { status: 400 }
+      );
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { success: false, error: 'File exceeds 10 MB limit' },
         { status: 400 }
       );
     }

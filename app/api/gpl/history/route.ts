@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const limit = Math.min(parseInt(searchParams.get('limit') || '25', 10), 100);
@@ -49,7 +53,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('[gpl/history] Error:', error.message);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch GPL upload history' },
+      { success: false, error: 'Failed to fetch GPL upload history' },
       { status: 500 }
     );
   }

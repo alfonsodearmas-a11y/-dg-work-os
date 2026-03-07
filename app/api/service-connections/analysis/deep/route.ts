@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 import { computeEfficiencyMetrics } from '@/lib/service-connection-analysis';
 import { generateEfficiencyAnalysis, getCachedAnalysis, saveAnalysis } from '@/lib/service-connection-ai';
 import type { ServiceConnection } from '@/lib/service-connection-types';
 
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
 export async function GET() {
   try {
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    if (authResult instanceof NextResponse) return authResult;
     const cached = await getCachedAnalysis();
     if (cached) {
       return NextResponse.json({ analysis: cached, cached: true });
@@ -27,14 +22,16 @@ export async function GET() {
 
 export async function POST(_request: NextRequest) {
   try {
-    const supabase = getSupabase();
-    const { data, error } = await supabase
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    if (authResult instanceof NextResponse) return authResult;
+
+    const { data, error } = await supabaseAdmin
       .from('service_connections')
       .select('*')
       .order('application_date', { ascending: false });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch service connections' }, { status: 500 });
     }
 
     const connections = (data || []) as ServiceConnection[];

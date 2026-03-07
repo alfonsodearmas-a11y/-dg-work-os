@@ -1,20 +1,15 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 import { computeEfficiencyMetrics } from '@/lib/service-connection-analysis';
 import type { ServiceConnection } from '@/lib/service-connection-types';
 
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
 export async function GET() {
   try {
-    const supabase = getSupabase();
-    const { data, error } = await supabase
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    if (authResult instanceof NextResponse) return authResult;
+
+    const { data, error } = await supabaseAdmin
       .from('service_connections')
       .select('*')
       .not('status', 'eq', 'legacy_excluded')
@@ -22,7 +17,7 @@ export async function GET() {
       .order('application_date', { ascending: false });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch service connection stats' }, { status: 500 });
     }
 
     const metrics = computeEfficiencyMetrics((data || []) as ServiceConnection[]);

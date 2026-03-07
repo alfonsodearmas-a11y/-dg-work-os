@@ -1,6 +1,7 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildAskContext } from '@/lib/budget-db';
+import { requireRole } from '@/lib/auth-helpers';
 
 const SYSTEM_PROMPT = `You are the senior budget analyst preparing the Honourable Minister of Public Utilities & Aviation for parliamentary committee defence of Guyana's 2026 Budget Estimates.
 
@@ -29,6 +30,9 @@ Rules:
 - Be direct and confident. Keep response under 800 words.`;
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   const body = await request.json();
   const question = (body.question || '').trim();
 

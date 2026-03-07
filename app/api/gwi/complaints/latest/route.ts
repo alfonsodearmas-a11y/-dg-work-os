@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function GET() {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     // First check weekly reports
     const { data: weeklyData } = await supabaseAdmin
@@ -29,7 +33,7 @@ export async function GET() {
       },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    console.error('[gwi/complaints/latest] Error:', err);
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

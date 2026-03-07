@@ -115,9 +115,9 @@ function NotificationCard({ notification, onRead }: { notification: Notification
           <p className="text-xs text-white/40 mt-0.5 truncate">{notification.body}</p>
         )}
         <div className="flex items-center gap-2 mt-1">
-          <p className="text-[10px] text-white/30">{relativeTime(notification.scheduled_for)}</p>
+          <p className="text-xs text-white/30">{relativeTime(notification.scheduled_for)}</p>
           {notification.action_required && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[#d4af37]/20 text-[#d4af37]">
+            <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-[#d4af37]/20 text-[#d4af37]">
               {actionLabel(notification.action_type)}
             </span>
           )}
@@ -215,7 +215,7 @@ export function NotificationPanel() {
               <button
                 key={f.key}
                 onClick={() => setFilter(f.key)}
-                className={`text-[11px] px-2.5 py-1 rounded-full transition-colors ${
+                className={`text-xs px-2.5 py-1.5 rounded-full transition-colors ${
                   filter === f.key
                     ? 'bg-[#d4af37]/20 text-[#d4af37] font-semibold'
                     : 'bg-white/5 text-white/40 hover:text-white/60'
@@ -231,7 +231,7 @@ export function NotificationPanel() {
               <button
                 key={c.key ?? 'all'}
                 onClick={() => setCategoryFilter(c.key)}
-                className={`text-[11px] px-2.5 py-1 rounded-full transition-colors whitespace-nowrap ${
+                className={`text-xs px-2.5 py-1.5 rounded-full transition-colors whitespace-nowrap ${
                   categoryFilter === c.key
                     ? 'bg-white/15 text-white font-semibold'
                     : 'bg-white/5 text-white/40 hover:text-white/60'
@@ -262,7 +262,7 @@ export function NotificationPanel() {
                 if (!items || items.length === 0) return null;
                 return (
                   <div key={group} className="py-2">
-                    <p className="px-4 py-1.5 text-[10px] uppercase tracking-wider text-white/30 font-semibold">
+                    <p className="px-4 py-1.5 text-xs uppercase tracking-wider text-white/30 font-semibold">
                       {group}
                     </p>
                     {items.map(n => (

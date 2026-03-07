@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchBudget } from '@/lib/budget-db';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   const q = request.nextUrl.searchParams.get('q') || '';
   const sector = request.nextUrl.searchParams.get('sector') || '';
   const agency = request.nextUrl.searchParams.get('agency') || '';

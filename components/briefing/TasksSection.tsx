@@ -319,7 +319,7 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
               {label}
               {badge !== undefined && (
                 <span
-                  className={`inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full text-[10px] font-bold text-white ${badgeColor}`}
+                  className={`inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full text-xs font-bold text-white ${badgeColor}`}
                 >
                   {badge}
                 </span>
@@ -404,7 +404,7 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
                               </p>
                             )}
                             <span
-                              className={`inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-medium ${
+                              className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium ${
                                 statusStyles[task.status] || 'bg-[#4a5568]/30 text-[#94a3b8]'
                               }`}
                             >

@@ -99,7 +99,7 @@ export function NotificationPreferences() {
           <Bell className="h-5 w-5 text-[#d4af37]" />
           <h2 className="text-lg font-semibold text-white">Notification Preferences</h2>
         </div>
-        {saving && <span className="text-[10px] text-[#d4af37] uppercase tracking-wider">Saving...</span>}
+        {saving && <span className="text-xs text-[#d4af37] uppercase tracking-wider">Saving...</span>}
       </div>
 
       {/* Meeting Reminders */}
@@ -183,7 +183,7 @@ export function NotificationPreferences() {
               <p className="text-xs text-white/40 mb-3">Suppress toasts during these hours</p>
               <div className="flex items-center gap-3">
                 <div className="flex-1">
-                  <label className="text-[10px] text-white/30 uppercase tracking-wider block mb-1">Start</label>
+                  <label className="text-xs text-white/30 uppercase tracking-wider block mb-1">Start</label>
                   <input
                     type="time"
                     value={prefs.quiet_hours_start || ''}
@@ -193,7 +193,7 @@ export function NotificationPreferences() {
                 </div>
                 <span className="text-white/30 mt-5">to</span>
                 <div className="flex-1">
-                  <label className="text-[10px] text-white/30 uppercase tracking-wider block mb-1">End</label>
+                  <label className="text-xs text-white/30 uppercase tracking-wider block mb-1">End</label>
                   <input
                     type="time"
                     value={prefs.quiet_hours_end || ''}

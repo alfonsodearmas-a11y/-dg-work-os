@@ -85,7 +85,7 @@ export function TaskContextMenu({ task, position, onClose, onEdit, onMove, onDel
       ) : (
         <div className="px-3.5 py-2.5">
           <p className="text-xs font-semibold text-white mb-1">Delete this task?</p>
-          <p className="text-[11px] text-[#64748b] mb-3">This cannot be undone.</p>
+          <p className="text-xs text-[#64748b] mb-3">This cannot be undone.</p>
           <div className="flex gap-2">
             <button
               onClick={() => setConfirming(false)}

@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { MetricSnapshot } from '@/lib/ai/types';
 import { assembleRawData, computeGPLHealth, computeGWIHealth, computeCJIAHealth, computeGCAAHealth } from '@/lib/ai/context-engine';
 import { isPast, isToday } from 'date-fns';
+import { requireRole } from '@/lib/auth-helpers';
 
 // ── GET /api/ai/snapshot ────────────────────────────────────────────────────
 // Returns today's metric snapshot for the ChatPanel's local answer engine.
@@ -10,6 +11,9 @@ import { isPast, isToday } from 'date-fns';
 
 export async function GET(_request: NextRequest) {
   try {
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    if (authResult instanceof NextResponse) return authResult;
+
     const today = new Date().toISOString().slice(0, 10);
 
     // Try precomputed snapshot first

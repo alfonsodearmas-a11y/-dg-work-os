@@ -1,26 +1,22 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 import { computeEfficiencyMetrics } from '@/lib/service-connection-analysis';
 import type { ServiceConnection } from '@/lib/service-connection-types';
 
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
 export async function GET() {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
-    const supabase = getSupabase();
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('service_connections')
       .select('*')
       .order('application_date', { ascending: false });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('[service-connections/analysis] DB error:', error.message);
+      return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 });
     }
 
     const connections = (data || []) as ServiceConnection[];

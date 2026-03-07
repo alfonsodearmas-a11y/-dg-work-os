@@ -283,17 +283,17 @@ export function PushNotificationSettings() {
                           {platformLabel(sub.platform)}
                         </p>
                         {isCurrent && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#d4af37]/15 text-[#d4af37] font-medium uppercase">
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-[#d4af37]/15 text-[#d4af37] font-medium uppercase">
                             This device
                           </span>
                         )}
                         {!sub.active && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#dc2626]/15 text-[#dc2626] font-medium uppercase">
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-[#dc2626]/15 text-[#dc2626] font-medium uppercase">
                             Inactive
                           </span>
                         )}
                       </div>
-                      <p className="text-[10px] text-white/30 mt-0.5">
+                      <p className="text-xs text-white/30 mt-0.5">
                         Last active: {relativeDate(sub.last_used_at)}
                       </p>
                     </div>

@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('[gpl/upload/confirm] Error:', error.message);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to confirm GPL upload' },
+      { success: false, error: 'Failed to confirm GPL upload' },
       { status: 500 }
     );
   }

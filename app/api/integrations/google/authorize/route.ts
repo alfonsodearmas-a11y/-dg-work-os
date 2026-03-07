@@ -11,8 +11,8 @@ const SCOPES = [
 function getRedirectUri(): string {
   const base =
     process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-    'http://localhost:3000';
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
+  if (!base) throw new Error('NEXT_PUBLIC_APP_URL or VERCEL_URL must be configured');
   return `${base}/api/integrations/google/callback`;
 }
 

@@ -130,7 +130,7 @@ export function Sidebar() {
             </div>
             <div>
               <h1 className="font-bold text-white text-base leading-tight tracking-tight">Work <span className="text-[#d4af37]">OS</span></h1>
-              <p className="text-[#64748b] text-[10px] font-medium tracking-wide uppercase">{roleLabel}</p>
+              <p className="text-[#64748b] text-xs font-medium tracking-wide uppercase">{roleLabel}</p>
             </div>
           </Link>
           <button
@@ -193,7 +193,7 @@ export function Sidebar() {
                       >
                         <Icon className={`h-4 w-4 ${active ? 'text-[#d4af37]' : ''}`} />
                         <span className="text-[15px]">{agency.label}</span>
-                        <span className="ml-auto text-[10px] text-[#64748b] hidden group-hover:inline">{agency.name}</span>
+                        <span className="ml-auto text-xs text-[#64748b] hidden group-hover:inline">{agency.name}</span>
                       </Link>
                     );
                   })}

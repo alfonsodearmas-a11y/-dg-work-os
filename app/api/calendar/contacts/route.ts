@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
+import { requireRole } from '@/lib/auth-helpers';
 import { searchCalendarContacts, getRecentContacts } from '@/lib/calendar-contacts';
 
 export async function GET(request: Request) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q');

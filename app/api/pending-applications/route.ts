@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 
 const COLUMNS = 'id,agency,customer_reference,first_name,last_name,telephone,region,district,village_ward,street,lot,event_code,event_description,application_date,days_waiting,data_as_of,pipeline_stage,account_type,service_order_type,service_order_number,account_status,cycle,division_code';
 
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
 export async function GET(request: NextRequest) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const { searchParams } = request.nextUrl;
     const agency = searchParams.get('agency') || 'all';
@@ -35,8 +31,7 @@ export async function GET(request: NextRequest) {
     const sortCol = sortColumn[sortBy] || 'days_waiting';
     const ascending = order === 'asc';
 
-    const supabase = getSupabase();
-    let query = supabase
+    let query = supabaseAdmin
       .from('pending_applications')
       .select(COLUMNS, { count: 'exact' });
 
@@ -44,7 +39,8 @@ export async function GET(request: NextRequest) {
       query = query.eq('agency', agency.toUpperCase());
     }
     if (region) {
-      query = query.ilike('region', `%${region}%`);
+      const sanitizedRegion = region.replace(/[%_.*(),"\\]/g, '');
+      if (sanitizedRegion) query = query.ilike('region', `%${sanitizedRegion}%`);
     }
     if (minDays) {
       query = query.gte('days_waiting', parseInt(minDays));
@@ -56,9 +52,12 @@ export async function GET(request: NextRequest) {
       query = query.eq('pipeline_stage', stage);
     }
     if (search) {
-      query = query.or(
-        `first_name.ilike.%${search}%,last_name.ilike.%${search}%,telephone.ilike.%${search}%,customer_reference.ilike.%${search}%,village_ward.ilike.%${search}%`
-      );
+      const sanitized = search.replace(/[%_.*(),"\\]/g, '');
+      if (sanitized) {
+        query = query.or(
+          `first_name.ilike.%${sanitized}%,last_name.ilike.%${sanitized}%,telephone.ilike.%${sanitized}%,customer_reference.ilike.%${sanitized}%,village_ward.ilike.%${sanitized}%`
+        );
+      }
     }
 
     const offset = (page - 1) * pageSize;
@@ -69,7 +68,8 @@ export async function GET(request: NextRequest) {
     const { data, count, error } = await query;
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('[pending-applications] DB error:', error.message);
+      return NextResponse.json({ error: 'Failed to fetch records' }, { status: 500 });
     }
 
     const records = (data || []).map(row => ({

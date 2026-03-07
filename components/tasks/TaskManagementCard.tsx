@@ -61,17 +61,17 @@ export function TaskManagementCard({ task, onClick, compact }: TaskCardProps) {
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5 mt-2">
-        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${agencyColor}`}>
+        <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border ${agencyColor}`}>
           {task.agency.toUpperCase()}
         </span>
         {!compact && (
-          <span className={`text-[10px] px-1.5 py-0.5 rounded ${statusInfo.color}`}>
+          <span className={`text-xs px-1.5 py-0.5 rounded ${statusInfo.color}`}>
             {statusInfo.label}
           </span>
         )}
       </div>
 
-      <div className="flex items-center justify-between mt-2 text-[11px] text-[#64748b]">
+      <div className="flex items-center justify-between mt-2 text-xs text-[#64748b]">
         {task.assignee_name && (
           <span className="flex items-center gap-1 truncate">
             <User className="h-3 w-3" />

@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    if (authResult instanceof NextResponse) return authResult;
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const track = searchParams.get('track');
@@ -20,9 +15,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const pageSize = Math.min(parseInt(searchParams.get('pageSize') || '50', 10), 200);
 
-    const supabase = getSupabase();
-
-    let query = supabase
+    let query = supabaseAdmin
       .from('service_connections')
       .select('*', { count: 'exact' });
 
@@ -44,7 +37,7 @@ export async function GET(request: NextRequest) {
       .range(from, from + pageSize - 1);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch service connections' }, { status: 500 });
     }
 
     return NextResponse.json({

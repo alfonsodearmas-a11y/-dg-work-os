@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { AlertTriangle, Loader2, Brain, ChevronDown, ChevronLeft, ChevronRight, RefreshCw, Search, X, ArrowUpDown, MapPin } from 'lucide-react';
 import {
   BarChart,
@@ -46,12 +46,21 @@ export function GWIAnalysisPanel() {
   const [totalRecords, setTotalRecords] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loadingRecords, setLoadingRecords] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [regionFilter, setRegionFilter] = useState('');
   const [sortBy, setSortBy] = useState('days_waiting');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Debounce search
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchInput(value);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => setSearchQuery(value), 300);
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -268,25 +277,25 @@ export function GWIAnalysisPanel() {
         <h3 className="text-sm font-semibold text-white mb-4">All GWI Applications ({totalRecords})</h3>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          <div className="relative flex-1 min-w-[180px]">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
+          <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
             <input
               type="text"
               placeholder="Search name, reference, village..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm placeholder:text-[#64748b] focus:border-[#d4af37] focus:outline-none"
+              value={searchInput}
+              onChange={e => handleSearchChange(e.target.value)}
+              className="w-full pl-10 pr-10 py-3 sm:py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-base sm:text-sm placeholder:text-[#64748b] focus:border-[#d4af37] focus:outline-none"
             />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-white">
+            {searchInput && (
+              <button onClick={() => { setSearchInput(''); setSearchQuery(''); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-white p-1">
                 <X className="h-4 w-4" />
               </button>
             )}
           </div>
           <div className="relative">
             <select value={regionFilter} onChange={e => setRegionFilter(e.target.value)}
-              className="appearance-none pl-3 pr-8 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-[#94a3b8] text-sm focus:border-[#d4af37] focus:outline-none cursor-pointer">
+              className="appearance-none w-full pl-3 pr-8 py-3 sm:py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-[#94a3b8] text-base sm:text-sm focus:border-[#d4af37] focus:outline-none cursor-pointer">
               <option value="">All Regions</option>
               {regionNames.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
@@ -334,15 +343,15 @@ export function GWIAnalysisPanel() {
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#2d3a52]">
-            <span className="text-xs text-[#64748b]">{totalRecords} records · Page {page} of {totalPages}</span>
+            <span className="text-sm sm:text-xs text-[#64748b]">{totalRecords} records · Page {page} of {totalPages}</span>
             <div className="flex items-center gap-2">
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                className="p-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] disabled:opacity-30">
-                <ChevronLeft className="h-4 w-4" />
+                className="p-2.5 sm:p-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] disabled:opacity-30">
+                <ChevronLeft className="h-5 w-5 sm:h-4 sm:w-4" />
               </button>
               <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="p-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] disabled:opacity-30">
-                <ChevronRight className="h-4 w-4" />
+                className="p-2.5 sm:p-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] disabled:opacity-30">
+                <ChevronRight className="h-5 w-5 sm:h-4 sm:w-4" />
               </button>
             </div>
           </div>
@@ -473,21 +482,21 @@ function RecordRow({ record: r, expanded, onToggle }: { record: PendingApplicati
 function MobileCard({ record: r, expanded, onToggle }: { record: PendingApplication; expanded: boolean; onToggle: () => void }) {
   return (
     <div className="rounded-xl bg-[#0a1628] border border-[#2d3a52] overflow-hidden" onClick={onToggle}>
-      <div className="p-3 flex items-center justify-between cursor-pointer">
+      <div className="p-3 flex items-center justify-between cursor-pointer min-h-[56px]">
         <div className="min-w-0">
           <div className="text-sm text-white font-medium truncate">{r.firstName} {r.lastName}</div>
-          <div className="flex items-center gap-2 mt-1 text-xs text-[#64748b]">
+          <div className="flex items-center gap-2 mt-1 text-sm sm:text-xs text-[#64748b]">
             <span>{r.region || '—'}</span>
             {r.district && <span>· {r.district}</span>}
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border ${getBadgeColor(r.daysWaiting)}`}>{r.daysWaiting}d</span>
-          <ChevronDown className={`h-4 w-4 text-[#64748b] transition-transform ${expanded ? 'rotate-180' : ''}`} />
+          <span className={`inline-flex px-2 py-1 rounded-full text-sm sm:text-xs font-semibold border ${getBadgeColor(r.daysWaiting)}`}>{r.daysWaiting}d</span>
+          <ChevronDown className={`h-5 w-5 text-[#64748b] transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </div>
       </div>
       {expanded && (
-        <div className="px-3 pb-3 border-t border-[#2d3a52]/50 pt-2 space-y-1.5">
+        <div className="px-3 pb-3 border-t border-[#2d3a52]/50 pt-2 space-y-2">
           <DetailItem label="Customer Ref" value={r.customerReference} />
           <DetailItem label="Village/Ward" value={r.villageWard} />
           <DetailItem label="Street" value={r.street} />
@@ -504,7 +513,7 @@ function MobileCard({ record: r, expanded, onToggle }: { record: PendingApplicat
 function DetailItem({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
   return (
-    <div>
+    <div className="text-sm sm:text-xs">
       <span className="text-[#64748b]">{label}: </span>
       <span className="text-[#94a3b8]">{value}</span>
     </div>

@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ date: string }> }
 ) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const { date } = await params;
 
@@ -88,7 +92,7 @@ export async function GET(
   } catch (error: any) {
     console.error('[gpl/daily] Error:', error.message);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch GPL data for date' },
+      { success: false, error: 'Failed to fetch GPL data for date' },
       { status: 500 }
     );
   }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { requireRole } from '@/lib/auth-helpers';
 
 const HIGHLIGHTS_PATH = path.join(process.cwd(), 'scraper', 'output', 'oversight-highlights-latest.json');
 
@@ -56,6 +57,9 @@ function normalizeArray(arr: any[]): any[] {
 
 export async function GET() {
   try {
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    if (authResult instanceof NextResponse) return authResult;
+
     if (!fs.existsSync(HIGHLIGHTS_PATH)) {
       return NextResponse.json(
         { success: false, error: 'No scrape data found. Run the scraper first.' },
@@ -89,7 +93,7 @@ export async function GET() {
     return NextResponse.json({ success: true, data });
   } catch (error: any) {
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to load oversight data' },
       { status: 500 }
     );
   }

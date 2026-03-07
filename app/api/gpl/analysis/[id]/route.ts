@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { generateGPLBriefing } from '@/lib/ai-analysis';
+import { requireRole } from '@/lib/auth-helpers';
 
 const EXCLUDED_STATIONS = ['onverwagt'];
 
@@ -8,6 +9,9 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const { id } = await params;
 
@@ -150,7 +154,7 @@ export async function GET(
   } catch (error: any) {
     console.error('[gpl/analysis] GET Error:', error.message);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch GPL analysis' },
+      { success: false, error: 'Failed to fetch GPL analysis' },
       { status: 500 }
     );
   }
@@ -160,6 +164,9 @@ export async function POST(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const { id } = await params;
 
@@ -295,7 +302,7 @@ export async function POST(
   } catch (error: any) {
     console.error('[gpl/analysis] POST Error:', error.message);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to regenerate GPL analysis' },
+      { success: false, error: 'Failed to regenerate GPL analysis' },
       { status: 500 }
     );
   }

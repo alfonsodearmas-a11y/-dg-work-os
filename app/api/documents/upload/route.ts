@@ -4,6 +4,8 @@ import { extractText } from '@/lib/document-parser';
 import { analyzeDocument } from '@/lib/document-analyzer';
 import { requireRole } from '@/lib/auth-helpers';
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
 export async function POST(request: NextRequest) {
   const result = await requireRole(['dg', 'ps', 'agency_admin', 'officer']);
   if (result instanceof NextResponse) return result;
@@ -14,6 +16,10 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ error: 'File exceeds 10 MB limit' }, { status: 400 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());

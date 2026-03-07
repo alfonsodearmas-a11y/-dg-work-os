@@ -25,7 +25,7 @@ function taskCard(task: { title: string; agency: string; due_date?: string | nul
   </div>`;
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
 
 export function taskAssignedEmail(userName: string, task: { id: string; title: string; agency: string; due_date?: string | null; priority?: string }) {
   return {

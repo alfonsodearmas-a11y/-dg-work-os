@@ -4,11 +4,10 @@ import { supabaseAdmin } from '@/lib/db';
 export const dynamic = 'force-dynamic';
 
 function verifyCron(request: NextRequest): boolean {
-  // Vercel crons: no secret needed (Vercel handles auth internally)
-  // External callers: check Authorization header
-  if (!process.env.CRON_SECRET) return true;
-  const secret = request.headers.get('authorization')?.replace('Bearer ', '');
-  return secret === process.env.CRON_SECRET;
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) return false;
+  const secret = request.headers.get('authorization')?.replace('Bearer ', '') || '';
+  return secret.length === cronSecret.length && secret === cronSecret;
 }
 
 async function handleCron(request: NextRequest) {

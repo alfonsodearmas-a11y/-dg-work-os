@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 import {
   saveSubscription,
   deleteSubscriptionByEndpoint,
@@ -7,17 +8,26 @@ import {
 } from '@/lib/push';
 
 // Register or update a push subscription
+// Public route (called from SW) — uses session when available, falls back to body user_id
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { user_id, subscription } = body;
+    const { subscription } = body;
 
     if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
       return NextResponse.json({ error: 'Invalid subscription object' }, { status: 400 });
     }
 
+    // Prefer session user ID; fall back to body user_id (SW context)
+    const session = await auth();
+    const userId = session?.user?.id || body.user_id;
+
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+    }
+
     const userAgent = request.headers.get('user-agent') || '';
-    const record = await saveSubscription(user_id || 'dg', subscription, userAgent);
+    const record = await saveSubscription(userId, subscription, userAgent);
 
     return NextResponse.json({ success: true, subscription: record });
   } catch (err) {
@@ -26,11 +36,14 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// List subscriptions for a user
-export async function GET(request: NextRequest) {
+// List subscriptions for a user — requires auth
+export async function GET() {
   try {
-    const userId = request.nextUrl.searchParams.get('user_id') || 'dg';
-    const subscriptions = await getAllSubscriptionsForUser(userId);
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const subscriptions = await getAllSubscriptionsForUser(session.user.id);
     return NextResponse.json({ subscriptions });
   } catch (err) {
     console.error('GET /api/push/subscribe error:', err);

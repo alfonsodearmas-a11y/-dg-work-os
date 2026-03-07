@@ -2,12 +2,16 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import Anthropic from '@anthropic-ai/sdk';
+import { requireRole } from '@/lib/auth-helpers';
 
 // In-memory cache — invalidated when row count changes (new upload)
 let cachedAnalysis: { analysis: any; generatedAt: number; rowCount: number } | null = null;
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export async function GET() {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     // Fetch all KPI data from Supabase
     const { data: kpiRows, error } = await supabaseAdmin
@@ -168,7 +172,10 @@ Respond in JSON format:
 
 // POST to force regeneration (invalidates cache)
 export async function POST() {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   cachedAnalysis = null;
-  // Re-use GET logic
+  // Re-use GET logic — auth already checked above, GET will re-check (harmless)
   return GET();
 }

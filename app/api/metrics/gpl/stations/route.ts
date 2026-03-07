@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireRole } from '@/lib/auth-helpers';
 
 const GPL_STATIONS = [
   { code: 'SEI', name: 'Skeldon Energy Inc', type: 'fossil' },
@@ -21,5 +22,8 @@ const GPL_SOLAR_SITES = [
 ];
 
 export async function GET() {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   return NextResponse.json({ success: true, data: { stations: GPL_STATIONS, solarSites: GPL_SOLAR_SITES } });
 }

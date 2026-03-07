@@ -271,7 +271,7 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
             )}
           </div>
           {savedFlash && (
-            <span className="text-[10px] text-emerald-400 mt-1 inline-block animate-fade-in">Saved</span>
+            <span className="text-xs text-emerald-400 mt-1 inline-block animate-fade-in">Saved</span>
           )}
         </div>
         <button
@@ -528,7 +528,7 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
                     <span className="font-medium">{a.user_name || 'System'}</span>{' '}
                     <span className="text-[#94a3b8]">{ACTIVITY_LABELS[a.action] || a.action}</span>
                   </p>
-                  <p className="text-[10px] text-[#64748b] mt-0.5">
+                  <p className="text-xs text-[#64748b] mt-0.5">
                     {formatDistanceToNow(parseISO(a.created_at), { addSuffix: true })}
                   </p>
                 </div>

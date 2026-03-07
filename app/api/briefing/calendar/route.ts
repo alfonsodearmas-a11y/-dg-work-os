@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireRole } from '@/lib/auth-helpers';
 import { fetchTodayEvents, fetchWeekEvents, classifyCalendarError } from '@/lib/google-calendar';
 import type { CalendarEvent } from '@/lib/calendar-types';
 
@@ -81,6 +82,9 @@ function getBusinessDayEnd(days: number): Date {
 }
 
 export async function GET() {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const [todayEvents, weekEvents] = await Promise.all([
       fetchTodayEvents(),

@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { askDocument } from '@/lib/document-qa';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const { id } = await params;
     const { question } = await request.json();

@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 import { computeGPLAnalysis, computeGWIAnalysis } from '@/lib/pending-applications-analysis';
 import { generateGPLDeepAnalysis, generateGWIDeepAnalysis } from '@/lib/pending-applications-ai';
 import type { PendingApplication } from '@/lib/pending-applications-types';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 function mapRow(row: Record<string, unknown>): PendingApplication {
   return {
@@ -43,13 +36,15 @@ function mapRow(row: Record<string, unknown>): PendingApplication {
 // GET — return latest saved analysis
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    if (authResult instanceof NextResponse) return authResult;
+
     const agency = request.nextUrl.searchParams.get('agency')?.toUpperCase();
     if (agency !== 'GPL' && agency !== 'GWI') {
       return NextResponse.json({ error: 'agency parameter required (GPL or GWI)' }, { status: 400 });
     }
 
-    const supabase = getSupabase();
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('pending_application_analyses')
       .select('*')
       .eq('agency', agency)
@@ -82,22 +77,23 @@ export async function GET(request: NextRequest) {
 // POST — generate fresh analysis
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    if (authResult instanceof NextResponse) return authResult;
+
     const body = await request.json();
     const agency = String(body.agency || '').toUpperCase();
     if (agency !== 'GPL' && agency !== 'GWI') {
       return NextResponse.json({ error: 'agency field required (GPL or GWI)' }, { status: 400 });
     }
 
-    const supabase = getSupabase();
-
     // Fetch all records for this agency
-    const { data: rows, error: fetchError } = await supabase
+    const { data: rows, error: fetchError } = await supabaseAdmin
       .from('pending_applications')
       .select('*')
       .eq('agency', agency);
 
     if (fetchError) {
-      return NextResponse.json({ error: fetchError.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch pending applications' }, { status: 500 });
     }
 
     const records = (rows || []).map(mapRow);
@@ -114,11 +110,11 @@ export async function POST(request: NextRequest) {
       : await generateGWIDeepAnalysis(records, structuredAnalysis as ReturnType<typeof computeGWIAnalysis>);
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 500 });
+      return NextResponse.json({ error: 'AI analysis generation failed' }, { status: 500 });
     }
 
     // Persist
-    const { data: saved, error: saveError } = await supabase
+    const { data: saved, error: saveError } = await supabaseAdmin
       .from('pending_application_analyses')
       .insert({
         agency,

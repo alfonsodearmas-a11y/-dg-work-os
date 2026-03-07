@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Sidebar } from './Sidebar';
@@ -52,11 +53,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="h-full px-3 md:px-8 flex items-center justify-between">
               <div className="flex items-center gap-2 md:gap-3 min-w-0">
                 <MobileMenuButton />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src="/app-icon.png"
                   alt=""
-                  className="w-7 h-7 rounded-full ring-1 ring-[#d4af37]/30 hidden sm:block"
+                  width={28}
+                  height={28}
+                  className="rounded-full ring-1 ring-[#d4af37]/30 hidden sm:block"
                 />
                 {/* Desktop: full greeting */}
                 <div className="hidden md:block">

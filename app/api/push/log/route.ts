@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
+import { auth } from '@/lib/auth';
 
 // Use Supabase for persistent logging across serverless invocations
 // Stores in a simple key-value approach using the notifications table metadata
@@ -12,9 +13,13 @@ export async function POST(request: NextRequest) {
       detail: String((body as Record<string, unknown>).detail || ''),
     };
 
+    // Use session user ID when available, fall back to body user_id (SW context)
+    const session = await auth();
+    const userId = session?.user?.id || String((body as Record<string, unknown>).user_id || 'system');
+
     // Store as a special notification type for debugging
     await supabaseAdmin.from('notifications').insert({
-      user_id: String((body as Record<string, unknown>).user_id || 'system'),
+      user_id: userId,
       type: 'meeting_starting', // use a valid type
       title: `[SW_LOG] ${entry.event}`,
       body: entry.detail,

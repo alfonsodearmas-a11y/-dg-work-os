@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchDocuments } from '@/lib/document-search';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    if (authResult instanceof NextResponse) return authResult;
+
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q') || '';
     const agency = searchParams.get('agency') || undefined;

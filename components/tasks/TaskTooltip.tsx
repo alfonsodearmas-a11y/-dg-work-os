@@ -66,7 +66,7 @@ export function TaskTooltip({ task, cardRect, visible }: TaskTooltipProps) {
           </span>
         )}
         {task.agency && (
-          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#2d3a52] text-[#94a3b8]">
+          <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-[#2d3a52] text-[#94a3b8]">
             {task.agency}
           </span>
         )}

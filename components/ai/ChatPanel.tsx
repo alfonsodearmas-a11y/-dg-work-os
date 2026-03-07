@@ -396,7 +396,7 @@ function TierPill({ tier, tierLabel, cached, local }: {
 
   return (
     <span
-      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ml-1.5"
+      className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ml-1.5"
       style={{ background: `${color}20`, color, border: `1px solid ${color}40` }}
     >
       {label}
@@ -1061,7 +1061,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
             </div>
 
             <div className="flex items-center gap-1">
-              <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-[11px] bg-white/5 text-white/50 border border-white/10 mr-2 truncate max-w-[140px]">
+              <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-xs bg-white/5 text-white/50 border border-white/10 mr-2 truncate max-w-[140px]">
                 {pageName}
               </span>
 
@@ -1140,7 +1140,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
                   </div>
                 ) : (
                   <div className="flex flex-col mb-3">
-                    <span className="text-[11px] text-white/30 mb-1 ml-1 flex items-center">
+                    <span className="text-xs text-white/30 mb-1 ml-1 flex items-center">
                       {getTierDisplayName(msg)} &middot; {formatTime(msg.timestamp)}
                       <TierPill tier={msg.tier} tierLabel={msg.tierLabel} cached={msg.cached} local={msg.local} />
                     </span>
@@ -1223,7 +1223,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
             {/* Streaming message */}
             {isStreaming && streamingText && (
               <div className="flex flex-col mb-3">
-                <span className="text-[11px] text-white/30 mb-1 ml-1 flex items-center">
+                <span className="text-xs text-white/30 mb-1 ml-1 flex items-center">
                   {streamingMeta?.local ? 'Instant' : streamingMeta?.cached ? 'Cached' : `Claude ${streamingMeta?.tierLabel || ''}`}
                   {streamingMeta && (
                     <TierPill tier={streamingMeta.tier} tierLabel={streamingMeta.tierLabel} cached={streamingMeta.cached} local={streamingMeta.local} />
@@ -1271,7 +1271,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
               Deep Analysis
             </button>
             {forceDeep && (
-              <span className="text-[10px] text-[#d4af37]/60">Next message uses Opus</span>
+              <span className="text-xs text-[#d4af37]/60">Next message uses Opus</span>
             )}
           </div>
 
@@ -1289,7 +1289,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
                   <span className="text-sm font-mono text-[#d4af37] min-w-[110px]">{cmd.command}</span>
                   <span className="flex flex-col min-w-0">
                     <span className="text-sm text-white/80 truncate">{cmd.label}</span>
-                    <span className="text-[11px] text-white/40 truncate">{cmd.description}</span>
+                    <span className="text-xs text-white/40 truncate">{cmd.description}</span>
                   </span>
                 </button>
               ))}
@@ -1327,7 +1327,7 @@ export function ChatPanel({ isOpen, onClose, onMinimize }: ChatPanelProps) {
               )}
             </button>
           </div>
-          <p className="text-[10px] text-white/20 text-center mt-2 mb-1">
+          <p className="text-xs text-white/20 text-center mt-2 mb-1">
             Type <span className="text-white/30">/</span> for commands {'\u00B7'} {'\u2318'}+Enter to send
           </p>
         </div>

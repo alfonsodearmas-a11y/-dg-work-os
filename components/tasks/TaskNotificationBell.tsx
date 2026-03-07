@@ -77,7 +77,7 @@ export function TaskNotificationBell({ basePath = '/dashboard' }: { basePath?: s
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center min-w-[18px] h-[18px]">
+          <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center min-w-[18px] h-[18px]">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -109,7 +109,7 @@ export function TaskNotificationBell({ basePath = '/dashboard' }: { basePath?: s
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-white font-medium truncate">{n.title}</p>
                       {n.message && <p className="text-xs text-[#64748b] mt-0.5 line-clamp-2">{n.message}</p>}
-                      <p className="text-[10px] text-[#64748b] mt-1">
+                      <p className="text-xs text-[#64748b] mt-1">
                         {new Date(n.created_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>

@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
     await auditService.log({ userId: session.user.id, action: result.action, entityType: 'gpl_daily_metrics', entityId: result.metrics.id, newValues: body, request });
     return NextResponse.json({ success: true, message: `GPL metrics ${result.action.toLowerCase()}d successfully`, data: result.metrics }, { status: result.action === 'CREATE' ? 201 : 200 });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message || 'Failed to submit GPL metrics' }, { status: 400 });
+    console.error('[metrics/gpl] Error:', error.message);
+    return NextResponse.json({ success: false, error: 'Failed to submit GPL metrics' }, { status: 400 });
   }
 }

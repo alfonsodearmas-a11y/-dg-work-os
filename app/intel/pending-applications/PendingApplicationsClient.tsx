@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import {
   ArrowLeft,
   ClipboardList,
@@ -12,10 +13,21 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { OverviewTab } from '@/components/intel/pending-applications/OverviewTab';
-import { GPLModule } from '@/components/intel/gpl/GPLModule';
-import { GWIAnalysisPanel } from '@/components/intel/pending-applications/GWIAnalysisPanel';
 import { UploadPanel } from '@/components/intel/pending-applications/UploadPanel';
-import { TrendCharts } from '@/components/intel/pending-applications/TrendCharts';
+
+// Lazy-load chart-heavy components
+const TrendCharts = dynamic(
+  () => import('@/components/intel/pending-applications/TrendCharts').then(m => ({ default: m.TrendCharts })),
+  { ssr: false, loading: () => <div className="skeleton skeleton-chart card-premium" /> }
+);
+const GPLModule = dynamic(
+  () => import('@/components/intel/gpl/GPLModule').then(m => ({ default: m.GPLModule })),
+  { loading: () => <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="skeleton skeleton-card card-premium" />)}</div> }
+);
+const GWIAnalysisPanel = dynamic(
+  () => import('@/components/intel/pending-applications/GWIAnalysisPanel').then(m => ({ default: m.GWIAnalysisPanel })),
+  { loading: () => <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="skeleton skeleton-card card-premium" />)}</div> }
+);
 
 type Tab = 'overview' | 'gpl' | 'gwi' | 'upload';
 
@@ -89,7 +101,7 @@ export default function PendingApplicationsClient({ isDG, userAgency }: Props) {
       {activeTab === 'overview' && isDG && <TrendCharts refreshKey={refreshKey} />}
 
       {/* Tab Bar */}
-      <div className="flex items-center gap-1 p-1 rounded-xl bg-[#1a2744] border border-[#2d3a52] overflow-x-auto">
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-[#1a2744] border border-[#2d3a52] overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
         {allowedTabs.map(tab => {
           const Icon = tab.icon;
           const active = activeTab === tab.key;
@@ -97,7 +109,7 @@ export default function PendingApplicationsClient({ isDG, userAgency }: Props) {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-1.5 px-4 py-3 sm:py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex-1 sm:flex-none justify-center sm:justify-start ${
                 active
                   ? 'bg-[#d4af37] text-[#0a1628]'
                   : 'text-[#94a3b8] hover:text-white hover:bg-[#2d3a52]/50'

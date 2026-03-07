@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function GET(_request: NextRequest) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     // Get the latest confirmed upload
     const { data: upload, error: uploadError } = await supabaseAdmin
@@ -75,7 +79,7 @@ export async function GET(_request: NextRequest) {
   } catch (error: any) {
     console.error('[gpl/latest] Error:', error.message);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch latest GPL data' },
+      { success: false, error: 'Failed to fetch latest GPL data' },
       { status: 500 }
     );
   }

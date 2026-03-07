@@ -659,7 +659,7 @@ export function KanbanBoard() {
                 <p className="text-[#64748b] text-xs mt-1 line-clamp-2">{t.description}</p>
               )}
               {t.agency_slug && (
-                <span className="inline-block mt-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#2d3a52] text-[#94a3b8]">
+                <span className="inline-block mt-1.5 px-1.5 py-0.5 rounded text-xs font-medium bg-[#2d3a52] text-[#94a3b8]">
                   {t.agency_slug.toUpperCase()}
                 </span>
               )}

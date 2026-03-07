@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
+import { requireRole } from '@/lib/auth-helpers';
 import { fetchWeekEvents, classifyCalendarError } from '@/lib/google-calendar';
 import { supabaseAdmin } from '@/lib/db';
 
 export async function GET() {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const events = await fetchWeekEvents();
 

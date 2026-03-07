@@ -68,12 +68,12 @@ export function EfficiencyPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   return (
     <div className="space-y-6">
       {/* Sub-tab selector */}
-      <div className="flex items-center gap-1 text-xs">
+      <div className="flex items-center gap-1 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
         {(['overview', 'stages', 'trends', 'orders'] as const).map(t => (
           <button
             key={t}
             onClick={() => setSubTab(t)}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
+            className={`px-3 py-2.5 sm:py-1.5 rounded-lg font-medium text-sm sm:text-xs whitespace-nowrap transition-colors ${
               subTab === t
                 ? 'bg-[#d4af37]/20 text-[#d4af37]'
                 : 'text-[#64748b] hover:text-white hover:bg-[#2d3a52]/50'
@@ -157,7 +157,7 @@ function OverviewSection({ metrics }: { metrics: EfficiencyMetrics }) {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex items-center gap-4 mt-3 text-[10px] text-[#64748b]">
+          <div className="flex items-center gap-4 mt-3 text-xs text-[#64748b]">
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-600" /> ≤ SLA</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#d4af37]" /> 1-2x SLA</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-600" /> &gt;2x SLA</span>
@@ -188,22 +188,22 @@ function OverviewSection({ metrics }: { metrics: EfficiencyMetrics }) {
                   {aiInsight.sections.map((section, i) => (
                     <div key={i} className={`rounded-lg border p-3 ${SEVERITY_COLORS[section.severity] || ''}`}>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-xs font-bold uppercase ${
+                        <span className={`text-sm sm:text-xs font-bold uppercase ${
                           section.severity === 'critical' ? 'text-red-400' : section.severity === 'warning' ? 'text-amber-400' : section.severity === 'positive' ? 'text-emerald-400' : 'text-blue-400'
                         }`}>{section.severity}</span>
                         <span className="text-sm font-medium text-white">{section.title}</span>
                       </div>
-                      <p className="text-xs text-[#94a3b8] mb-1">{section.summary}</p>
-                      <p className="text-xs text-[#64748b] leading-relaxed">{section.detail}</p>
+                      <p className="text-sm sm:text-xs text-[#94a3b8] mb-1">{section.summary}</p>
+                      <p className="text-sm sm:text-xs text-[#64748b] leading-relaxed">{section.detail}</p>
                     </div>
                   ))}
                 </div>
                 {aiInsight.recommendations.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-semibold text-white mb-2">Recommendations</h4>
+                    <h4 className="text-sm sm:text-xs font-semibold text-white mb-2">Recommendations</h4>
                     <div className="space-y-2">
                       {aiInsight.recommendations.map((rec, i) => (
-                        <div key={i} className="flex items-start gap-2 text-xs">
+                        <div key={i} className="flex items-start gap-2 text-sm sm:text-xs">
                           <span className={`shrink-0 px-1.5 py-0.5 rounded font-medium ${
                             rec.urgency === 'Immediate' ? 'bg-red-500/20 text-red-400' : rec.urgency === 'Short-term' ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'
                           }`}>{rec.urgency}</span>
@@ -264,10 +264,10 @@ function StageSection({ metrics }: { metrics: EfficiencyMetrics }) {
       <div className="card-premium p-4 md:p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold text-white">Stage Breakdown</h3>
-          <div className="flex items-center gap-1 text-[10px]">
-            <span className="text-[#64748b]">Sort:</span>
+          <div className="flex items-center gap-1 text-xs">
+            <span className="text-[#64748b] hidden sm:inline">Sort:</span>
             {(['count', 'avgDays', 'slaPct'] as const).map(s => (
-              <button key={s} onClick={() => setSortBy(s)} className={`px-2 py-1 rounded ${sortBy === s ? 'bg-[#d4af37]/20 text-[#d4af37]' : 'text-[#64748b] hover:text-white'}`}>
+              <button key={s} onClick={() => setSortBy(s)} className={`px-2.5 py-1.5 sm:px-2 sm:py-1 rounded ${sortBy === s ? 'bg-[#d4af37]/20 text-[#d4af37]' : 'text-[#64748b] hover:text-white'}`}>
                 {s === 'count' ? 'Volume' : s === 'avgDays' ? 'Duration' : 'SLA'}
               </button>
             ))}
@@ -527,10 +527,10 @@ function OrdersSection() {
             </div>
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#2d3a52]">
-                <span className="text-xs text-[#64748b]">{total} orders · Page {page} of {totalPages}</span>
+                <span className="text-sm sm:text-xs text-[#64748b]">{total} orders · Page {page} of {totalPages}</span>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] disabled:opacity-30"><ChevronLeft className="h-4 w-4" /></button>
-                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
+                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-2.5 sm:p-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] disabled:opacity-30"><ChevronLeft className="h-5 w-5 sm:h-4 sm:w-4" /></button>
+                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-2.5 sm:p-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] disabled:opacity-30"><ChevronRight className="h-5 w-5 sm:h-4 sm:w-4" /></button>
                 </div>
               </div>
             )}
@@ -547,11 +547,11 @@ function OrderRowInner({ order, name, days, expanded, onToggle }: {
   return (
     <>
       <tr className="border-b border-[#2d3a52]/50 hover:bg-[#1a2744]/50 cursor-pointer" onClick={onToggle}>
-        <td className="py-2.5">{expanded ? <ChevronUp className="h-3.5 w-3.5 text-[#64748b]" /> : <ChevronDown className="h-3.5 w-3.5 text-[#64748b]" />}</td>
-        <td className="py-2.5"><div className="text-white text-xs font-medium">{name}</div><div className="text-[10px] text-[#64748b]">{order.customer_reference}</div></td>
-        <td className="py-2.5 text-[#94a3b8] text-xs hidden md:table-cell">{order.service_order_number || '—'}</td>
-        <td className="py-2.5 text-[#94a3b8] text-xs">{order.current_stage || '—'}</td>
-        <td className="py-2.5 text-xs hidden md:table-cell">
+        <td className="py-3 sm:py-2.5">{expanded ? <ChevronUp className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-[#64748b]" /> : <ChevronDown className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-[#64748b]" />}</td>
+        <td className="py-3 sm:py-2.5"><div className="text-white text-sm sm:text-xs font-medium">{name}</div><div className="text-xs text-[#64748b]">{order.customer_reference}</div></td>
+        <td className="py-3 sm:py-2.5 text-[#94a3b8] text-sm sm:text-xs hidden md:table-cell">{order.service_order_number || '—'}</td>
+        <td className="py-3 sm:py-2.5 text-[#94a3b8] text-sm sm:text-xs">{order.current_stage || '—'}</td>
+        <td className="py-3 sm:py-2.5 text-sm sm:text-xs hidden md:table-cell">
           <span
             className={`cursor-help ${order.track === 'A' ? 'text-emerald-400' : order.track === 'B' ? 'text-amber-400' : order.track === 'Design' ? 'text-purple-400' : 'text-[#64748b]'}`}
             title={order.track === 'A' ? TRACK_TOOLTIPS['Track A'] : order.track === 'B' ? TRACK_TOOLTIPS['Track B'] : order.track === 'Design' ? TRACK_TOOLTIPS['Design'] : undefined}
@@ -559,13 +559,13 @@ function OrderRowInner({ order, name, days, expanded, onToggle }: {
             {order.track === 'A' ? 'Track A' : order.track === 'B' ? 'Track B' : order.track === 'Design' ? 'Design' : '—'}
           </span>
         </td>
-        <td className="py-2.5 text-right text-xs text-[#94a3b8]">{days !== null ? `${days}d` : '—'}</td>
-        <td className="py-2.5 text-right"><span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${STATUS_COLORS[order.status] || ''}`}>{order.status}</span></td>
+        <td className="py-3 sm:py-2.5 text-right text-sm sm:text-xs text-[#94a3b8]">{days !== null ? `${days}d` : '—'}</td>
+        <td className="py-3 sm:py-2.5 text-right"><span className={`px-1.5 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[order.status] || ''}`}>{order.status}</span></td>
       </tr>
       {expanded && (
         <tr>
           <td colSpan={7} className="py-3 px-4 bg-[#0f1d35]">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs mb-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm sm:text-xs mb-3">
               <div><span className="text-[#64748b]">Application Date:</span> <span className="text-white">{order.application_date || '—'}</span></div>
               <div><span className="text-[#64748b]">Account Type:</span> <span className="text-white">{order.account_type || '—'}</span></div>
               <div><span className="text-[#64748b]">SO Type:</span> <span className="text-white">{order.service_order_type || '—'}</span></div>
@@ -577,12 +577,12 @@ function OrderRowInner({ order, name, days, expanded, onToggle }: {
             </div>
             {order.stage_history && (order.stage_history as StageHistoryEntry[]).length > 0 && (
               <div>
-                <span className="text-[#64748b] text-xs font-medium">Stage History</span>
-                <div className="mt-2 flex flex-wrap items-center gap-1">
+                <span className="text-[#64748b] text-sm sm:text-xs font-medium">Stage History</span>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:gap-1">
                   {(order.stage_history as StageHistoryEntry[]).map((entry, i) => (
                     <div key={i} className="flex items-center gap-1">
                       {i > 0 && <span className="text-[#2d3a52]">→</span>}
-                      <span className="px-2 py-1 rounded bg-[#1a2744] border border-[#2d3a52] text-[10px]">
+                      <span className="px-2 py-1 rounded bg-[#1a2744] border border-[#2d3a52] text-xs">
                         <span className="text-white">{entry.stage}</span>
                         {entry.days !== null && <span className="text-[#64748b] ml-1">({entry.days}d)</span>}
                       </span>
@@ -603,9 +603,9 @@ function OrderRowInner({ order, name, days, expanded, onToggle }: {
 function KPICard({ icon: Icon, label, value, sub, color }: { icon: React.ElementType; label: string; value: string; sub: string; color: string }) {
   return (
     <div className="card-premium p-4">
-      <div className="flex items-center gap-2 mb-2"><Icon className={`h-4 w-4 ${color}`} /><span className="text-xs text-[#64748b]">{label}</span></div>
+      <div className="flex items-center gap-2 mb-2"><Icon className={`h-4 w-4 ${color}`} /><span className="text-sm sm:text-xs text-[#64748b]">{label}</span></div>
       <div className="text-2xl font-bold text-white">{value}</div>
-      <div className="text-xs text-[#64748b] mt-1">{sub}</div>
+      <div className="text-sm sm:text-xs text-[#64748b] mt-1">{sub}</div>
     </div>
   );
 }
@@ -624,17 +624,17 @@ function TrackCard({ title, subtitle, track, color, tooltip }: { title: string; 
         <div>
           <h4 className="text-sm font-semibold text-white flex items-center gap-1.5">
             {title}
-            {tooltip && <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-[#64748b]/50 text-[9px] text-[#64748b] font-normal cursor-help">?</span>}
+            {tooltip && <span className="inline-flex items-center justify-center w-4 h-4 sm:w-3.5 sm:h-3.5 rounded-full border border-[#64748b]/50 text-xs sm:text-[9px] text-[#64748b] font-normal cursor-help">?</span>}
           </h4>
-          <p className="text-[10px] text-[#64748b]">{subtitle}</p>
+          <p className="text-xs text-[#64748b]">{subtitle}</p>
         </div>
       </div>
       <div className="grid grid-cols-3 gap-3">
-        <div><div className="text-lg font-bold text-white">{track.completedCount}</div><div className="text-[10px] text-[#64748b]">completed</div></div>
-        <div><div className="text-lg font-bold text-white">{track.avgDays}<span className="text-xs font-normal text-[#64748b]">d</span></div><div className="text-[10px] text-[#64748b]">avg (≤{track.slaTarget}d)</div></div>
-        <div><div className={`text-lg font-bold ${track.slaPct >= 70 ? 'text-emerald-400' : track.slaPct >= 50 ? 'text-amber-400' : 'text-red-400'}`}>{track.slaPct}%</div><div className="text-[10px] text-[#64748b]">SLA</div></div>
+        <div><div className="text-lg font-bold text-white">{track.completedCount}</div><div className="text-xs text-[#64748b]">completed</div></div>
+        <div><div className="text-lg font-bold text-white">{track.avgDays}<span className="text-xs font-normal text-[#64748b]">d</span></div><div className="text-xs text-[#64748b]">avg (≤{track.slaTarget}d)</div></div>
+        <div><div className={`text-lg font-bold ${track.slaPct >= 70 ? 'text-emerald-400' : track.slaPct >= 50 ? 'text-amber-400' : 'text-red-400'}`}>{track.slaPct}%</div><div className="text-xs text-[#64748b]">SLA</div></div>
       </div>
-      <div className="mt-3 pt-2 border-t border-[#2d3a52]"><span className="text-xs text-[#64748b]">{track.openCount} currently open</span></div>
+      <div className="mt-3 pt-2 border-t border-[#2d3a52]"><span className="text-sm sm:text-xs text-[#64748b]">{track.openCount} currently open</span></div>
     </div>
   );
 }

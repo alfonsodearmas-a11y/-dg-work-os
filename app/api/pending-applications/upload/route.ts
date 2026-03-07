@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/db';
 import { createHash } from 'crypto';
 import { detectAgency, parseGPLBuffer, parseGWIBuffer } from '@/lib/pending-applications-parser';
 import { createSnapshot } from '@/lib/pending-applications-snapshots';
@@ -11,14 +11,6 @@ import { auth } from '@/lib/auth';
 export const maxDuration = 60; // Vercel: allow up to 60s for large uploads
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 /** Classify track from a PendingRecord using shared classification logic */
 function classifyTrackFromRecord(rec: PendingRecord): 'A' | 'B' | 'Design' | 'unknown' {
@@ -32,7 +24,6 @@ function classifyTrackFromRecord(rec: PendingRecord): 'A' | 'B' | 'Design' | 'un
 
 /** Insert completed records directly into service_connections */
 async function insertCompletedConnections(records: PendingRecord[], dataAsOf: string) {
-  const supabase = getSupabase();
   const batchSize = 50;
 
   for (let i = 0; i < records.length; i += batchSize) {
@@ -70,7 +61,7 @@ async function insertCompletedConnections(records: PendingRecord[], dataAsOf: st
       };
     });
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('service_connections')
       .upsert(batch, {
         onConflict: 'customer_reference,service_order_number',
@@ -80,7 +71,7 @@ async function insertCompletedConnections(records: PendingRecord[], dataAsOf: st
     if (error) {
       // Upsert may fail on records without both keys — fall back to insert
       for (const row of batch) {
-        await supabase.from('service_connections').insert(row).select('id');
+        await supabaseAdmin.from('service_connections').insert(row).select('id');
       }
     }
   }
@@ -209,15 +200,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Full-refresh upsert of outstanding records into pending_applications
-    const supabase = getSupabase();
-
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await supabaseAdmin
       .from('pending_applications')
       .delete()
       .eq('agency', agency);
 
     if (deleteError) {
-      return NextResponse.json({ error: `Failed to clear existing records: ${deleteError.message}` }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to clear existing records' }, { status: 500 });
     }
 
     // Strip completed-only fields before inserting into pending_applications
@@ -231,7 +220,7 @@ export async function POST(request: NextRequest) {
     const batchSize = 100;
     for (let i = 0; i < pendingBatch.length; i += batchSize) {
       const batch = pendingBatch.slice(i, i + batchSize);
-      const { data, error: insertError } = await supabase
+      const { data, error: insertError } = await supabaseAdmin
         .from('pending_applications')
         .insert(batch)
         .select('id');

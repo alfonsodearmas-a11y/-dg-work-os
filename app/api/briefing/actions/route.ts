@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 
 // Actions are now sourced from the native tasks table — no Notion dependency
@@ -53,6 +54,9 @@ function daysBetween(a: Date, b: Date): number {
 }
 
 export async function GET() {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   if (cache && Date.now() < cache.expiry) {
     return NextResponse.json(cache.data);
   }
@@ -139,7 +143,6 @@ export async function GET() {
     return NextResponse.json(result);
   } catch (err) {
     console.error('[Briefing Actions] Error:', err);
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch briefing actions' }, { status: 500 });
   }
 }

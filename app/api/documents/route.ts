@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const agency = searchParams.get('agency');
@@ -20,7 +24,10 @@ export async function GET(request: NextRequest) {
       query = query.eq('document_type', type);
     }
     if (search) {
-      query = query.or(`title.ilike.%${search}%,summary.ilike.%${search}%`);
+      const sanitized = search.replace(/[%_.*(),"\\]/g, '');
+      if (sanitized) {
+        query = query.or(`title.ilike.%${sanitized}%,summary.ilike.%${sanitized}%`);
+      }
     }
 
     const { data, error } = await query

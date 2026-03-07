@@ -1,7 +1,7 @@
 import { Pool, PoolClient, QueryResult } from 'pg';
 
 const pool = new Pool({
-  host: process.env.PG_HOST || 'localhost',
+  host: process.env.PG_HOST || '',
   port: parseInt(process.env.PG_PORT || '5432'),
   database: process.env.PG_DATABASE || 'ministry_dashboard',
   user: process.env.PG_USER || 'ministry_app',

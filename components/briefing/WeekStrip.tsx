@@ -80,7 +80,7 @@ export function WeekStrip({ weekEvents, todayEvents, onDayClick, selectedDay }: 
             >
               {/* Day name */}
               <span
-                className={`text-[10px] md:text-xs font-medium ${
+                className={`text-xs font-medium ${
                   isSelected ? 'text-[#d4af37]' : isToday ? 'text-[#d4af37]/70' : 'text-[#64748b]'
                 }`}
               >

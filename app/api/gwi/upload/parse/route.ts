@@ -3,8 +3,12 @@ import { parseGWIDocx } from '@/lib/gwi-docx-parser';
 import { extractManagementReport, extractCSCRReport, extractProcurementReport } from '@/lib/gwi-report-extractor';
 import { supabaseAdmin } from '@/lib/db';
 import type { GWIReportType } from '@/lib/gwi-docx-parser';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -59,8 +63,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[gwi/upload/parse] Error:', message);
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    console.error('[gwi/upload/parse] Error:', err);
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

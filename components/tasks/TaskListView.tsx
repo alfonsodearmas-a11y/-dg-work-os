@@ -246,7 +246,7 @@ export function TaskListView({
                   )}
                 </div>
                 <div className="px-3 py-2.5">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-medium capitalize ${STATUS_PILLS[task.status] || ''}`}>
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${STATUS_PILLS[task.status] || ''}`}>
                     {task.status}
                   </span>
                 </div>
@@ -268,11 +268,11 @@ export function TaskListView({
                   <p className="text-sm text-white truncate">{task.title}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     {task.agency && (
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${AGENCY_COLORS[task.agency] || 'bg-[#2d3a52] text-[#94a3b8]'}`}>
+                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${AGENCY_COLORS[task.agency] || 'bg-[#2d3a52] text-[#94a3b8]'}`}>
                         {task.agency}
                       </span>
                     )}
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium capitalize ${STATUS_PILLS[task.status] || ''}`}>
+                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium capitalize ${STATUS_PILLS[task.status] || ''}`}>
                       {task.status}
                     </span>
                   </div>

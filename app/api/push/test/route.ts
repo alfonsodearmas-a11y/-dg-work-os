@@ -1,11 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { sendTestPush } from '@/lib/push';
+import { requireRole } from '@/lib/auth-helpers';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
+  const authResult = await requireRole(['dg', 'minister', 'ps']);
+  if (authResult instanceof NextResponse) return authResult;
+  const { session } = authResult;
+
   try {
-    const body = await request.json();
-    const userId = body.user_id || 'dg';
-    const result = await sendTestPush(userId);
+    const result = await sendTestPush(session.user.id);
     return NextResponse.json(result);
   } catch (err) {
     console.error('POST /api/push/test error:', err);

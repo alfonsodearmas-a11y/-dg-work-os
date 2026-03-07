@@ -1,15 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 import { computeGPLAnalysis, computeGWIAnalysis } from '@/lib/pending-applications-analysis';
 import type { PendingApplication } from '@/lib/pending-applications-types';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 function mapRow(row: Record<string, unknown>): PendingApplication {
   return {
@@ -41,19 +34,21 @@ function mapRow(row: Record<string, unknown>): PendingApplication {
 
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    if (authResult instanceof NextResponse) return authResult;
+
     const agency = request.nextUrl.searchParams.get('agency')?.toUpperCase();
     if (agency !== 'GPL' && agency !== 'GWI') {
       return NextResponse.json({ error: 'agency parameter required (GPL or GWI)' }, { status: 400 });
     }
 
-    const supabase = getSupabase();
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('pending_applications')
       .select('*')
       .eq('agency', agency);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch pending applications' }, { status: 500 });
     }
 
     const records = (data || []).map(mapRow);

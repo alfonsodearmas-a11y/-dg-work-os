@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Search,
   ChevronLeft,
@@ -65,6 +65,7 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
   const [agencyFilter, setAgencyFilter] = useState<AgencyFilter>('all');
   const [regionFilter, setRegionFilter] = useState('');
   const [waitBracket, setWaitBracket] = useState<WaitBracket>('all');
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('days_waiting');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -72,6 +73,14 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
 
   const [selectedRecord, setSelectedRecord] = useState<PendingApplication | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Debounce search input
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchInput(value);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => setSearchQuery(value), 300);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -175,8 +184,17 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-6 h-6 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="card-premium p-4 space-y-3">
+              <div className="skeleton skeleton-text w-24" />
+              <div className="skeleton skeleton-number" />
+              <div className="skeleton skeleton-text w-32" />
+            </div>
+          ))}
+        </div>
+        <div className="skeleton skeleton-chart card-premium" />
       </div>
     );
   }
@@ -185,7 +203,7 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
     <div className="space-y-6">
       {/* Data freshness */}
       {stats && (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-[#64748b]">
+        <div className="flex flex-wrap items-center gap-2 text-sm sm:text-xs text-[#64748b]">
           <Clock className="h-3.5 w-3.5" />
           <span>GPL data as of <span className="text-[#94a3b8]">{formatDate(gplStats?.dataAsOf || '')}</span></span>
           <span className="text-[#2d3a52]">·</span>
@@ -198,10 +216,10 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
         <div className="card-premium p-4">
           <div className="flex items-center gap-2 mb-3">
             <Users className="h-4 w-4 text-[#d4af37]" />
-            <span className="text-xs text-[#64748b] uppercase tracking-wider font-semibold">Total Pending</span>
+            <span className="text-sm sm:text-xs text-[#64748b] uppercase tracking-wider font-semibold">Total Pending</span>
           </div>
           <div className="stat-number text-2xl md:text-3xl">{combinedTotal}</div>
-          <div className="flex items-center gap-3 mt-2 text-xs text-[#64748b]">
+          <div className="flex items-center gap-3 mt-2 text-sm sm:text-xs text-[#64748b]">
             <span>GPL: <span className="text-amber-400 font-medium">{gplStats?.total || 0}</span></span>
             <span>GWI: <span className="text-cyan-400 font-medium">{gwiStats?.total || 0}</span></span>
           </div>
@@ -210,15 +228,15 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
         <div className="card-premium p-4">
           <div className="flex items-center gap-2 mb-3">
             <Timer className="h-4 w-4 text-[#d4af37]" />
-            <span className="text-xs text-[#64748b] uppercase tracking-wider font-semibold">Avg Wait</span>
+            <span className="text-sm sm:text-xs text-[#64748b] uppercase tracking-wider font-semibold">Avg Wait</span>
           </div>
           <div className="stat-number text-2xl md:text-3xl">
             {combinedTotal > 0 ? Math.round(
               ((gplStats?.avgDaysWaiting || 0) * (gplStats?.total || 0) +
                (gwiStats?.avgDaysWaiting || 0) * (gwiStats?.total || 0)) / combinedTotal
-            ) : 0} <span className="text-base font-normal text-[#64748b]">days</span>
+            ) : 0} <span className="text-sm sm:text-base font-normal text-[#64748b]">days</span>
           </div>
-          <div className="flex items-center gap-3 mt-2 text-xs text-[#64748b]">
+          <div className="flex items-center gap-3 mt-2 text-sm sm:text-xs text-[#64748b]">
             <span>GPL: <span className="text-amber-400 font-medium">{gplStats?.avgDaysWaiting || 0}d</span></span>
             <span>GWI: <span className="text-cyan-400 font-medium">{gwiStats?.avgDaysWaiting || 0}d</span></span>
           </div>
@@ -227,19 +245,19 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
         <div className="card-premium p-4">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="h-4 w-4 text-[#d4af37]" />
-            <span className="text-xs text-[#64748b] uppercase tracking-wider font-semibold">Longest Wait</span>
+            <span className="text-sm sm:text-xs text-[#64748b] uppercase tracking-wider font-semibold">Longest Wait</span>
           </div>
           <div className="stat-number text-2xl md:text-3xl">
-            {Math.max(gplStats?.maxDaysWaiting || 0, gwiStats?.maxDaysWaiting || 0)} <span className="text-base font-normal text-[#64748b]">days</span>
+            {Math.max(gplStats?.maxDaysWaiting || 0, gwiStats?.maxDaysWaiting || 0)} <span className="text-sm sm:text-base font-normal text-[#64748b]">days</span>
           </div>
           <div className="mt-2 space-y-1">
             {gplStats?.longestWaitCustomer && (
-              <button onClick={() => setSelectedRecord(gplStats.longestWaitCustomer)} className="block text-xs text-amber-400 hover:text-amber-300 truncate max-w-full text-left">
+              <button onClick={() => setSelectedRecord(gplStats.longestWaitCustomer)} className="block text-sm sm:text-xs text-amber-400 hover:text-amber-300 truncate max-w-full text-left min-h-[44px] sm:min-h-0 flex items-center">
                 GPL: {gplStats.longestWaitCustomer.firstName} {gplStats.longestWaitCustomer.lastName} ({gplStats.maxDaysWaiting}d)
               </button>
             )}
             {gwiStats?.longestWaitCustomer && (
-              <button onClick={() => setSelectedRecord(gwiStats.longestWaitCustomer)} className="block text-xs text-cyan-400 hover:text-cyan-300 truncate max-w-full text-left">
+              <button onClick={() => setSelectedRecord(gwiStats.longestWaitCustomer)} className="block text-sm sm:text-xs text-cyan-400 hover:text-cyan-300 truncate max-w-full text-left min-h-[44px] sm:min-h-0 flex items-center">
                 GWI: {gwiStats.longestWaitCustomer.firstName} {gwiStats.longestWaitCustomer.lastName} ({gwiStats.maxDaysWaiting}d)
               </button>
             )}
@@ -249,10 +267,10 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
         <div className={`card-premium p-4 ${over30 > 0 ? 'border-red-500/30' : ''}`}>
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className={`h-4 w-4 ${over30 > 0 ? 'text-red-400' : 'text-[#d4af37]'}`} />
-            <span className="text-xs text-[#64748b] uppercase tracking-wider font-semibold">&gt; 30 Days</span>
+            <span className="text-sm sm:text-xs text-[#64748b] uppercase tracking-wider font-semibold">&gt; 30 Days</span>
           </div>
           <div className={`stat-number text-2xl md:text-3xl ${over30 > 0 ? 'text-red-400' : ''}`}>{over30}</div>
-          <div className="flex items-center gap-3 mt-2 text-xs text-[#64748b]">
+          <div className="flex items-center gap-3 mt-2 text-sm sm:text-xs text-[#64748b]">
             <span>GPL: <span className={`font-medium ${(gplStats?.waitBrackets.find(b => b.min === 31)?.count || 0) > 0 ? 'text-red-400' : 'text-amber-400'}`}>
               {gplStats?.waitBrackets.find(b => b.min === 31)?.count || 0}
             </span></span>
@@ -315,25 +333,25 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
       {regionData.length > 0 && (
         <div className="card-premium p-4 md:p-6">
           <h3 className="text-sm font-semibold text-white mb-4">Region Breakdown</h3>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-[#64748b] text-xs uppercase tracking-wider border-b border-[#2d3a52]">
-                  <th className="text-left py-2 pr-4">Region</th>
-                  <th className="text-right py-2 px-3">Count</th>
-                  <th className="text-right py-2 px-3">Avg Wait</th>
-                  <th className="text-right py-2 px-3">Max Wait</th>
-                  <th className="text-right py-2 pl-3">% Over 30d</th>
+                <tr className="text-[#64748b] text-sm sm:text-xs uppercase tracking-wider border-b border-[#2d3a52]">
+                  <th className="text-left py-3 px-3">Region</th>
+                  <th className="text-right py-3 px-3">Count</th>
+                  <th className="text-right py-3 px-3">Avg Wait</th>
+                  <th className="text-right py-3 px-3 hidden sm:table-cell">Max Wait</th>
+                  <th className="text-right py-3 px-3">% Over 30d</th>
                 </tr>
               </thead>
               <tbody>
                 {regionData.map(r => (
                   <tr key={r.region} className="border-b border-[#2d3a52]/50 hover:bg-[#1a2744]/50">
-                    <td className="py-2.5 pr-4 text-white font-medium">{r.region}</td>
-                    <td className="py-2.5 px-3 text-right text-[#94a3b8]">{r.count}</td>
-                    <td className="py-2.5 px-3 text-right text-[#94a3b8]">{r.avgDays}d</td>
-                    <td className="py-2.5 px-3 text-right text-[#94a3b8]">{r.maxDays}d</td>
-                    <td className="py-2.5 pl-3 text-right">
+                    <td className="py-3 px-3 text-white font-medium">{r.region}</td>
+                    <td className="py-3 px-3 text-right text-[#94a3b8]">{r.count}</td>
+                    <td className="py-3 px-3 text-right text-[#94a3b8]">{r.avgDays}d</td>
+                    <td className="py-3 px-3 text-right text-[#94a3b8] hidden sm:table-cell">{r.maxDays}d</td>
+                    <td className="py-3 px-3 text-right">
                       <span className={`${r.pctOver30 > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{r.pctOver30}%</span>
                     </td>
                   </tr>
@@ -346,56 +364,58 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
 
       {/* Filters Bar */}
       <div className="card-premium p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px]">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
             <input
               type="text"
               placeholder="Search name, phone, reference..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm placeholder:text-[#64748b] focus:border-[#d4af37] focus:outline-none"
+              value={searchInput}
+              onChange={e => handleSearchChange(e.target.value)}
+              className="w-full pl-10 pr-10 py-3 sm:py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-base sm:text-sm placeholder:text-[#64748b] focus:border-[#d4af37] focus:outline-none"
             />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-white">
+            {searchInput && (
+              <button onClick={() => { setSearchInput(''); setSearchQuery(''); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-white p-1">
                 <X className="h-4 w-4" />
               </button>
             )}
           </div>
-          <div className="relative">
-            <select value={regionFilter} onChange={e => setRegionFilter(e.target.value)}
-              className="appearance-none pl-3 pr-8 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-[#94a3b8] text-sm focus:border-[#d4af37] focus:outline-none cursor-pointer">
-              <option value="">All Regions</option>
-              {allRegions.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b] pointer-events-none" />
-          </div>
-          <div className="relative">
-            <select value={waitBracket} onChange={e => setWaitBracket(e.target.value as WaitBracket)}
-              className="appearance-none pl-3 pr-8 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-[#94a3b8] text-sm focus:border-[#d4af37] focus:outline-none cursor-pointer">
-              <option value="all">All Wait Times</option>
-              <option value="0-6">&lt; 7 days</option>
-              <option value="7-14">7–14 days</option>
-              <option value="15-30">15–30 days</option>
-              <option value="31+">&gt; 30 days</option>
-            </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b] pointer-events-none" />
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-none">
+              <select value={regionFilter} onChange={e => setRegionFilter(e.target.value)}
+                className="appearance-none w-full pl-3 pr-8 py-3 sm:py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-[#94a3b8] text-base sm:text-sm focus:border-[#d4af37] focus:outline-none cursor-pointer">
+                <option value="">All Regions</option>
+                {allRegions.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b] pointer-events-none" />
+            </div>
+            <div className="relative flex-1 sm:flex-none">
+              <select value={waitBracket} onChange={e => setWaitBracket(e.target.value as WaitBracket)}
+                className="appearance-none w-full pl-3 pr-8 py-3 sm:py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-[#94a3b8] text-base sm:text-sm focus:border-[#d4af37] focus:outline-none cursor-pointer">
+                <option value="all">All Wait Times</option>
+                <option value="0-6">&lt; 7 days</option>
+                <option value="7-14">7–14 days</option>
+                <option value="15-30">15–30 days</option>
+                <option value="31+">&gt; 30 days</option>
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b] pointer-events-none" />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Customer Records Table */}
       <div className="card-premium overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-[#64748b] text-xs uppercase tracking-wider border-b border-[#2d3a52] bg-[#0a1628]/50">
-                <th className="text-left py-3 px-4">Agency</th>
+              <tr className="text-[#64748b] text-sm sm:text-xs uppercase tracking-wider border-b border-[#2d3a52] bg-[#0a1628]/50">
+                <th className="text-left py-3 px-3">Agency</th>
                 <SortHeader label="Name" field="last_name" current={sortBy} order={sortOrder} onSort={handleSort} />
                 <th className="text-left py-3 px-3 hidden md:table-cell">Region</th>
                 <th className="text-left py-3 px-3 hidden lg:table-cell">District/Village</th>
                 <SortHeader label="Applied" field="application_date" current={sortBy} order={sortOrder} onSort={handleSort} />
-                <SortHeader label="Days Waiting" field="days_waiting" current={sortBy} order={sortOrder} onSort={handleSort} />
+                <SortHeader label="Days" field="days_waiting" current={sortBy} order={sortOrder} onSort={handleSort} />
                 <th className="text-left py-3 px-3 hidden md:table-cell">Ref No.</th>
               </tr>
             </thead>
@@ -406,15 +426,15 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
                 <tr><td colSpan={7} className="py-12 text-center text-[#64748b]">No records found</td></tr>
               ) : records.map(record => (
                 <tr key={record.id} onClick={() => setSelectedRecord(record)} className="border-b border-[#2d3a52]/50 hover:bg-[#1a2744]/50 cursor-pointer transition-colors">
-                  <td className="py-3 px-4">
-                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${record.agency === 'GPL' ? 'bg-amber-500/20 text-amber-400' : 'bg-cyan-500/20 text-cyan-400'}`}>{record.agency}</span>
+                  <td className="py-3 px-3">
+                    <span className={`px-2 py-0.5 rounded text-sm sm:text-xs font-semibold ${record.agency === 'GPL' ? 'bg-amber-500/20 text-amber-400' : 'bg-cyan-500/20 text-cyan-400'}`}>{record.agency}</span>
                   </td>
-                  <td className="py-3 px-3 text-white font-medium">{record.firstName} {record.lastName}</td>
+                  <td className="py-3 px-3 text-white font-medium text-sm">{record.firstName} {record.lastName}</td>
                   <td className="py-3 px-3 text-[#94a3b8] hidden md:table-cell">{record.region || '—'}</td>
                   <td className="py-3 px-3 text-[#94a3b8] hidden lg:table-cell truncate max-w-[200px]">{record.district || record.villageWard || '—'}</td>
-                  <td className="py-3 px-3 text-[#94a3b8] whitespace-nowrap">{formatDate(record.applicationDate)}</td>
+                  <td className="py-3 px-3 text-[#94a3b8] whitespace-nowrap text-sm">{formatDate(record.applicationDate)}</td>
                   <td className="py-3 px-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border ${getBadgeColor(record.daysWaiting)}`}>{record.daysWaiting}d</span>
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-sm sm:text-xs font-semibold border ${getBadgeColor(record.daysWaiting)}`}>{record.daysWaiting}d</span>
                   </td>
                   <td className="py-3 px-3 text-[#64748b] font-mono text-xs hidden md:table-cell">{record.customerReference || '—'}</td>
                 </tr>
@@ -425,15 +445,15 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-[#2d3a52]">
-            <span className="text-xs text-[#64748b]">{totalRecords} records · Page {page} of {totalPages}</span>
+            <span className="text-sm sm:text-xs text-[#64748b]">{totalRecords} records · Page {page} of {totalPages}</span>
             <div className="flex items-center gap-2">
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                className="p-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] disabled:opacity-30 disabled:cursor-not-allowed">
-                <ChevronLeft className="h-4 w-4" />
+                className="p-2.5 sm:p-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] disabled:opacity-30 disabled:cursor-not-allowed">
+                <ChevronLeft className="h-5 w-5 sm:h-4 sm:w-4" />
               </button>
               <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="p-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] disabled:opacity-30 disabled:cursor-not-allowed">
-                <ChevronRight className="h-4 w-4" />
+                className="p-2.5 sm:p-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] disabled:opacity-30 disabled:cursor-not-allowed">
+                <ChevronRight className="h-5 w-5 sm:h-4 sm:w-4" />
               </button>
             </div>
           </div>
@@ -501,9 +521,9 @@ function SortHeader({ label, field, current, order, onSort }: { label: string; f
 function DetailRow({ label, value }: { label: string; value: string }) {
   if (!value) return null;
   return (
-    <div className="flex items-start gap-3 py-2 border-b border-[#2d3a52]/50">
-      <span className="text-xs text-[#64748b] w-32 shrink-0 pt-0.5">{label}</span>
-      <span className="text-sm text-white">{value}</span>
+    <div className="flex items-start gap-3 py-2.5 border-b border-[#2d3a52]/50">
+      <span className="text-sm sm:text-xs text-[#64748b] w-32 shrink-0 pt-0.5">{label}</span>
+      <span className="text-sm text-white break-words min-w-0">{value}</span>
     </div>
   );
 }

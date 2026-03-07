@@ -1,25 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/db';
+import { requireRole } from '@/lib/auth-helpers';
 import { computeMonthlyVolumes } from '@/lib/service-connection-analysis';
 import type { ServiceConnection } from '@/lib/service-connection-types';
 
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    if (authResult instanceof NextResponse) return authResult;
     const { searchParams } = new URL(request.url);
     const months = parseInt(searchParams.get('months') || '12', 10);
     const track = searchParams.get('track') || 'all';
 
-    const supabase = getSupabase();
-
-    let query = supabase
+    let query = supabaseAdmin
       .from('service_connections')
       .select('*')
       .neq('status', 'legacy_excluded')
@@ -32,7 +25,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query.order('application_date', { ascending: false });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch service connection trends' }, { status: 500 });
     }
 
     const volumes = computeMonthlyVolumes((data || []) as ServiceConnection[]);

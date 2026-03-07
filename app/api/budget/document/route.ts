@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDocumentContent } from '@/lib/budget-db';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   const agency = request.nextUrl.searchParams.get('agency');
   const doc = request.nextUrl.searchParams.get('doc');
 

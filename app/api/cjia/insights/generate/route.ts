@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { generateCJIAInsights } from '@/lib/cjia-insights';
+import { requireRole } from '@/lib/auth-helpers';
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = await request.json();
     const { month, forceRegenerate } = body;
@@ -19,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: insights });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    console.error('[cjia/insights/generate] Error:', err);
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

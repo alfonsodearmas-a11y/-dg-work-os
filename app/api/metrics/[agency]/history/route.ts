@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db-pg';
+import { requireRole } from '@/lib/auth-helpers';
 
 const AGENCY_TABLES: Record<string, string> = {
   cjia: 'cjia_daily_metrics',
@@ -11,6 +12,9 @@ const AGENCY_TABLES: Record<string, string> = {
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ agency: string }> }) {
   try {
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    if (authResult instanceof NextResponse) return authResult;
+
     const { agency } = await params;
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '30');
@@ -28,6 +32,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json({ success: true, data: result.rows });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to fetch metrics history' }, { status: 500 });
   }
 }

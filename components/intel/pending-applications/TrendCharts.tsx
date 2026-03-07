@@ -63,7 +63,7 @@ export function TrendCharts({ refreshKey }: TrendChartsProps) {
           <LineChart data={chartData} margin={{ left: 0, right: 10 }}>
             <XAxis
               dataKey="date"
-              tick={{ fill: '#64748b', fontSize: 11 }}
+              tick={{ fill: '#64748b', fontSize: 12 }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(d: string) => {
