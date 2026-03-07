@@ -176,10 +176,10 @@ function formatCurrency(value: number | null) {
 }
 
 function fmtCurrency(value: number | string | null | undefined): string {
-  if (value === null || value === undefined || value === '-') return '-';
+  if (value === null || value === undefined || value === '-') return 'N/A';
   const num = typeof value === 'string' ? parseFloat(value.replace(/[$,]/g, '')) : Number(value);
-  if (isNaN(num) || num <= 0) return '-';
-  if (num > 1e11) return '-';
+  if (isNaN(num) || num <= 0) return 'N/A';
+  if (num > 1e11) return 'N/A';
   if (num >= 1e9) return `$${(num / 1e9).toFixed(1)}B`;
   if (num >= 1e6) return `$${(num / 1e6).toFixed(1)}M`;
   if (num >= 1e3) return `$${(num / 1e3).toFixed(1)}K`;
@@ -823,7 +823,12 @@ export default function OversightPage() {
   function handleRefresh() {
     fetchOversight();
     setPsipLoading(true);
-    Promise.all([fetchPsipSummary(), fetchProjects()]).finally(() => setPsipLoading(false));
+    // Recalculate health for all projects, then refresh data
+    fetch('/api/projects/recalculate-health', { method: 'POST' })
+      .catch(() => {}) // non-blocking — recalc writes to DB for filter accuracy
+      .finally(() => {
+        Promise.all([fetchPsipSummary(), fetchProjects()]).finally(() => setPsipLoading(false));
+      });
   }
 
   const hasActiveFilters = agencies.length || statuses.length || regions.length || healths.length || budgetMin || budgetMax || contractor || dateFrom || dateTo || search;

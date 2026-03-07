@@ -116,6 +116,58 @@ function safeContractValue(raw: any): number | null {
   return num;
 }
 
+// ── Health computation ────────────────────────────────────────────────────
+
+export function computeHealth(
+  completionPct: number,
+  endDate: string | null,
+  startDate: string | null,
+  status: string,
+  escalated: boolean,
+  updatedAt?: string | null,
+): 'green' | 'amber' | 'red' {
+  // Completed projects are always green
+  if (status === 'Complete') return 'green';
+
+  // RED: Delayed / On Hold / Cancelled
+  if (status === 'Delayed' || status === 'On Hold' || status === 'Cancelled') return 'red';
+
+  // RED: Past end date and not complete
+  if (endDate && new Date(endDate) < new Date() && completionPct < 100) return 'red';
+
+  // RED: Escalated
+  if (escalated) return 'red';
+
+  // Progress gap analysis (if we have both start and end dates)
+  if (startDate && endDate) {
+    const start = new Date(startDate).getTime();
+    const end = new Date(endDate).getTime();
+    const now = Date.now();
+    const totalDuration = end - start;
+    if (totalDuration > 0) {
+      const elapsed = Math.max(0, now - start);
+      const expectedPct = Math.min(100, (elapsed / totalDuration) * 100);
+      const gap = expectedPct - completionPct;
+      if (gap > 25) return 'red';
+      if (gap > 10) return 'amber';
+    }
+  }
+
+  // AMBER: End date within 30 days and completion < 80%
+  if (endDate) {
+    const daysUntilEnd = (new Date(endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+    if (daysUntilEnd > 0 && daysUntilEnd <= 30 && completionPct < 80) return 'amber';
+  }
+
+  // AMBER: In Progress but no update in 30+ days
+  if (status === 'In Progress' && updatedAt) {
+    const daysSinceUpdate = (Date.now() - new Date(updatedAt).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSinceUpdate > 30) return 'amber';
+  }
+
+  return 'green';
+}
+
 function enrichProject(row: any): Project {
   const completionPct = Number(row.completion_pct) || 0;
   const endDate = row.project_end_date || null;
@@ -128,13 +180,23 @@ function enrichProject(row: any): Project {
     );
   }
 
+  // Always compute health from actual project data (never trust DB default)
+  const health = computeHealth(
+    completionPct,
+    endDate,
+    row.start_date || null,
+    status,
+    row.escalated || false,
+    row.updated_at || null,
+  );
+
   return {
     ...row,
     contract_value: safeContractValue(row.contract_value),
     completion_pct: completionPct,
     status,
     days_overdue: daysOverdue,
-    health: row.health || 'green',
+    health,
     escalated: row.escalated || false,
     escalation_reason: row.escalation_reason || null,
     assigned_to: row.assigned_to || null,
@@ -157,11 +219,11 @@ export async function getPortfolioSummary(filters?: {
 }): Promise<PortfolioSummary> {
   let query = supabaseAdmin
     .from('projects')
-    .select('sub_agency, contract_value, completion_pct, project_end_date, health, escalated, region, status_override');
+    .select('sub_agency, contract_value, completion_pct, project_end_date, health, escalated, region, status_override, start_date, updated_at');
 
   if (filters?.agencies?.length) query = query.in('sub_agency', filters.agencies);
   if (filters?.regions?.length) query = query.in('region', filters.regions);
-  if (filters?.healths?.length) query = query.in('health', filters.healths);
+  // Health filter applied client-side after computation (DB column may lag)
   if (filters?.budgetMin != null) query = query.gte('contract_value', filters.budgetMin);
   if (filters?.budgetMax != null) query = query.lte('contract_value', filters.budgetMax);
   if (filters?.contractor) query = query.ilike('contractor', `%${filters.contractor}%`);
@@ -182,11 +244,16 @@ export async function getPortfolioSummary(filters?: {
     const status = computeStatus(pct, row.project_end_date, row.status_override);
     const value = safeContractValue(row.contract_value) || 0;
     const agency = row.sub_agency || 'MOPUA';
-    const health = row.health || 'green';
+    // Compute health from project data (not DB default)
+    const health = computeHealth(pct, row.project_end_date, row.start_date, status, row.escalated || false, row.updated_at);
 
     // Status filter (computed, not in DB)
     if (filters?.statuses?.length) {
       if (!filters.statuses.includes(status)) continue;
+    }
+    // Health filter (computed, not from DB default)
+    if (filters?.healths?.length) {
+      if (!filters.healths.includes(health)) continue;
     }
 
     totalValue += value;
@@ -266,8 +333,7 @@ export async function getProjectsList(filters: {
   if (filters.regions?.length) query = query.in('region', filters.regions);
   else if (filters.region) query = query.eq('region', filters.region);
 
-  // Health filter
-  if (filters.healths?.length) query = query.in('health', filters.healths);
+  // Health filter applied client-side after computation (DB column may lag)
 
   // Budget range
   if (filters.budgetMin != null) query = query.gte('contract_value', filters.budgetMin);
@@ -324,6 +390,11 @@ export async function getProjectsList(filters: {
   const statusFilters = filters.statuses?.length ? filters.statuses : (filters.status ? [filters.status] : []);
   if (statusFilters.length) {
     projects = projects.filter(p => statusFilters.includes(p.status));
+  }
+
+  // Client-side health filter (health is computed on the fly, DB may lag)
+  if (filters.healths?.length) {
+    projects = projects.filter(p => filters.healths!.includes(p.health));
   }
 
   return { projects, total: count || 0 };
@@ -515,4 +586,41 @@ export async function getContractors(): Promise<string[]> {
 
   const unique = [...new Set((data || []).map((r: any) => r.contractor).filter(Boolean))];
   return unique as string[];
+}
+
+// ── Batch health recalculation ────────────────────────────────────────────
+
+export async function recalculateAllHealth(): Promise<{ updated: number; total: number; breakdown: Record<string, number> }> {
+  const { data } = await supabaseAdmin
+    .from('projects')
+    .select('id, completion_pct, project_end_date, start_date, status_override, escalated, health, updated_at');
+
+  if (!data) return { updated: 0, total: 0, breakdown: {} };
+
+  const breakdown: Record<string, number> = { green: 0, amber: 0, red: 0 };
+  const updates: { id: string; health: string }[] = [];
+
+  for (const row of data) {
+    const pct = Number(row.completion_pct) || 0;
+    const status = computeStatus(pct, row.project_end_date, row.status_override);
+    const newHealth = computeHealth(pct, row.project_end_date, row.start_date, status, row.escalated || false, row.updated_at);
+    breakdown[newHealth] = (breakdown[newHealth] || 0) + 1;
+
+    if (newHealth !== (row.health || 'green')) {
+      updates.push({ id: row.id, health: newHealth });
+    }
+  }
+
+  // Batch update in chunks of 50
+  for (let i = 0; i < updates.length; i += 50) {
+    const chunk = updates.slice(i, i + 50);
+    for (const u of chunk) {
+      await supabaseAdmin
+        .from('projects')
+        .update({ health: u.health })
+        .eq('id', u.id);
+    }
+  }
+
+  return { updated: updates.length, total: data.length, breakdown };
 }
