@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
+import { parseBody, apiError } from '@/lib/api-utils';
 import { escalateProject, deescalateProject } from '@/lib/project-queries';
 import { supabaseAdmin } from '@/lib/db';
+
+const escalateSchema = z.object({
+  reason: z.string().min(1),
+});
 
 export async function POST(
   request: NextRequest,
@@ -10,15 +16,13 @@ export async function POST(
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
 
+  const { data, error } = await parseBody(request, escalateSchema);
+  if (error) return error;
+
   try {
     const { id } = await params;
-    const { reason } = await request.json();
 
-    if (!reason?.trim()) {
-      return NextResponse.json({ error: 'Escalation reason is required' }, { status: 400 });
-    }
-
-    await escalateProject(id, reason.trim(), authResult.session.user.id);
+    await escalateProject(id, data.reason.trim(), authResult.session.user.id);
 
     // Get project details for notification
     const { data: project } = await supabaseAdmin
@@ -39,7 +43,7 @@ export async function POST(
         user_id: u.id,
         type: 'project_escalated',
         title: `Project Escalated: ${project?.project_name || 'Unknown'}`,
-        body: reason.trim(),
+        body: data.reason.trim(),
         priority: 'high',
         reference_type: 'project',
         reference_id: id,
@@ -52,7 +56,6 @@ export async function POST(
       await supabaseAdmin.from('notifications').insert(notifications);
     }
 
-    // Also notify agency directors for same-agency projects
     if (project?.sub_agency) {
       const { data: agencyDirectors } = await supabaseAdmin
         .from('users')
@@ -66,7 +69,7 @@ export async function POST(
           user_id: u.id,
           type: 'project_escalated',
           title: `Project Escalated: ${project?.project_name || 'Unknown'}`,
-          body: reason.trim(),
+          body: data.reason.trim(),
           priority: 'high',
           reference_type: 'project',
           reference_id: id,
@@ -81,9 +84,9 @@ export async function POST(
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Escalate error:', error);
-    return NextResponse.json({ error: 'Failed to escalate project' }, { status: 500 });
+  } catch (err) {
+    console.error('Escalate error:', err);
+    return apiError('ESCALATE_FAILED', 'Failed to escalate project', 500);
   }
 }
 

@@ -1,8 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/db';
 import { parseProjectsExcelWithDebug, ProjectRow, FundingRow } from '@/lib/excel-parser';
 import { detectChanges } from '@/lib/change-detector';
 import { requireRole } from '@/lib/auth-helpers';
+import { apiError } from '@/lib/api-utils';
+
+const scrapedProjectSchema = z.object({
+  project_id: z.string().min(1),
+  executing_agency: z.string().optional(),
+  sub_agency: z.string().optional(),
+  project_name: z.string().min(1),
+  region: z.string().optional(),
+  tender_board_type: z.string().optional(),
+  contract_value: z.number().optional(),
+  contractor: z.string().optional(),
+  project_end_date: z.string().optional(),
+  completion_pct: z.number().optional(),
+  has_images: z.number().optional(),
+  balance_remaining: z.number().optional(),
+  remarks: z.string().optional(),
+  project_status: z.string().optional(),
+  extension_reason: z.string().optional(),
+  extension_date: z.string().optional(),
+  project_extended: z.boolean().optional(),
+  total_distributed: z.number().optional(),
+  total_expended: z.number().optional(),
+  start_date: z.string().optional(),
+  revised_start_date: z.string().optional(),
+  funding_data: z.string().optional(),
+});
+
+const jsonUploadSchema = z.object({
+  projects: z.array(scrapedProjectSchema).min(1),
+});
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -94,11 +125,7 @@ interface ScrapedProject {
   funding_data?: string; // JSON string: [{d, t, a, e}]
 }
 
-async function handleJsonUpload(body: { projects: ScrapedProject[] }) {
-  if (!body.projects?.length) {
-    return NextResponse.json({ error: 'No projects in payload' }, { status: 400 });
-  }
-
+async function handleJsonUpload(body: z.infer<typeof jsonUploadSchema>) {
   const now = new Date().toISOString();
   const projects: ProjectRow[] = body.projects.map(p => ({
     project_id: p.project_id,
@@ -182,10 +209,16 @@ export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get('content-type') || '';
 
-    // JSON upload path (scraper data)
     if (contentType.includes('application/json')) {
-      const body = await request.json();
-      return handleJsonUpload(body);
+      const raw = await request.json();
+      const parsed = jsonUploadSchema.safeParse(raw);
+      if (!parsed.success) {
+        return NextResponse.json(
+          { code: 'VALIDATION_ERROR', errors: parsed.error.flatten().fieldErrors },
+          { status: 400 }
+        );
+      }
+      return handleJsonUpload(parsed.data);
     }
 
     // Excel upload path
@@ -283,11 +316,8 @@ export async function POST(request: NextRequest) {
       detail_columns_found: [...presentDetailFields],
       changes,
     });
-  } catch (error) {
-    console.error('Upload error:', error);
-    return NextResponse.json(
-      { error: 'Failed to process upload' },
-      { status: 500 }
-    );
+  } catch (err) {
+    console.error('Upload error:', err);
+    return apiError('UPLOAD_FAILED', 'Failed to process upload', 500);
   }
 }

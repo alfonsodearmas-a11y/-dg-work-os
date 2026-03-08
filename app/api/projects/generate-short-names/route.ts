@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
+import { apiError } from '@/lib/api-utils';
 import { supabaseAdmin } from '@/lib/db';
 import Anthropic from '@anthropic-ai/sdk';
 
@@ -90,8 +91,8 @@ ${projectList}`;
     }
 
     return NextResponse.json({ updated: totalUpdated, total: projects.length });
-  } catch (error) {
-    console.error('Generate short names error:', error);
-    return NextResponse.json({ error: 'Failed to generate short names' }, { status: 500 });
+  } catch (err) {
+    console.error('Generate short names error:', err);
+    return apiError('GENERATE_SHORT_NAMES_FAILED', 'Failed to generate short names', 500);
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { auth } from '@/lib/auth';
+import { withErrorHandler } from '@/lib/api-utils';
 
 export async function GET() {
   try {
@@ -50,42 +51,34 @@ export async function GET() {
   }
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandler(async (_request: NextRequest) => {
+  const session = await auth();
+  const userId = session?.user?.id || 'system';
+  let forecastResult;
   try {
-    const session = await auth();
-    const userId = session?.user?.id || 'system';
-    let forecastResult;
-    try {
-      const { generateForecast } = await import('@/lib/gpl-multivariate-forecast');
-      console.log(`[gpl-forecast-multivariate] Generation triggered by ${userId}`);
-      forecastResult = await generateForecast();
-    } catch (importError: any) {
-      console.warn('[gpl-forecast-multivariate] Module unavailable:', importError.message);
-      return NextResponse.json({
-        success: true,
-        message: 'Multivariate forecast generation is not yet available. The module is still being set up.',
-        placeholder: true,
-      });
-    }
-
-    if (!forecastResult.success) {
-      return NextResponse.json(
-        { success: false, error: forecastResult.error },
-        { status: 500 }
-      );
-    }
-
+    const { generateForecast } = await import('@/lib/gpl-multivariate-forecast');
+    console.log(`[gpl-forecast-multivariate] Generation triggered by ${userId}`);
+    forecastResult = await generateForecast();
+  } catch (importError: any) {
+    console.warn('[gpl-forecast-multivariate] Module unavailable:', importError.message);
     return NextResponse.json({
       success: true,
-      data: forecastResult.forecast,
-      warning: 'warning' in forecastResult ? forecastResult.warning : undefined,
-      generatedBy: userId,
+      message: 'Multivariate forecast generation is not yet available. The module is still being set up.',
+      placeholder: true,
     });
-  } catch (error: any) {
-    console.error('[gpl-forecast-multivariate] POST Error:', error.message);
+  }
+
+  if (!forecastResult.success) {
     return NextResponse.json(
-      { success: false, error: 'Failed to generate multivariate forecast' },
+      { success: false, error: forecastResult.error },
       { status: 500 }
     );
   }
-}
+
+  return NextResponse.json({
+    success: true,
+    data: forecastResult.forecast,
+    warning: 'warning' in forecastResult ? forecastResult.warning : undefined,
+    generatedBy: userId,
+  });
+});

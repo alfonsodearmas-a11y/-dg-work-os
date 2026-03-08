@@ -1,35 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
+import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
 
 export const dynamic = 'force-dynamic';
 
-export async function PATCH(
+const patchTemplateSchema = z.object({
+  name: z.string().min(1).optional(),
+  description: z.string().optional(),
+  agency_slug: z.string().optional(),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+  checklist: z.array(z.unknown()).optional(),
+  recurrence_rule: z.string().optional(),
+  recurrence_enabled: z.boolean().optional(),
+  recurrence_assignee_id: z.string().optional(),
+  next_occurrence: z.string().optional(),
+  due_offset_days: z.number().optional(),
+}).refine(obj => Object.keys(obj).length > 0, { message: 'No valid fields to update' });
+
+export const PATCH = withErrorHandler(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+  ctx?: unknown,
+) => {
   const result = await requireRole(['dg', 'minister', 'ps']);
   if (result instanceof NextResponse) return result;
 
-  const { id } = await params;
-  const body = await request.json();
+  const { id } = await (ctx as { params: Promise<{ id: string }> }).params;
+  const { data, error: validationError } = await parseBody(request, patchTemplateSchema);
+  if (validationError) return validationError;
 
+  const updates: Record<string, unknown> = {};
   const allowed = [
     'name', 'description', 'agency_slug', 'priority', 'checklist',
     'recurrence_rule', 'recurrence_enabled', 'recurrence_assignee_id',
     'next_occurrence', 'due_offset_days',
-  ];
+  ] as const;
 
-  const updates: Record<string, unknown> = {};
   for (const key of allowed) {
-    if (key in body) updates[key] = body[key];
+    if (data[key] !== undefined) updates[key] = data[key];
   }
 
-  if (Object.keys(updates).length === 0) {
-    return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
-  }
-
-  const { data, error } = await supabaseAdmin
+  const { data: template, error } = await supabaseAdmin
     .from('task_templates')
     .update(updates)
     .eq('id', id)
@@ -37,8 +49,8 @@ export async function PATCH(
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return apiError('DB_ERROR', error.message, 500);
   }
 
-  return NextResponse.json({ template: data });
-}
+  return NextResponse.json({ template });
+});

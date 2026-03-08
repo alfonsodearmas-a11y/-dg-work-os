@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import webpush from 'web-push';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { withErrorHandler } from '@/lib/api-utils';
 
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandler(async (request: NextRequest) => {
   const authResult = await requireRole(['dg', 'minister', 'ps']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
@@ -115,4 +116,4 @@ export async function POST(request: NextRequest) {
     active_subscriptions: (allSubs || []).filter((s: { active: boolean }) => s.active).length,
     subscriptions: results,
   });
-}
+});

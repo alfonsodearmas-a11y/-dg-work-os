@@ -78,15 +78,17 @@ function classifyAction(item: { task: string; owner: string | null; dueDate: str
   return { confidence: 'AUTO_CREATE', review_reason: null };
 }
 
-export async function POST(
+import { withErrorHandler } from '@/lib/api-utils';
+
+export const POST = withErrorHandler(async (
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+  ctx?: unknown
+) => {
   const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
-  const { id } = await params;
+  const { id } = await (ctx as { params: Promise<{ id: string }> }).params;
 
   // Fetch meeting
   const { data: meeting, error: fetchError } = await supabaseAdmin
@@ -221,4 +223,4 @@ export async function POST(
     const message = err instanceof Error ? err.message : 'Analysis failed';
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+});

@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
+import { parseBody, apiError } from '@/lib/api-utils';
 import { getProjectById, getProjectNotes, getProjectSummary, upsertProjectSummary } from '@/lib/project-queries';
 import Anthropic from '@anthropic-ai/sdk';
+
+const generateSummarySchema = z.object({
+  force: z.boolean().optional(),
+});
 
 let client: Anthropic | null = null;
 function getClient(): Anthropic {
@@ -37,9 +43,11 @@ export async function POST(
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
 
+  const { data } = await parseBody(request, generateSummarySchema);
+
   try {
     const { id } = await params;
-    const { force } = await request.json().catch(() => ({ force: false }));
+    const force = data?.force ?? false;
 
     const project = await getProjectById(id);
     if (!project) {
@@ -112,8 +120,8 @@ Respond ONLY with valid JSON matching this structure:
 
     const result = await getProjectSummary(id);
     return NextResponse.json(result);
-  } catch (error) {
-    console.error('AI summary error:', error);
-    return NextResponse.json({ error: 'Failed to generate summary' }, { status: 500 });
+  } catch (err) {
+    console.error('AI summary error:', err);
+    return apiError('SUMMARY_FAILED', 'Failed to generate summary', 500);
   }
 }

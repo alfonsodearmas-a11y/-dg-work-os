@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { auth } from '@/lib/auth';
 import {
   saveSubscription,
@@ -6,35 +7,35 @@ import {
   getAllSubscriptionsForUser,
   deleteSubscription,
 } from '@/lib/push';
+import { parseBody, withErrorHandler } from '@/lib/api-utils';
 
-// Register or update a push subscription
-// Public route (called from SW) — uses session when available, falls back to body user_id
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { subscription } = body;
+const subscribeSchema = z.object({
+  subscription: z.object({
+    endpoint: z.string().min(1),
+    keys: z.object({
+      p256dh: z.string().min(1),
+      auth: z.string().min(1),
+    }),
+  }),
+  user_id: z.string().min(1).optional(),
+});
 
-    if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
-      return NextResponse.json({ error: 'Invalid subscription object' }, { status: 400 });
-    }
+export const POST = withErrorHandler(async (request: NextRequest) => {
+  const { data, error } = await parseBody(request, subscribeSchema);
+  if (error) return error;
 
-    // Prefer session user ID; fall back to body user_id (SW context)
-    const session = await auth();
-    const userId = session?.user?.id || body.user_id;
+  const session = await auth();
+  const userId = session?.user?.id || data!.user_id;
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
-    }
-
-    const userAgent = request.headers.get('user-agent') || '';
-    const record = await saveSubscription(userId, subscription, userAgent);
-
-    return NextResponse.json({ success: true, subscription: record });
-  } catch (err) {
-    console.error('POST /api/push/subscribe error:', err);
-    return NextResponse.json({ error: 'Failed to save subscription' }, { status: 500 });
+  if (!userId) {
+    return NextResponse.json({ error: 'User ID required' }, { status: 400 });
   }
-}
+
+  const userAgent = request.headers.get('user-agent') || '';
+  const record = await saveSubscription(userId, data!.subscription, userAgent);
+
+  return NextResponse.json({ success: true, subscription: record });
+});
 
 // List subscriptions for a user — requires auth
 export async function GET() {

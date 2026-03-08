@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { auth } from '@/lib/auth';
 import {
   getNotifications,
@@ -9,6 +10,7 @@ import {
   dismissAll,
   markDelivered,
 } from '@/lib/notifications';
+import { parseBody, withErrorHandler } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,41 +37,39 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PATCH(request: NextRequest) {
-  try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+const notificationPatchSchema = z.object({
+  action: z.enum(['mark_read', 'mark_all_read', 'dismiss', 'dismiss_all', 'delivered']),
+  id: z.string().min(1).optional(),
+}).refine(
+  (d) => ['mark_all_read', 'dismiss_all'].includes(d.action) || !!d.id,
+  { message: 'id is required for this action', path: ['id'] },
+);
 
-    const body = await request.json();
-    const { action, id } = body;
+export const PATCH = withErrorHandler(async (request: NextRequest) => {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
-    switch (action) {
-      case 'mark_read':
-        if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-        await markAsRead(id);
-        break;
-      case 'mark_all_read':
-        await markAllRead(userId);
-        break;
-      case 'dismiss':
-        if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-        await dismissNotification(id);
-        break;
-      case 'dismiss_all':
-        await dismissAll(userId);
-        break;
-      case 'delivered':
-        if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-        await markDelivered(id);
-        break;
-      default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-    }
+  const { data, error } = await parseBody(request, notificationPatchSchema);
+  if (error) return error;
 
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error('PATCH /api/notifications error:', err);
-    return NextResponse.json({ error: 'Failed to update notification' }, { status: 500 });
+  switch (data!.action) {
+    case 'mark_read':
+      await markAsRead(data!.id!);
+      break;
+    case 'mark_all_read':
+      await markAllRead(userId);
+      break;
+    case 'dismiss':
+      await dismissNotification(data!.id!);
+      break;
+    case 'dismiss_all':
+      await dismissAll(userId);
+      break;
+    case 'delivered':
+      await markDelivered(data!.id!);
+      break;
   }
-}
+
+  return NextResponse.json({ success: true });
+});

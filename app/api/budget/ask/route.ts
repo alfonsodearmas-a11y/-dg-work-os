@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildAskContext } from '@/lib/budget-db';
 import { requireRole } from '@/lib/auth-helpers';
+import { parseBody, apiError } from '@/lib/api-utils';
 
 const SYSTEM_PROMPT = `You are the senior budget analyst preparing the Honourable Minister of Public Utilities & Aviation for parliamentary committee defence of Guyana's 2026 Budget Estimates.
 
@@ -29,19 +31,18 @@ Rules:
 - Agency 34 is NEW for 2026 — prior-year zeros are expected due to restructuring.
 - Be direct and confident. Keep response under 800 words.`;
 
+const askSchema = z.object({
+  question: z.string().min(1),
+});
+
 export async function POST(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
 
-  const body = await request.json();
-  const question = (body.question || '').trim();
+  const { data, error } = await parseBody(request, askSchema);
+  if (error) return error;
 
-  if (!question) {
-    return new Response(JSON.stringify({ error: 'question required' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  const question = data!.question.trim();
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {

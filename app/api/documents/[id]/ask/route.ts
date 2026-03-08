@@ -1,33 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { askDocument } from '@/lib/document-qa';
 import { requireRole } from '@/lib/auth-helpers';
+import { parseBody, withErrorHandler } from '@/lib/api-utils';
 
-export async function POST(
+const askSchema = z.object({
+  question: z.string().min(1),
+});
+
+export const POST = withErrorHandler(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+  ctx?: unknown,
+) => {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
 
-  try {
-    const { id } = await params;
-    const { question } = await request.json();
+  const { id } = await (ctx as { params: Promise<{ id: string }> }).params;
+  const { data, error } = await parseBody(request, askSchema);
+  if (error) return error;
 
-    if (!question) {
-      return NextResponse.json(
-        { error: 'Question is required' },
-        { status: 400 }
-      );
-    }
+  const answer = await askDocument(id, data!.question);
 
-    const answer = await askDocument(id, question);
-
-    return NextResponse.json({ answer });
-  } catch (error) {
-    console.error('Ask document error:', error);
-    return NextResponse.json(
-      { error: 'Failed to process question' },
-      { status: 500 }
-    );
-  }
-}
+  return NextResponse.json({ answer });
+});

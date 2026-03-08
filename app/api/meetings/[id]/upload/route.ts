@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
+import { withErrorHandler } from '@/lib/api-utils';
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
 
-export async function POST(
+export const POST = withErrorHandler(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+  ctx?: unknown
+) => {
   const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (result instanceof NextResponse) return result;
 
-  const { id } = await params;
+  const { id } = await (ctx as { params: Promise<{ id: string }> }).params;
 
   try {
     const formData = await request.formData();
@@ -60,4 +61,4 @@ export async function POST(
     const message = err instanceof Error ? err.message : 'Upload failed';
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+});

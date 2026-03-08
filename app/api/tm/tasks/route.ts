@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { authenticateAny, AuthError } from '@/lib/auth';
 import { createTask, getTasksList } from '@/lib/task-queries';
+import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
+
+const createTmTaskSchema = z.object({
+  title: z.string().min(1),
+  assignee_id: z.string().min(1),
+  description: z.string().optional(),
+  priority: z.enum(['high', 'medium', 'low']).optional(),
+  agency: z.string().optional(),
+  due_date: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  source_meeting_id: z.string().optional(),
+  source_recording_id: z.string().optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,25 +45,22 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandler(async (request: NextRequest) => {
   try {
     const user = await authenticateAny(request);
 
-    const body = await request.json();
-    if (!body.title || !body.assignee_id) {
-      return NextResponse.json({ success: false, error: 'title and assignee_id are required' }, { status: 400 });
-    }
+    const { data, error: validationError } = await parseBody(request, createTmTaskSchema);
+    if (validationError) return validationError;
 
-    // Default agency to 'ministry' if not provided
     const taskData = {
-      ...body,
-      agency: body.agency || 'ministry',
+      ...data,
+      agency: data.agency || 'ministry',
     };
 
     const task = await createTask(taskData, user.id);
     return NextResponse.json({ success: true, data: task }, { status: 201 });
   } catch (error: any) {
     if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return apiError('INTERNAL_ERROR', error.message, 500);
   }
-}
+});

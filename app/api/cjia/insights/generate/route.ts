@@ -1,29 +1,27 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { z } from 'zod';
 import { generateCJIAInsights } from '@/lib/cjia-insights';
 import { requireRole } from '@/lib/auth-helpers';
+import { parseBody, withErrorHandler } from '@/lib/api-utils';
 
-export async function POST(request: NextRequest) {
+const generateInsightsSchema = z.object({
+  month: z.string().min(7),
+  forceRegenerate: z.boolean().optional(),
+});
+
+export const POST = withErrorHandler(async (request: NextRequest) => {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
 
-  try {
-    const body = await request.json();
-    const { month, forceRegenerate } = body;
+  const { data, error } = await parseBody(request, generateInsightsSchema);
+  if (error) return error;
 
-    if (!month) {
-      return NextResponse.json({ success: false, error: 'month is required (YYYY-MM or YYYY-MM-DD)' }, { status: 400 });
-    }
+  const normalizedMonth = data!.month.length === 7 ? `${data!.month}-01` : data!.month;
+  const insights = await generateCJIAInsights(normalizedMonth, data!.forceRegenerate ?? false);
 
-    const normalizedMonth = month.length === 7 ? `${month}-01` : month;
-    const insights = await generateCJIAInsights(normalizedMonth, forceRegenerate ?? false);
-
-    if (!insights) {
-      return NextResponse.json({ success: false, error: 'Failed to generate insights. Check API key and data availability.' }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true, data: insights });
-  } catch (err: unknown) {
-    console.error('[cjia/insights/generate] Error:', err);
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+  if (!insights) {
+    return NextResponse.json({ success: false, error: 'Failed to generate insights. Check API key and data availability.' }, { status: 500 });
   }
-}
+
+  return NextResponse.json({ success: true, data: insights });
+});

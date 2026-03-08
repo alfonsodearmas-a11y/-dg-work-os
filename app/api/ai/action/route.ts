@@ -1,34 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { auth } from '@/lib/auth';
 import { executeAction } from '@/lib/ai/tools';
 import { invalidateContextCache } from '@/lib/ai/context-engine';
+import { parseBody, withErrorHandler } from '@/lib/api-utils';
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+const actionSchema = z.object({
+  tool_name: z.string().min(1),
+  tool_input: z.record(z.string(), z.unknown()),
+});
 
-    const { tool_name, tool_input } = await request.json();
-
-    if (!tool_name || !tool_input) {
-      return NextResponse.json({ error: 'tool_name and tool_input are required' }, { status: 400 });
-    }
-
-    const result = await executeAction(tool_name, tool_input, session.user.id);
-
-    // Invalidate context cache so next AI query sees the new data
-    if (result.success) {
-      invalidateContextCache();
-    }
-
-    return NextResponse.json(result);
-  } catch (err: any) {
-    console.error('[ai/action] Error:', err);
-    return NextResponse.json(
-      { success: false, message: err.message || 'Action execution failed' },
-      { status: 500 }
-    );
+export const POST = withErrorHandler(async (request: NextRequest) => {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-}
+
+  const { data, error } = await parseBody(request, actionSchema);
+  if (error) return error;
+
+  const result = await executeAction(data!.tool_name, data!.tool_input, session.user.id);
+
+  if (result.success) {
+    invalidateContextCache();
+  }
+
+  return NextResponse.json(result);
+});

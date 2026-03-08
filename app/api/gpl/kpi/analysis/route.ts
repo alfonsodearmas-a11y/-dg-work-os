@@ -1,8 +1,8 @@
-// TEMPORARY: Swapped from Anthropic to OpenAI GPT-4o. Revert when Anthropic quota restored.
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireRole } from '@/lib/auth-helpers';
+import { withErrorHandler } from '@/lib/api-utils';
 
 // In-memory cache — invalidated when row count changes (new upload)
 let cachedAnalysis: { analysis: any; generatedAt: number; rowCount: number } | null = null;
@@ -170,12 +170,10 @@ Respond in JSON format:
   }
 }
 
-// POST to force regeneration (invalidates cache)
-export async function POST() {
+export const POST = withErrorHandler(async () => {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
 
   cachedAnalysis = null;
-  // Re-use GET logic — auth already checked above, GET will re-check (harmless)
   return GET();
-}
+});

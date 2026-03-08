@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { generateGPLBriefing } from '@/lib/ai-analysis';
 import { requireRole } from '@/lib/auth-helpers';
+import { withErrorHandler } from '@/lib/api-utils';
 
 const EXCLUDED_STATIONS = ['onverwagt'];
 
@@ -160,150 +161,136 @@ export async function GET(
   }
 }
 
-export async function POST(
+export const POST = withErrorHandler(async (
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+  ctx?: unknown
+) => {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
 
-  try {
-    const { id } = await params;
+  const { id } = await (ctx as { params: Promise<{ id: string }> }).params;
 
-    // Verify the upload exists
-    const { data: upload, error: uploadError } = await supabaseAdmin
-      .from('gpl_uploads')
-      .select('id, report_date, raw_data')
-      .eq('id', id)
-      .maybeSingle();
+  const { data: upload, error: uploadError } = await supabaseAdmin
+    .from('gpl_uploads')
+    .select('id, report_date, raw_data')
+    .eq('id', id)
+    .maybeSingle();
 
-    if (uploadError) throw uploadError;
+  if (uploadError) throw uploadError;
 
-    if (!upload) {
-      return NextResponse.json(
-        { success: false, error: 'Upload not found' },
-        { status: 404 }
-      );
-    }
-
-    const rawData = typeof upload.raw_data === 'string'
-      ? JSON.parse(upload.raw_data)
-      : upload.raw_data;
-
-    if (!rawData) {
-      return NextResponse.json(
-        { success: false, error: 'No raw data available for analysis. Please re-upload the file.' },
-        { status: 422 }
-      );
-    }
-
-    // Build context from stored raw data, filtering out excluded stations
-    const schedule = rawData.schedule;
-    const summaries = rawData.generationStatus?.summaries || {};
-    const scheduleSummary = schedule?.summary || {};
-    const stations = (schedule?.stations || []).filter(
-      (s: any) => !EXCLUDED_STATIONS.includes((s.station || '').toLowerCase())
-    );
-    const units = (schedule?.units || []).filter(
-      (u: any) => !EXCLUDED_STATIONS.includes((u.station || '').toLowerCase())
-    );
-
-    const onlineCount = units.filter((u: any) => u.status === 'online').length;
-    const offlineCount = units.filter((u: any) => u.status === 'offline').length;
-    const noDataCount = units.filter((u: any) => u.status === 'no_data').length;
-
-    const criticalStations = stations
-      .filter((s: any) => s.stationUtilizationPct !== null && s.stationUtilizationPct < 50)
-      .map((s: any) => s.station);
-
-    const briefingContext = {
-      reportDate: upload.report_date,
-      systemOverview: {
-        totalCapacityMw: scheduleSummary.totalFossilFuelCapacityMw ?? summaries.totalFossilCapacity,
-        availableCapacityMw: schedule?.stats?.totalAvailableMw ?? null,
-        expectedPeakMw: scheduleSummary.expectedPeakDemandMw ?? summaries.expectedPeakDemand,
-        reserveCapacityMw: scheduleSummary.reserveCapacityMw ?? summaries.reserveCapacity,
-        eveningPeak: {
-          onBars: scheduleSummary.eveningPeakOnBarsMw ?? null,
-          suppressed: scheduleSummary.eveningPeakSuppressedMw ?? null,
-        },
-      },
-      renewables: {
-        hampshireMwp: summaries.hampshireSolarMwp || 0,
-        prospectMwp: summaries.prospectSolarMwp || 0,
-        trafalgarMwp: summaries.trafalgarSolarMwp || 0,
-        totalMwp: summaries.totalRenewableCapacity || 0,
-      },
-      unitStats: {
-        total: units.length,
-        online: onlineCount,
-        offline: offlineCount,
-        noData: noDataCount,
-      },
-      stations: stations.map((s: any) => ({
-        name: s.station,
-        units: s.totalUnits,
-        online: s.unitsOnline,
-        capacityMw: s.totalDeratedCapacityMw,
-        availableMw: s.totalAvailableMw,
-        utilizationPct: s.stationUtilizationPct,
-      })),
-      criticalStations,
-      outages: rawData.outages || [],
-    };
-
-    // Generate fresh analysis
-    const analysis = await generateGPLBriefing(briefingContext);
-
-    // Check if an existing analysis record exists
-    const { data: existingRows, error: existingError } = await supabaseAdmin
-      .from('gpl_analysis')
-      .select('id')
-      .eq('upload_id', id);
-
-    if (existingError) throw existingError;
-
-    if (existingRows && existingRows.length > 0) {
-      // Update existing record
-      const { error: updateError } = await supabaseAdmin
-        .from('gpl_analysis')
-        .update({
-          analysis_data: analysis,
-          status: analysis.success ? 'completed' : 'failed',
-          created_at: new Date().toISOString(),
-        })
-        .eq('upload_id', id);
-
-      if (updateError) throw updateError;
-    } else {
-      // Insert new record
-      const { error: insertError } = await supabaseAdmin
-        .from('gpl_analysis')
-        .insert({
-          upload_id: id,
-          report_date: upload.report_date,
-          analysis_data: analysis,
-          status: analysis.success ? 'completed' : 'failed',
-        });
-
-      if (insertError) throw insertError;
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: 'Analysis regenerated successfully',
-      data: {
-        uploadId: id,
-        reportDate: upload.report_date,
-        status: analysis.success ? 'completed' : 'failed',
-        analysis,
-      },
-    });
-  } catch (error: any) {
-    console.error('[gpl/analysis] POST Error:', error.message);
+  if (!upload) {
     return NextResponse.json(
-      { success: false, error: 'Failed to regenerate GPL analysis' },
-      { status: 500 }
+      { success: false, error: 'Upload not found' },
+      { status: 404 }
     );
   }
-}
+
+  const rawData = typeof upload.raw_data === 'string'
+    ? JSON.parse(upload.raw_data)
+    : upload.raw_data;
+
+  if (!rawData) {
+    return NextResponse.json(
+      { success: false, error: 'No raw data available for analysis. Please re-upload the file.' },
+      { status: 422 }
+    );
+  }
+
+  const schedule = rawData.schedule;
+  const summaries = rawData.generationStatus?.summaries || {};
+  const scheduleSummary = schedule?.summary || {};
+  const stations = (schedule?.stations || []).filter(
+    (s: any) => !EXCLUDED_STATIONS.includes((s.station || '').toLowerCase())
+  );
+  const units = (schedule?.units || []).filter(
+    (u: any) => !EXCLUDED_STATIONS.includes((u.station || '').toLowerCase())
+  );
+
+  const onlineCount = units.filter((u: any) => u.status === 'online').length;
+  const offlineCount = units.filter((u: any) => u.status === 'offline').length;
+  const noDataCount = units.filter((u: any) => u.status === 'no_data').length;
+
+  const criticalStations = stations
+    .filter((s: any) => s.stationUtilizationPct !== null && s.stationUtilizationPct < 50)
+    .map((s: any) => s.station);
+
+  const briefingContext = {
+    reportDate: upload.report_date,
+    systemOverview: {
+      totalCapacityMw: scheduleSummary.totalFossilFuelCapacityMw ?? summaries.totalFossilCapacity,
+      availableCapacityMw: schedule?.stats?.totalAvailableMw ?? null,
+      expectedPeakMw: scheduleSummary.expectedPeakDemandMw ?? summaries.expectedPeakDemand,
+      reserveCapacityMw: scheduleSummary.reserveCapacityMw ?? summaries.reserveCapacity,
+      eveningPeak: {
+        onBars: scheduleSummary.eveningPeakOnBarsMw ?? null,
+        suppressed: scheduleSummary.eveningPeakSuppressedMw ?? null,
+      },
+    },
+    renewables: {
+      hampshireMwp: summaries.hampshireSolarMwp || 0,
+      prospectMwp: summaries.prospectSolarMwp || 0,
+      trafalgarMwp: summaries.trafalgarSolarMwp || 0,
+      totalMwp: summaries.totalRenewableCapacity || 0,
+    },
+    unitStats: {
+      total: units.length,
+      online: onlineCount,
+      offline: offlineCount,
+      noData: noDataCount,
+    },
+    stations: stations.map((s: any) => ({
+      name: s.station,
+      units: s.totalUnits,
+      online: s.unitsOnline,
+      capacityMw: s.totalDeratedCapacityMw,
+      availableMw: s.totalAvailableMw,
+      utilizationPct: s.stationUtilizationPct,
+    })),
+    criticalStations,
+    outages: rawData.outages || [],
+  };
+
+  const analysis = await generateGPLBriefing(briefingContext);
+
+  const { data: existingRows, error: existingError } = await supabaseAdmin
+    .from('gpl_analysis')
+    .select('id')
+    .eq('upload_id', id);
+
+  if (existingError) throw existingError;
+
+  if (existingRows && existingRows.length > 0) {
+    const { error: updateError } = await supabaseAdmin
+      .from('gpl_analysis')
+      .update({
+        analysis_data: analysis,
+        status: analysis.success ? 'completed' : 'failed',
+        created_at: new Date().toISOString(),
+      })
+      .eq('upload_id', id);
+
+    if (updateError) throw updateError;
+  } else {
+    const { error: insertError } = await supabaseAdmin
+      .from('gpl_analysis')
+      .insert({
+        upload_id: id,
+        report_date: upload.report_date,
+        analysis_data: analysis,
+        status: analysis.success ? 'completed' : 'failed',
+      });
+
+    if (insertError) throw insertError;
+  }
+
+  return NextResponse.json({
+    success: true,
+    message: 'Analysis regenerated successfully',
+    data: {
+      uploadId: id,
+      reportDate: upload.report_date,
+      status: analysis.success ? 'completed' : 'failed',
+      analysis,
+    },
+  });
+});

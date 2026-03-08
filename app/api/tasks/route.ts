@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireRole, canAssignTasks } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { insertNotification } from '@/lib/notifications';
+import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
+
+const createTaskSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().optional(),
+  status: z.enum(['new', 'active', 'blocked', 'done']).optional(),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+  due_date: z.string().optional(),
+  agency: z.string().optional(),
+  role: z.string().optional(),
+  assignee_id: z.string().optional(),
+  source_meeting_id: z.string().optional(),
+});
 
 export const dynamic = 'force-dynamic';
 
@@ -62,49 +76,43 @@ export async function GET(request: NextRequest) {
   });
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandler(async (request: NextRequest) => {
   const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
-  const body = await request.json();
+  const { data, error: validationError } = await parseBody(request, createTaskSchema);
+  if (validationError) return validationError;
 
-  if (!body.title) {
-    return NextResponse.json({ error: 'Title is required' }, { status: 400 });
-  }
-
-  // Determine owner
   let ownerId = session.user.id;
-  if (body.assignee_id && canAssignTasks(session.user.role)) {
-    ownerId = body.assignee_id;
+  if (data.assignee_id && canAssignTasks(session.user.role)) {
+    ownerId = data.assignee_id;
   }
 
   const { data: task, error } = await supabaseAdmin
     .from('tasks')
     .insert({
-      title: body.title,
-      description: body.description || null,
-      status: body.status || 'new',
-      priority: body.priority || 'medium',
-      due_date: body.due_date || null,
-      agency: body.agency || null,
-      role: body.role || null,
+      title: data.title,
+      description: data.description || null,
+      status: data.status || 'new',
+      priority: data.priority || 'medium',
+      due_date: data.due_date || null,
+      agency: data.agency || null,
+      role: data.role || null,
       owner_user_id: ownerId,
-      assigned_by_user_id: body.assignee_id && canAssignTasks(session.user.role) ? session.user.id : null,
-      source_meeting_id: body.source_meeting_id || null,
+      assigned_by_user_id: data.assignee_id && canAssignTasks(session.user.role) ? session.user.id : null,
+      source_meeting_id: data.source_meeting_id || null,
     })
     .select('*, owner:users!owner_user_id(id, name)')
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return apiError('DB_ERROR', error.message, 500);
   }
 
-  // Flatten owner
   const owner = task.owner as { id: string; name: string } | null;
   const flatTask = { ...task, owner_name: owner?.name || null, owner: undefined };
 
-  // Log activity
   await supabaseAdmin.from('task_activity').insert({
     task_id: task.id,
     user_id: session.user.id,
@@ -113,10 +121,9 @@ export async function POST(request: NextRequest) {
     new_value: null,
   });
 
-  // Notify the assignee when a task is assigned to someone else
-  if (body.assignee_id && canAssignTasks(session.user.role) && body.assignee_id !== session.user.id) {
+  if (data.assignee_id && canAssignTasks(session.user.role) && data.assignee_id !== session.user.id) {
     await insertNotification({
-      user_id: body.assignee_id,
+      user_id: data.assignee_id,
       type: 'task_assigned',
       title: 'New task assigned to you',
       body: task.title,
@@ -134,4 +141,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ task: flatTask });
-}
+});

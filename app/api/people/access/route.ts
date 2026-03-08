@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { checkPermission, grantObjectAccess, getObjectGrants, revokeObjectAccess, logActivity } from '@/lib/people-permissions';
 import type { AccessLevel } from '@/lib/people-types';
+import { parseBody, withErrorHandler } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
@@ -20,13 +22,20 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ grants });
 }
 
-export async function POST(request: NextRequest) {
+const accessSchema = z.object({
+  targetUserId: z.string().min(1),
+  objectType: z.string().min(1),
+  objectId: z.string().min(1).optional(),
+  accessLevel: z.enum(['view', 'edit', 'manage']),
+  reason: z.string().optional(),
+});
+
+export const POST = withErrorHandler(async (request: NextRequest) => {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 
   const hasPermission = await checkPermission(session.user.id, 'user.manage_roles');
-  // Fallback: agency_admin can share within their agency objects
   const hasSharePermission = await checkPermission(session.user.id, 'dashboard.share');
 
   if (!hasPermission && !hasSharePermission) {
@@ -39,28 +48,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
 
-  const body = await request.json();
-  const { targetUserId, objectType, objectId, accessLevel, reason } = body;
-
-  if (!targetUserId || !objectType || !accessLevel) {
-    return NextResponse.json(
-      { error: 'targetUserId, objectType, and accessLevel are required' },
-      { status: 400 }
-    );
-  }
-
-  const validLevels: AccessLevel[] = ['view', 'edit', 'manage'];
-  if (!validLevels.includes(accessLevel)) {
-    return NextResponse.json({ error: 'Invalid access level' }, { status: 400 });
-  }
+  const { data, error } = await parseBody(request, accessSchema);
+  if (error) return error;
 
   const result = await grantObjectAccess({
     granterId: session.user.id,
-    targetUserId,
-    objectType,
-    objectId: objectId || null,
-    accessLevel,
-    reason,
+    targetUserId: data!.targetUserId,
+    objectType: data!.objectType,
+    objectId: data!.objectId || null,
+    accessLevel: data!.accessLevel,
+    reason: data!.reason,
   });
 
   if (!result.success) {
@@ -68,7 +65,7 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ success: true }, { status: 201 });
-}
+});
 
 export async function DELETE(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);

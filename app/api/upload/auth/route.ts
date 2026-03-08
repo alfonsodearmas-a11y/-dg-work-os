@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { timingSafeEqual, createHash } from 'crypto';
+import { parseBody, withErrorHandler } from '@/lib/api-utils';
 
 const VALID_AGENCIES = ['GPL', 'GWI'] as const;
 type Agency = typeof VALID_AGENCIES[number];
@@ -45,10 +47,14 @@ function makeUploadToken(code: string, agency: string): string {
   return createHash('sha256').update(code + '_upload_' + agency).digest('hex');
 }
 
-export async function POST(request: NextRequest) {
+const uploadAuthSchema = z.object({
+  agency: z.enum(['GPL', 'GWI']),
+  code: z.string().min(1),
+});
+
+export const POST = withErrorHandler(async (request: NextRequest) => {
   const ip = getClientIP(request);
 
-  // Check if this is a logout request
   const url = new URL(request.url);
   if (url.searchParams.get('action') === 'logout') {
     const response = NextResponse.json({ success: true });
@@ -64,47 +70,33 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: { agency?: string; code?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
-  }
+  const { data, error } = await parseBody(request, uploadAuthSchema);
+  if (error) return error;
 
-  const { agency, code } = body;
-
-  if (!agency || !VALID_AGENCIES.includes(agency as Agency)) {
-    return NextResponse.json({ error: 'Invalid agency. Must be GPL or GWI.' }, { status: 400 });
-  }
-
-  if (!code || typeof code !== 'string') {
-    return NextResponse.json({ error: 'Access code required' }, { status: 400 });
-  }
-
-  const envKey = `UPLOAD_ACCESS_CODE_${agency}`;
+  const envKey = `UPLOAD_ACCESS_CODE_${data!.agency}`;
   const expectedCode = process.env[envKey];
   if (!expectedCode) {
     return NextResponse.json({ error: 'Upload access not configured for this agency' }, { status: 500 });
   }
 
-  if (!constantTimeCompare(code, expectedCode)) {
+  if (!constantTimeCompare(data!.code, expectedCode)) {
     return NextResponse.json({ error: 'Invalid access code' }, { status: 401 });
   }
 
-  const token = makeUploadToken(expectedCode, agency);
+  const token = makeUploadToken(expectedCode, data!.agency);
   const isProduction = process.env.NODE_ENV === 'production';
 
-  const response = NextResponse.json({ success: true, agency });
+  const response = NextResponse.json({ success: true, agency: data!.agency });
 
   response.cookies.set('upload-auth', token, {
     httpOnly: true,
     secure: isProduction,
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 30, // 30 days
+    maxAge: 60 * 60 * 24 * 30,
     path: '/',
   });
 
-  response.cookies.set('upload-agency', agency, {
+  response.cookies.set('upload-agency', data!.agency, {
     httpOnly: false,
     secure: isProduction,
     sameSite: 'lax',
@@ -113,4 +105,4 @@ export async function POST(request: NextRequest) {
   });
 
   return response;
-}
+});

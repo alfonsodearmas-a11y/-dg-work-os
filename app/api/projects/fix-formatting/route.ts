@@ -1,10 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
+import { withErrorHandler } from '@/lib/api-utils';
 
-// No longer needed — formatting is handled at parse time
-export async function POST() {
+export const POST = withErrorHandler(async (_req: NextRequest) => {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
 
   return NextResponse.json({ message: 'No-op: formatting is handled during Excel parsing' });
-}
+});

@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
+import { parseBody, apiError } from '@/lib/api-utils';
 import { fetchMonthEvents, fetchWeekEvents, createEvent, classifyCalendarError } from '@/lib/google-calendar';
+
+const createEventSchema = z.object({
+  title: z.string().min(1),
+  start_time: z.string().min(1),
+  end_time: z.string().min(1),
+  location: z.string().optional(),
+  description: z.string().optional(),
+  all_day: z.boolean().optional(),
+  attendees: z.array(z.string()).optional(),
+  add_google_meet: z.boolean().optional(),
+});
 
 export const dynamic = 'force-dynamic';
 
@@ -45,25 +58,19 @@ export async function POST(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
 
+  const { data, error } = await parseBody(request, createEventSchema);
+  if (error) return error;
+
   try {
-    const body = await request.json();
-
-    if (!body.title || !body.start_time || !body.end_time) {
-      return NextResponse.json(
-        { error: 'Title, start_time, and end_time are required' },
-        { status: 400 }
-      );
-    }
-
     const event = await createEvent({
-      title: body.title,
-      start_time: body.start_time,
-      end_time: body.end_time,
-      location: body.location,
-      description: body.description,
-      all_day: body.all_day,
-      attendees: body.attendees,
-      add_google_meet: body.add_google_meet,
+      title: data.title,
+      start_time: data.start_time,
+      end_time: data.end_time,
+      location: data.location,
+      description: data.description,
+      all_day: data.all_day,
+      attendees: data.attendees,
+      add_google_meet: data.add_google_meet,
     });
 
     return NextResponse.json({ event });

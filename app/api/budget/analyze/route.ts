@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildAnalysisContext } from '@/lib/budget-db';
 import { requireRole } from '@/lib/auth-helpers';
+import { parseBody } from '@/lib/api-utils';
 
 const ANALYSIS_SYSTEM_PROMPT = `You are the senior budget analyst preparing the Honourable Minister of Public Utilities & Aviation for parliamentary committee defence of Guyana's 2026 Budget Estimates.
 
@@ -34,22 +36,24 @@ Rules:
 - Be direct and confident. No hedging. This is parliamentary defence, not academic analysis.
 - Keep the total response under 800 words. The Minister needs precision, not length.`;
 
+const analyzeSchema = z.object({
+  agency_code: z.string().min(1),
+  line_item: z.string().min(1),
+  budget_2026: z.number().optional(),
+  question: z.string().optional(),
+});
+
 export async function POST(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
 
-  const body = await request.json();
-  const agencyCode = (body.agency_code || '').toUpperCase();
-  const lineItem = body.line_item || '';
-  const budget2026 = body.budget_2026 || 0;
-  const question = body.question || '';
+  const { data, error } = await parseBody(request, analyzeSchema);
+  if (error) return error;
 
-  if (!agencyCode || !lineItem) {
-    return new Response(JSON.stringify({ error: 'agency_code and line_item required' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  const agencyCode = data!.agency_code.toUpperCase();
+  const lineItem = data!.line_item;
+  const budget2026 = data!.budget_2026 || 0;
+  const question = data!.question || '';
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {

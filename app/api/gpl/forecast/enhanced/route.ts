@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getEnhancedForecast, getLatestCachedForecast } from '@/lib/gpl-enhanced-forecast';
 import { requireRole } from '@/lib/auth-helpers';
+import { withErrorHandler } from '@/lib/api-utils';
 
 /**
  * GET /api/gpl/forecast/enhanced
@@ -46,34 +47,22 @@ export async function GET(_request: NextRequest) {
   }
 }
 
-/**
- * POST /api/gpl/forecast/enhanced
- * Force-regenerate the enhanced forecast (ignores cache)
- */
-export async function POST(_request: NextRequest) {
+export const POST = withErrorHandler(async (_request: NextRequest) => {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
 
-  try {
-    const result = await getEnhancedForecast(true);
+  const result = await getEnhancedForecast(true);
 
-    if (result.success && result.forecast) {
-      return NextResponse.json({
-        success: true,
-        forecast: result.forecast,
-        regenerated: true,
-      });
-    }
-
-    return NextResponse.json(
-      { success: false, error: result.error || 'Failed to generate forecast' },
-      { status: 500 }
-    );
-  } catch (error: any) {
-    console.error('[forecast/enhanced] POST error:', error.message);
-    return NextResponse.json(
-      { success: false, error: 'Failed to generate enhanced forecast' },
-      { status: 500 }
-    );
+  if (result.success && result.forecast) {
+    return NextResponse.json({
+      success: true,
+      forecast: result.forecast,
+      regenerated: true,
+    });
   }
-}
+
+  return NextResponse.json(
+    { success: false, error: result.error || 'Failed to generate forecast' },
+    { status: 500 }
+  );
+});

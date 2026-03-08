@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
 import { computeGPLAnalysis, computeGWIAnalysis } from '@/lib/pending-applications-analysis';
 import { generateGPLDeepAnalysis, generateGWIDeepAnalysis } from '@/lib/pending-applications-ai';
 import type { PendingApplication } from '@/lib/pending-applications-types';
+import { parseBody, withErrorHandler } from '@/lib/api-utils';
 
 function mapRow(row: Record<string, unknown>): PendingApplication {
   return {
@@ -74,79 +76,75 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST — generate fresh analysis
-export async function POST(request: NextRequest) {
-  try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
-    if (authResult instanceof NextResponse) return authResult;
+const deepAnalysisSchema = z.object({
+  agency: z.string().min(1),
+});
 
-    const body = await request.json();
-    const agency = String(body.agency || '').toUpperCase();
-    if (agency !== 'GPL' && agency !== 'GWI') {
-      return NextResponse.json({ error: 'agency field required (GPL or GWI)' }, { status: 400 });
-    }
+export const POST = withErrorHandler(async (request: NextRequest) => {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
 
-    // Fetch all records for this agency
-    const { data: rows, error: fetchError } = await supabaseAdmin
-      .from('pending_applications')
-      .select('*')
-      .eq('agency', agency);
+  const { data, error } = await parseBody(request, deepAnalysisSchema);
+  if (error) return error;
 
-    if (fetchError) {
-      return NextResponse.json({ error: 'Failed to fetch pending applications' }, { status: 500 });
-    }
+  const agency = data!.agency.toUpperCase();
+  if (agency !== 'GPL' && agency !== 'GWI') {
+    return NextResponse.json({ error: 'agency field required (GPL or GWI)' }, { status: 400 });
+  }
 
-    const records = (rows || []).map(mapRow);
-    if (records.length === 0) {
-      return NextResponse.json({ error: `No ${agency} records found` }, { status: 404 });
-    }
+  const { data: rows, error: fetchError } = await supabaseAdmin
+    .from('pending_applications')
+    .select('*')
+    .eq('agency', agency);
 
-    // Compute structured analysis first
-    const structuredAnalysis = agency === 'GPL' ? computeGPLAnalysis(records) : computeGWIAnalysis(records);
+  if (fetchError) {
+    return NextResponse.json({ error: 'Failed to fetch pending applications' }, { status: 500 });
+  }
 
-    // Generate AI deep analysis
-    const result = agency === 'GPL'
-      ? await generateGPLDeepAnalysis(records, structuredAnalysis as ReturnType<typeof computeGPLAnalysis>)
-      : await generateGWIDeepAnalysis(records, structuredAnalysis as ReturnType<typeof computeGWIAnalysis>);
+  const records = (rows || []).map(mapRow);
+  if (records.length === 0) {
+    return NextResponse.json({ error: `No ${agency} records found` }, { status: 404 });
+  }
 
-    if (!result.success) {
-      return NextResponse.json({ error: 'AI analysis generation failed' }, { status: 500 });
-    }
+  const structuredAnalysis = agency === 'GPL' ? computeGPLAnalysis(records) : computeGWIAnalysis(records);
 
-    // Persist
-    const { data: saved, error: saveError } = await supabaseAdmin
-      .from('pending_application_analyses')
-      .insert({
-        agency,
-        analysis_type: 'deep',
-        result: {
-          executiveSummary: result.executiveSummary,
-          sections: result.sections,
-          recommendations: result.recommendations,
-        },
-        status: 'completed',
-      })
-      .select('id,analysis_date,created_at')
-      .single();
+  const result = agency === 'GPL'
+    ? await generateGPLDeepAnalysis(records, structuredAnalysis as ReturnType<typeof computeGPLAnalysis>)
+    : await generateGWIDeepAnalysis(records, structuredAnalysis as ReturnType<typeof computeGWIAnalysis>);
 
-    if (saveError) {
-      console.error('[deep-analysis] Save error:', saveError.message);
-    }
+  if (!result.success) {
+    return NextResponse.json({ error: 'AI analysis generation failed' }, { status: 500 });
+  }
 
-    return NextResponse.json({
+  const { data: saved, error: saveError } = await supabaseAdmin
+    .from('pending_application_analyses')
+    .insert({
       agency,
-      analysis: {
-        id: saved?.id,
-        agency,
-        analysisDate: saved?.analysis_date,
+      analysis_type: 'deep',
+      result: {
         executiveSummary: result.executiveSummary,
         sections: result.sections,
         recommendations: result.recommendations,
-        createdAt: saved?.created_at,
       },
-    });
-  } catch (err) {
-    console.error('[deep-analysis POST] Error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+      status: 'completed',
+    })
+    .select('id,analysis_date,created_at')
+    .single();
+
+  if (saveError) {
+    console.error('[deep-analysis] Save error:', saveError.message);
   }
-}
+
+  return NextResponse.json({
+    agency,
+    analysis: {
+      id: saved?.id,
+      agency,
+      analysisDate: saved?.analysis_date,
+      executiveSummary: result.executiveSummary,
+      sections: result.sections,
+      recommendations: result.recommendations,
+      createdAt: saved?.created_at,
+    },
+  });
+});

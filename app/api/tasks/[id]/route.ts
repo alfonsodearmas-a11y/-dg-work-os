@@ -1,20 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { insertNotification } from '@/lib/notifications';
+import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
 
-export async function PATCH(
+const patchTaskSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().optional(),
+  status: z.enum(['new', 'active', 'blocked', 'done']).optional(),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+  due_date: z.string().nullable().optional(),
+  agency: z.string().optional(),
+  role: z.string().optional(),
+  blocked_reason: z.string().nullable().optional(),
+});
+
+export const PATCH = withErrorHandler(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+  ctx?: unknown,
+) => {
   const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
-  const { id } = await params;
-  const body = await request.json();
+  const { id } = await (ctx as { params: Promise<{ id: string }> }).params;
+  const { data, error: validationError } = await parseBody(request, patchTaskSchema);
+  if (validationError) return validationError;
 
-  // Ownership check
   const { data: task } = await supabaseAdmin
     .from('tasks')
     .select('owner_user_id, assigned_by_user_id, status')
@@ -22,7 +35,7 @@ export async function PATCH(
     .single();
 
   if (!task) {
-    return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    return apiError('NOT_FOUND', 'Task not found', 404);
   }
 
   const isOwner = task.owner_user_id === session.user.id;
@@ -30,29 +43,27 @@ export async function PATCH(
   const isMinistryRole = ['dg', 'minister', 'ps'].includes(session.user.role);
 
   if (!isOwner && !isAssigner && !isMinistryRole) {
-    return NextResponse.json({ error: 'Not authorized to update this task' }, { status: 403 });
+    return apiError('FORBIDDEN', 'Not authorized to update this task', 403);
   }
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (body.title !== undefined) updates.title = body.title;
-  if (body.description !== undefined) updates.description = body.description;
-  if (body.status !== undefined) updates.status = body.status;
-  if (body.priority !== undefined) updates.priority = body.priority;
-  if (body.due_date !== undefined) updates.due_date = body.due_date;
-  if (body.agency !== undefined) updates.agency = body.agency;
-  if (body.role !== undefined) updates.role = body.role;
-  if (body.blocked_reason !== undefined) updates.blocked_reason = body.blocked_reason;
+  if (data.title !== undefined) updates.title = data.title;
+  if (data.description !== undefined) updates.description = data.description;
+  if (data.status !== undefined) updates.status = data.status;
+  if (data.priority !== undefined) updates.priority = data.priority;
+  if (data.due_date !== undefined) updates.due_date = data.due_date;
+  if (data.agency !== undefined) updates.agency = data.agency;
+  if (data.role !== undefined) updates.role = data.role;
+  if (data.blocked_reason !== undefined) updates.blocked_reason = data.blocked_reason;
 
-  // Track completed_at
-  if (body.status === 'done' && task.status !== 'done') {
+  if (data.status === 'done' && task.status !== 'done') {
     updates.completed_at = new Date().toISOString();
   }
-  if (body.status && body.status !== 'done') {
+  if (data.status && data.status !== 'done') {
     updates.completed_at = null;
   }
 
-  // Clear blocked_reason when moving out of blocked
-  if (body.status && body.status !== 'blocked' && task.status === 'blocked') {
+  if (data.status && data.status !== 'blocked' && task.status === 'blocked') {
     updates.blocked_reason = null;
   }
 
@@ -64,32 +75,30 @@ export async function PATCH(
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return apiError('DB_ERROR', error.message, 500);
   }
 
-  // Flatten owner
   const owner = updated.owner as { id: string; name: string } | null;
   const flatTask = { ...updated, owner_name: owner?.name || null, owner: undefined };
 
-  // Log activity for key field changes
   const activityEntries: Array<{ task_id: string; user_id: string; action: string; old_value: string | null; new_value: string | null }> = [];
 
-  if (body.status !== undefined && body.status !== task.status) {
+  if (data.status !== undefined && data.status !== task.status) {
     activityEntries.push({
       task_id: id,
       user_id: session.user.id,
-      action: `moved_to_${body.status}`,
+      action: `moved_to_${data.status}`,
       old_value: task.status,
-      new_value: body.status,
+      new_value: data.status,
     });
   }
-  if (body.due_date !== undefined) {
+  if (data.due_date !== undefined) {
     activityEntries.push({
       task_id: id,
       user_id: session.user.id,
       action: 'due_date_changed',
       old_value: null,
-      new_value: body.due_date || 'cleared',
+      new_value: data.due_date || 'cleared',
     });
   }
 
@@ -97,9 +106,7 @@ export async function PATCH(
     await supabaseAdmin.from('task_activity').insert(activityEntries);
   }
 
-  // Notify DG when a task is moved to blocked
-  if (body.status === 'blocked' && task.status !== 'blocked') {
-    // Find DG user(s) to notify
+  if (data.status === 'blocked' && task.status !== 'blocked') {
     const { data: dgUsers } = await supabaseAdmin
       .from('users')
       .select('id')
@@ -112,7 +119,7 @@ export async function PATCH(
           user_id: dg.id,
           type: 'task_blocked',
           title: `Task blocked: ${updated.title}`,
-          body: body.blocked_reason || 'No reason provided',
+          body: data.blocked_reason || 'No reason provided',
           icon: 'task',
           priority: 'high',
           reference_type: 'task',
@@ -129,7 +136,7 @@ export async function PATCH(
   }
 
   return NextResponse.json({ task: flatTask });
-}
+});
 
 export async function DELETE(
   request: NextRequest,

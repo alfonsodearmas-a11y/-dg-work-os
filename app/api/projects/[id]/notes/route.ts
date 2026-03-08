@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
+import { parseBody, apiError } from '@/lib/api-utils';
 import { getProjectNotes, addProjectNote } from '@/lib/project-queries';
+
+const addNoteSchema = z.object({
+  note_text: z.string().min(1),
+  note_type: z.enum(['general', 'escalation', 'status_update']).optional(),
+});
 
 export async function GET(
   _request: NextRequest,
@@ -26,18 +33,15 @@ export async function POST(
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
 
+  const { data, error } = await parseBody(request, addNoteSchema);
+  if (error) return error;
+
   try {
     const { id } = await params;
-    const { note_text, note_type } = await request.json();
-
-    if (!note_text?.trim()) {
-      return NextResponse.json({ error: 'Note text is required' }, { status: 400 });
-    }
-
-    const note = await addProjectNote(id, authResult.session.user.id, note_text.trim(), note_type || 'general');
+    const note = await addProjectNote(id, authResult.session.user.id, data.note_text.trim(), data.note_type || 'general');
     return NextResponse.json(note);
-  } catch (error) {
-    console.error('Add note error:', error);
-    return NextResponse.json({ error: 'Failed to add note' }, { status: 500 });
+  } catch (err) {
+    console.error('Add note error:', err);
+    return apiError('ADD_NOTE_FAILED', 'Failed to add note', 500);
   }
 }

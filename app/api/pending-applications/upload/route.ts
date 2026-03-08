@@ -7,6 +7,7 @@ import { processUploadDiff } from '@/lib/service-connection-diff';
 import type { PendingRecord } from '@/lib/pending-applications-types';
 import { classifyTrack } from '@/lib/service-connection-track';
 import { auth } from '@/lib/auth';
+import { withErrorHandler } from '@/lib/api-utils';
 
 export const maxDuration = 60; // Vercel: allow up to 60s for large uploads
 
@@ -120,16 +121,14 @@ async function validateAuth(request: NextRequest): Promise<string | null> {
   return agency;
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandler(async (request: NextRequest) => {
+  let lockedAgency: string | null;
   try {
-    // Auth check
-    let lockedAgency: string | null;
-    try {
-      lockedAgency = await validateAuth(request);
-    } catch (authError: unknown) {
-      const err = authError as { status: number; error: string };
-      return NextResponse.json({ error: err.error }, { status: err.status });
-    }
+    lockedAgency = await validateAuth(request);
+  } catch (authError: unknown) {
+    const err = authError as { status: number; error: string };
+    return NextResponse.json({ error: err.error }, { status: err.status });
+  }
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -267,8 +266,4 @@ export async function POST(request: NextRequest) {
         },
       }),
     });
-  } catch (err) {
-    console.error('[pending-applications/upload] Error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
-}
+});

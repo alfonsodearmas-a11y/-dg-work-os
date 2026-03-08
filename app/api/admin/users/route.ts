@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { insertNotification } from '@/lib/notifications';
 import { sendInviteEmail } from '@/lib/invite-email';
+import { parseBody, withErrorHandler } from '@/lib/api-utils';
 
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps']);
@@ -21,33 +23,28 @@ export async function GET() {
 }
 
 const VALID_INVITE_ROLES = ['agency_admin', 'officer'] as const;
-const VALID_AGENCIES = ['gpl', 'cjia', 'gwi', 'gcaa', 'heci', 'marad', 'has'];
+const VALID_AGENCIES = ['gpl', 'cjia', 'gwi', 'gcaa', 'heci', 'marad', 'has'] as const;
 
-export async function POST(request: NextRequest) {
+const inviteSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1),
+  role: z.enum(VALID_INVITE_ROLES),
+  agency: z.enum(VALID_AGENCIES).optional(),
+}).refine(
+  (d) => d.role !== 'agency_admin' || !!d.agency,
+  { message: 'Agency is required for agency_admin role', path: ['agency'] },
+);
+
+export const POST = withErrorHandler(async (request: NextRequest) => {
   const authResult = await requireRole(['dg']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 
-  const body = await request.json();
-  const { email, name, role, agency } = body;
+  const { data, error } = await parseBody(request, inviteSchema);
+  if (error) return error;
 
-  if (!email || !name || !role) {
-    return NextResponse.json({ error: 'Email, name, and role are required' }, { status: 400 });
-  }
+  const { email, name, role, agency } = data!;
 
-  if (!VALID_INVITE_ROLES.includes(role)) {
-    return NextResponse.json({ error: 'Invalid role. Can only invite agency_admin or officer.' }, { status: 400 });
-  }
-
-  if (role === 'agency_admin' && (!agency || !VALID_AGENCIES.includes(agency))) {
-    return NextResponse.json({ error: 'Agency is required for agency_admin role' }, { status: 400 });
-  }
-
-  if (agency && !VALID_AGENCIES.includes(agency)) {
-    return NextResponse.json({ error: 'Invalid agency' }, { status: 400 });
-  }
-
-  // Check if email already exists
   const { data: existing } = await supabaseAdmin
     .from('users')
     .select('id, email')
@@ -58,7 +55,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'A user with this email already exists' }, { status: 409 });
   }
 
-  const { data: newUser, error } = await supabaseAdmin
+  const { data: newUser, error: dbError } = await supabaseAdmin
     .from('users')
     .insert({
       email: email.toLowerCase().trim(),
@@ -73,11 +70,10 @@ export async function POST(request: NextRequest) {
     .select('id, email, name, role, agency, status')
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (dbError) {
+    return NextResponse.json({ error: dbError.message }, { status: 500 });
   }
 
-  // Send invite email (best-effort, don't block on failure)
   await sendInviteEmail({
     to: newUser.email,
     name: newUser.name,
@@ -86,7 +82,6 @@ export async function POST(request: NextRequest) {
     inviterName: session.user.name || 'The Director General',
   }).catch(() => {});
 
-  // Notify the admin that the invite was sent
   await insertNotification({
     user_id: session.user.id,
     type: 'invite_sent',
@@ -103,4 +98,4 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json({ user: newUser }, { status: 201 });
-}
+});

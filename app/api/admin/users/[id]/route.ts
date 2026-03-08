@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { sendInviteEmail } from '@/lib/invite-email';
-import type { Role } from '@/lib/auth';
-
-const VALID_ROLES: Role[] = ['dg', 'minister', 'ps', 'agency_admin', 'officer'];
-const VALID_AGENCIES = ['gpl', 'cjia', 'gwi', 'gcaa', 'heci', 'marad', 'has'];
+import { parseBody, withErrorHandler } from '@/lib/api-utils';
 
 async function logAudit(actorId: string, targetUserId: string, action: string, metadata: Record<string, unknown> = {}) {
   await supabaseAdmin.from('admin_audit_log').insert({
@@ -16,20 +14,28 @@ async function logAudit(actorId: string, targetUserId: string, action: string, m
   });
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+const patchUserSchema = z.object({
+  action: z.enum(['suspend', 'reactivate', 'archive', 'restore', 'force_signout', 'resend_invite']).optional(),
+  role: z.enum(['dg', 'minister', 'ps', 'agency_admin', 'officer'] as const).optional(),
+  agency: z.enum(['gpl', 'cjia', 'gwi', 'gcaa', 'heci', 'marad', 'has'] as const).nullable().optional(),
+  name: z.string().min(1).optional(),
+  is_active: z.boolean().optional(),
+});
+
+export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown) => {
   const authResult = await requireRole(['dg']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
-  const { id } = await params;
+  const { id } = await (ctx as { params: Promise<{ id: string }> }).params;
 
   if (session.user.id === id) {
     return NextResponse.json({ error: 'Cannot modify your own account' }, { status: 400 });
   }
 
-  const body = await request.json();
+  const { data, error } = await parseBody(request, patchUserSchema);
+  if (error) return error;
 
-  // --- Dispatch to specific actions ---
-  if (body.action === 'suspend') {
+  if (data!.action === 'suspend') {
     const { data: user } = await supabaseAdmin.from('users').select('email, status').eq('id', id).single();
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
@@ -38,7 +44,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ success: true, message: `User suspended` });
   }
 
-  if (body.action === 'reactivate') {
+  if (data!.action === 'reactivate') {
     const { data: user } = await supabaseAdmin.from('users').select('email, status').eq('id', id).single();
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
@@ -47,7 +53,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ success: true, message: `User reactivated` });
   }
 
-  if (body.action === 'archive') {
+  if (data!.action === 'archive') {
     const { data: user } = await supabaseAdmin.from('users').select('email').eq('id', id).single();
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
@@ -60,7 +66,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ success: true, message: 'User archived' });
   }
 
-  if (body.action === 'restore') {
+  if (data!.action === 'restore') {
     const { data: user } = await supabaseAdmin.from('users').select('email').eq('id', id).single();
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
@@ -73,14 +79,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ success: true, message: 'User restored' });
   }
 
-  if (body.action === 'force_signout') {
+  if (data!.action === 'force_signout') {
     const { data: user } = await supabaseAdmin.from('users').select('email').eq('id', id).single();
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
     await logAudit(session.user.id, id, 'force_signout', { email: user.email });
     return NextResponse.json({ success: true, message: 'Sign-out signal sent. User will be signed out on next request.' });
   }
 
-  if (body.action === 'resend_invite') {
+  if (data!.action === 'resend_invite') {
     const { data: user } = await supabaseAdmin.from('users').select('email, name, status, role, agency').eq('id', id).single();
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
     if (user.status !== 'pending') {
@@ -104,38 +110,30 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ success: true, message: `Invite email resent to ${user.email}` });
   }
 
-  // --- Standard field updates ---
   const updates: Record<string, unknown> = {};
 
-  if (body.role !== undefined) {
-    if (!VALID_ROLES.includes(body.role)) {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
-    }
-    updates.role = body.role;
+  if (data!.role !== undefined) {
+    updates.role = data!.role;
   }
 
-  if (body.agency !== undefined) {
-    if (body.agency !== null && !VALID_AGENCIES.includes(body.agency)) {
-      return NextResponse.json({ error: 'Invalid agency' }, { status: 400 });
-    }
-    updates.agency = body.agency;
+  if (data!.agency !== undefined) {
+    updates.agency = data!.agency;
   }
 
-  if (body.name !== undefined) {
-    updates.name = body.name;
+  if (data!.name !== undefined) {
+    updates.name = data!.name;
   }
 
-  if (body.is_active !== undefined) {
-    updates.is_active = Boolean(body.is_active);
-    updates.status = body.is_active ? 'active' : 'inactive';
+  if (data!.is_active !== undefined) {
+    updates.is_active = data!.is_active;
+    updates.status = data!.is_active ? 'active' : 'inactive';
   }
 
-  // Enforce constraint: ministry roles must have null agency
   const newRole = (updates.role as string) || undefined;
   if (newRole) {
     if (['dg', 'minister', 'ps'].includes(newRole)) {
       updates.agency = null;
-    } else if (['agency_admin', 'officer'].includes(newRole) && !updates.agency && body.agency === undefined) {
+    } else if (['agency_admin', 'officer'].includes(newRole) && !updates.agency && data!.agency === undefined) {
       const { data: existing } = await supabaseAdmin.from('users').select('agency').eq('id', id).single();
       if (!existing?.agency) {
         return NextResponse.json({ error: 'Agency is required for agency_admin and officer roles' }, { status: 400 });
@@ -149,18 +147,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const { data: beforeUser } = await supabaseAdmin.from('users').select('role, agency, is_active, status, name').eq('id', id).single();
 
-  const { data, error } = await supabaseAdmin
+  const { data: updatedUser, error: dbError } = await supabaseAdmin
     .from('users')
     .update(updates)
     .eq('id', id)
     .select('id, email, name, role, agency, is_active, status')
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (dbError) {
+    return NextResponse.json({ error: dbError.message }, { status: 500 });
   }
 
-  // Audit log for field changes
   const changes: Record<string, unknown> = {};
   if (updates.role && updates.role !== beforeUser?.role) changes.role = { from: beforeUser?.role, to: updates.role };
   if (updates.agency !== undefined && updates.agency !== beforeUser?.agency) changes.agency = { from: beforeUser?.agency, to: updates.agency };
@@ -171,8 +168,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     await logAudit(session.user.id, id, 'updated', changes);
   }
 
-  return NextResponse.json({ user: data });
-}
+  return NextResponse.json({ user: updatedUser });
+});
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const authResult = await requireRole(['dg']);

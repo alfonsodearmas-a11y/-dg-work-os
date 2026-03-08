@@ -1,21 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
+import { parseBody, apiError } from '@/lib/api-utils';
 import { bulkUpdateProjects } from '@/lib/project-queries';
 import { supabaseAdmin } from '@/lib/db';
+
+const bulkUpdateSchema = z.object({
+  project_ids: z.array(z.string().min(1)).min(1),
+  health: z.enum(['green', 'yellow', 'red']).optional(),
+  assigned_to: z.string().nullable().optional(),
+});
 
 export async function PATCH(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
 
+  const { data, error } = await parseBody(request, bulkUpdateSchema);
+  if (error) return error;
+
   try {
     const session = authResult.session;
-    const { project_ids, health, assigned_to } = await request.json();
+    const { project_ids, health, assigned_to } = data;
 
-    if (!project_ids?.length) {
-      return NextResponse.json({ error: 'No projects selected' }, { status: 400 });
-    }
-
-    // Role-based access check
     const role = session.user.role;
     const userAgency = session.user.agency;
 
@@ -46,8 +52,8 @@ export async function PATCH(request: NextRequest) {
 
     await bulkUpdateProjects(project_ids, updates);
     return NextResponse.json({ success: true, updated: project_ids.length });
-  } catch (error) {
-    console.error('Bulk update error:', error);
-    return NextResponse.json({ error: 'Failed to bulk update projects' }, { status: 500 });
+  } catch (err) {
+    console.error('Bulk update error:', err);
+    return apiError('BULK_UPDATE_FAILED', 'Failed to bulk update projects', 500);
   }
 }

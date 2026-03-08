@@ -1,61 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseKpiCsv } from '@/lib/gpl-kpi-csv-parser';
 import { requireRole, canUploadData } from '@/lib/auth-helpers';
+import { apiError, withErrorHandler } from '@/lib/api-utils';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-export async function POST(request: NextRequest) {
-  const result = await requireRole(['dg', 'agency_admin', 'officer']);
-  if (result instanceof NextResponse) return result;
-  const { session } = result;
+export const POST = withErrorHandler(async (request: NextRequest) => {
+  const authResult = await requireRole(['dg', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+  const { session } = authResult;
   if (!canUploadData(session.user.role, session.user.agency, 'GPL')) return NextResponse.json({ error: 'Cannot upload GPL data' }, { status: 403 });
 
-  try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
+  const formData = await request.formData();
+  const file = formData.get('file') as File;
 
-    if (!file) {
-      return NextResponse.json(
-        { success: false, error: 'No CSV file provided' },
-        { status: 400 }
-      );
-    }
+  if (!file) {
+    return apiError('VALIDATION_ERROR', 'No CSV file provided', 400);
+  }
 
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { success: false, error: 'File exceeds 10 MB limit' },
-        { status: 400 }
-      );
-    }
+  if (file.size > MAX_FILE_SIZE) {
+    return apiError('VALIDATION_ERROR', 'File exceeds 10 MB limit', 400);
+  }
 
-    if (!file.name.endsWith('.csv')) {
-      return NextResponse.json(
-        { success: false, error: 'File must be a CSV' },
-        { status: 400 }
-      );
-    }
+  if (!file.name.endsWith('.csv')) {
+    return apiError('VALIDATION_ERROR', 'File must be a CSV', 400);
+  }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const result = parseKpiCsv(buffer, file.name);
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const parseResult = parseKpiCsv(buffer, file.name);
 
-    if (!result.success) {
-      return NextResponse.json(
-        { success: false, error: result.error, warnings: result.warnings },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      preview: result.preview,
-      data: result.data,
-      warnings: result.warnings,
-    });
-  } catch (error: any) {
-    console.error('[gpl-kpi-upload] Error:', error.message);
+  if (!parseResult.success) {
     return NextResponse.json(
-      { success: false, error: 'Failed to parse KPI CSV' },
-      { status: 500 }
+      { success: false, error: parseResult.error, warnings: parseResult.warnings },
+      { status: 400 }
     );
   }
-}
+
+  return NextResponse.json({
+    success: true,
+    preview: parseResult.preview,
+    data: parseResult.data,
+    warnings: parseResult.warnings,
+  });
+});

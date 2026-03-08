@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db-pg';
 import { createTaskNotification, sendTaskEmail } from '@/lib/task-notifications';
 import { taskReminderEmail } from '@/lib/task-email-templates';
+import { apiError, withErrorHandler } from '@/lib/api-utils';
 
 // Vercel crons use GET
 export { handleCron as GET };
@@ -36,10 +37,10 @@ async function handleCron(request: NextRequest) {
     return NextResponse.json({ success: true, data: { checked: result.rowCount, sent } });
   } catch (error: any) {
     console.error('[cron/reminders] Error:', error.message);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return apiError('INTERNAL_ERROR', error.message, 500);
   }
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandler(async (request: NextRequest) => {
   return handleCron(request);
-}
+});

@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { z } from 'zod';
 import Anthropic from '@anthropic-ai/sdk';
 import { format } from 'date-fns';
 
@@ -13,6 +14,7 @@ import { tryLocalAnswer } from '@/lib/ai/local-answers';
 import { getAnthropicTools, buildActionProposal, isQueryTool, executeQueryTool } from '@/lib/ai/tools';
 import { ModelTier, MODEL_IDS, MAX_TOKENS, TIER_LABELS, MetricSnapshot, ChatStreamEvent } from '@/lib/ai/types';
 import { auth } from '@/lib/auth';
+import { parseBody } from '@/lib/api-utils';
 
 // ── Rate Limiting (in-memory, per-session) ───────────────────────────────────
 
@@ -78,9 +80,20 @@ function parseActionsFromText(text: string): { clean: string; actions: Array<{ l
 
 // ── Route Handler ────────────────────────────────────────────────────────────
 
+const chatSchema = z.object({
+  message: z.string().min(1),
+  conversation_history: z.array(z.object({
+    role: z.enum(['user', 'assistant']),
+    content: z.string(),
+  })).default([]),
+  current_page: z.string().default('/'),
+  session_id: z.string().default('dg-session'),
+  force_deep: z.boolean().default(false),
+  snapshot: z.any().nullable().default(null),
+});
+
 export async function POST(request: NextRequest) {
   try {
-    // Validate API key
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return new Response(
@@ -89,34 +102,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get authenticated user
     const session = await auth();
     const userId = session?.user?.id || 'anonymous';
 
-    // Parse request
-    const body = await request.json();
+    const { data, error } = await parseBody(request, chatSchema);
+    if (error) return error;
+
     const {
       message,
-      conversation_history = [],
-      current_page = '/',
-      session_id = 'dg-session',
-      force_deep = false,
-      snapshot = null,
-    } = body as {
-      message: string;
-      conversation_history: Array<{ role: 'user' | 'assistant'; content: string }>;
-      current_page: string;
-      session_id?: string;
-      force_deep?: boolean;
-      snapshot?: MetricSnapshot | null;
-    };
-
-    if (!message || typeof message !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Message is required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+      conversation_history,
+      current_page,
+      session_id,
+      force_deep,
+      snapshot,
+    } = data!;
 
     // Rate limit check
     const rateCheck = checkRateLimit(session_id);

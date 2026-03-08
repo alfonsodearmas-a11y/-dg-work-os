@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
+import { withErrorHandler } from '@/lib/api-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -89,7 +90,6 @@ export async function GET(request: NextRequest) {
   return handleCron(request);
 }
 
-// External callers can use POST
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandler(async (request: NextRequest) => {
   return handleCron(request);
-}
+});

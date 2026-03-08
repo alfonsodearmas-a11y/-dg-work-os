@@ -2,22 +2,15 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { deleteGoogleCalendarToken } from '@/lib/integration-tokens';
 import { invalidateCalendarClientCache } from '@/lib/google-calendar';
+import { withErrorHandler } from '@/lib/api-utils';
 
-export async function POST() {
-  try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+export const POST = withErrorHandler(async () => {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-    await deleteGoogleCalendarToken(userId);
-    invalidateCalendarClientCache(userId);
+  await deleteGoogleCalendarToken(userId);
+  invalidateCalendarClientCache(userId);
 
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error('[Google Disconnect] Error:', err);
-    return NextResponse.json(
-      { error: 'Failed to disconnect' },
-      { status: 500 }
-    );
-  }
-}
+  return NextResponse.json({ ok: true });
+});

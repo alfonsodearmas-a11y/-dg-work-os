@@ -1,34 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/db';
 import { auditService } from '@/lib/audit';
 import { generateGPLBriefing } from '@/lib/ai-analysis';
 import { requireRole, canUploadData } from '@/lib/auth-helpers';
+import { parseBody, withErrorHandler } from '@/lib/api-utils';
 
-export async function POST(request: NextRequest) {
+const confirmSchema = z.object({
+  uploadData: z.record(z.string(), z.any()),
+  reportDate: z.string().min(1),
+});
+
+export const POST = withErrorHandler(async (request: NextRequest) => {
   const result = await requireRole(['dg', 'agency_admin', 'officer']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
   if (!canUploadData(session.user.role, session.user.agency, 'GPL')) return NextResponse.json({ error: 'Cannot upload GPL data' }, { status: 403 });
 
-  try {
-    const body = await request.json();
-    const { uploadData, reportDate } = body;
+  const { data: body, error } = await parseBody(request, confirmSchema);
+  if (error) return error;
 
-    if (!uploadData) {
-      return NextResponse.json(
-        { success: false, error: 'Upload data is required. Run the preview step first.' },
-        { status: 400 }
-      );
-    }
+  const { uploadData, reportDate } = body!;
 
-    if (!reportDate) {
-      return NextResponse.json(
-        { success: false, error: 'Report date is required.' },
-        { status: 400 }
-      );
-    }
-
-    // Insert into gpl_uploads
+  // Insert into gpl_uploads
     const { data: uploadRow, error: uploadError } = await supabaseAdmin
       .from('gpl_uploads')
       .insert({
@@ -226,11 +220,4 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
-    console.error('[gpl/upload/confirm] Error:', error.message);
-    return NextResponse.json(
-      { success: false, error: 'Failed to confirm GPL upload' },
-      { status: 500 }
-    );
-  }
-}
+});

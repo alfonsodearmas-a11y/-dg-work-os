@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
+import { parseBody, apiError } from '@/lib/api-utils';
 import { getSavedFilters, saveFilter, deleteFilter } from '@/lib/project-queries';
+
+const saveFilterSchema = z.object({
+  filter_name: z.string().min(1),
+  filter_params: z.record(z.string(), z.unknown()).optional(),
+});
 
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -19,18 +26,15 @@ export async function POST(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
 
+  const { data, error } = await parseBody(request, saveFilterSchema);
+  if (error) return error;
+
   try {
-    const { filter_name, filter_params } = await request.json();
-
-    if (!filter_name?.trim()) {
-      return NextResponse.json({ error: 'Filter name is required' }, { status: 400 });
-    }
-
-    const saved = await saveFilter(authResult.session.user.id, filter_name.trim(), filter_params || {});
+    const saved = await saveFilter(authResult.session.user.id, data.filter_name.trim(), data.filter_params || {});
     return NextResponse.json(saved);
-  } catch (error) {
-    console.error('Save filter error:', error);
-    return NextResponse.json({ error: 'Failed to save filter' }, { status: 500 });
+  } catch (err) {
+    console.error('Save filter error:', err);
+    return apiError('SAVE_FILTER_FAILED', 'Failed to save filter', 500);
   }
 }
 

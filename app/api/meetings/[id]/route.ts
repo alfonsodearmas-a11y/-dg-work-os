@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
+import { parseBody, withErrorHandler } from '@/lib/api-utils';
 
 export async function GET(
   _request: NextRequest,
@@ -24,33 +26,43 @@ export async function GET(
   return NextResponse.json({ meeting });
 }
 
-export async function PATCH(
+const patchMeetingSchema = z.object({
+  title: z.string().min(1).optional(),
+  attendees: z.array(z.string()).optional(),
+  transcript_text: z.string().optional(),
+  summary: z.string().optional(),
+  decisions: z.array(z.string()).optional(),
+  notes: z.string().optional(),
+});
+
+export const PATCH = withErrorHandler(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+  ctx?: unknown
+) => {
   const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (result instanceof NextResponse) return result;
 
-  const { id } = await params;
-  const body = await request.json();
+  const { id } = await (ctx as { params: Promise<{ id: string }> }).params;
+  const { data, error } = await parseBody(request, patchMeetingSchema);
+  if (error) return error;
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (body.title !== undefined) updates.title = body.title;
-  if (body.attendees !== undefined) updates.attendees = body.attendees;
-  if (body.transcript_text !== undefined) updates.transcript_text = body.transcript_text;
-  if (body.summary !== undefined) updates.summary = body.summary;
-  if (body.decisions !== undefined) updates.decisions = body.decisions;
-  if (body.notes !== undefined) updates.notes = body.notes;
+  if (data!.title !== undefined) updates.title = data!.title;
+  if (data!.attendees !== undefined) updates.attendees = data!.attendees;
+  if (data!.transcript_text !== undefined) updates.transcript_text = data!.transcript_text;
+  if (data!.summary !== undefined) updates.summary = data!.summary;
+  if (data!.decisions !== undefined) updates.decisions = data!.decisions;
+  if (data!.notes !== undefined) updates.notes = data!.notes;
 
-  const { data: meeting, error } = await supabaseAdmin
+  const { data: meeting, error: updateError } = await supabaseAdmin
     .from('meetings')
     .update(updates)
     .eq('id', id)
     .select('*, meeting_actions(*)')
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (updateError) {
+    return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
   if (!meeting) {
@@ -58,7 +70,7 @@ export async function PATCH(
   }
 
   return NextResponse.json({ meeting });
-}
+});
 
 export async function DELETE(
   _request: NextRequest,

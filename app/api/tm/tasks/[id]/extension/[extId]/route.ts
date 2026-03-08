@@ -1,31 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { authenticateAny, AuthError, authorizeRoles } from '@/lib/auth';
 import { decideExtension } from '@/lib/task-queries';
 import { createTaskNotification } from '@/lib/task-notifications';
+import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
 
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string; extId: string }> }) {
+const decideExtensionSchema = z.object({
+  approved: z.boolean(),
+  note: z.string().optional(),
+});
+
+export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown) => {
   try {
     const user = await authenticateAny(request);
     authorizeRoles(user, 'director', 'admin');
-    const { id, extId } = await params;
+    const { id, extId } = await (ctx as { params: Promise<{ id: string; extId: string }> }).params;
 
-    const { approved, note } = await request.json();
-    if (typeof approved !== 'boolean') return NextResponse.json({ success: false, error: 'approved (boolean) is required' }, { status: 400 });
+    const { data, error: validationError } = await parseBody(request, decideExtensionSchema);
+    if (validationError) return validationError;
 
-    const result = await decideExtension(extId, user.id, approved, note);
+    const result = await decideExtension(extId, user.id, data.approved, data.note);
 
-    // Notify requester
     await createTaskNotification(
       result.requested_by,
       'extension_decided',
       id,
-      `Extension ${approved ? 'approved' : 'rejected'}`,
-      note || (approved ? 'Your deadline extension has been approved' : 'Your deadline extension was rejected')
+      `Extension ${data.approved ? 'approved' : 'rejected'}`,
+      data.note || (data.approved ? 'Your deadline extension has been approved' : 'Your deadline extension was rejected')
     );
 
     return NextResponse.json({ success: true, data: result });
   } catch (error: any) {
     if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return apiError('INTERNAL_ERROR', error.message, 500);
   }
-}
+});

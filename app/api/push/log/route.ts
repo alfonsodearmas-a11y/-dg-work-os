@@ -1,37 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/db';
 import { auth } from '@/lib/auth';
+import { parseBody, withErrorHandler } from '@/lib/api-utils';
 
-// Use Supabase for persistent logging across serverless invocations
-// Stores in a simple key-value approach using the notifications table metadata
+const logSchema = z.object({
+  event: z.string().optional(),
+  detail: z.string().optional(),
+  user_id: z.string().optional(),
+});
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const entry = {
-      event: String((body as Record<string, unknown>).event || 'unknown'),
-      detail: String((body as Record<string, unknown>).detail || ''),
-    };
+export const POST = withErrorHandler(async (request: NextRequest) => {
+  const { data, error } = await parseBody(request, logSchema);
+  if (error) return error;
 
-    // Use session user ID when available, fall back to body user_id (SW context)
-    const session = await auth();
-    const userId = session?.user?.id || String((body as Record<string, unknown>).user_id || 'system');
+  const entry = {
+    event: data!.event || 'unknown',
+    detail: data!.detail || '',
+  };
 
-    // Store as a special notification type for debugging
-    await supabaseAdmin.from('notifications').insert({
-      user_id: userId,
-      type: 'meeting_starting', // use a valid type
-      title: `[SW_LOG] ${entry.event}`,
-      body: entry.detail,
-      priority: 'low',
-      scheduled_for: new Date().toISOString(),
-    });
+  const session = await auth();
+  const userId = session?.user?.id || data!.user_id || 'system';
 
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
-  }
-}
+  await supabaseAdmin.from('notifications').insert({
+    user_id: userId,
+    type: 'meeting_starting',
+    title: `[SW_LOG] ${entry.event}`,
+    body: entry.detail,
+    priority: 'low',
+    scheduled_for: new Date().toISOString(),
+  });
+
+  return NextResponse.json({ ok: true });
+});
 
 export async function GET() {
   // Fetch recent SW logs (last 20 entries where title starts with [SW_LOG])
