@@ -28,16 +28,18 @@ function parseFundingJson(
   }
   if (!Array.isArray(rows) || rows.length === 0) return [];
 
-  return rows.map(r => ({
-    project_id: projectId,
-    date_distributed: r.d || null,
-    payment_type: r.t || null,
-    amount_distributed: r.a ?? null,
-    amount_expended: r.e ?? null,
-    distributed_balance: r.b ?? null,
-    funding_remarks: r.r || null,
-    contract_ref: r.c || null,
-  }));
+  return rows
+    .filter(r => r.d || r.t) // Skip totals rows (both date and type empty)
+    .map(r => ({
+      project_id: projectId,
+      date_distributed: r.d || null,
+      payment_type: r.t || null,
+      amount_distributed: r.a ?? null,
+      amount_expended: r.e ?? null,
+      distributed_balance: r.b ?? null,
+      funding_remarks: r.r || null,
+      contract_ref: r.c || null,
+    }));
 }
 
 async function upsertFundingRows(fundingRows: FundingRow[], projectIds: string[]) {
