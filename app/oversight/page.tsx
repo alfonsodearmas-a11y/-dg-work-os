@@ -1,582 +1,23 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, Fragment, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
-  Eye, RefreshCw, AlertTriangle, Clock, ShieldAlert, FileWarning,
-  Building2, TrendingUp, ChevronDown, ChevronRight,
-  Search, Filter, X, SlidersHorizontal, Upload, DollarSign,
-  CheckCircle, CircleDot, List, GanttChart,
-  Loader2, BookmarkPlus, Bookmark, Trash2,
-  Download, Square, CheckSquare, UserPlus,
+  Eye, RefreshCw, AlertTriangle,
+  Building2, ChevronDown,
+  Filter, X,
+  List, GanttChart,
+  Download, UserPlus,
 } from 'lucide-react';
-import { Badge } from '@/components/ui/Badge';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { EscalationControls } from '@/components/projects/EscalationControls';
-import { ProjectAISummary } from '@/components/projects/ProjectAISummary';
-import { ProjectActivityLog } from '@/components/projects/ProjectActivityLog';
-
-// ── Scraped Oversight Types ────────────────────────────────────────────────
-
-interface OversightData {
-  metadata: {
-    generatedAt: string;
-    totalProjects: number;
-    analysisDate: string;
-  };
-  dashboard: {
-    kpis: {
-      totalContractCost: number | null;
-      totalContractCostDisplay: string | null;
-      totalDisbursement: number | null;
-      totalDisbursementDisplay: string | null;
-      totalBalance: number | null;
-      totalBalanceDisplay: string | null;
-      totalProjects: number | null;
-      utilizationPercent: number | null;
-      engineerEstimate: number | null;
-      engineerEstimateDisplay: string | null;
-    };
-    statusChart: Record<string, { percent: number; count: number } | number | null>;
-    scrapedAt: string;
-  };
-  summary: {
-    delayed: number;
-    overdue: number;
-    endingSoon: number;
-    atRisk: number;
-    bondWarnings: number;
-  };
-  delayed: any[];
-  overdue: any[];
-  endingSoon: any[];
-  atRisk: any[];
-  bondWarnings: any[];
-  agencyBreakdown: {
-    agency: string;
-    agencyFull: string | null;
-    projectCount: number;
-    totalValue: number;
-    totalValueDisplay: string | null;
-    avgCompletion: number | null;
-  }[];
-  top10: any[];
-}
-
-// ── PSIP Project Types ─────────────────────────────────────────────────────
-
-interface Project {
-  id: string;
-  project_id: string;
-  executing_agency: string | null;
-  sub_agency: string | null;
-  project_name: string | null;
-  short_name: string | null;
-  region: string | null;
-  contract_value: number | null;
-  contractor: string | null;
-  project_end_date: string | null;
-  completion_pct: number;
-  has_images: number;
-  status: string;
-  days_overdue: number;
-  health: 'green' | 'amber' | 'red';
-  escalated: boolean;
-  escalation_reason: string | null;
-  assigned_to: string | null;
-  start_date: string | null;
-  revised_start_date: string | null;
-  // Detail fields from oversight scraper
-  balance_remaining: number | null;
-  remarks: string | null;
-  project_status: string | null;
-  extension_reason: string | null;
-  extension_date: string | null;
-  project_extended: boolean;
-  total_distributed: number | null;
-  total_expended: number | null;
-  created_at: string;
-  updated_at: string;
-}
-
-interface PortfolioSummary {
-  total_projects: number;
-  total_value: number;
-  complete: number;
-  in_progress: number;
-  delayed: number;
-  not_started: number;
-  delayed_value: number;
-  at_risk: number;
-  agencies: { agency: string; total: number; complete: number; in_progress: number; delayed: number; not_started: number; total_value: number; avg_completion: number }[];
-  regions: Record<string, number>;
-}
-
-
-
-interface SavedFilter {
-  id: string;
-  filter_name: string;
-  filter_params: Record<string, any>;
-  created_at: string;
-}
-
-type ViewMode = 'list' | 'timeline';
-type TabMode = 'alerts' | 'projects';
-
-// ── Constants ──────────────────────────────────────────────────────────────
-
-const AGENCY_OPTIONS = ['GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'MOPUA', 'HAS'];
-const REGION_OPTIONS = [
-  { value: '01', label: 'Region 1 – Barima-Waini' },
-  { value: '02', label: 'Region 2 – Pomeroon-Supenaam' },
-  { value: '03', label: 'Region 3 – Essequibo Islands-West Demerara' },
-  { value: '04', label: 'Region 4 – Demerara-Mahaica' },
-  { value: '05', label: 'Region 5 – Mahaica-Berbice' },
-  { value: '06', label: 'Region 6 – East Berbice-Corentyne' },
-  { value: '07', label: 'Region 7 – Cuyuni-Mazaruni' },
-  { value: '08', label: 'Region 8 – Potaro-Siparuni' },
-  { value: '09', label: 'Region 9 – Upper Takutu-Upper Essequibo' },
-  { value: '10', label: 'Region 10 – Upper Demerara-Berbice' },
-  { value: 'GT', label: 'Georgetown' },
-  { value: 'MR', label: 'Multi-Region' },
-];
-const STATUS_OPTIONS = ['Commenced', 'Delayed', 'Awarded', 'Designed', 'Completed', 'Rollover', 'Cancelled'];
-const HEALTH_OPTIONS = [
-  { value: 'green', label: 'On Track', color: 'bg-emerald-500' },
-  { value: 'amber', label: 'Minor Issues', color: 'bg-amber-500' },
-  { value: 'red', label: 'Critical', color: 'bg-red-500' },
-];
-
-const STATUS_STYLES: Record<string, { variant: 'success' | 'danger' | 'info' | 'default' | 'warning'; label: string }> = {
-  Commenced: { variant: 'info', label: 'Commenced' },
-  Delayed: { variant: 'danger', label: 'Delayed' },
-  Awarded: { variant: 'warning', label: 'Awarded' },
-  Designed: { variant: 'default', label: 'Designed' },
-  Completed: { variant: 'success', label: 'Completed' },
-  Rollover: { variant: 'warning', label: 'Rollover' },
-  Cancelled: { variant: 'danger', label: 'Cancelled' },
-  Unknown: { variant: 'default', label: 'Unknown' },
-};
-
-const HEALTH_DOT: Record<string, string> = {
-  green: 'bg-emerald-400', amber: 'bg-amber-400', red: 'bg-red-400',
-};
-
-// ── Formatting ─────────────────────────────────────────────────────────────
-
-function formatCurrency(value: number | null) {
-  if (value === null || value === undefined) return '-';
-  if (value > 1e11) return '-';
-  if (value >= 1e9) return `$${(value / 1e9).toFixed(1)}B`;
-  if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
-  if (value >= 1e3) return `$${(value / 1e3).toFixed(0)}K`;
-  return `$${value.toLocaleString()}`;
-}
-
-function fmtCurrency(value: number | string | null | undefined, allowZero = false): string {
-  if (value === null || value === undefined || value === '-') return 'N/A';
-  const num = typeof value === 'string' ? parseFloat(value.replace(/[$,]/g, '')) : Number(value);
-  if (isNaN(num)) return 'N/A';
-  if (num === 0) return allowZero ? '$0' : 'N/A';
-  if (num < 0) return 'N/A';
-  if (num > 1e11) return 'N/A';
-  if (num >= 1e9) return `$${(num / 1e9).toFixed(1)}B`;
-  if (num >= 1e6) return `$${(num / 1e6).toFixed(1)}M`;
-  if (num >= 1e3) return `$${(num / 1e3).toFixed(1)}K`;
-  return `$${num.toLocaleString()}`;
-}
-
-function fmtDate(iso: string | null): string {
-  if (!iso) return '-';
-  const d = new Date(iso + 'T00:00:00');
-  if (isNaN(d.getTime())) return '-';
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-function fmtRegion(code: string | null): string {
-  if (!code) return '-';
-  if (code === 'GT') return 'Georgetown';
-  if (code === 'MR') return 'Multi-Region';
-  const n = parseInt(code, 10);
-  return isNaN(n) ? code : `Region ${n}`;
-}
-
-// ── Shared UI Components ───────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    overdue: 'bg-red-500/20 text-red-400 border-red-500/30',
-    delayed: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-    'at-risk': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-    'ending-soon': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-    'bond-warning': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  };
-  return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${colors[status] || 'bg-[#2d3a52] text-[#94a3b8]'}`}>
-      {status.replace('-', ' ')}
-    </span>
-  );
-}
-
-function HealthDot({ health }: { health: string }) {
-  const dot = HEALTH_DOT[health] || HEALTH_DOT.green;
-  const labels: Record<string, string> = { green: 'On Track', amber: 'Minor Issues', red: 'Critical' };
-  return (
-    <span className="inline-flex items-center gap-1.5" title={labels[health] || health}>
-      <span className={`w-2.5 h-2.5 rounded-full ${dot}`} />
-      <span className="text-xs text-[#94a3b8] hidden lg:inline">{labels[health] || health}</span>
-    </span>
-  );
-}
-
-function ProgressBar({ pct }: { pct: number }) {
-  const safePct = pct ?? 0;
-  const color = safePct >= 100 ? 'bg-emerald-500' : safePct >= 80 ? 'bg-emerald-500' : safePct >= 40 ? 'bg-amber-500' : safePct > 0 ? 'bg-red-500' : 'bg-[#2d3a52]';
-  return (
-    <div className="flex items-center gap-2">
-      <div className="w-16 h-1.5 bg-[#2d3a52] rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.min(safePct, 100)}%` }} />
-      </div>
-      <span className="text-xs text-[#94a3b8] w-8 text-right">{safePct}%</span>
-    </div>
-  );
-}
-
-function MultiSelect({
-  label, options, selected, onChange, renderOption,
-}: {
-  label: string;
-  options: { value: string; label: string }[];
-  selected: string[];
-  onChange: (val: string[]) => void;
-  renderOption?: (opt: { value: string; label: string }) => React.ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    function handler(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-  function toggle(val: string) { onChange(selected.includes(val) ? selected.filter(v => v !== val) : [...selected, val]); }
-  return (
-    <div ref={ref} className="relative">
-      <button onClick={() => setOpen(!open)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none flex items-center gap-2 w-full md:min-w-[130px] md:w-auto">
-        <span className="truncate">{selected.length ? `${label} (${selected.length})` : label}</span>
-        <ChevronDown className={`h-3.5 w-3.5 text-[#64748b] shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-1 bg-[#1a2744] border border-[#2d3a52] rounded-lg shadow-xl z-50 min-w-[200px] max-h-[300px] overflow-y-auto">
-          {options.map(opt => (
-            <label key={opt.value} className="flex items-center gap-2 px-3 py-2 hover:bg-[#0a1628]/60 cursor-pointer text-sm">
-              <input type="checkbox" checked={selected.includes(opt.value)} onChange={() => toggle(opt.value)} className="accent-[#d4af37]" />
-              {renderOption ? renderOption(opt) : <span className="text-white">{opt.label}</span>}
-            </label>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Scraped Oversight Components ───────────────────────────────────────────
-
-function OversightKpiCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="bg-[#1a2744] border border-[#2d3a52] rounded-xl p-4">
-      <p className="text-[#64748b] text-xs uppercase tracking-wider">{label}</p>
-      <p className="text-white text-xl md:text-2xl font-bold mt-1">{value}</p>
-      {sub && <p className="text-[#64748b] text-xs mt-1">{sub}</p>}
-    </div>
-  );
-}
-
-function CollapsibleSection({ title, icon: Icon, count, accent, defaultOpen = false, children }: {
-  title: string; icon: any; count: number; accent: string; defaultOpen?: boolean; children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="bg-[#1a2744] border border-[#2d3a52] rounded-xl overflow-hidden">
-      <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between p-4 hover:bg-[#2d3a52]/30 transition-colors">
-        <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-lg ${accent} flex items-center justify-center`}><Icon className="h-4 w-4" /></div>
-          <span className="text-white font-medium">{title}</span>
-          <span className="bg-[#2d3a52] text-[#94a3b8] text-xs px-2 py-0.5 rounded-full">{count}</span>
-        </div>
-        {open ? <ChevronDown className="h-4 w-4 text-[#64748b]" /> : <ChevronRight className="h-4 w-4 text-[#64748b]" />}
-      </button>
-      {open && <div className="border-t border-[#2d3a52]">{children}</div>}
-    </div>
-  );
-}
-
-function ProjectRow({ project, tag }: { project: any; tag?: string }) {
-  return (
-    <div className="flex items-start gap-3 px-4 py-3 hover:bg-[#2d3a52]/20 transition-colors border-b border-[#2d3a52]/50 last:border-0">
-      <div className="flex-1 min-w-0">
-        <p className="text-white text-sm font-medium truncate">{project.name || 'Unnamed'}</p>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-[#64748b]">
-          <span>{project.agency}</span>
-          {project.region && <span>{project.region}</span>}
-          {project.contractValueDisplay && <span>{project.contractValueDisplay}</span>}
-          {project.contractor && <span>{project.contractor}</span>}
-        </div>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        {project.completion != null && (
-          <div className="text-right">
-            <p className="text-xs font-mono text-[#94a3b8]">{project.completion}%</p>
-            <div className="w-16 h-1.5 bg-[#2d3a52] rounded-full mt-1">
-              <div className="h-full rounded-full bg-[#d4af37]" style={{ width: `${Math.min(project.completion, 100)}%` }} />
-            </div>
-          </div>
-        )}
-        {tag && <StatusBadge status={tag} />}
-        {project.daysOverdue != null && <span className="text-red-400 text-xs font-mono whitespace-nowrap">{project.daysOverdue}d late</span>}
-        {project.daysRemaining != null && <span className="text-yellow-400 text-xs font-mono whitespace-nowrap">{project.daysRemaining}d left</span>}
-      </div>
-    </div>
-  );
-}
-
-// ── Escalation Modal ───────────────────────────────────────────────────────
-
-// EscalationModal removed — now using shared EscalationControls component
-
-// ── Save Filter Modal ──────────────────────────────────────────────────────
-
-function SaveFilterModal({ filterParams, onClose, onSaved }: { filterParams: Record<string, any>; onClose: () => void; onSaved: () => void }) {
-  const [name, setName] = useState('');
-  const [saving, setSaving] = useState(false);
-  async function handleSave() {
-    if (!name.trim()) return;
-    setSaving(true);
-    try {
-      const res = await fetch('/api/projects/filters', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filter_name: name, filter_params: filterParams }) });
-      if (!res.ok) throw new Error();
-      onSaved();
-    } catch { alert('Failed to save filter'); }
-    setSaving(false);
-  }
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="card-premium p-6 w-full max-w-sm mx-4 rounded-2xl" onClick={e => e.stopPropagation()}>
-        <h2 className="text-lg font-semibold text-white mb-4">Save Filter Preset</h2>
-        <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. GPL Delayed Projects" className="w-full bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2.5 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none" onKeyDown={e => e.key === 'Enter' && handleSave()} autoFocus />
-        <div className="flex justify-end gap-3 mt-4">
-          <button onClick={onClose} className="btn-navy px-4 py-2 text-sm">Cancel</button>
-          <button onClick={handleSave} disabled={!name.trim() || saving} className="btn-gold px-4 py-2 text-sm disabled:opacity-40">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Project Detail Slide Panel ─────────────────────────────────────────────
-
-function ProjectSlidePanel({ project, onClose, userRole, onRefreshList }: {
-  project: Project; onClose: () => void; userRole: string; onRefreshList: () => void;
-}) {
-  // Lock body scroll on mobile when panel is open
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
-  }, []);
-
-  const ss = STATUS_STYLES[project.status] || STATUS_STYLES['Unknown'];
-
-  return (
-    <>
-      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm touch-none" onClick={onClose} />
-      <div className="fixed inset-0 md:inset-auto md:right-0 md:top-0 md:bottom-0 z-50 w-full md:max-w-xl bg-[#0f1d32] md:border-l border-[#2d3a52] shadow-2xl overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="sticky top-0 z-10 bg-[#0f1d32] border-b border-[#2d3a52] px-4 md:px-5 py-4 flex items-center justify-between">
-          <h2 className="text-white font-semibold text-lg truncate pr-4">Project Detail</h2>
-          <button onClick={onClose} className="text-[#64748b] hover:text-white"><X className="h-5 w-5" /></button>
-        </div>
-        <div className="p-4 md:p-5 space-y-5 md:space-y-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
-          <EscalationControls
-            projectId={project.id}
-            projectName={project.project_name || ''}
-            escalated={!!project.escalated}
-            escalationReason={project.escalation_reason}
-            userRole={userRole}
-            onUpdate={onRefreshList}
-            compact
-          />
-          <div>
-            <h3 className="text-white font-semibold text-base mb-1">{project.project_name || '-'}</h3>
-            <p className="text-[#64748b] text-xs font-mono">{project.project_id}</p>
-            <div className="flex items-center gap-3 mt-3">
-              <Badge variant={ss.variant}>{ss.label}</Badge>
-              <HealthDot health={project.health} />
-              {project.sub_agency && <span className="text-[#d4af37] text-xs font-medium px-2 py-0.5 rounded bg-[#d4af37]/10">{project.sub_agency}</span>}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div><span className="text-[#64748b] text-xs">Contract Value</span><p className="text-[#d4af37] font-semibold">{fmtCurrency(project.contract_value)}</p></div>
-            <div><span className="text-[#64748b] text-xs">Completion</span><div className="mt-0.5"><ProgressBar pct={project.completion_pct} /></div></div>
-            <div><span className="text-[#64748b] text-xs">Contractor</span><p className="text-white">{project.contractor || '-'}</p></div>
-            <div><span className="text-[#64748b] text-xs">Region</span><p className="text-white">{fmtRegion(project.region)}</p></div>
-            <div><span className="text-[#64748b] text-xs">Start Date</span><p className="text-white">{fmtDate(project.start_date)}</p>{project.revised_start_date && project.revised_start_date !== project.start_date && <p className="text-[#d4af37] text-[10px] mt-0.5">Revised: {fmtDate(project.revised_start_date)}</p>}</div>
-            <div><span className="text-[#64748b] text-xs">End Date</span><p className={project.status === 'Delayed' ? 'text-red-400 font-semibold' : 'text-white'}>{fmtDate(project.project_end_date)}</p></div>
-            <div>
-              <span className="text-[#64748b] text-xs">Agency</span>
-              <p className="text-white">{project.sub_agency || project.executing_agency || '-'}</p>
-              {project.executing_agency && project.sub_agency && project.executing_agency !== project.sub_agency && <p className="text-[#4a5568] text-[10px] mt-0.5">under {project.executing_agency}</p>}
-            </div>
-            {project.days_overdue > 0 && <div><span className="text-[#64748b] text-xs">Days Overdue</span><p className="text-red-400 font-semibold">{project.days_overdue} days</p></div>}
-          </div>
-
-          {/* Oversight Detail Fields */}
-          {(project.balance_remaining != null || project.total_distributed != null || project.total_expended != null || project.project_extended) && (
-            <div className="space-y-4">
-              {/* Financial Summary */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                {project.balance_remaining != null && (
-                  <div><span className="text-[#64748b] text-xs">Balance Remaining</span><p className="text-white font-semibold">{fmtCurrency(project.balance_remaining)}</p></div>
-                )}
-                {project.total_distributed != null && (
-                  <div><span className="text-[#64748b] text-xs">Total Distributed</span><p className="text-white font-semibold">{fmtCurrency(project.total_distributed)}</p></div>
-                )}
-                {project.total_expended != null && (
-                  <div><span className="text-[#64748b] text-xs">Total Expended</span><p className="text-white font-semibold">{fmtCurrency(project.total_expended)}</p></div>
-                )}
-                {project.total_distributed != null && project.total_expended != null && project.total_distributed > 0 && (
-                  <div>
-                    <span className="text-[#64748b] text-xs">Utilization</span>
-                    <p className={`font-semibold ${(project.total_expended / project.total_distributed) > 0.8 ? 'text-emerald-400' : (project.total_expended / project.total_distributed) > 0.5 ? 'text-amber-400' : 'text-red-400'}`}>
-                      {Math.round((project.total_expended / project.total_distributed) * 100)}%
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Extension Info */}
-              {project.project_extended && (
-                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm">
-                  <p className="text-amber-400 font-semibold text-xs mb-1">Extension Granted</p>
-                  {project.extension_date && <p className="text-[#94a3b8] text-xs">New deadline: {fmtDate(project.extension_date)}</p>}
-                  {project.extension_reason && <p className="text-[#94a3b8] text-xs mt-1">{project.extension_reason}</p>}
-                </div>
-              )}
-
-              {/* Remarks */}
-              {project.remarks && (
-                <div>
-                  <span className="text-[#64748b] text-xs">Remarks</span>
-                  <p className="text-[#94a3b8] text-xs mt-1 leading-relaxed whitespace-pre-wrap md:line-clamp-4">{project.remarks}</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* AI Summary */}
-          <ProjectAISummary projectId={project.id} />
-          {/* Activity Log */}
-          <ProjectActivityLog projectId={project.id} />
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ── Timeline View ──────────────────────────────────────────────────────────
-
-function TimelineView({ projects, groupBy }: { projects: Project[]; groupBy: 'agency' | 'region' }) {
-  const groups = useMemo(() => {
-    const g: Record<string, Project[]> = {};
-    for (const p of projects) {
-      const key = groupBy === 'agency' ? (p.sub_agency || 'Unknown') : fmtRegion(p.region);
-      if (!g[key]) g[key] = [];
-      g[key].push(p);
-    }
-    return Object.entries(g).sort((a, b) => b[1].length - a[1].length);
-  }, [projects, groupBy]);
-
-  const now = new Date();
-  const dates = projects.flatMap(p => {
-    const d: Date[] = [];
-    if (p.start_date) d.push(new Date(p.start_date));
-    if (p.project_end_date) d.push(new Date(p.project_end_date));
-    return d;
-  }).filter(d => !isNaN(d.getTime()));
-
-  if (dates.length === 0) return <div className="card-premium p-8 text-center text-[#64748b]">No date data available for timeline view.</div>;
-
-  const minDate = new Date(Math.min(...dates.map(d => d.getTime()), now.getTime() - 365 * 86400000));
-  const maxDate = new Date(Math.max(...dates.map(d => d.getTime()), now.getTime() + 180 * 86400000));
-  const totalDays = (maxDate.getTime() - minDate.getTime()) / 86400000;
-  function getPos(ds: string | null) { if (!ds) return 0; const d = new Date(ds); return isNaN(d.getTime()) ? 0 : ((d.getTime() - minDate.getTime()) / 86400000 / totalDays) * 100; }
-  const nowPos = ((now.getTime() - minDate.getTime()) / 86400000 / totalDays) * 100;
-  const hc: Record<string, string> = { green: 'bg-emerald-500/80', amber: 'bg-amber-500/80', red: 'bg-red-500/80' };
-
-  return (
-    <div className="card-premium overflow-hidden">
-      <div className="overflow-x-auto">
-        <div className="min-w-[800px]">
-          <div className="flex items-center border-b border-[#2d3a52] px-4 py-2 relative">
-            <div className="w-48 shrink-0 text-[#64748b] text-xs font-medium uppercase">Project</div>
-            <div className="flex-1 relative h-6">
-              {Array.from({ length: Math.min(Math.ceil(totalDays / 30), 36) }).map((_, i) => {
-                const d = new Date(minDate.getTime() + i * 30 * 86400000);
-                return <span key={i} className="absolute text-[10px] text-[#4a5568] whitespace-nowrap" style={{ left: `${(i * 30 / totalDays) * 100}%` }}>{d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}</span>;
-              })}
-            </div>
-          </div>
-          {groups.map(([name, items]) => (
-            <div key={name}>
-              <div className="px-4 py-2 bg-[#0a1628]/60 border-b border-[#2d3a52]/50">
-                <span className="text-[#d4af37] text-xs font-semibold">{name}</span>
-                <span className="text-[#64748b] text-xs ml-2">({items.length})</span>
-              </div>
-              {items.slice(0, 20).map(p => {
-                const start = getPos(p.start_date || p.created_at);
-                const end = getPos(p.project_end_date);
-                const barLeft = Math.min(start, end || start);
-                const barWidth = Math.max((end || start + 2) - barLeft, 1);
-                return (
-                  <div key={p.id} className="flex items-center px-4 py-1.5 border-b border-[#2d3a52]/20 hover:bg-[#1a2744]/30">
-                    <div className="w-48 shrink-0 pr-2"><p className="text-white text-xs truncate" title={p.project_name || ''}>{p.project_name || '-'}</p></div>
-                    <div className="flex-1 relative h-5">
-                      <div className="absolute top-0 bottom-0 w-px bg-[#d4af37]/30" style={{ left: `${nowPos}%` }} />
-                      <div className={`absolute top-1 h-3 rounded-sm ${hc[p.health] || hc.green} ${p.escalated ? 'ring-1 ring-red-400' : ''}`} style={{ left: `${barLeft}%`, width: `${barWidth}%`, minWidth: '4px' }} title={`${p.project_name} (${p.completion_pct}%)`}>
-                        {barWidth > 5 && <div className="h-full bg-white/20 rounded-sm" style={{ width: `${Math.min(p.completion_pct, 100)}%` }} />}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Portfolio KPI Card ─────────────────────────────────────────────────────
-
-function PortfolioKpiCard({ icon: Icon, label, value, color, subtitle }: {
-  icon: React.ComponentType<{ className?: string }>; label: string; value: string; color: 'gold' | 'red' | 'green' | 'blue' | 'grey' | 'amber'; subtitle?: string;
-}) {
-  const colors = {
-    gold: { bg: 'bg-[#d4af37]/20', text: 'text-[#d4af37]' }, red: { bg: 'bg-red-500/20', text: 'text-red-400' },
-    green: { bg: 'bg-emerald-500/20', text: 'text-emerald-400' }, blue: { bg: 'bg-blue-500/20', text: 'text-blue-400' },
-    grey: { bg: 'bg-[#4a5568]/20', text: 'text-[#94a3b8]' }, amber: { bg: 'bg-amber-500/20', text: 'text-amber-400' },
-  };
-  const c = colors[color];
-  return (
-    <div className="card-premium p-3 md:p-5 min-w-[130px] md:min-w-0">
-      <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg ${c.bg} flex items-center justify-center mb-2 md:mb-3`}><Icon className={`h-4 w-4 md:h-5 md:w-5 ${c.text}`} /></div>
-      <p className={`text-lg md:text-2xl font-bold ${c.text} truncate`}>{value}</p>
-      <p className="text-[#64748b] text-xs mt-1">{label}</p>
-      {subtitle && <p className="text-[#4a5568] text-[10px] mt-0.5">{subtitle}</p>}
-    </div>
-  );
-}
+import type { OversightData, Project, PortfolioSummary, SavedFilter, ViewMode, TabMode } from '@/components/oversight/types';
+import { HEALTH_OPTIONS } from '@/components/oversight/types';
+import { SaveFilterModal, OversightFilterPanel } from '@/components/oversight/OversightFilters';
+import { ProjectSlidePanel, OversightProjectTable } from '@/components/oversight/OversightTable';
+import { TimelineView } from '@/components/oversight/TimelineView';
+import { PortfolioSummarySection } from '@/components/oversight/PortfolioSummary';
+import { AlertsTabContent } from '@/components/oversight/AlertsTab';
 
 // ── Bulk Action Bar ────────────────────────────────────────────────────────
 
@@ -769,7 +210,7 @@ export default function OversightPage() {
       });
   }
 
-  const hasActiveFilters = agencies.length || statuses.length || regions.length || healths.length || budgetMin || budgetMax || contractor || dateFrom || dateTo || search;
+  const hasActiveFilters = !!(agencies.length || statuses.length || regions.length || healths.length || budgetMin || budgetMax || contractor || dateFrom || dateTo || search);
   const activeFilterCount = [agencies.length > 0, statuses.length > 0, regions.length > 0, healths.length > 0, budgetMin || budgetMax, contractor, dateFrom || dateTo, search].filter(Boolean).length;
   const totalPages = Math.ceil(totalCount / limit);
 
@@ -863,136 +304,14 @@ export default function OversightPage() {
       {/* TAB: ALERTS & FLAGS (existing scraped oversight data) */}
       {/* ════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'alerts' && (
-        <>
-          {oversightLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              {[...Array(6)].map((_, i) => <div key={i} className="bg-[#1a2744] border border-[#2d3a52] rounded-xl p-4 animate-pulse"><div className="h-3 w-16 bg-[#2d3a52] rounded mb-2" /><div className="h-7 w-20 bg-[#2d3a52] rounded" /></div>)}
-            </div>
-          ) : oversightError ? (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
-              <AlertTriangle className="h-8 w-8 text-red-400 mx-auto mb-2" />
-              <p className="text-red-400 font-medium">{oversightError}</p>
-              <p className="text-[#64748b] text-sm mt-1">Run <code className="bg-[#2d3a52] px-2 py-0.5 rounded text-xs">cd scraper && node scraper.js --highlights</code> to generate data.</p>
-            </div>
-          ) : oversightData ? (
-            <>
-              {/* Scraped KPIs */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                <OversightKpiCard label="Contract Cost" value={oversightData.dashboard.kpis.totalContractCostDisplay || formatCurrency(oversightData.dashboard.kpis.totalContractCost ?? null)} />
-                <OversightKpiCard label="Disbursement" value={oversightData.dashboard.kpis.totalDisbursementDisplay || formatCurrency(oversightData.dashboard.kpis.totalDisbursement ?? null)} />
-                <OversightKpiCard label="Balance" value={oversightData.dashboard.kpis.totalBalanceDisplay || formatCurrency(oversightData.dashboard.kpis.totalBalance ?? null)} />
-                <OversightKpiCard label="Projects" value={String(oversightData.dashboard.kpis.totalProjects ?? oversightData.metadata.totalProjects)} />
-                <OversightKpiCard label="Utilization" value={oversightData.dashboard.kpis.utilizationPercent != null ? `${oversightData.dashboard.kpis.utilizationPercent}%` : '-'} />
-                <OversightKpiCard label="Engineer Est." value={oversightData.dashboard.kpis.engineerEstimateDisplay || formatCurrency(oversightData.dashboard.kpis.engineerEstimate ?? null)} />
-              </div>
-
-              {/* Status Chart */}
-              {oversightData.dashboard.statusChart && Object.keys(oversightData.dashboard.statusChart).length > 0 && (
-                <div className="bg-[#1a2744] border border-[#2d3a52] rounded-xl p-4">
-                  <p className="text-[#64748b] text-xs uppercase tracking-wider mb-3">Project Status</p>
-                  <div className="flex flex-wrap gap-3">
-                    {Object.entries(oversightData.dashboard.statusChart).map(([label, value]) => {
-                      const pct = typeof value === 'object' && value ? value.percent : typeof value === 'number' ? value : null;
-                      const count = typeof value === 'object' && value ? value.count : null;
-                      const colors: Record<string, string> = { Designed: 'bg-blue-500', Commenced: 'bg-emerald-500', Delayed: 'bg-orange-500', Completed: 'bg-green-500', Rollover: 'bg-purple-500', Cancelled: 'bg-red-500', 'N/A': 'bg-gray-500' };
-                      return (<div key={label} className="flex items-center gap-2"><div className={`w-2.5 h-2.5 rounded-full ${colors[label] || 'bg-gray-500'}`} /><span className="text-white text-sm">{label}</span>{count != null && <span className="text-[#64748b] text-xs">({count})</span>}{pct != null && <span className="text-[#64748b] text-xs">{pct}%</span>}</div>);
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Alert Summary Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                {[
-                  { label: 'Overdue', count: oversightData.summary.overdue, color: 'text-red-400', bg: 'bg-red-500/10' },
-                  { label: 'At Risk', count: oversightData.summary.atRisk, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
-                  { label: 'Ending Soon', count: oversightData.summary.endingSoon, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-                  { label: 'Delayed', count: oversightData.summary.delayed, color: 'text-orange-400', bg: 'bg-orange-500/10' },
-                  { label: 'Bond Warnings', count: oversightData.summary.bondWarnings, color: 'text-purple-400', bg: 'bg-purple-500/10' },
-                ].map(item => (
-                  <div key={item.label} className={`${item.bg} border border-[#2d3a52] rounded-xl p-3 text-center`}>
-                    <p className={`text-2xl font-bold ${item.color}`}>{item.count}</p>
-                    <p className="text-[#64748b] text-xs mt-1">{item.label}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Collapsible Alert Sections */}
-              {oversightData.overdue.length > 0 && <CollapsibleSection title="Overdue Projects" icon={AlertTriangle} count={oversightData.overdue.length} accent="bg-red-500/20 text-red-400" defaultOpen>{oversightData.overdue.sort((a: any, b: any) => (b.daysOverdue || 0) - (a.daysOverdue || 0)).map((p: any, i: number) => <ProjectRow key={p.p3Id || i} project={p} tag="overdue" />)}</CollapsibleSection>}
-              {oversightData.atRisk.length > 0 && <CollapsibleSection title="At-Risk Projects" icon={ShieldAlert} count={oversightData.atRisk.length} accent="bg-yellow-500/20 text-yellow-400">{oversightData.atRisk.sort((a: any, b: any) => (a.daysRemaining || 0) - (b.daysRemaining || 0)).map((p: any, i: number) => <ProjectRow key={p.p3Id || i} project={p} tag="at-risk" />)}</CollapsibleSection>}
-              {oversightData.endingSoon.length > 0 && <CollapsibleSection title="Ending Soon" icon={Clock} count={oversightData.endingSoon.length} accent="bg-blue-500/20 text-blue-400">{oversightData.endingSoon.sort((a: any, b: any) => (a.daysRemaining || 0) - (b.daysRemaining || 0)).map((p: any, i: number) => <ProjectRow key={p.p3Id || i} project={p} tag="ending-soon" />)}</CollapsibleSection>}
-              {oversightData.bondWarnings.length > 0 && <CollapsibleSection title="Bond Warnings" icon={FileWarning} count={oversightData.bondWarnings.length} accent="bg-purple-500/20 text-purple-400">{oversightData.bondWarnings.map((p: any, i: number) => <ProjectRow key={p.p3Id || i} project={p} tag="bond-warning" />)}</CollapsibleSection>}
-
-              {/* Agency Breakdown */}
-              <div className="bg-[#1a2744] border border-[#2d3a52] rounded-xl overflow-hidden">
-                <div className="flex items-center gap-3 p-4 border-b border-[#2d3a52]"><div className="w-8 h-8 rounded-lg bg-[#d4af37]/20 flex items-center justify-center"><Building2 className="h-4 w-4 text-[#d4af37]" /></div><span className="text-white font-medium">Agency Breakdown</span></div>
-                {/* Mobile: card layout */}
-                <div className="md:hidden divide-y divide-[#2d3a52]/50">
-                  {oversightData.agencyBreakdown.map(a => {
-                    const isExp = expandedAgency === a.agency;
-                    const agencyProjects = projectsByAgency[a.agency] || [];
-                    return (
-                      <div key={a.agency}>
-                        <button onClick={() => setExpandedAgency(isExp ? null : a.agency)} className={`w-full p-3 flex items-center gap-3 transition-colors ${isExp ? 'bg-[#2d3a52]/30' : ''}`}>
-                          <ChevronRight className={`h-3.5 w-3.5 text-[#64748b] shrink-0 transition-transform duration-200 ${isExp ? 'rotate-90' : ''}`} />
-                          <div className="flex-1 min-w-0 text-left">
-                            <p className="text-white font-medium text-sm">{a.agency || '-'}</p>
-                            <div className="flex items-center gap-3 mt-1 text-xs">
-                              <span className="text-[#94a3b8]">{a.projectCount} projects</span>
-                              <span className="text-[#d4af37] font-mono">{a.totalValueDisplay || formatCurrency(a.totalValue)}</span>
-                            </div>
-                          </div>
-                          {a.avgCompletion != null && (
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <div className="w-12 h-1.5 bg-[#2d3a52] rounded-full"><div className="h-full rounded-full bg-[#d4af37]" style={{ width: `${a.avgCompletion}%` }} /></div>
-                              <span className="text-[#94a3b8] font-mono text-xs">{a.avgCompletion}%</span>
-                            </div>
-                          )}
-                        </button>
-                        {isExp && <div className="bg-[#0a1628]/60 border-t border-[#2d3a52]/50">{agencyProjects.length > 0 ? <div className="max-h-[400px] overflow-y-auto">{agencyProjects.map((item, i) => <ProjectRow key={item.project.id || item.project.p3Id || i} project={item.project} tag={item.tag} />)}</div> : <p className="px-4 py-6 text-[#64748b] text-sm text-center">No flagged projects for this agency</p>}</div>}
-                      </div>
-                    );
-                  })}
-                </div>
-                {/* Desktop: table layout */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead><tr className="text-[#64748b] text-xs uppercase tracking-wider"><th className="text-left px-4 py-3 w-6"></th><th className="text-left px-4 py-3">Agency</th><th className="text-right px-4 py-3">Projects</th><th className="text-right px-4 py-3">Total Value</th><th className="text-right px-4 py-3">Avg Completion</th></tr></thead>
-                    <tbody>
-                      {oversightData.agencyBreakdown.map(a => {
-                        const isExp = expandedAgency === a.agency;
-                        const agencyProjects = projectsByAgency[a.agency] || [];
-                        return (
-                          <Fragment key={a.agency}>
-                            <tr onClick={() => setExpandedAgency(isExp ? null : a.agency)} className={`border-t border-[#2d3a52]/50 hover:bg-[#2d3a52]/20 cursor-pointer transition-colors ${isExp ? 'bg-[#2d3a52]/30' : ''}`}>
-                              <td className="pl-4 py-3 w-6"><ChevronRight className={`h-3.5 w-3.5 text-[#64748b] transition-transform duration-200 ${isExp ? 'rotate-90' : ''}`} /></td>
-                              <td className="px-4 py-3"><span className="text-white font-medium">{a.agency || '-'}</span>{a.agencyFull && a.agencyFull !== a.agency && <span className="text-[#64748b] text-xs ml-2">{a.agencyFull}</span>}</td>
-                              <td className="px-4 py-3 text-[#94a3b8] text-right">{a.projectCount}</td>
-                              <td className="px-4 py-3 text-[#d4af37] text-right font-mono">{a.totalValueDisplay || formatCurrency(a.totalValue)}</td>
-                              <td className="px-4 py-3 text-right">{a.avgCompletion != null ? <div className="flex items-center justify-end gap-2"><div className="w-16 h-1.5 bg-[#2d3a52] rounded-full"><div className="h-full rounded-full bg-[#d4af37]" style={{ width: `${a.avgCompletion}%` }} /></div><span className="text-[#94a3b8] font-mono text-xs">{a.avgCompletion}%</span></div> : <span className="text-[#64748b]">-</span>}</td>
-                            </tr>
-                            {isExp && <tr><td colSpan={5} className="p-0"><div className="bg-[#0a1628]/60 border-t border-[#2d3a52]/50">{agencyProjects.length > 0 ? <div className="max-h-[400px] overflow-y-auto">{agencyProjects.map((item, i) => <ProjectRow key={item.project.id || item.project.p3Id || i} project={item.project} tag={item.tag} />)}</div> : <p className="px-4 py-6 text-[#64748b] text-sm text-center">No flagged projects for this agency</p>}</div></td></tr>}
-                          </Fragment>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Top 10 */}
-              <CollapsibleSection title="Top 10 by Contract Value" icon={TrendingUp} count={oversightData.top10.length} accent="bg-[#d4af37]/20 text-[#d4af37]">
-                {oversightData.top10.map((p: any, i: number) => (
-                  <div key={p.id || i} className="flex items-center gap-3 px-4 py-3 border-b border-[#2d3a52]/50 last:border-0 hover:bg-[#2d3a52]/20">
-                    <span className="text-[#d4af37] font-mono text-sm w-6 text-right shrink-0">#{p.rank || i + 1}</span>
-                    <div className="flex-1 min-w-0"><p className="text-white text-sm font-medium truncate">{p.name}</p><p className="text-[#64748b] text-xs">{p.agency} &middot; {p.contractValueDisplay || formatCurrency(p.contractValue)}</p></div>
-                    {p.completion != null && <span className="text-[#94a3b8] font-mono text-xs shrink-0">{p.completion}%</span>}
-                  </div>
-                ))}
-              </CollapsibleSection>
-            </>
-          ) : null}
-        </>
+        <AlertsTabContent
+          oversightData={oversightData}
+          oversightLoading={oversightLoading}
+          oversightError={oversightError}
+          expandedAgency={expandedAgency}
+          onExpandedAgencyChange={setExpandedAgency}
+          projectsByAgency={projectsByAgency}
+        />
       )}
 
       {/* ════════════════════════════════════════════════════════════════════ */}
@@ -1000,95 +319,45 @@ export default function OversightPage() {
       {/* ════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'projects' && (
         <>
-          {/* Portfolio Dashboard Cards */}
-          {psipSummary && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
-              <PortfolioKpiCard icon={Building2} label="Active Projects" value={String(psipSummary.total_projects)} color="gold" />
-              <PortfolioKpiCard icon={DollarSign} label="Portfolio Value" value={psipSummary.total_value > 0 ? fmtCurrency(psipSummary.total_value) : '$0'} color="gold" />
-              <PortfolioKpiCard icon={AlertTriangle} label="At Risk" value={String(psipSummary.at_risk)} color="amber" subtitle="Amber + Red health" />
-              <PortfolioKpiCard icon={CheckCircle} label="Completion Rate" value={psipSummary.total_projects > 0 ? `${Math.round((psipSummary.complete / psipSummary.total_projects) * 100)}%` : '0%'} color="green" subtitle={`${psipSummary.complete} of ${psipSummary.total_projects}`} />
-              <PortfolioKpiCard icon={AlertTriangle} label="Delayed" value={String(psipSummary.delayed)} color="red" subtitle={psipSummary.delayed_value > 0 ? fmtCurrency(psipSummary.delayed_value) : undefined} />
-            </div>
-          )}
-
-          {/* Regional Spread */}
-          {psipSummary && Object.keys(psipSummary.regions).length > 1 && (
-            <div className="card-premium p-4">
-              <h3 className="text-white text-sm font-semibold mb-3">Regional Spread</h3>
-              <div className="flex items-end gap-1 h-16">
-                {Object.entries(psipSummary.regions)
-                  .map(([reg, count]) => {
-                    const n = parseInt(reg, 10);
-                    const label = !isNaN(n) ? `R${n}` : (reg && reg !== 'Unknown' ? reg : 'Other');
-                    const sortKey = !isNaN(n) ? n : 999;
-                    return { label, count, sortKey, key: reg };
-                  })
-                  .sort((a, b) => a.sortKey - b.sortKey)
-                  .map(({ label, count, key }) => {
-                    const maxCount = Math.max(...Object.values(psipSummary.regions));
-                    const h = Math.max((count / maxCount) * 100, 8);
-                    return (<div key={key} className="flex-1 flex flex-col items-center gap-1"><span className="text-[#d4af37] text-[10px] font-medium">{count}</span><div className="w-full bg-[#d4af37]/30 rounded-t" style={{ height: `${h}%` }} /><span className="text-[#64748b] text-[9px]">{label}</span></div>);
-                  })}
-              </div>
-            </div>
-          )}
+          <PortfolioSummarySection summary={psipSummary} />
 
           {/* Filter Panel */}
-          <div className="card-premium">
-            <button onClick={() => setShowFilters(!showFilters)} className="w-full px-4 py-3 flex items-center justify-between hover:bg-[#1a2744]/40 transition-colors">
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal className="h-4 w-4 text-[#d4af37]" />
-                <span className="text-white text-sm font-medium">Filters</span>
-                {activeFilterCount > 0 && <span className="bg-[#d4af37] text-[#0a1628] text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">{activeFilterCount}</span>}
-              </div>
-              <ChevronDown className={`h-4 w-4 text-[#64748b] transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-            </button>
-            {showFilters && (
-              <div className="px-4 pb-4 space-y-3 border-t border-[#2d3a52]">
-                <div className="pt-3 grid grid-cols-2 md:flex md:flex-wrap md:items-end gap-3">
-                  <MultiSelect label="Agency" options={AGENCY_OPTIONS.map(a => ({ value: a, label: a }))} selected={agencies} onChange={setAgencies} />
-                  <MultiSelect label="Status" options={STATUS_OPTIONS.map(s => ({ value: s, label: s }))} selected={statuses} onChange={setStatuses} />
-                  <MultiSelect label="Region" options={REGION_OPTIONS} selected={regions} onChange={setRegions} />
-                  <MultiSelect label="Health" options={HEALTH_OPTIONS.map(h => ({ value: h.value, label: h.label }))} selected={healths} onChange={setHealths} renderOption={opt => <span className="flex items-center gap-2 text-white"><span className={`w-2 h-2 rounded-full ${HEALTH_DOT[opt.value] || ''}`} />{opt.label}</span>} />
-                  <div className="flex items-center gap-1 col-span-2 md:col-span-1">
-                    <input type="number" placeholder="Min $" value={budgetMin} onChange={e => setBudgetMin(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-2 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none w-full md:w-24" />
-                    <span className="text-[#64748b] text-xs">-</span>
-                    <input type="number" placeholder="Max $" value={budgetMax} onChange={e => setBudgetMax(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-2 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none w-full md:w-24" />
-                  </div>
-                  <input type="text" list="contractor-list" value={contractor} onChange={e => setContractor(e.target.value)} placeholder="Contractor..." className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none col-span-2 md:col-span-1 md:w-40" />
-                  <datalist id="contractor-list">{contractors.slice(0, 50).map(c => <option key={c} value={c} />)}</datalist>
-                  <div className="relative col-span-2 md:col-span-1 md:flex-1 md:min-w-[180px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
-                    <input type="text" placeholder="Search projects..." value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-[#0a1628] border border-[#2d3a52] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 md:flex md:flex-wrap md:items-center gap-3">
-                  <select value={dateField} onChange={e => setDateField(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none"><option value="project_end_date">End Date</option><option value="start_date">Start Date</option><option value="updated_at">Last Updated</option></select>
-                  <select value={sort} onChange={e => setSort(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none"><option value="value">Sort: Value</option><option value="completion">Sort: Completion %</option><option value="end_date">Sort: End Date</option><option value="agency">Sort: Agency</option><option value="name">Sort: Name</option><option value="health">Sort: Health</option></select>
-                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none" />
-                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none" />
-                  <div className="hidden md:block flex-1" />
-                  {hasActiveFilters && (
-                    <>
-                      <button onClick={() => setShowSaveFilter(true)} className="text-[#d4af37] text-xs flex items-center gap-1 hover:text-[#e5c04b]"><BookmarkPlus className="h-3.5 w-3.5" /> Save Preset</button>
-                      <button onClick={clearFilters} className="text-[#64748b] hover:text-white text-xs flex items-center gap-1"><X className="h-3.5 w-3.5" /> Clear All</button>
-                    </>
-                  )}
-                </div>
-                {savedFilters.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <Bookmark className="h-3.5 w-3.5 text-[#64748b]" />
-                    {savedFilters.map(sf => (
-                      <div key={sf.id} className="flex items-center gap-1 bg-[#0a1628] border border-[#2d3a52] rounded-lg px-2 py-1">
-                        <button onClick={() => applySavedFilter(sf)} className="text-[#d4af37] text-xs hover:text-[#e5c04b]">{sf.filter_name}</button>
-                        <button onClick={() => deleteSavedFilter(sf.id)} className="text-[#4a5568] hover:text-red-400"><X className="h-3 w-3" /></button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <OversightFilterPanel
+            showFilters={showFilters}
+            onToggleFilters={() => setShowFilters(!showFilters)}
+            agencies={agencies}
+            onAgenciesChange={setAgencies}
+            statuses={statuses}
+            onStatusesChange={setStatuses}
+            regions={regions}
+            onRegionsChange={setRegions}
+            healths={healths}
+            onHealthsChange={setHealths}
+            budgetMin={budgetMin}
+            onBudgetMinChange={setBudgetMin}
+            budgetMax={budgetMax}
+            onBudgetMaxChange={setBudgetMax}
+            contractor={contractor}
+            onContractorChange={setContractor}
+            contractors={contractors}
+            dateField={dateField}
+            onDateFieldChange={setDateField}
+            dateFrom={dateFrom}
+            onDateFromChange={setDateFrom}
+            dateTo={dateTo}
+            onDateToChange={setDateTo}
+            search={search}
+            onSearchChange={setSearch}
+            sort={sort}
+            onSortChange={setSort}
+            savedFilters={savedFilters}
+            onApplySavedFilter={applySavedFilter}
+            onDeleteSavedFilter={deleteSavedFilter}
+            onClearFilters={clearFilters}
+            onShowSaveFilter={() => setShowSaveFilter(true)}
+            activeFilterCount={activeFilterCount}
+            hasActiveFilters={hasActiveFilters}
+          />
 
           {/* Project count + View Toggle */}
           <div className="flex items-center justify-between gap-2">
@@ -1110,128 +379,20 @@ export default function OversightPage() {
 
           {/* Project View */}
           {viewMode === 'timeline' ? <TimelineView projects={projects} groupBy={timelineGroupBy} /> : (
-            <>
-              {/* ── Mobile card layout ── */}
-              {isMobile ? (
-                <div className="card-premium overflow-hidden">
-                  {/* Select all header */}
-                  <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#2d3a52]">
-                    <button onClick={toggleSelectAll} className="flex items-center gap-2 text-[#64748b] hover:text-white text-xs">
-                      {selectedIds.size === projects.length && projects.length > 0 ? <CheckSquare className="h-4 w-4 text-[#d4af37]" /> : <Square className="h-4 w-4" />}
-                      Select all
-                    </button>
-                  </div>
-                  <div className="divide-y divide-[#2d3a52]/50">
-                    {loadingProjects ? Array.from({ length: 4 }).map((_, i) => (
-                      <div key={i} className="p-3 animate-pulse space-y-2">
-                        <div className="h-4 bg-[#2d3a52] rounded w-3/4" />
-                        <div className="h-3 bg-[#2d3a52] rounded w-1/2" />
-                        <div className="h-3 bg-[#2d3a52] rounded w-1/3" />
-                      </div>
-                    ))
-                    : projects.length === 0 ? (
-                      <div className="px-4 py-12 text-center text-[#64748b]">No projects match your filters.</div>
-                    )
-                    : projects.map(p => {
-                        const ss = STATUS_STYLES[p.status] || STATUS_STYLES['Unknown'];
-                        const isSelected = selectedIds.has(p.id);
-                        const displayName = p.short_name || p.project_name || '-';
-                        return (
-                          <div key={p.id} onClick={() => setSelectedProject(p)} className={`p-3 cursor-pointer transition-colors active:bg-[#1a2744]/60 ${p.escalated ? 'bg-red-500/5 border-l-2 border-l-red-500' : ''} ${isSelected ? 'bg-[#d4af37]/5' : ''}`}>
-                            <div className="flex items-start gap-2.5">
-                              <button onClick={e => { e.stopPropagation(); toggleSelect(p.id); }} className="text-[#64748b] hover:text-white mt-0.5 shrink-0">
-                                {isSelected ? <CheckSquare className="h-4 w-4 text-[#d4af37]" /> : <Square className="h-4 w-4" />}
-                              </button>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-white text-sm font-medium truncate" title={p.project_name || ''}>{displayName}</p>
-                                <div className="flex items-center gap-2 flex-wrap mt-1.5">
-                                  <Badge variant={ss.variant}>{ss.label}</Badge>
-                                  <HealthDot health={p.health} />
-                                  {p.escalated && <ShieldAlert className="h-3.5 w-3.5 text-red-400" />}
-                                </div>
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-[#64748b]">
-                                  <span className="text-[#d4af37] font-medium">{p.sub_agency || '-'}</span>
-                                  <span>{fmtRegion(p.region)}</span>
-                                  <span className="text-[#d4af37] font-mono">{fmtCurrency(p.contract_value)}</span>
-                                </div>
-                                {/* Funding preview */}
-                                {(p.balance_remaining != null || p.total_distributed != null || p.total_expended != null) && (
-                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs">
-                                    {p.total_distributed != null && <span className="text-[#94a3b8]">Distributed: <span className="text-white font-medium">{fmtCurrency(p.total_distributed)}</span></span>}
-                                    {p.total_expended != null && <span className="text-[#94a3b8]">Expended: <span className="text-white font-medium">{fmtCurrency(p.total_expended)}</span></span>}
-                                    {p.balance_remaining != null && <span className="text-[#94a3b8]">Balance: <span className="text-white font-medium">{fmtCurrency(p.balance_remaining)}</span></span>}
-                                  </div>
-                                )}
-                                {/* Remarks preview */}
-                                {p.remarks && (
-                                  <p className="text-[#64748b] text-xs mt-1 line-clamp-2 italic">{p.remarks}</p>
-                                )}
-                                <div className="flex items-center justify-between mt-2">
-                                  <span className={`text-xs ${p.status === 'Delayed' ? 'text-red-400 font-semibold' : 'text-[#94a3b8]'}`}>{fmtDate(p.project_end_date)}</span>
-                                  <ProgressBar pct={p.completion_pct} />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                </div>
-              ) : (
-              /* ── Desktop table layout ── */
-              <div className="card-premium overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-[#2d3a52] text-[#64748b] text-xs uppercase">
-                        <th className="px-3 py-3 text-center font-medium w-10"><button onClick={toggleSelectAll} className="text-[#64748b] hover:text-white">{selectedIds.size === projects.length && projects.length > 0 ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}</button></th>
-                        <th className="px-3 py-3 text-left font-medium">Status</th>
-                        <th className="px-3 py-3 text-left font-medium">Health</th>
-                        <th className="px-4 py-3 text-left font-medium">Project Name</th>
-                        <th className="px-3 py-3 text-left font-medium">Agency</th>
-                        <th className="px-3 py-3 text-left font-medium">Region</th>
-                        <th className="px-3 py-3 text-right font-medium">Value</th>
-                        <th className="px-3 py-3 text-left font-medium">End Date</th>
-                        <th className="px-3 py-3 text-left font-medium">Completion</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#2d3a52]/50">
-                      {loadingProjects ? Array.from({ length: 8 }).map((_, i) => <tr key={i} className="animate-pulse">{Array.from({ length: 9 }).map((_, j) => <td key={j} className="px-3 py-3"><div className="h-5 bg-[#2d3a52] rounded w-full" /></td>)}</tr>)
-                      : projects.length === 0 ? <tr><td colSpan={9} className="px-4 py-12 text-center text-[#64748b]">No projects match your filters.</td></tr>
-                      : projects.map(p => {
-                          const ss = STATUS_STYLES[p.status] || STATUS_STYLES['Unknown'];
-                          const isSelected = selectedIds.has(p.id);
-                          const displayName = p.short_name || p.project_name || '-';
-                          return (
-                            <tr key={p.id} onClick={() => setSelectedProject(p)} className={`hover:bg-[#1a2744]/40 cursor-pointer transition-colors ${p.escalated ? 'bg-red-500/5 border-l-2 border-l-red-500' : ''} ${isSelected ? 'bg-[#d4af37]/5' : ''}`}>
-                              <td className="px-3 py-3 text-center" onClick={e => e.stopPropagation()}><button onClick={() => toggleSelect(p.id)} className="text-[#64748b] hover:text-white">{isSelected ? <CheckSquare className="h-4 w-4 text-[#d4af37]" /> : <Square className="h-4 w-4" />}</button></td>
-                              <td className="px-3 py-3"><div className="flex items-center gap-1.5 flex-wrap"><Badge variant={ss.variant}>{ss.label}</Badge>{p.escalated && <ShieldAlert className="h-3.5 w-3.5 text-red-400" />}</div></td>
-                              <td className="px-3 py-3"><HealthDot health={p.health} /></td>
-                              <td className="px-4 py-3"><span className="text-white truncate block max-w-[300px]" title={p.project_name || ''}>{displayName}</span></td>
-                              <td className="px-3 py-3"><span className="text-[#d4af37] font-medium text-xs">{p.sub_agency || '-'}</span></td>
-                              <td className="px-3 py-3 text-[#94a3b8]">{fmtRegion(p.region)}</td>
-                              <td className="px-3 py-3 text-right"><span className="text-[#d4af37] font-mono text-xs">{fmtCurrency(p.contract_value)}</span></td>
-                              <td className="px-3 py-3"><span className={p.status === 'Delayed' ? 'text-red-400 font-semibold' : 'text-[#94a3b8]'}>{fmtDate(p.project_end_date)}</span></td>
-                              <td className="px-3 py-3"><ProgressBar pct={p.completion_pct} /></td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              )}
-              {totalPages > 1 && (
-                <div className="flex flex-wrap items-center justify-between px-2 md:px-4 py-3 gap-2">
-                  <span className="text-[#64748b] text-xs md:text-sm">{(page - 1) * limit + 1}-{Math.min(page * limit, totalCount)} of {totalCount}</span>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="btn-navy px-3 py-1.5 text-sm disabled:opacity-30">Prev</button>
-                    <span className="text-[#94a3b8] text-xs md:text-sm">{page}/{totalPages}</span>
-                    <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="btn-navy px-3 py-1.5 text-sm disabled:opacity-30">Next</button>
-                  </div>
-                </div>
-              )}
-            </>
+            <OversightProjectTable
+              projects={projects}
+              loadingProjects={loadingProjects}
+              isMobile={isMobile}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelect}
+              onToggleSelectAll={toggleSelectAll}
+              onSelectProject={setSelectedProject}
+              page={page}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              limit={limit}
+              onPageChange={setPage}
+            />
           )}
         </>
       )}
