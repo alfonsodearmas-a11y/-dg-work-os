@@ -87,7 +87,6 @@ interface Project {
   assigned_to: string | null;
   start_date: string | null;
   revised_start_date: string | null;
-  status_override: string | null;
   // Detail fields from oversight scraper
   balance_remaining: number | null;
   remarks: string | null;
@@ -143,7 +142,7 @@ const REGION_OPTIONS = [
   { value: 'GT', label: 'Georgetown' },
   { value: 'MR', label: 'Multi-Region' },
 ];
-const STATUS_OPTIONS = ['Not Started', 'In Progress', 'On Hold', 'Delayed', 'Complete', 'Cancelled'];
+const STATUS_OPTIONS = ['Commenced', 'Delayed', 'Awarded', 'Designed', 'Completed', 'Rollover', 'Cancelled'];
 const HEALTH_OPTIONS = [
   { value: 'green', label: 'On Track', color: 'bg-emerald-500' },
   { value: 'amber', label: 'Minor Issues', color: 'bg-amber-500' },
@@ -151,12 +150,14 @@ const HEALTH_OPTIONS = [
 ];
 
 const STATUS_STYLES: Record<string, { variant: 'success' | 'danger' | 'info' | 'default' | 'warning'; label: string }> = {
-  Complete: { variant: 'success', label: 'Complete' },
+  Commenced: { variant: 'info', label: 'Commenced' },
   Delayed: { variant: 'danger', label: 'Delayed' },
-  'In Progress': { variant: 'info', label: 'In Progress' },
-  'Not Started': { variant: 'default', label: 'Not Started' },
-  'On Hold': { variant: 'warning', label: 'On Hold' },
+  Awarded: { variant: 'warning', label: 'Awarded' },
+  Designed: { variant: 'default', label: 'Designed' },
+  Completed: { variant: 'success', label: 'Completed' },
+  Rollover: { variant: 'warning', label: 'Rollover' },
   Cancelled: { variant: 'danger', label: 'Cancelled' },
+  Unknown: { variant: 'default', label: 'Unknown' },
 };
 
 const HEALTH_DOT: Record<string, string> = {
@@ -383,7 +384,7 @@ function ProjectSlidePanel({ project, onClose, userRole, onRefreshList }: {
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  const ss = STATUS_STYLES[project.status] || STATUS_STYLES['Not Started'];
+  const ss = STATUS_STYLES[project.status] || STATUS_STYLES['Unknown'];
 
   return (
     <>
@@ -428,28 +429,8 @@ function ProjectSlidePanel({ project, onClose, userRole, onRefreshList }: {
           </div>
 
           {/* Oversight Detail Fields */}
-          {(project.project_status || project.balance_remaining != null || project.total_distributed != null || project.total_expended != null || project.project_extended) && (
+          {(project.balance_remaining != null || project.total_distributed != null || project.total_expended != null || project.project_extended) && (
             <div className="space-y-4">
-              {/* Oversight Status Badge */}
-              {project.project_status && (
-                <div>
-                  <span className="text-[#64748b] text-xs">Oversight Status</span>
-                  <div className="mt-1">
-                    <span className={`inline-block px-3 py-1 rounded-lg text-xs font-semibold ${
-                      project.project_status === 'DELAYED' ? 'bg-red-500/20 text-red-400'
-                      : project.project_status === 'COMMENCED' ? 'bg-blue-500/20 text-blue-400'
-                      : project.project_status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400'
-                      : project.project_status === 'AWARDED' ? 'bg-green-500/20 text-green-400'
-                      : project.project_status === 'ROLLOVER' ? 'bg-amber-500/20 text-amber-400'
-                      : project.project_status === 'CANCELLED' ? 'bg-red-500/20 text-red-300'
-                      : 'bg-[#2d3a52] text-[#94a3b8]'
-                    }`}>
-                      {project.project_status}
-                    </span>
-                  </div>
-                </div>
-              )}
-
               {/* Financial Summary */}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 {project.balance_remaining != null && (
@@ -597,24 +578,15 @@ function PortfolioKpiCard({ icon: Icon, label, value, color, subtitle }: {
 
 // ── Bulk Action Bar ────────────────────────────────────────────────────────
 
-function BulkActionBar({ count, onUpdateStatus, onUpdateHealth, onAssignOfficer, onExport, onClear, officers }: {
-  count: number; onUpdateStatus: (s: string) => void; onUpdateHealth: (h: string) => void; onAssignOfficer: (userId: string | null) => void; onExport: () => void; onClear: () => void; officers: { id: string; name: string }[];
+function BulkActionBar({ count, onUpdateHealth, onAssignOfficer, onExport, onClear, officers }: {
+  count: number; onUpdateHealth: (h: string) => void; onAssignOfficer: (userId: string | null) => void; onExport: () => void; onClear: () => void; officers: { id: string; name: string }[];
 }) {
-  const [showStatus, setShowStatus] = useState(false);
   const [showHealth, setShowHealth] = useState(false);
   const [showAssign, setShowAssign] = useState(false);
-  function closeAll() { setShowStatus(false); setShowHealth(false); setShowAssign(false); }
+  function closeAll() { setShowHealth(false); setShowAssign(false); }
   return (
     <div className="fixed bottom-0 left-0 right-0 md:bottom-4 md:left-1/2 md:right-auto md:-translate-x-1/2 z-40 bg-[#1a2744] border-t md:border border-[#d4af37]/40 md:rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-2 md:gap-3 flex-wrap justify-center">
       <span className="text-[#d4af37] font-semibold text-sm">{count} selected</span>
-      <div className="relative">
-        <button onClick={() => { closeAll(); setShowStatus(!showStatus); }} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1">Status <ChevronDown className="h-3 w-3" /></button>
-        {showStatus && <div className="absolute bottom-full left-0 mb-2 bg-[#1a2744] border border-[#2d3a52] rounded-lg shadow-xl min-w-[140px]">
-          {[{ value: 'not_started', label: 'Not Started' }, { value: 'in_progress', label: 'In Progress' }, { value: 'on_hold', label: 'On Hold' }, { value: 'delayed', label: 'Delayed' }, { value: 'completed', label: 'Complete' }, { value: 'cancelled', label: 'Cancelled' }].map(s =>
-            <button key={s.value} onClick={() => { onUpdateStatus(s.value); closeAll(); }} className="block w-full text-left px-3 py-2 text-sm text-white hover:bg-[#0a1628]/60">{s.label}</button>
-          )}
-        </div>}
-      </div>
       <div className="relative">
         <button onClick={() => { closeAll(); setShowHealth(!showHealth); }} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1">Health <ChevronDown className="h-3 w-3" /></button>
         {showHealth && <div className="absolute bottom-full left-0 mb-2 bg-[#1a2744] border border-[#2d3a52] rounded-lg shadow-xl min-w-[140px]">
@@ -1151,7 +1123,7 @@ export default function OversightPage() {
                       <div className="px-4 py-12 text-center text-[#64748b]">No projects match your filters.</div>
                     )
                     : projects.map(p => {
-                        const ss = STATUS_STYLES[p.status] || STATUS_STYLES['Not Started'];
+                        const ss = STATUS_STYLES[p.status] || STATUS_STYLES['Unknown'];
                         const isSelected = selectedIds.has(p.id);
                         const displayName = p.short_name || p.project_name || '-';
                         return (
@@ -1165,7 +1137,6 @@ export default function OversightPage() {
                                 <div className="flex items-center gap-2 flex-wrap mt-1.5">
                                   <Badge variant={ss.variant}>{ss.label}</Badge>
                                   <HealthDot health={p.health} />
-                                  {p.project_status && p.project_status !== ss.label?.toUpperCase() && <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${p.project_status === 'DELAYED' ? 'bg-red-500/20 text-red-400' : p.project_status === 'COMMENCED' ? 'bg-blue-500/20 text-blue-400' : p.project_status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400' : p.project_status === 'AWARDED' ? 'bg-green-500/20 text-green-400' : p.project_status === 'ROLLOVER' ? 'bg-amber-500/20 text-amber-400' : 'bg-[#2d3a52] text-[#94a3b8]'}`}>{p.project_status}</span>}
                                   {p.escalated && <ShieldAlert className="h-3.5 w-3.5 text-red-400" />}
                                 </div>
                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-[#64748b]">
@@ -1218,13 +1189,13 @@ export default function OversightPage() {
                       {loadingProjects ? Array.from({ length: 8 }).map((_, i) => <tr key={i} className="animate-pulse">{Array.from({ length: 9 }).map((_, j) => <td key={j} className="px-3 py-3"><div className="h-5 bg-[#2d3a52] rounded w-full" /></td>)}</tr>)
                       : projects.length === 0 ? <tr><td colSpan={9} className="px-4 py-12 text-center text-[#64748b]">No projects match your filters.</td></tr>
                       : projects.map(p => {
-                          const ss = STATUS_STYLES[p.status] || STATUS_STYLES['Not Started'];
+                          const ss = STATUS_STYLES[p.status] || STATUS_STYLES['Unknown'];
                           const isSelected = selectedIds.has(p.id);
                           const displayName = p.short_name || p.project_name || '-';
                           return (
                             <tr key={p.id} onClick={() => setSelectedProject(p)} className={`hover:bg-[#1a2744]/40 cursor-pointer transition-colors ${p.escalated ? 'bg-red-500/5 border-l-2 border-l-red-500' : ''} ${isSelected ? 'bg-[#d4af37]/5' : ''}`}>
                               <td className="px-3 py-3 text-center" onClick={e => e.stopPropagation()}><button onClick={() => toggleSelect(p.id)} className="text-[#64748b] hover:text-white">{isSelected ? <CheckSquare className="h-4 w-4 text-[#d4af37]" /> : <Square className="h-4 w-4" />}</button></td>
-                              <td className="px-3 py-3"><div className="flex items-center gap-1.5 flex-wrap"><Badge variant={ss.variant}>{ss.label}</Badge>{p.project_status && p.project_status !== ss.label?.toUpperCase() && <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${p.project_status === 'DELAYED' ? 'bg-red-500/20 text-red-400' : p.project_status === 'COMMENCED' ? 'bg-blue-500/20 text-blue-400' : p.project_status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400' : p.project_status === 'AWARDED' ? 'bg-green-500/20 text-green-400' : p.project_status === 'ROLLOVER' ? 'bg-amber-500/20 text-amber-400' : 'bg-[#2d3a52] text-[#94a3b8]'}`}>{p.project_status}</span>}{p.escalated && <ShieldAlert className="h-3.5 w-3.5 text-red-400" />}</div></td>
+                              <td className="px-3 py-3"><div className="flex items-center gap-1.5 flex-wrap"><Badge variant={ss.variant}>{ss.label}</Badge>{p.escalated && <ShieldAlert className="h-3.5 w-3.5 text-red-400" />}</div></td>
                               <td className="px-3 py-3"><HealthDot health={p.health} /></td>
                               <td className="px-4 py-3"><span className="text-white truncate block max-w-[300px]" title={p.project_name || ''}>{displayName}</span></td>
                               <td className="px-3 py-3"><span className="text-[#d4af37] font-medium text-xs">{p.sub_agency || '-'}</span></td>
@@ -1256,7 +1227,7 @@ export default function OversightPage() {
       )}
 
       {/* Bulk Action Bar */}
-      {selectedIds.size > 0 && <BulkActionBar count={selectedIds.size} onUpdateStatus={s => handleBulkUpdate({ status_override: s })} onUpdateHealth={h => handleBulkUpdate({ health: h })} onAssignOfficer={userId => handleBulkUpdate({ assigned_to: userId })} onExport={handleExport} onClear={() => setSelectedIds(new Set())} officers={officers} />}
+      {selectedIds.size > 0 && <BulkActionBar count={selectedIds.size} onUpdateHealth={h => handleBulkUpdate({ health: h })} onAssignOfficer={userId => handleBulkUpdate({ assigned_to: userId })} onExport={handleExport} onClear={() => setSelectedIds(new Set())} officers={officers} />}
     </div>
   );
 }

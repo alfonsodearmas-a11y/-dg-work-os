@@ -40,7 +40,7 @@ export async function generateProjectNotifications(userId: string): Promise<Gene
     // 2. Stalled projects: <50% complete with <30 days left
     const { projects: allProjects } = await getProjectsList({ limit: 500 });
     for (const p of allProjects) {
-      if (p.status !== 'In Progress' || !p.project_end_date) continue;
+      if (p.status !== 'Commenced' || !p.project_end_date) continue;
       if (p.completion_pct >= 50) continue;
       const endDate = new Date(p.project_end_date);
       const daysLeft = Math.ceil((endDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));

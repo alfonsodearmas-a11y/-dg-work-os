@@ -36,7 +36,7 @@ interface Project {
   assigned_to: string | null;
   start_date: string | null;
   revised_start_date: string | null;
-  status_override: string | null;
+  project_status: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -121,15 +121,15 @@ const REGION_OPTIONS = [
   { value: '09', label: 'Region 9' }, { value: '10', label: 'Region 10' },
 ];
 
-const STATUS_OPTIONS = ['Not Started', 'In Progress', 'On Hold', 'Delayed', 'Complete', 'Cancelled'];
-
 const STATUS_STYLES: Record<string, { variant: 'success' | 'danger' | 'info' | 'default' | 'warning'; label: string }> = {
-  Complete: { variant: 'success', label: 'Complete' },
+  Commenced: { variant: 'info', label: 'Commenced' },
   Delayed: { variant: 'danger', label: 'Delayed' },
-  'In Progress': { variant: 'info', label: 'In Progress' },
-  'Not Started': { variant: 'default', label: 'Not Started' },
-  'On Hold': { variant: 'warning', label: 'On Hold' },
+  Awarded: { variant: 'warning', label: 'Awarded' },
+  Designed: { variant: 'default', label: 'Designed' },
+  Completed: { variant: 'success', label: 'Completed' },
+  Rollover: { variant: 'warning', label: 'Rollover' },
   Cancelled: { variant: 'danger', label: 'Cancelled' },
+  Unknown: { variant: 'default', label: 'Unknown' },
 };
 
 const HEALTH_OPTIONS = [
@@ -139,12 +139,14 @@ const HEALTH_OPTIONS = [
 ];
 
 const STATUS_DOT: Record<string, string> = {
-  Complete: 'bg-emerald-400',
+  Commenced: 'bg-blue-400',
   Delayed: 'bg-red-400',
-  'In Progress': 'bg-blue-400',
-  'Not Started': 'bg-[#64748b]',
-  'On Hold': 'bg-amber-400',
+  Awarded: 'bg-amber-400',
+  Designed: 'bg-[#64748b]',
+  Completed: 'bg-emerald-400',
+  Rollover: 'bg-amber-400',
   Cancelled: 'bg-red-600',
+  Unknown: 'bg-[#64748b]',
 };
 
 const HEALTH_DOT: Record<string, string> = {
@@ -534,7 +536,7 @@ function ProjectSlidePanel({
     } catch {}
   }
 
-  const ss = STATUS_STYLES[project.status] || STATUS_STYLES['Not Started'];
+  const ss = STATUS_STYLES[project.status] || STATUS_STYLES['Unknown'];
 
   return (
     <>
@@ -928,52 +930,24 @@ function KpiCard({
 
 function BulkActionBar({
   count,
-  onUpdateStatus,
   onUpdateHealth,
   onExport,
   onClear,
-  userRole,
 }: {
   count: number;
-  onUpdateStatus: (status: string) => void;
   onUpdateHealth: (health: string) => void;
   onExport: () => void;
   onClear: () => void;
-  userRole: string;
 }) {
-  const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showHealthMenu, setShowHealthMenu] = useState(false);
 
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-[#1a2744] border border-[#d4af37]/40 rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3">
       <span className="text-[#d4af37] font-semibold text-sm">{count} selected</span>
 
-      {/* Status */}
-      <div className="relative">
-        <button onClick={() => { setShowStatusMenu(!showStatusMenu); setShowHealthMenu(false); }} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1">
-          Status <ChevronDown className="h-3 w-3" />
-        </button>
-        {showStatusMenu && (
-          <div className="absolute bottom-full left-0 mb-2 bg-[#1a2744] border border-[#2d3a52] rounded-lg shadow-xl min-w-[140px]">
-            {[
-              { value: 'not_started', label: 'Not Started' },
-              { value: 'in_progress', label: 'In Progress' },
-              { value: 'on_hold', label: 'On Hold' },
-              { value: 'delayed', label: 'Delayed' },
-              { value: 'completed', label: 'Complete' },
-              { value: 'cancelled', label: 'Cancelled' },
-            ].map(s => (
-              <button key={s.value} onClick={() => { onUpdateStatus(s.value); setShowStatusMenu(false); }} className="block w-full text-left px-3 py-2 text-sm text-white hover:bg-[#0a1628]/60">
-                {s.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Health */}
       <div className="relative">
-        <button onClick={() => { setShowHealthMenu(!showHealthMenu); setShowStatusMenu(false); }} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1">
+        <button onClick={() => setShowHealthMenu(!showHealthMenu)} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1">
           Health <ChevronDown className="h-3 w-3" />
         </button>
         {showHealthMenu && (
@@ -1016,6 +990,7 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [contractors, setContractors] = useState<string[]>([]);
+  const [statusOptions, setStatusOptions] = useState<string[]>([]);
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
 
   // UI state
@@ -1107,8 +1082,9 @@ export default function ProjectsPage() {
   useEffect(() => {
     setLoading(true);
     Promise.all([fetchSummary(), fetchProjects()]).finally(() => setLoading(false));
-    // Load contractors and saved filters
+    // Load contractors, statuses, and saved filters
     fetch('/api/projects/contractors').then(r => r.json()).then(d => { if (Array.isArray(d)) setContractors(d); }).catch(() => {});
+    fetch('/api/projects/statuses').then(r => r.json()).then(d => { if (Array.isArray(d)) setStatusOptions(d.map((s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())); }).catch(() => {});
     fetch('/api/projects/filters').then(r => r.json()).then(d => { if (Array.isArray(d)) setSavedFilters(d); }).catch(() => {});
   }, []);
 
@@ -1134,7 +1110,7 @@ export default function ProjectsPage() {
         setStatuses([]);
         setHealths(['amber', 'red']);
       } else if (filter === 'complete') {
-        setStatuses(['Complete']);
+        setStatuses(['Completed']);
         setHealths([]);
       } else if (filter === 'active') {
         // Show all — clear filters
@@ -1398,7 +1374,7 @@ export default function ProjectsPage() {
               {/* Status multi-select */}
               <MultiSelect
                 label="Status"
-                options={STATUS_OPTIONS.map(s => ({ value: s, label: s }))}
+                options={statusOptions.map(s => ({ value: s, label: s }))}
                 selected={statuses}
                 onChange={v => { setCardFilter(null); setStatuses(v); }}
               />
@@ -1600,7 +1576,7 @@ export default function ProjectsPage() {
                 </div>
               ) : (
                 projects.map(p => {
-                  const ss = STATUS_STYLES[p.status] || STATUS_STYLES['Not Started'];
+                  const ss = STATUS_STYLES[p.status] || STATUS_STYLES['Unknown'];
                   return (
                     <div
                       key={p.id}
@@ -1681,7 +1657,7 @@ export default function ProjectsPage() {
                       </tr>
                     ) : (
                       projects.map(p => {
-                        const ss = STATUS_STYLES[p.status] || STATUS_STYLES['Not Started'];
+                        const ss = STATUS_STYLES[p.status] || STATUS_STYLES['Unknown'];
                         const isPastDue = p.status === 'Delayed';
                         const isSelected = selectedIds.has(p.id);
 
@@ -1761,11 +1737,9 @@ export default function ProjectsPage() {
       {selectedIds.size > 0 && (
         <BulkActionBar
           count={selectedIds.size}
-          onUpdateStatus={s => handleBulkUpdate({ status_override: s })}
           onUpdateHealth={h => handleBulkUpdate({ health: h })}
           onExport={handleExport}
           onClear={() => setSelectedIds(new Set())}
-          userRole={userRole}
         />
       )}
     </div>

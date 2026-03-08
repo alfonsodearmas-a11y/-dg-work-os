@@ -9,7 +9,7 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const session = authResult.session;
-    const { project_ids, status_override, health, assigned_to } = await request.json();
+    const { project_ids, health, assigned_to } = await request.json();
 
     if (!project_ids?.length) {
       return NextResponse.json({ error: 'No projects selected' }, { status: 400 });
@@ -37,7 +37,6 @@ export async function PATCH(request: NextRequest) {
     }
 
     const updates: Record<string, any> = {};
-    if (status_override) updates.status_override = status_override;
     if (health) updates.health = health;
     if (assigned_to !== undefined) updates.assigned_to = assigned_to || null;
 

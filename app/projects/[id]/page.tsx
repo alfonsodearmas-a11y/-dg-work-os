@@ -26,12 +26,14 @@ const AGENCY_NAMES: Record<string, string> = {
 };
 
 const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
-  Complete: { bg: 'bg-emerald-500/20', text: 'text-emerald-400' },
+  Commenced: { bg: 'bg-blue-500/20', text: 'text-blue-400' },
   Delayed: { bg: 'bg-red-500/20', text: 'text-red-400' },
-  'In Progress': { bg: 'bg-blue-500/20', text: 'text-blue-400' },
-  'Not Started': { bg: 'bg-[#64748b]/20', text: 'text-[#94a3b8]' },
-  'On Hold': { bg: 'bg-amber-500/20', text: 'text-amber-400' },
+  Awarded: { bg: 'bg-amber-500/20', text: 'text-amber-400' },
+  Designed: { bg: 'bg-[#64748b]/20', text: 'text-[#94a3b8]' },
+  Completed: { bg: 'bg-emerald-500/20', text: 'text-emerald-400' },
+  Rollover: { bg: 'bg-amber-500/20', text: 'text-amber-400' },
   Cancelled: { bg: 'bg-red-500/20', text: 'text-red-300' },
+  Unknown: { bg: 'bg-[#64748b]/20', text: 'text-[#94a3b8]' },
 };
 
 const HEALTH_DOT: Record<string, { color: string; label: string }> = {
@@ -106,7 +108,7 @@ export default function ProjectDetailPage() {
     );
   }
 
-  const ss = STATUS_STYLES[project.status] || STATUS_STYLES['Not Started'];
+  const ss = STATUS_STYLES[project.status] || STATUS_STYLES['Unknown'];
   const isDelayed = project.status === 'Delayed';
   const pct = project.completion_pct || 0;
   const progressColor = pct >= 80 ? 'bg-emerald-500' : pct >= 40 ? 'bg-amber-500' : pct > 0 ? 'bg-red-500' : 'bg-[#2d3a52]';
@@ -269,7 +271,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Oversight Detail Fields */}
-      {(project.project_status || project.balance_remaining != null || project.total_distributed != null || project.total_expended != null || project.remarks || project.project_extended) && (
+      {(project.balance_remaining != null || project.total_distributed != null || project.total_expended != null || project.remarks || project.project_extended) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Financial Details */}
           <div className="card-premium p-6">
@@ -278,21 +280,6 @@ export default function ProjectDetailPage() {
               <h2 className="text-lg font-semibold text-white">Financial Details</h2>
             </div>
             <div className="space-y-4 text-sm">
-              {project.project_status && (
-                <div>
-                  <p className="text-[#64748b]">Oversight Status</p>
-                  <span className={`inline-block mt-1 px-3 py-1 rounded-lg text-sm font-medium ${
-                    project.project_status === 'DELAYED' ? 'bg-red-500/20 text-red-400'
-                    : project.project_status === 'COMMENCED' ? 'bg-blue-500/20 text-blue-400'
-                    : project.project_status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400'
-                    : project.project_status === 'AWARDED' ? 'bg-green-500/20 text-green-400'
-                    : project.project_status === 'ROLLOVER' ? 'bg-amber-500/20 text-amber-400'
-                    : 'bg-[#2d3a52] text-[#94a3b8]'
-                  }`}>
-                    {project.project_status}
-                  </span>
-                </div>
-              )}
               {project.balance_remaining != null && (
                 <div>
                   <p className="text-[#64748b]">Balance Remaining</p>

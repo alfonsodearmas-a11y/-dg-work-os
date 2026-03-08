@@ -1,23 +1,10 @@
 import { supabaseAdmin } from './db';
 
-// ── Status computation (matches SQL generated column logic) ────────────────
+// ── Status computation (uses scraped project_status from oversight.gov.gy) ──
 
-export function computeStatus(completionPct: number, endDate: string | null, statusOverride?: string | null): string {
-  if (statusOverride) {
-    const map: Record<string, string> = {
-      not_started: 'Not Started',
-      in_progress: 'In Progress',
-      on_hold: 'On Hold',
-      delayed: 'Delayed',
-      completed: 'Complete',
-      cancelled: 'Cancelled',
-    };
-    return map[statusOverride] || statusOverride;
-  }
-  if (completionPct >= 100) return 'Complete';
-  if (completionPct > 0 && endDate && new Date(endDate) < new Date()) return 'Delayed';
-  if (completionPct > 0) return 'In Progress';
-  return 'Not Started';
+export function computeStatus(projectStatus: string | null): string {
+  if (!projectStatus) return 'Unknown';
+  return projectStatus.charAt(0).toUpperCase() + projectStatus.slice(1).toLowerCase();
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -44,7 +31,6 @@ export interface Project {
   assigned_to: string | null;
   start_date: string | null;
   revised_start_date: string | null;
-  status_override: string | null;
   // Detail fields from oversight scraper
   balance_remaining: number | null;
   remarks: string | null;
@@ -147,15 +133,17 @@ export function computeHealth(
   completionPct: number,
   endDate: string | null,
   startDate: string | null,
-  status: string,
+  projectStatus: string | null,
   escalated: boolean,
   updatedAt?: string | null,
 ): 'green' | 'amber' | 'red' {
-  // Completed projects are always green
-  if (status === 'Complete') return 'green';
+  const raw = (projectStatus || '').toUpperCase();
 
-  // RED: Delayed / On Hold / Cancelled
-  if (status === 'Delayed' || status === 'On Hold' || status === 'Cancelled') return 'red';
+  // COMPLETED projects are always green
+  if (raw === 'COMPLETED' || completionPct >= 100) return 'green';
+
+  // RED: DELAYED
+  if (raw === 'DELAYED') return 'red';
 
   // RED: Past end date and not complete
   if (endDate && new Date(endDate) < new Date() && completionPct < 100) return 'red';
@@ -184,8 +172,8 @@ export function computeHealth(
     if (daysUntilEnd > 0 && daysUntilEnd <= 30 && completionPct < 80) return 'amber';
   }
 
-  // AMBER: In Progress but no update in 30+ days
-  if (status === 'In Progress' && updatedAt) {
+  // AMBER: COMMENCED but no update in 30+ days
+  if (raw === 'COMMENCED' && updatedAt) {
     const daysSinceUpdate = (Date.now() - new Date(updatedAt).getTime()) / (1000 * 60 * 60 * 24);
     if (daysSinceUpdate > 30) return 'amber';
   }
@@ -196,7 +184,8 @@ export function computeHealth(
 function enrichProject(row: any): Project {
   const completionPct = Number(row.completion_pct) || 0;
   const endDate = row.project_end_date || null;
-  const status = computeStatus(completionPct, endDate, row.status_override);
+  const projectStatus = row.project_status || null;
+  const status = computeStatus(projectStatus);
 
   let daysOverdue = 0;
   if (status === 'Delayed' && endDate) {
@@ -210,7 +199,7 @@ function enrichProject(row: any): Project {
     completionPct,
     endDate,
     row.start_date || null,
-    status,
+    projectStatus,
     row.escalated || false,
     row.updated_at || null,
   );
@@ -227,11 +216,10 @@ function enrichProject(row: any): Project {
     assigned_to: row.assigned_to || null,
     start_date: row.start_date || null,
     revised_start_date: row.revised_start_date || null,
-    status_override: row.status_override || null,
     // Detail fields
     balance_remaining: row.balance_remaining ?? null,
     remarks: row.remarks || null,
-    project_status: row.project_status || null,
+    project_status: projectStatus,
     extension_reason: row.extension_reason || null,
     extension_date: row.extension_date || null,
     project_extended: row.project_extended || false,
@@ -255,7 +243,7 @@ export async function getPortfolioSummary(filters?: {
 }): Promise<PortfolioSummary> {
   let query = supabaseAdmin
     .from('projects')
-    .select('sub_agency, contract_value, completion_pct, project_end_date, health, escalated, region, status_override, start_date, updated_at');
+    .select('sub_agency, contract_value, completion_pct, project_end_date, health, escalated, region, project_status, start_date, updated_at');
 
   if (filters?.agencies?.length) query = query.in('sub_agency', filters.agencies);
   if (filters?.regions?.length) query = query.in('region', filters.regions);
@@ -277,11 +265,11 @@ export async function getPortfolioSummary(filters?: {
 
   for (const row of rows) {
     const pct = Number(row.completion_pct) || 0;
-    const status = computeStatus(pct, row.project_end_date, row.status_override);
+    const status = computeStatus(row.project_status);
     const value = safeContractValue(row.contract_value) || 0;
     const agency = row.sub_agency || 'MOPUA';
     // Compute health from project data (not DB default)
-    const health = computeHealth(pct, row.project_end_date, row.start_date, status, row.escalated || false, row.updated_at);
+    const health = computeHealth(pct, row.project_end_date, row.start_date, row.project_status, row.escalated || false, row.updated_at);
 
     // Status filter (computed, not in DB)
     if (filters?.statuses?.length) {
@@ -294,9 +282,9 @@ export async function getPortfolioSummary(filters?: {
 
     totalValue += value;
     if (health === 'red' || health === 'amber') atRisk++;
-    if (status === 'Complete') complete++;
+    if (status === 'Completed') complete++;
     else if (status === 'Delayed') { delayed++; delayedValue += value; }
-    else if (status === 'In Progress') inProgress++;
+    else if (status === 'Commenced') inProgress++;
     else notStarted++;
 
     // Region counts
@@ -313,9 +301,9 @@ export async function getPortfolioSummary(filters?: {
     a.total++;
     a.total_value += value;
     a.avg_completion += pct;
-    if (status === 'Complete') a.complete++;
+    if (status === 'Completed') a.complete++;
     else if (status === 'Delayed') a.delayed++;
-    else if (status === 'In Progress') a.in_progress++;
+    else if (status === 'Commenced') a.in_progress++;
     else a.not_started++;
   }
 
@@ -568,7 +556,7 @@ export async function deescalateProject(projectId: string): Promise<void> {
 
 export async function bulkUpdateProjects(
   projectIds: string[],
-  updates: { status_override?: string; health?: string; assigned_to?: string }
+  updates: { health?: string; assigned_to?: string }
 ): Promise<void> {
   await supabaseAdmin
     .from('projects')
@@ -629,7 +617,7 @@ export async function getContractors(): Promise<string[]> {
 export async function recalculateAllHealth(): Promise<{ updated: number; total: number; breakdown: Record<string, number> }> {
   const { data } = await supabaseAdmin
     .from('projects')
-    .select('id, completion_pct, project_end_date, start_date, status_override, escalated, health, updated_at');
+    .select('id, completion_pct, project_end_date, start_date, project_status, escalated, health, updated_at');
 
   if (!data) return { updated: 0, total: 0, breakdown: {} };
 
@@ -638,8 +626,7 @@ export async function recalculateAllHealth(): Promise<{ updated: number; total: 
 
   for (const row of data) {
     const pct = Number(row.completion_pct) || 0;
-    const status = computeStatus(pct, row.project_end_date, row.status_override);
-    const newHealth = computeHealth(pct, row.project_end_date, row.start_date, status, row.escalated || false, row.updated_at);
+    const newHealth = computeHealth(pct, row.project_end_date, row.start_date, row.project_status, row.escalated || false, row.updated_at);
     breakdown[newHealth] = (breakdown[newHealth] || 0) + 1;
 
     if (newHealth !== (row.health || 'green')) {
@@ -659,6 +646,19 @@ export async function recalculateAllHealth(): Promise<{ updated: number; total: 
   }
 
   return { updated: updates.length, total: data.length, breakdown };
+}
+
+// ── Distinct statuses (for filter dropdowns) ──────────────────────────────
+
+export async function getDistinctStatuses(): Promise<string[]> {
+  const { data } = await supabaseAdmin
+    .from('projects')
+    .select('project_status')
+    .not('project_status', 'is', null)
+    .order('project_status');
+
+  const unique = [...new Set((data || []).map((r: any) => r.project_status).filter(Boolean))];
+  return unique as string[];
 }
 
 // ── Funding Distributions ─────────────────────────────────────────────────

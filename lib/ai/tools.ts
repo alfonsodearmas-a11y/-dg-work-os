@@ -38,7 +38,7 @@ const QUERY_TOOLS: AIToolDefinition[] = [
     input_schema: {
       type: 'object',
       properties: {
-        status: { type: 'string', enum: ['Complete', 'Delayed', 'In Progress', 'Not Started'], description: 'Filter by computed status (optional)' },
+        status: { type: 'string', enum: ['Commenced', 'Delayed', 'Awarded', 'Designed', 'Completed'], description: 'Filter by project status from oversight.gov.gy (optional)' },
         agency: { type: 'string', description: 'Filter by executing agency (optional)' },
         region: { type: 'string', description: 'Filter by region number e.g. "4" or "Region 4" (optional)' },
         search: { type: 'string', description: 'Search term for project name (optional)' },

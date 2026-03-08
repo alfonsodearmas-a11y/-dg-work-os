@@ -42,18 +42,12 @@ function fmtRegion(code: string | null): string {
   return isNaN(n) ? code : `Region ${n}`;
 }
 
-function statusVariant(status: string): 'success' | 'danger' | 'info' | 'default' {
-  if (status === 'Complete') return 'success';
+function statusVariant(status: string): 'success' | 'danger' | 'info' | 'default' | 'warning' {
+  if (status === 'Completed') return 'success';
   if (status === 'Delayed') return 'danger';
-  if (status === 'In Progress') return 'info';
+  if (status === 'Commenced') return 'info';
+  if (status === 'Awarded' || status === 'Rollover') return 'warning';
   return 'default';
-}
-
-function computeStatus(pct: number, endDate: string | null): string {
-  if (pct >= 100) return 'Complete';
-  if (pct > 0 && endDate && new Date(endDate) < new Date()) return 'Delayed';
-  if (pct > 0) return 'In Progress';
-  return 'Not Started';
 }
 
 export default function AgencyPage() {
@@ -67,16 +61,16 @@ export default function AgencyPage() {
     setLoading(true);
     fetch(`/api/projects?agency=${agency}`)
       .then(r => r.json())
-      .then(d => setProjects((d || []).map((p: any) => ({ ...p, status: computeStatus(p.completion_pct || 0, p.project_end_date) }))))
+      .then(d => setProjects(d || []))
       .finally(() => setLoading(false));
   }, [agency]);
 
   const filtered = statusFilter ? projects.filter(p => p.status === statusFilter) : projects;
   const stats = {
     total: projects.length,
-    inProgress: projects.filter(p => p.status === 'In Progress').length,
+    commenced: projects.filter(p => p.status === 'Commenced').length,
     delayed: projects.filter(p => p.status === 'Delayed').length,
-    complete: projects.filter(p => p.status === 'Complete').length,
+    completed: projects.filter(p => p.status === 'Completed').length,
     totalValue: projects.reduce((s, p) => {
       const v = Number(p.contract_value) || 0;
       return s + (v > 1e11 ? 0 : v);
@@ -85,9 +79,9 @@ export default function AgencyPage() {
 
   const tabs = [
     { key: '', label: 'All', count: stats.total },
-    { key: 'In Progress', label: 'In Progress', count: stats.inProgress },
+    { key: 'Commenced', label: 'Commenced', count: stats.commenced },
     { key: 'Delayed', label: 'Delayed', count: stats.delayed },
-    { key: 'Complete', label: 'Complete', count: stats.complete },
+    { key: 'Completed', label: 'Completed', count: stats.completed },
   ];
 
   return (
@@ -111,9 +105,9 @@ export default function AgencyPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="card-premium p-5"><p className="stat-number">{stats.total}</p><p className="text-[#64748b] text-sm mt-1">Total</p></div>
-        <div className="card-premium p-5"><p className="stat-number">{stats.inProgress}</p><p className="text-[#64748b] text-sm mt-1">In Progress</p></div>
+        <div className="card-premium p-5"><p className="stat-number">{stats.commenced}</p><p className="text-[#64748b] text-sm mt-1">Commenced</p></div>
         <div className="card-premium p-5"><p className="stat-number text-red-400">{stats.delayed}</p><p className="text-[#64748b] text-sm mt-1">Delayed</p></div>
-        <div className="card-premium p-5"><p className="stat-number text-emerald-400">{stats.complete}</p><p className="text-[#64748b] text-sm mt-1">Complete</p></div>
+        <div className="card-premium p-5"><p className="stat-number text-emerald-400">{stats.completed}</p><p className="text-[#64748b] text-sm mt-1">Completed</p></div>
         <div className="card-premium p-5"><p className="stat-number">{fmtCurrency(stats.totalValue)}</p><p className="text-[#64748b] text-sm mt-1">Total Value</p></div>
       </div>
 

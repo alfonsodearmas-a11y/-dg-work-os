@@ -222,32 +222,7 @@ export function formatRegion(region: string | null | undefined): string {
  * Format project status
  */
 export function formatStatus(status: string | null | undefined): string {
-  if (!status) return '';
-
-  const lower = status.toLowerCase().trim();
-
-  // Standardize common statuses
-  const statusMap: Record<string, string> = {
-    'in progress': 'In Progress',
-    'inprogress': 'In Progress',
-    'in-progress': 'In Progress',
-    'completed': 'Completed',
-    'complete': 'Completed',
-    'not started': 'Not Started',
-    'notstarted': 'Not Started',
-    'not-started': 'Not Started',
-    'pending': 'Pending',
-    'on hold': 'On Hold',
-    'onhold': 'On Hold',
-    'on-hold': 'On Hold',
-    'cancelled': 'Cancelled',
-    'canceled': 'Cancelled',
-    'delayed': 'Delayed',
-    'behind schedule': 'Behind Schedule',
-    'ahead of schedule': 'Ahead of Schedule',
-    'on schedule': 'On Schedule',
-    'at risk': 'At Risk'
-  };
-
-  return statusMap[lower] || toTitleCase(status);
+  if (!status) return 'Unknown';
+  // Title-case: COMMENCED → Commenced, DELAYED → Delayed, etc.
+  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
 }

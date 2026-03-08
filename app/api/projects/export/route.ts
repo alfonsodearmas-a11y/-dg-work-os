@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
-import { computeStatus } from '@/lib/project-queries';
 
 export async function POST(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -25,7 +24,8 @@ export async function POST(request: NextRequest) {
 
     const headers = ['Project ID', 'Project Name', 'Agency', 'Region', 'Contractor', 'Contract Value', 'Completion %', 'End Date', 'Status', 'Health'];
     const rows = data.map(p => {
-      const status = computeStatus(Number(p.completion_pct) || 0, p.project_end_date, p.status_override);
+      const raw = p.project_status || '';
+      const status = raw ? raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase() : 'Unknown';
       return [
         p.project_id,
         `"${(p.project_name || '').replace(/"/g, '""')}"`,

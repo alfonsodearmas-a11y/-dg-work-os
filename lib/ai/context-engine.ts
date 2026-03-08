@@ -803,7 +803,7 @@ export function formatFullContext(raw: RawContextData, currentPage: string): str
   if (portfolio) {
     lines.push('\n== PROJECTS OVERVIEW ==');
     lines.push(`Total: ${portfolio.total_projects} projects, ${$(portfolio.total_value)} portfolio value`);
-    lines.push(`By Status: ${portfolio.in_progress} In Progress, ${portfolio.delayed} Delayed, ${portfolio.complete} Complete, ${portfolio.not_started} Not Started`);
+    lines.push(`By Status: ${portfolio.in_progress} Commenced, ${portfolio.delayed} Delayed, ${portfolio.complete} Completed, ${portfolio.not_started} Other (Awarded/Designed/Unknown)`);
 
     const agencyLine = portfolio.agencies.map(a =>
       `${a.agency} ${a.total} (${$(a.total_value)}, ${a.delayed} delayed)`
