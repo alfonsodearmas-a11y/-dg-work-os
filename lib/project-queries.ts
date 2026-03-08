@@ -43,6 +43,7 @@ export interface Project {
   escalation_reason: string | null;
   assigned_to: string | null;
   start_date: string | null;
+  revised_start_date: string | null;
   status_override: string | null;
   // Detail fields from oversight scraper
   balance_remaining: number | null;
@@ -225,6 +226,7 @@ function enrichProject(row: any): Project {
     escalation_reason: row.escalation_reason || null,
     assigned_to: row.assigned_to || null,
     start_date: row.start_date || null,
+    revised_start_date: row.revised_start_date || null,
     status_override: row.status_override || null,
     // Detail fields
     balance_remaining: row.balance_remaining ?? null,

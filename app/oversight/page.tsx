@@ -7,12 +7,15 @@ import {
   Eye, RefreshCw, AlertTriangle, Clock, ShieldAlert, FileWarning,
   Building2, TrendingUp, ChevronDown, ChevronRight,
   Search, Filter, X, SlidersHorizontal, Upload, DollarSign,
-  CheckCircle, CircleDot, List, GanttChart, Flag, Sparkles,
-  MessageSquare, Send, Loader2, BookmarkPlus, Bookmark, Trash2,
-  Download, Square, CheckSquare, AlertCircle, UserPlus,
+  CheckCircle, CircleDot, List, GanttChart,
+  Loader2, BookmarkPlus, Bookmark, Trash2,
+  Download, Square, CheckSquare, UserPlus,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { EscalationControls } from '@/components/projects/EscalationControls';
+import { ProjectAISummary } from '@/components/projects/ProjectAISummary';
+import { ProjectActivityLog } from '@/components/projects/ProjectActivityLog';
 
 // ── Scraped Oversight Types ────────────────────────────────────────────────
 
@@ -83,6 +86,7 @@ interface Project {
   escalation_reason: string | null;
   assigned_to: string | null;
   start_date: string | null;
+  revised_start_date: string | null;
   status_override: string | null;
   // Detail fields from oversight scraper
   balance_remaining: number | null;
@@ -110,29 +114,7 @@ interface PortfolioSummary {
   regions: Record<string, number>;
 }
 
-interface ProjectNote {
-  id: string;
-  project_id: string;
-  user_id: string;
-  note_text: string;
-  note_type: 'general' | 'escalation' | 'status_update';
-  created_at: string;
-  user_name?: string;
-  user_role?: string;
-}
 
-interface ProjectSummaryData {
-  id: string;
-  project_id: string;
-  summary: {
-    status_snapshot: string;
-    timeline_assessment: string;
-    budget_position: string;
-    key_risks: string[];
-    recommended_actions: string[];
-  };
-  generated_at: string;
-}
 
 interface SavedFilter {
   id: string;
@@ -216,16 +198,6 @@ function fmtRegion(code: string | null): string {
   if (code === 'MR') return 'Multi-Region';
   const n = parseInt(code, 10);
   return isNaN(n) ? code : `Region ${n}`;
-}
-
-function timeAgo(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(ms / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
 }
 
 // ── Shared UI Components ───────────────────────────────────────────────────
@@ -368,40 +340,7 @@ function ProjectRow({ project, tag }: { project: any; tag?: string }) {
 
 // ── Escalation Modal ───────────────────────────────────────────────────────
 
-function EscalationModal({ project, onClose, onDone }: { project: Project; onClose: () => void; onDone: () => void }) {
-  const [reason, setReason] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  async function handleSubmit() {
-    if (!reason.trim()) return;
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/projects/${project.id}/escalate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) });
-      if (!res.ok) throw new Error();
-      onDone();
-    } catch { alert('Failed to escalate project'); }
-    setSubmitting(false);
-  }
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="card-premium p-6 w-full max-w-md mx-4 rounded-2xl" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center"><ShieldAlert className="h-5 w-5 text-red-400" /></div>
-          <div>
-            <h2 className="text-lg font-semibold text-white">Escalate Project</h2>
-            <p className="text-[#64748b] text-xs line-clamp-1">{project.project_name}</p>
-          </div>
-        </div>
-        <textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Why does this project need escalation?" className="w-full bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-3 text-sm text-white placeholder-[#64748b] focus:border-red-400 focus:outline-none resize-none h-28" />
-        <div className="flex items-center justify-end gap-3 mt-4">
-          <button onClick={onClose} className="btn-navy px-4 py-2 text-sm">Cancel</button>
-          <button onClick={handleSubmit} disabled={!reason.trim() || submitting} className="bg-red-500/20 text-red-400 border border-red-500/30 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-500/30 disabled:opacity-40">
-            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Escalate'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+// EscalationModal removed — now using shared EscalationControls component
 
 // ── Save Filter Modal ──────────────────────────────────────────────────────
 
@@ -434,45 +373,15 @@ function SaveFilterModal({ filterParams, onClose, onSaved }: { filterParams: Rec
 
 // ── Project Detail Slide Panel ─────────────────────────────────────────────
 
-function ProjectSlidePanel({ project, onClose, userRole, onEscalate, onRefreshList }: {
-  project: Project; onClose: () => void; userRole: string; onEscalate: (p: Project) => void; onRefreshList: () => void;
+function ProjectSlidePanel({ project, onClose, userRole, onRefreshList }: {
+  project: Project; onClose: () => void; userRole: string; onRefreshList: () => void;
 }) {
-  const [summary, setSummary] = useState<ProjectSummaryData | null>(null);
-  const [loadingSummary, setLoadingSummary] = useState(false);
-  const [notes, setNotes] = useState<ProjectNote[]>([]);
-  const [loadingNotes, setLoadingNotes] = useState(true);
-  const [newNote, setNewNote] = useState('');
-  const [addingNote, setAddingNote] = useState(false);
-  const canDeescalate = ['dg', 'minister', 'ps'].includes(userRole);
-
-  useEffect(() => {
-    fetch(`/api/projects/${project.id}/notes`).then(r => r.json()).then(d => setNotes(Array.isArray(d) ? d : [])).catch(() => {}).finally(() => setLoadingNotes(false));
-    fetch(`/api/projects/${project.id}/summary`).then(r => r.json()).then(d => { if (d?.summary) setSummary(d); }).catch(() => {});
-  }, [project.id]);
-
   // Lock body scroll on mobile when panel is open
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, []);
-
-  async function generateSummary(force = false) {
-    setLoadingSummary(true);
-    try { const res = await fetch(`/api/projects/${project.id}/summary`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ force }) }); const d = await res.json(); if (d?.summary) setSummary(d); } catch {}
-    setLoadingSummary(false);
-  }
-
-  async function addNote() {
-    if (!newNote.trim()) return;
-    setAddingNote(true);
-    try { const res = await fetch(`/api/projects/${project.id}/notes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note_text: newNote }) }); const n = await res.json(); if (n?.id) { setNotes(prev => [n, ...prev]); setNewNote(''); } } catch {}
-    setAddingNote(false);
-  }
-
-  async function handleDeescalate() {
-    try { const res = await fetch(`/api/projects/${project.id}/escalate`, { method: 'DELETE' }); if (res.ok) onRefreshList(); } catch {}
-  }
 
   const ss = STATUS_STYLES[project.status] || STATUS_STYLES['Not Started'];
 
@@ -485,16 +394,15 @@ function ProjectSlidePanel({ project, onClose, userRole, onEscalate, onRefreshLi
           <button onClick={onClose} className="text-[#64748b] hover:text-white"><X className="h-5 w-5" /></button>
         </div>
         <div className="p-4 md:p-5 space-y-5 md:space-y-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
-          {project.escalated && (
-            <div className="flex items-start gap-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30">
-              <ShieldAlert className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-red-400 font-semibold text-sm">Escalated</p>
-                <p className="text-red-400/80 text-xs mt-0.5">{project.escalation_reason}</p>
-              </div>
-              {canDeescalate && <button onClick={handleDeescalate} className="text-red-400/60 hover:text-red-400 text-xs">De-escalate</button>}
-            </div>
-          )}
+          <EscalationControls
+            projectId={project.id}
+            projectName={project.project_name || ''}
+            escalated={!!project.escalated}
+            escalationReason={project.escalation_reason}
+            userRole={userRole}
+            onUpdate={onRefreshList}
+            compact
+          />
           <div>
             <h3 className="text-white font-semibold text-base mb-1">{project.project_name || '-'}</h3>
             <p className="text-[#64748b] text-xs font-mono">{project.project_id}</p>
@@ -509,6 +417,7 @@ function ProjectSlidePanel({ project, onClose, userRole, onEscalate, onRefreshLi
             <div><span className="text-[#64748b] text-xs">Completion</span><div className="mt-0.5"><ProgressBar pct={project.completion_pct} /></div></div>
             <div><span className="text-[#64748b] text-xs">Contractor</span><p className="text-white">{project.contractor || '-'}</p></div>
             <div><span className="text-[#64748b] text-xs">Region</span><p className="text-white">{fmtRegion(project.region)}</p></div>
+            <div><span className="text-[#64748b] text-xs">Start Date</span><p className="text-white">{fmtDate(project.start_date)}</p>{project.revised_start_date && project.revised_start_date !== project.start_date && <p className="text-[#d4af37] text-[10px] mt-0.5">Revised: {fmtDate(project.revised_start_date)}</p>}</div>
             <div><span className="text-[#64748b] text-xs">End Date</span><p className={project.status === 'Delayed' ? 'text-red-400 font-semibold' : 'text-white'}>{fmtDate(project.project_end_date)}</p></div>
             <div>
               <span className="text-[#64748b] text-xs">Agency</span>
@@ -581,55 +490,10 @@ function ProjectSlidePanel({ project, onClose, userRole, onEscalate, onRefreshLi
             </div>
           )}
 
-          {!project.escalated && (
-            <button onClick={() => onEscalate(project)} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm hover:bg-red-500/20 transition-colors w-full justify-center">
-              <Flag className="h-4 w-4" /> Escalate Project
-            </button>
-          )}
           {/* AI Summary */}
-          <div className="card-premium p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-[#d4af37]" /><h4 className="text-white font-semibold text-sm">AI Summary</h4></div>
-              <button onClick={() => generateSummary(!!summary)} disabled={loadingSummary} className="text-[#d4af37] text-xs hover:text-[#e5c04b] flex items-center gap-1">
-                {loadingSummary ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}{summary ? 'Regenerate' : 'Generate'}
-              </button>
-            </div>
-            {loadingSummary ? (
-              <div className="space-y-3 animate-pulse">{[1,2,3,4,5].map(i => <div key={i} className="h-4 bg-[#2d3a52] rounded w-full" />)}</div>
-            ) : summary?.summary ? (
-              <div className="space-y-3 text-sm">
-                <div><span className="text-[#64748b] text-xs uppercase tracking-wider">Status Snapshot</span><p className="text-[#94a3b8] mt-0.5">{summary.summary.status_snapshot}</p></div>
-                <div><span className="text-[#64748b] text-xs uppercase tracking-wider">Timeline</span><p className="text-[#94a3b8] mt-0.5">{summary.summary.timeline_assessment}</p></div>
-                <div><span className="text-[#64748b] text-xs uppercase tracking-wider">Budget Position</span><p className="text-[#94a3b8] mt-0.5">{summary.summary.budget_position}</p></div>
-                {summary.summary.key_risks?.length > 0 && <div><span className="text-[#64748b] text-xs uppercase tracking-wider">Key Risks</span><ul className="mt-1 space-y-1">{summary.summary.key_risks.map((r, i) => <li key={i} className="text-red-400/80 text-xs flex items-start gap-1.5"><AlertCircle className="h-3 w-3 shrink-0 mt-0.5" />{r}</li>)}</ul></div>}
-                {summary.summary.recommended_actions?.length > 0 && <div><span className="text-[#64748b] text-xs uppercase tracking-wider">Recommended Actions</span><ul className="mt-1 space-y-1">{summary.summary.recommended_actions.map((a, i) => <li key={i} className="text-emerald-400/80 text-xs flex items-start gap-1.5"><CheckCircle className="h-3 w-3 shrink-0 mt-0.5" />{a}</li>)}</ul></div>}
-                <p className="text-[#4a5568] text-[10px] mt-2">Generated {summary.generated_at ? timeAgo(summary.generated_at) : ''}</p>
-              </div>
-            ) : <p className="text-[#64748b] text-sm">Click &quot;Generate&quot; to create an AI summary.</p>}
-          </div>
-          {/* Notes */}
-          <div>
-            <div className="flex items-center gap-2 mb-3"><MessageSquare className="h-4 w-4 text-[#d4af37]" /><h4 className="text-white font-semibold text-sm">Activity Log</h4><span className="text-[#64748b] text-xs">({notes.length})</span></div>
-            <div className="flex items-start gap-2 mb-4">
-              <textarea value={newNote} onChange={e => setNewNote(e.target.value)} placeholder="Add a note..." rows={2} className="flex-1 bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none resize-none" />
-              <button onClick={addNote} disabled={!newNote.trim() || addingNote} className="btn-gold p-2.5 rounded-lg disabled:opacity-40 shrink-0">{addingNote ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</button>
-            </div>
-            {loadingNotes ? <div className="space-y-3 animate-pulse">{[1,2].map(i => <div key={i} className="h-12 bg-[#2d3a52] rounded" />)}</div>
-            : notes.length === 0 ? <p className="text-[#64748b] text-sm">No notes yet.</p>
-            : <div className="space-y-3 max-h-[400px] overflow-y-auto">{notes.map(n => (
-                <div key={n.id} className={`p-3 rounded-lg text-sm ${n.note_type === 'escalation' ? 'bg-red-500/5 border border-red-500/20' : 'bg-[#0a1628] border border-[#2d3a52]/50'}`}>
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-white font-medium text-xs">{n.user_name}</span>
-                      <span className="text-[#4a5568] text-[10px]">{n.user_role}</span>
-                      {n.note_type === 'escalation' && <span className="text-red-400 text-[10px] font-medium px-1.5 py-0.5 rounded bg-red-500/10">ESCALATION</span>}
-                    </div>
-                    <span className="text-[#4a5568] text-[10px]">{timeAgo(n.created_at)}</span>
-                  </div>
-                  <p className="text-[#94a3b8] text-xs">{n.note_text}</p>
-                </div>
-              ))}</div>}
-          </div>
+          <ProjectAISummary projectId={project.id} />
+          {/* Activity Log */}
+          <ProjectActivityLog projectId={project.id} />
         </div>
       </div>
     </>
@@ -831,7 +695,6 @@ export default function OversightPage() {
   // UI
   const [showFilters, setShowFilters] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [escalateTarget, setEscalateTarget] = useState<Project | null>(null);
   const [showSaveFilter, setShowSaveFilter] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [timelineGroupBy, setTimelineGroupBy] = useState<'agency' | 'region'>('agency');
@@ -984,9 +847,8 @@ export default function OversightPage() {
   return (
     <div className="space-y-6">
       {/* Modals */}
-      {escalateTarget && <EscalationModal project={escalateTarget} onClose={() => setEscalateTarget(null)} onDone={() => { setEscalateTarget(null); handleRefresh(); }} />}
       {showSaveFilter && <SaveFilterModal filterParams={currentFilterParams} onClose={() => setShowSaveFilter(false)} onSaved={() => { setShowSaveFilter(false); fetch('/api/projects/filters').then(r => r.json()).then(d => { if (Array.isArray(d)) setSavedFilters(d); }); }} />}
-      {selectedProject && <ProjectSlidePanel project={selectedProject} onClose={() => setSelectedProject(null)} userRole={userRole} onEscalate={p => { setSelectedProject(null); setEscalateTarget(p); }} onRefreshList={() => { setSelectedProject(null); handleRefresh(); }} />}
+      {selectedProject && <ProjectSlidePanel project={selectedProject} onClose={() => setSelectedProject(null)} userRole={userRole} onRefreshList={() => { setSelectedProject(null); handleRefresh(); }} />}
 
       {/* Header */}
       <div className="flex items-center justify-between gap-2">

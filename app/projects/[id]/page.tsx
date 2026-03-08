@@ -240,6 +240,13 @@ export default function ProjectDetailPage() {
               <p className="text-white font-medium mt-1">{fmtRegion(project.region)}</p>
             </div>
             <div>
+              <p className="text-[#64748b]">Start Date</p>
+              <p className="text-white font-medium mt-1">{fmtDate(project.start_date)}</p>
+              {project.revised_start_date && project.revised_start_date !== project.start_date && (
+                <p className="text-[#d4af37] text-xs mt-0.5">Revised: {fmtDate(project.revised_start_date)}</p>
+              )}
+            </div>
+            <div>
               <p className="text-[#64748b]">End Date</p>
               <p className={`font-medium mt-1 ${isDelayed ? 'text-red-400' : 'text-white'}`}>
                 {fmtDate(project.project_end_date)}

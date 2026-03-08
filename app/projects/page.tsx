@@ -35,6 +35,7 @@ interface Project {
   escalation_reason: string | null;
   assigned_to: string | null;
   start_date: string | null;
+  revised_start_date: string | null;
   status_override: string | null;
   created_at: string;
   updated_at: string;
@@ -590,6 +591,13 @@ function ProjectSlidePanel({
             <div>
               <span className="text-[#64748b] text-xs">Region</span>
               <p className="text-white">{fmtRegion(project.region)}</p>
+            </div>
+            <div>
+              <span className="text-[#64748b] text-xs">Start Date</span>
+              <p className="text-white">{fmtDate(project.start_date)}</p>
+              {project.revised_start_date && project.revised_start_date !== project.start_date && (
+                <p className="text-[#d4af37] text-[10px] mt-0.5">Revised: {fmtDate(project.revised_start_date)}</p>
+              )}
             </div>
             <div>
               <span className="text-[#64748b] text-xs">End Date</span>
@@ -1614,10 +1622,18 @@ export default function ProjectsPage() {
                         )}
                       </div>
                       <p className="text-white font-medium text-sm mb-2">{p.project_name || '-'}</p>
-                      <div className="flex items-center justify-between text-xs mb-2">
+                      <div className="flex items-center justify-between text-xs mb-1">
                         <span className="text-[#d4af37] font-semibold">{fmtCurrency(p.contract_value)}</span>
                         <span className={p.status === 'Delayed' ? 'text-red-400 font-semibold' : 'text-[#94a3b8]'}>{fmtDate(p.project_end_date)}</span>
                       </div>
+                      {p.start_date && (
+                        <div className="text-[10px] text-[#64748b] mb-2">
+                          Start: {fmtDate(p.start_date)}
+                          {p.revised_start_date && p.revised_start_date !== p.start_date && (
+                            <span className="text-[#d4af37] ml-2">Rev: {fmtDate(p.revised_start_date)}</span>
+                          )}
+                        </div>
+                      )}
                       <ProgressBar pct={p.completion_pct} />
                     </div>
                   );
@@ -1643,6 +1659,7 @@ export default function ProjectsPage() {
                       <th className="px-3 py-3 text-left font-medium">Region</th>
                       <th className="px-3 py-3 text-left font-medium">Contractor</th>
                       <th className="px-3 py-3 text-right font-medium">Value</th>
+                      <th className="px-3 py-3 text-left font-medium">Start Date</th>
                       <th className="px-3 py-3 text-left font-medium">End Date</th>
                       <th className="px-3 py-3 text-left font-medium">Completion</th>
                     </tr>
@@ -1651,14 +1668,14 @@ export default function ProjectsPage() {
                     {loadingProjects ? (
                       Array.from({ length: 8 }).map((_, i) => (
                         <tr key={i} className="animate-pulse">
-                          {Array.from({ length: 10 }).map((_, j) => (
+                          {Array.from({ length: 11 }).map((_, j) => (
                             <td key={j} className="px-3 py-3"><div className="h-5 bg-[#2d3a52] rounded w-full" /></td>
                           ))}
                         </tr>
                       ))
                     ) : projects.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="px-4 py-12 text-center text-[#64748b]">
+                        <td colSpan={11} className="px-4 py-12 text-center text-[#64748b]">
                           {summary && summary.total_projects > 0 ? 'No projects match your filters.' : 'No projects yet. Upload an Excel file to get started.'}
                         </td>
                       </tr>
@@ -1701,6 +1718,12 @@ export default function ProjectsPage() {
                             </td>
                             <td className="px-3 py-3 text-right" onClick={() => setSelectedProject(p)}>
                               <span className="text-[#d4af37] font-mono text-xs">{fmtCurrency(p.contract_value)}</span>
+                            </td>
+                            <td className="px-3 py-3" onClick={() => setSelectedProject(p)}>
+                              <span className="text-[#94a3b8]">{fmtDate(p.start_date)}</span>
+                              {p.revised_start_date && p.revised_start_date !== p.start_date && (
+                                <span className="block text-[10px] text-[#d4af37]">Rev: {fmtDate(p.revised_start_date)}</span>
+                              )}
                             </td>
                             <td className="px-3 py-3" onClick={() => setSelectedProject(p)}>
                               <span className={isPastDue ? 'text-red-400 font-semibold' : 'text-[#94a3b8]'}>{fmtDate(p.project_end_date)}</span>
