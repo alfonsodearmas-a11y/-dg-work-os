@@ -175,10 +175,12 @@ function formatCurrency(value: number | null) {
   return `$${value.toLocaleString()}`;
 }
 
-function fmtCurrency(value: number | string | null | undefined): string {
+function fmtCurrency(value: number | string | null | undefined, allowZero = false): string {
   if (value === null || value === undefined || value === '-') return 'N/A';
   const num = typeof value === 'string' ? parseFloat(value.replace(/[$,]/g, '')) : Number(value);
-  if (isNaN(num) || num <= 0) return 'N/A';
+  if (isNaN(num)) return 'N/A';
+  if (num === 0) return allowZero ? '$0' : 'N/A';
+  if (num < 0) return 'N/A';
   if (num > 1e11) return 'N/A';
   if (num >= 1e9) return `$${(num / 1e9).toFixed(1)}B`;
   if (num >= 1e6) return `$${(num / 1e6).toFixed(1)}M`;
@@ -1002,7 +1004,7 @@ export default function OversightPage() {
           {psipSummary && (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
               <PortfolioKpiCard icon={Building2} label="Active Projects" value={String(psipSummary.total_projects)} color="gold" />
-              <PortfolioKpiCard icon={DollarSign} label="Portfolio Value" value={fmtCurrency(psipSummary.total_value)} color="gold" />
+              <PortfolioKpiCard icon={DollarSign} label="Portfolio Value" value={psipSummary.total_value > 0 ? fmtCurrency(psipSummary.total_value) : '$0'} color="gold" />
               <PortfolioKpiCard icon={AlertTriangle} label="At Risk" value={String(psipSummary.at_risk)} color="amber" subtitle="Amber + Red health" />
               <PortfolioKpiCard icon={CheckCircle} label="Completion Rate" value={psipSummary.total_projects > 0 ? `${Math.round((psipSummary.complete / psipSummary.total_projects) * 100)}%` : '0%'} color="green" subtitle={`${psipSummary.complete} of ${psipSummary.total_projects}`} />
               <PortfolioKpiCard icon={AlertTriangle} label="Delayed" value={String(psipSummary.delayed)} color="red" subtitle={psipSummary.delayed_value > 0 ? fmtCurrency(psipSummary.delayed_value) : undefined} />
@@ -1014,11 +1016,19 @@ export default function OversightPage() {
             <div className="card-premium p-4">
               <h3 className="text-white text-sm font-semibold mb-3">Regional Spread</h3>
               <div className="flex items-end gap-1 h-16">
-                {Object.entries(psipSummary.regions).filter(([k]) => k !== 'Unknown').sort((a, b) => parseInt(a[0]) - parseInt(b[0])).map(([reg, count]) => {
-                  const maxCount = Math.max(...Object.values(psipSummary.regions));
-                  const h = Math.max((count / maxCount) * 100, 8);
-                  return (<div key={reg} className="flex-1 flex flex-col items-center gap-1"><span className="text-[#d4af37] text-[10px] font-medium">{count}</span><div className="w-full bg-[#d4af37]/30 rounded-t" style={{ height: `${h}%` }} /><span className="text-[#64748b] text-[9px]">R{parseInt(reg)}</span></div>);
-                })}
+                {Object.entries(psipSummary.regions)
+                  .map(([reg, count]) => {
+                    const n = parseInt(reg, 10);
+                    const label = !isNaN(n) ? `R${n}` : (reg && reg !== 'Unknown' ? reg : 'Other');
+                    const sortKey = !isNaN(n) ? n : 999;
+                    return { label, count, sortKey, key: reg };
+                  })
+                  .sort((a, b) => a.sortKey - b.sortKey)
+                  .map(({ label, count, key }) => {
+                    const maxCount = Math.max(...Object.values(psipSummary.regions));
+                    const h = Math.max((count / maxCount) * 100, 8);
+                    return (<div key={key} className="flex-1 flex flex-col items-center gap-1"><span className="text-[#d4af37] text-[10px] font-medium">{count}</span><div className="w-full bg-[#d4af37]/30 rounded-t" style={{ height: `${h}%` }} /><span className="text-[#64748b] text-[9px]">{label}</span></div>);
+                  })}
               </div>
             </div>
           )}

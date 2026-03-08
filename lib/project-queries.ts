@@ -282,7 +282,9 @@ export async function getPortfolioSummary(filters?: {
 
     totalValue += value;
     if (health === 'red' || health === 'amber') atRisk++;
-    if (status === 'Completed') complete++;
+    // Count as completed if project_status says so OR completion_pct >= 100
+    const isComplete = status === 'Completed' || pct >= 100;
+    if (isComplete) complete++;
     else if (status === 'Delayed') { delayed++; delayedValue += value; }
     else if (status === 'Commenced') inProgress++;
     else notStarted++;
@@ -301,7 +303,7 @@ export async function getPortfolioSummary(filters?: {
     a.total++;
     a.total_value += value;
     a.avg_completion += pct;
-    if (status === 'Completed') a.complete++;
+    if (isComplete) a.complete++;
     else if (status === 'Delayed') a.delayed++;
     else if (status === 'Commenced') a.in_progress++;
     else a.not_started++;

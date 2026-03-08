@@ -1327,16 +1327,21 @@ export default function ProjectsPage() {
           <h3 className="text-white text-sm font-semibold mb-3">Regional Spread</h3>
           <div className="flex items-end gap-1 h-16">
             {Object.entries(summary.regions)
-              .filter(([k]) => k !== 'Unknown')
-              .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
               .map(([reg, count]) => {
+                const n = parseInt(reg, 10);
+                const label = !isNaN(n) ? `R${n}` : (reg && reg !== 'Unknown' ? reg : 'Other');
+                const sortKey = !isNaN(n) ? n : 999;
+                return { label, count, sortKey, key: reg };
+              })
+              .sort((a, b) => a.sortKey - b.sortKey)
+              .map(({ label, count, key }) => {
                 const maxCount = Math.max(...Object.values(summary.regions));
                 const h = Math.max((count / maxCount) * 100, 8);
                 return (
-                  <div key={reg} className="flex-1 flex flex-col items-center gap-1">
+                  <div key={key} className="flex-1 flex flex-col items-center gap-1">
                     <span className="text-[#d4af37] text-[10px] font-medium">{count}</span>
                     <div className="w-full bg-[#d4af37]/30 rounded-t" style={{ height: `${h}%` }} />
-                    <span className="text-[#64748b] text-[9px]">R{parseInt(reg)}</span>
+                    <span className="text-[#64748b] text-[9px]">{label}</span>
                   </div>
                 );
               })}
