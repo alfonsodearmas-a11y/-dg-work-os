@@ -23,6 +23,8 @@ export interface ProjectRow {
   project_extended: boolean;
   total_distributed: number | null;
   total_expended: number | null;
+  start_date: string | null;
+  revised_start_date: string | null;
 }
 
 export interface FundingRow {
@@ -244,6 +246,8 @@ export function parseProjectsExcelWithDebug(buffer: Buffer): ParseResult {
       })(),
       total_distributed: parseCurrency(col(r, 'total_distributed')),
       total_expended: parseCurrency(col(r, 'total_expended')),
+      start_date: parseDateDMY(col(r, 'start_date')),
+      revised_start_date: parseDateDMY(col(r, 'revised_start_date')),
     };
 
     // Collect funding_data JSON strings (will be processed by upload route)

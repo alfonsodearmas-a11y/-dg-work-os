@@ -10,6 +10,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const DETAIL_FIELD_KEYS = [
   'balance_remaining', 'remarks', 'project_status', 'extension_reason',
   'extension_date', 'project_extended', 'total_distributed', 'total_expended',
+  'start_date', 'revised_start_date',
 ] as const;
 
 // ── Shared: parse funding_data JSON into FundingRow[] ─────────────────────
@@ -86,6 +87,8 @@ interface ScrapedProject {
   // Funding (compact format from scraper)
   total_distributed?: number;
   total_expended?: number;
+  start_date?: string;
+  revised_start_date?: string;
   funding_data?: string; // JSON string: [{d, t, a, e}]
 }
 
@@ -115,6 +118,8 @@ async function handleJsonUpload(body: { projects: ScrapedProject[] }) {
     project_extended: p.project_extended ?? false,
     total_distributed: p.total_distributed ?? null,
     total_expended: p.total_expended ?? null,
+    start_date: p.start_date || null,
+    revised_start_date: p.revised_start_date || null,
   }));
 
   // Detect changes
