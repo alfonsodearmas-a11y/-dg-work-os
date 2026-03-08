@@ -93,8 +93,8 @@ export function EfficiencyStaff() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center py-20" role="status" aria-label="Loading">
+        <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -115,17 +115,17 @@ export function EfficiencyStaff() {
         <div className="card-premium p-4 md:p-6">
           <h3 className="text-sm font-semibold text-white mb-4">Staff Performance</h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="Staff performance">
               <thead>
                 <tr className="border-b border-[#2d3a52]">
-                  <th className="text-left py-2 text-[#64748b] font-medium text-xs">Staff</th>
-                  <th className="text-right py-2 text-[#64748b] font-medium text-xs">Simple</th>
-                  <th className="text-right py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Avg Days</th>
-                  <th className="text-right py-2 text-[#64748b] font-medium text-xs">Estimates</th>
-                  <th className="text-right py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Avg Days</th>
-                  <th className="text-right py-2 text-[#64748b] font-medium text-xs">Capital Works</th>
-                  <th className="text-right py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Avg Days</th>
-                  <th className="text-right py-2 text-[#64748b] font-medium text-xs">Total</th>
+                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Staff</th>
+                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Simple</th>
+                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Avg Days</th>
+                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Estimates</th>
+                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Avg Days</th>
+                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Capital Works</th>
+                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Avg Days</th>
+                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -152,15 +152,15 @@ export function EfficiencyStaff() {
         <div className="card-premium p-4 md:p-6">
           <h3 className="text-sm font-semibold text-red-400 mb-4">Overdue Connections ({breaches.length})</h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="Overdue connections">
               <thead>
                 <tr className="border-b border-[#2d3a52]">
-                  <th className="text-left py-2 text-[#64748b] font-medium text-xs">Account</th>
-                  <th className="text-left py-2 text-[#64748b] font-medium text-xs">Customer</th>
-                  <th className="text-left py-2 text-[#64748b] font-medium text-xs">Category</th>
-                  <th className="text-right py-2 text-[#64748b] font-medium text-xs">Days</th>
-                  <th className="text-right py-2 text-[#64748b] font-medium text-xs">Standard</th>
-                  <th className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Staff</th>
+                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Account</th>
+                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Customer</th>
+                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Category</th>
+                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Days</th>
+                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Standard</th>
+                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Staff</th>
                 </tr>
               </thead>
               <tbody>

@@ -55,7 +55,7 @@ export function HealthBreakdownSection({ breakdown, score, label, severity }: He
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dotColor(item.score)}`} />
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dotColor(item.score)}`} aria-label={`Score: ${item.score >= 7 ? 'Good' : item.score >= 4 ? 'Warning' : 'Critical'}`} />
                     <span className="text-[#e2e8f0] text-xs truncate">{item.factor}</span>
                   </div>
                   {item.description && (

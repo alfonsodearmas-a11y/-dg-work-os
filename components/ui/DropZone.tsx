@@ -39,7 +39,7 @@ export function DropZone({
         ${isDragActive ? 'drag-over' : ''}
         ${className}`}
     >
-      <input {...getInputProps()} />
+      <input {...getInputProps()} aria-label="Select file to upload" />
       <div className="w-16 h-16 rounded-2xl bg-[#d4af37]/20 flex items-center justify-center mx-auto mb-4">
         <Upload className={`h-8 w-8 ${isDragActive ? 'text-[#d4af37]' : 'text-[#64748b]'}`} />
       </div>

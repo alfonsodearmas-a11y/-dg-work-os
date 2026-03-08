@@ -72,6 +72,7 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
               onClick={onClear}
               className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-[#94a3b8] hover:text-white hover:bg-[#2d3a52] transition-colors"
               style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+              aria-label="Clear selection"
             >
               <X className="h-3.5 w-3.5" />
               {!isMobile && 'Clear'}
@@ -90,6 +91,7 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                     : 'bg-[#0a1628] text-[#94a3b8] border border-[#2d3a52] hover:border-[#3d4a62]'
                 }`}
                 style={{ minHeight: isMobile ? 44 : undefined, minWidth: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+                aria-label="Due Date"
               >
                 <Calendar className="h-4 w-4" />
                 {!isMobile && 'Due Date'}
@@ -101,6 +103,7 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                     type="date"
                     value={dateValue}
                     onChange={(e) => setDateValue(e.target.value)}
+                    aria-label="Due date"
                     className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
                     style={{ minHeight: isMobile ? 44 : undefined }}
                   />
@@ -136,6 +139,7 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                     : 'bg-[#0a1628] text-[#94a3b8] border border-[#2d3a52] hover:border-[#3d4a62]'
                 }`}
                 style={{ minHeight: isMobile ? 44 : undefined, minWidth: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+                aria-label="Assignee"
               >
                 <UserCircle className="h-4 w-4" />
                 {!isMobile && 'Assignee'}
@@ -147,6 +151,7 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                     placeholder="Search users..."
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
+                    aria-label="Search users"
                     className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] mb-2"
                     style={{ minHeight: isMobile ? 44 : undefined, fontSize: isMobile ? 16 : undefined }}
                   />
@@ -186,6 +191,7 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                     : 'bg-[#0a1628] text-[#94a3b8] border border-[#2d3a52] hover:border-[#3d4a62]'
                 }`}
                 style={{ minHeight: isMobile ? 44 : undefined, minWidth: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+                aria-label="Agency"
               >
                 <Building2 className="h-4 w-4" />
                 {!isMobile && 'Agency'}
@@ -227,6 +233,7 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                     : 'bg-[#0a1628] text-[#94a3b8] border border-[#2d3a52] hover:border-[#3d4a62]'
                 }`}
                 style={{ minHeight: isMobile ? 44 : undefined, minWidth: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+                aria-label="Status"
               >
                 <ArrowUpCircle className="h-4 w-4" />
                 {!isMobile && 'Status'}
@@ -254,6 +261,7 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                       value={blockedReason}
                       onChange={(e) => setBlockedReason(e.target.value)}
                       placeholder="Reason for blocking..."
+                      aria-label="Reason for blocking"
                       className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-amber-500/30 text-white text-sm placeholder-[#64748b] focus:outline-none focus:border-amber-500 mb-2"
                       style={{ minHeight: isMobile ? 44 : undefined, fontSize: isMobile ? 16 : undefined }}
                     />
@@ -280,6 +288,7 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                     : 'bg-[#0a1628] text-red-400 border border-red-500/30 hover:bg-red-500/10'
                 }`}
                 style={{ minHeight: isMobile ? 44 : undefined, minWidth: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+                aria-label="Delete"
               >
                 <Trash2 className="h-4 w-4" />
                 {!isMobile && 'Delete'}

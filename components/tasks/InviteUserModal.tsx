@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, Send, Loader2 } from 'lucide-react';
 
 const AGENCIES = [
@@ -30,6 +30,23 @@ export function InviteUserModal({ open, onClose, onSuccess }: InviteUserModalPro
   const [form, setForm] = useState({ full_name: '', email: '', agency: '', role: 'ceo' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const modalRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open || !modalRef.current) return;
+    const focusable = modalRef.current.querySelector<HTMLElement>('input, button, select, textarea, [tabindex]:not([tabindex="-1"])');
+    focusable?.focus();
+  }, [open]);
 
   if (!open) return null;
 
@@ -66,10 +83,10 @@ export function InviteUserModal({ open, onClose, onSuccess }: InviteUserModalPro
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <form onSubmit={handleSubmit} className="bg-[#1a2744] border border-[#2d3a52] rounded-xl w-full max-w-md">
+      <form ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="invite-user-modal-title" onSubmit={handleSubmit} className="bg-[#1a2744] border border-[#2d3a52] rounded-xl w-full max-w-md">
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#2d3a52]">
-          <h2 className="text-lg font-semibold text-white">Invite User</h2>
-          <button type="button" onClick={handleClose} className="text-[#64748b] hover:text-white"><X className="h-5 w-5" /></button>
+          <h2 id="invite-user-modal-title" className="text-lg font-semibold text-white">Invite User</h2>
+          <button type="button" onClick={handleClose} aria-label="Close" className="text-[#64748b] hover:text-white"><X className="h-5 w-5" /></button>
         </div>
 
         <div className="p-5 space-y-4">
@@ -79,6 +96,8 @@ export function InviteUserModal({ open, onClose, onSuccess }: InviteUserModalPro
               type="text"
               value={form.full_name}
               onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))}
+              aria-label="Full name"
+              aria-required="true"
               className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
               placeholder="John Smith"
             />
@@ -89,6 +108,8 @@ export function InviteUserModal({ open, onClose, onSuccess }: InviteUserModalPro
               type="email"
               value={form.email}
               onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
+              aria-label="Email"
+              aria-required="true"
               className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
               placeholder="ceo@agency.gov.gy"
             />
@@ -98,6 +119,8 @@ export function InviteUserModal({ open, onClose, onSuccess }: InviteUserModalPro
             <select
               value={form.agency}
               onChange={(e) => setForm(f => ({ ...f, agency: e.target.value }))}
+              aria-label="Agency"
+              aria-required="true"
               className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
             >
               <option value="">Select agency...</option>
@@ -109,6 +132,8 @@ export function InviteUserModal({ open, onClose, onSuccess }: InviteUserModalPro
             <select
               value={form.role}
               onChange={(e) => setForm(f => ({ ...f, role: e.target.value }))}
+              aria-label="Role"
+              aria-required="true"
               className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
             >
               {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}

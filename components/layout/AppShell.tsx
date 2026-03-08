@@ -47,7 +47,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Sidebar />
 
         {/* Main Content */}
-        <main className="flex-1 min-h-screen min-w-0">
+        <main id="main-content" className="flex-1 min-h-screen min-w-0">
           {/* Top Bar */}
           <header className="h-14 md:h-16 border-b border-[#2d3a52]/50 bg-[#0a1628] md:bg-[#0a1628]/80 md:backdrop-blur-sm sticky top-0 z-40">
             <div className="h-full px-3 md:px-8 flex items-center justify-between">

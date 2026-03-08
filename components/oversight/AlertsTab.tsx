@@ -163,8 +163,8 @@ export function AlertsTabContent({
             </div>
             {/* Desktop: table layout */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead><tr className="text-[#64748b] text-xs uppercase tracking-wider"><th className="text-left px-4 py-3 w-6"></th><th className="text-left px-4 py-3">Agency</th><th className="text-right px-4 py-3">Projects</th><th className="text-right px-4 py-3">Total Value</th><th className="text-right px-4 py-3">Avg Completion</th></tr></thead>
+              <table className="w-full text-sm" aria-label="Agency breakdown">
+                <thead><tr className="text-[#64748b] text-xs uppercase tracking-wider"><th scope="col" className="text-left px-4 py-3 w-6"></th><th scope="col" className="text-left px-4 py-3">Agency</th><th scope="col" className="text-right px-4 py-3">Projects</th><th scope="col" className="text-right px-4 py-3">Total Value</th><th scope="col" className="text-right px-4 py-3">Avg Completion</th></tr></thead>
                 <tbody>
                   {oversightData.agencyBreakdown.map(a => {
                     const isExp = expandedAgency === a.agency;

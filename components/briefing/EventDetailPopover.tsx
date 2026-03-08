@@ -110,6 +110,7 @@ export function EventDetailPopover({
             <button
               onClick={onClose}
               className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors flex-shrink-0"
+              aria-label="Close"
             >
               <X className="h-4 w-4" />
             </button>

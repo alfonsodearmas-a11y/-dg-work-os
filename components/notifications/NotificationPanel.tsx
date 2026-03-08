@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, Bell, Calendar, CheckSquare, FileText, Building2, BarChart3, Eye, UserCheck } from 'lucide-react';
 import { useNotifications } from './NotificationProvider';
@@ -196,6 +196,23 @@ export function NotificationPanel() {
     return result;
   }, [notifications, filter, categoryFilter]);
 
+  const notifPanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isPanelOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closePanel();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPanelOpen, closePanel]);
+
+  useEffect(() => {
+    if (!isPanelOpen || !notifPanelRef.current) return;
+    const focusable = notifPanelRef.current.querySelector<HTMLElement>('button, input, [tabindex]:not([tabindex="-1"])');
+    focusable?.focus();
+  }, [isPanelOpen]);
+
   if (!isPanelOpen) return null;
 
   // Group notifications
@@ -223,10 +240,11 @@ export function NotificationPanel() {
       <div
         className="fixed inset-0 bg-black/50 z-[51]"
         onClick={closePanel}
+        aria-hidden="true"
       />
 
       {/* Panel */}
-      <div className="fixed z-[52] md:top-0 md:right-0 md:bottom-0 md:w-full md:max-w-[400px] md:animate-slide-in-right bottom-0 left-0 right-0 max-h-[80vh] md:max-h-none rounded-t-2xl md:rounded-none bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border-l border-[#2d3a52]/60 shadow-[-8px_0_32px_rgba(0,0,0,0.5)] flex flex-col">
+      <div ref={notifPanelRef} role="dialog" aria-modal="true" aria-labelledby="notification-panel-title" className="fixed z-[52] md:top-0 md:right-0 md:bottom-0 md:w-full md:max-w-[400px] md:animate-slide-in-right bottom-0 left-0 right-0 max-h-[80vh] md:max-h-none rounded-t-2xl md:rounded-none bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border-l border-[#2d3a52]/60 shadow-[-8px_0_32px_rgba(0,0,0,0.5)] flex flex-col">
         {/* Mobile handle */}
         <div className="md:hidden flex justify-center pt-2">
           <div className="w-9 h-1 rounded-full bg-white/20" />
@@ -234,7 +252,7 @@ export function NotificationPanel() {
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d3a52]/50 flex-shrink-0">
-          <h2 className="text-white font-semibold text-base">Notifications</h2>
+          <h2 id="notification-panel-title" className="text-white font-semibold text-base">Notifications</h2>
           <div className="flex items-center gap-2">
             <button
               onClick={markAllRead}

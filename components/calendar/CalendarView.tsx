@@ -181,6 +181,7 @@ export function CalendarView() {
             <button
               onClick={handlePrevMonth}
               className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors touch-active"
+              aria-label="Previous month"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -193,6 +194,7 @@ export function CalendarView() {
             <button
               onClick={handleNextMonth}
               className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors touch-active"
+              aria-label="Next month"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -207,15 +209,17 @@ export function CalendarView() {
             }}
             disabled={syncing}
             className="flex items-center gap-2 p-2 md:px-3 md:py-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] text-[#94a3b8] hover:border-[#3d4a62] transition-colors disabled:opacity-50 touch-active"
+            aria-label="Sync"
           >
-            <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} aria-hidden="true" />
             <span className="hidden md:inline">Sync</span>
           </button>
           <button
             onClick={handleNewEvent}
             className="flex items-center gap-1 md:gap-2 px-3 md:px-4 py-2 rounded-lg bg-[#d4af37] text-[#0a1628] font-medium hover:bg-[#c9a432] transition-colors touch-active"
+            aria-label="New Event"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4" aria-hidden="true" />
             <span className="hidden md:inline">New Event</span>
           </button>
         </div>
@@ -252,8 +256,8 @@ export function CalendarView() {
 
       {/* Calendar Grid */}
       {loading ? (
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-8 w-8 text-[#d4af37] animate-spin" />
+        <div className="flex items-center justify-center h-96" role="status" aria-label="Loading">
+          <Loader2 className="h-8 w-8 text-[#d4af37] animate-spin" aria-hidden="true" />
         </div>
       ) : (
         <div className="rounded-xl border border-[#2d3a52] overflow-hidden">

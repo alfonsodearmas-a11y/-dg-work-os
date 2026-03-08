@@ -157,7 +157,7 @@ export function GPLKpiUpload({ onSuccess, onCancel }: GPLKpiUploadProps) {
           Upload Monthly KPI CSV
         </h3>
         {onCancel && (
-          <button onClick={onCancel} className="text-[#94a3b8] hover:text-white">
+          <button onClick={onCancel} className="text-[#94a3b8] hover:text-white" aria-label="Close">
             <X className="w-5 h-5" />
           </button>
         )}
@@ -205,6 +205,7 @@ export function GPLKpiUpload({ onSuccess, onCancel }: GPLKpiUploadProps) {
                 type="file"
                 accept=".csv"
                 onChange={handleFileSelect}
+                aria-label="Select KPI CSV file"
                 className="hidden"
               />
             </label>

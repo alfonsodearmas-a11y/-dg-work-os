@@ -78,6 +78,7 @@ function AutoResizeTextarea({
 }
 
 export function TaskDetailModal({ task, isOpen, isMobile, onClose, onUpdate, onDelete, users }: TaskDetailModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState<TaskUpdate>({});
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -98,6 +99,21 @@ export function TaskDetailModal({ task, isOpen, isMobile, onClose, onUpdate, onD
       setConfirmingDelete(false);
     }
   }, [task]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (!isOpen || !modalRef.current) return;
+    const focusable = modalRef.current.querySelector<HTMLElement>('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    focusable?.focus();
+  }, [isOpen]);
 
   if (!isOpen || !task) return null;
 
@@ -133,6 +149,7 @@ export function TaskDetailModal({ task, isOpen, isMobile, onClose, onUpdate, onD
         <AutoResizeTextarea
           value={formData.title || ''}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          aria-label="Title"
           className="w-full px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] transition-colors leading-snug"
           style={inputStyle}
         />
@@ -144,6 +161,7 @@ export function TaskDetailModal({ task, isOpen, isMobile, onClose, onUpdate, onD
         <select
           value={formData.status || 'new'}
           onChange={(e) => setFormData({ ...formData, status: e.target.value as TaskUpdate['status'] })}
+          aria-label="Status"
           className="w-full px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white focus:outline-none focus:border-[#d4af37] transition-colors"
           style={inputStyle}
         >
@@ -162,6 +180,7 @@ export function TaskDetailModal({ task, isOpen, isMobile, onClose, onUpdate, onD
             value={formData.blocked_reason || ''}
             onChange={(e) => setFormData({ ...formData, blocked_reason: e.target.value })}
             placeholder="What's blocking this task?"
+            aria-label="Blocked reason"
             className="w-full px-3 py-2.5 rounded-lg bg-[#0a1628] border border-amber-500/30 text-white placeholder-[#64748b] focus:outline-none focus:border-amber-500 transition-colors"
             style={inputStyle}
           />
@@ -175,6 +194,7 @@ export function TaskDetailModal({ task, isOpen, isMobile, onClose, onUpdate, onD
           type="date"
           value={formData.due_date || ''}
           onChange={(e) => setFormData({ ...formData, due_date: e.target.value || null })}
+          aria-label="Due date"
           className="w-full px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white focus:outline-none focus:border-[#d4af37] transition-colors"
           style={inputStyle}
         />
@@ -187,6 +207,7 @@ export function TaskDetailModal({ task, isOpen, isMobile, onClose, onUpdate, onD
           <select
             value={formData.agency || ''}
             onChange={(e) => setFormData({ ...formData, agency: e.target.value || null })}
+            aria-label="Agency"
             className="w-full px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white focus:outline-none focus:border-[#d4af37] transition-colors"
             style={inputStyle}
           >
@@ -201,6 +222,7 @@ export function TaskDetailModal({ task, isOpen, isMobile, onClose, onUpdate, onD
           <select
             value={formData.role || ''}
             onChange={(e) => setFormData({ ...formData, role: e.target.value || null })}
+            aria-label="Role"
             className="w-full px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white focus:outline-none focus:border-[#d4af37] transition-colors"
             style={inputStyle}
           >
@@ -252,6 +274,7 @@ export function TaskDetailModal({ task, isOpen, isMobile, onClose, onUpdate, onD
           onChange={(e) => setFormData({ ...formData, description: e.target.value || undefined })}
           rows={3}
           placeholder="Add a description..."
+          aria-label="Description"
           className="w-full px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] transition-colors resize-none"
           style={{ ...inputStyle, minHeight: isMobile ? 80 : undefined }}
         />
@@ -319,7 +342,7 @@ export function TaskDetailModal({ task, isOpen, isMobile, onClose, onUpdate, onD
   // === MOBILE: Full-screen bottom sheet ===
   if (isMobile) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-[#0a1628]">
+      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="task-detail-modal-mobile-title" className="fixed inset-0 z-50 flex flex-col bg-[#0a1628]">
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-9 h-1 rounded-full bg-white/20" />
@@ -327,9 +350,10 @@ export function TaskDetailModal({ task, isOpen, isMobile, onClose, onUpdate, onD
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d3a52]">
-          <h2 className="text-lg font-semibold text-white">Edit Task</h2>
+          <h2 id="task-detail-modal-mobile-title" className="text-lg font-semibold text-white">Edit Task</h2>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="p-2 rounded-lg text-[#64748b] hover:text-white"
             style={{ minWidth: 44, minHeight: 44, touchAction: 'manipulation' }}
           >
@@ -354,15 +378,16 @@ export function TaskDetailModal({ task, isOpen, isMobile, onClose, onUpdate, onD
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg rounded-t-2xl md:rounded-2xl bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border border-[#2d3a52] shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up md:animate-fade-in" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="task-detail-modal-title" className="relative w-full max-w-lg rounded-t-2xl md:rounded-2xl bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border border-[#2d3a52] shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up md:animate-fade-in" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {/* Header */}
         <div className="flex items-center justify-between p-3 md:p-4 border-b border-[#2d3a52]">
-          <h2 className="text-lg font-semibold text-white">Edit Task</h2>
+          <h2 id="task-detail-modal-title" className="text-lg font-semibold text-white">Edit Task</h2>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
           >
             <X className="h-4 w-4" />

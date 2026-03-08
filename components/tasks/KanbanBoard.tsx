@@ -709,6 +709,7 @@ export function KanbanBoard() {
                 : 'bg-[#1a2744] text-[#64748b] hover:text-[#94a3b8]'
             }`}
             style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+            aria-label="Board view"
           >
             <LayoutGrid className="h-4 w-4" />
             {!isMobile && 'Board'}
@@ -721,6 +722,7 @@ export function KanbanBoard() {
                 : 'bg-[#1a2744] text-[#64748b] hover:text-[#94a3b8]'
             }`}
             style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+            aria-label="List view"
           >
             <List className="h-4 w-4" />
             {!isMobile && 'List'}
@@ -735,6 +737,7 @@ export function KanbanBoard() {
             placeholder="Search tasks..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search tasks"
             className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-[#1a2744] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] transition-colors"
             style={{ minHeight: isMobile ? 44 : undefined, fontSize: isMobile ? 16 : undefined }}
           />
@@ -825,7 +828,7 @@ export function KanbanBoard() {
             onClick={() => setShowNewTask(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#d4af37] text-[#0a1628] font-medium hover:bg-[#c9a432] transition-colors"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4" aria-hidden="true" />
             Add Task
           </button>
         )}
@@ -836,6 +839,7 @@ export function KanbanBoard() {
           disabled={syncing}
           className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-[#1a2744] border border-[#2d3a52] text-[#94a3b8] hover:border-[#3d4a62] transition-colors disabled:opacity-50"
           style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+          aria-label="Refresh"
         >
           <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
         </button>
@@ -854,6 +858,7 @@ export function KanbanBoard() {
                 onClick={pill.onClear}
                 className="hover:text-white transition-colors"
                 style={{ touchAction: 'manipulation' }}
+                aria-label={`Remove ${pill.label} filter`}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -897,6 +902,7 @@ export function KanbanBoard() {
               <select
                 value={assigneeFilter || ''}
                 onChange={(e) => setAssigneeFilter(e.target.value || null)}
+                aria-label="Assignee"
                 className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
                 style={{ minHeight: isMobile ? 44 : undefined }}
               >
@@ -1026,6 +1032,7 @@ export function KanbanBoard() {
             onKeyDown={(e) => e.key === 'Enter' && confirmBlocked()}
             placeholder="Describe the blocker..."
             autoFocus
+            aria-label="Blocked reason"
             className="w-full px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-amber-500"
             style={{ minHeight: isMobile ? 44 : undefined, fontSize: isMobile ? 16 : undefined }}
           />
@@ -1069,7 +1076,7 @@ export function KanbanBoard() {
                     }`}
                     style={{ minHeight: 44, touchAction: 'manipulation' }}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full ${tabStyle.dot}`} />
+                    <span className={`w-1.5 h-1.5 rounded-full ${tabStyle.dot}`} aria-hidden="true" />
                     {COLUMN_LABELS[col]}
                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                       isActive ? 'bg-white/10' : 'bg-[#2d3a52]'
@@ -1232,14 +1239,14 @@ export function KanbanBoard() {
                 <Zap className="h-5 w-5 text-[#d4af37]" />
                 <h2 className="text-lg font-semibold text-white">Standup Digest</h2>
               </div>
-              <button onClick={() => setShowStandup(false)} className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors">
+              <button onClick={() => setShowStandup(false)} className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors" aria-label="Close">
                 <X className="h-4 w-4" />
               </button>
             </div>
             <div className="p-4">
               {standupLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-[#d4af37]" />
+                <div className="flex items-center justify-center py-8" role="status" aria-label="Loading">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#d4af37]" aria-hidden="true" />
                   <span className="ml-2 text-[#94a3b8]">Generating digest...</span>
                 </div>
               ) : (

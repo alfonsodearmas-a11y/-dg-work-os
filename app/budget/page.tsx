@@ -182,16 +182,18 @@ export default function BudgetPage() {
           <button
             onClick={() => setAskOpen(true)}
             className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-[#d4af37]/20 to-[#b8860b]/20 border border-[#d4af37]/30 text-[#d4af37] hover:border-[#d4af37] transition-colors touch-active"
+            aria-label="Ask AI"
           >
-            <Sparkles className="h-4 w-4" />
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
             <span className="text-sm hidden md:inline">Ask AI</span>
           </button>
           <button
             onClick={loadData}
             disabled={isLoading}
             className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] hover:text-white transition-colors disabled:opacity-50 touch-active"
+            aria-label="Refresh"
           >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
             <span className="text-sm hidden md:inline">Refresh</span>
           </button>
         </div>
@@ -207,6 +209,7 @@ export default function BudgetPage() {
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search by line item code (e.g. 6321), name, agency, or keyword..."
+            aria-label="Search budget line items"
             className="w-full pl-10 pr-10 py-3 rounded-xl bg-[#1a2744] border border-[#2d3a52] focus:border-[#d4af37] text-white text-sm placeholder:text-[#64748b] outline-none transition-colors"
           />
           {isSearching && (
@@ -216,6 +219,7 @@ export default function BudgetPage() {
             <button
               onClick={clearSearch}
               className="absolute right-3 p-0.5 rounded-md hover:bg-[#2d3a52] text-[#64748b] hover:text-white transition-colors"
+              aria-label="Clear search"
             >
               <X className="h-4 w-4" />
             </button>
@@ -343,8 +347,8 @@ function SearchResultsView({
 }) {
   if (isSearching && !results) {
     return (
-      <div className="flex items-center gap-3 p-8 justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" />
+      <div className="flex items-center gap-3 p-8 justify-center" role="status" aria-label="Searching">
+        <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" aria-hidden="true" />
         <span className="text-[#64748b] text-sm">Searching budget data...</span>
       </div>
     );

@@ -7,10 +7,14 @@ interface TableProps {
   className?: string;
 }
 
-export function Table({ children, className = '' }: TableProps) {
+interface TableRootProps extends TableProps {
+  ariaLabel?: string;
+}
+
+export function Table({ children, className = '', ariaLabel }: TableRootProps) {
   return (
     <div className={`overflow-x-auto rounded-xl border border-[#2d3a52] ${className}`}>
-      <table className="table-premium min-w-full">
+      <table className="table-premium min-w-full" aria-label={ariaLabel}>
         {children}
       </table>
     </div>
@@ -29,9 +33,13 @@ export function TableRow({ children, className = '' }: TableProps) {
   return <tr className={className}>{children}</tr>;
 }
 
-export function TableHead({ children, className = '' }: TableProps) {
+interface TableHeadProps extends TableProps {
+  scope?: 'col' | 'row';
+}
+
+export function TableHead({ children, className = '', scope = 'col' }: TableHeadProps) {
   return (
-    <th className={className}>
+    <th scope={scope} className={className}>
       {children}
     </th>
   );

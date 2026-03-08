@@ -50,8 +50,8 @@ export function EfficiencyPanel({ refreshKey = 0 }: { refreshKey?: number }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center py-20" role="status" aria-label="Loading">
+        <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -274,16 +274,16 @@ function StageSection({ metrics }: { metrics: EfficiencyMetrics }) {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" aria-label="Pipeline stage breakdown">
             <thead>
               <tr className="border-b border-[#2d3a52]">
-                <th className="text-left py-2 text-[#64748b] font-medium text-xs">Stage</th>
-                <th className="text-right py-2 text-[#64748b] font-medium text-xs">Orders</th>
-                <th className="text-right py-2 text-[#64748b] font-medium text-xs">Avg</th>
-                <th className="text-right py-2 text-[#64748b] font-medium text-xs">Median</th>
-                <th className="text-right py-2 text-[#64748b] font-medium text-xs">Max</th>
-                <th className="text-right py-2 text-[#64748b] font-medium text-xs">SLA</th>
-                <th className="text-right py-2 text-[#64748b] font-medium text-xs">Compliance</th>
+                <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Stage</th>
+                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Orders</th>
+                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Avg</th>
+                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Median</th>
+                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Max</th>
+                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">SLA</th>
+                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Compliance</th>
               </tr>
             </thead>
             <tbody>
@@ -310,13 +310,13 @@ function StageSection({ metrics }: { metrics: EfficiencyMetrics }) {
         <div className="card-premium p-4 md:p-6">
           <h3 className="text-sm font-semibold text-white mb-4">Regional Distribution</h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="Regional distribution">
               <thead>
                 <tr className="border-b border-[#2d3a52]">
-                  <th className="text-left py-2 text-[#64748b] font-medium text-xs">Region</th>
-                  <th className="text-right py-2 text-[#64748b] font-medium text-xs">Open</th>
-                  <th className="text-right py-2 text-[#64748b] font-medium text-xs">Completed</th>
-                  <th className="text-right py-2 text-[#64748b] font-medium text-xs">Avg Days</th>
+                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Region</th>
+                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Open</th>
+                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Completed</th>
+                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Avg Days</th>
                 </tr>
               </thead>
               <tbody>
@@ -354,7 +354,7 @@ function TrendsSection() {
     load();
   }, []);
 
-  if (loading) return <div className="flex items-center justify-center py-20"><div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center py-20" role="status" aria-label="Loading"><div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" /></div>;
   if (data.length === 0) return <div className="card-premium p-8 text-center"><p className="text-[#64748b]">No monthly trend data yet. Data will appear after multiple uploads.</p></div>;
 
   const chartData = data.map(m => ({ ...m, label: fmtMonth(m.month) }));
@@ -397,15 +397,15 @@ function TrendsSection() {
       <div className="card-premium p-4 md:p-6">
         <h3 className="text-sm font-semibold text-white mb-4">Monthly Summary</h3>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" aria-label="Monthly service connection summary">
             <thead>
               <tr className="border-b border-[#2d3a52]">
-                <th className="text-left py-2 text-[#64748b] font-medium text-xs">Month</th>
-                <th className="text-right py-2 text-[#64748b] font-medium text-xs">Opened</th>
-                <th className="text-right py-2 text-[#64748b] font-medium text-xs">Completed</th>
-                <th className="text-right py-2 text-[#64748b] font-medium text-xs">Net</th>
-                <th className="text-right py-2 text-[#64748b] font-medium text-xs">Queue</th>
-                <th className="text-right py-2 text-[#64748b] font-medium text-xs">Avg Days</th>
+                <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Month</th>
+                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Opened</th>
+                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Completed</th>
+                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Net</th>
+                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Queue</th>
+                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Avg Days</th>
               </tr>
             </thead>
             <tbody>
@@ -467,6 +467,7 @@ function OrdersSection() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
             <input type="text" placeholder="Search name, customer ref, SO#..." value={searchInput}
               onChange={e => setSearchInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { setSearch(searchInput); setPage(1); } }}
+              aria-label="Search service connection orders"
               className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none" />
           </div>
           <button onClick={() => { setSearch(searchInput); setPage(1); }} className="btn-navy px-4 py-2 text-sm">Search</button>
@@ -477,10 +478,12 @@ function OrdersSection() {
         {showFilters && (
           <div className="flex items-center gap-3 mt-3 pt-3 border-t border-[#2d3a52]">
             <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}
+              aria-label="Filter by status"
               className="px-3 py-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:border-[#d4af37] focus:outline-none">
               <option value="">All Status</option><option value="open">Open</option><option value="completed">Completed</option><option value="legacy_excluded">Legacy</option>
             </select>
             <select value={track} onChange={e => { setTrack(e.target.value); setPage(1); }}
+              aria-label="Filter by track"
               className="px-3 py-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:border-[#d4af37] focus:outline-none"
               title={track === 'A' ? TRACK_TOOLTIPS['Track A'] : track === 'B' ? TRACK_TOOLTIPS['Track B'] : track === 'Design' ? TRACK_TOOLTIPS['Design'] : 'Filter by connection track (A = meter only, B = capital works, Design = estimation phase)'}>
               <option value="">All Tracks</option><option value="A">Track A — Meter Only</option><option value="B">Track B — Capital Works</option><option value="Design">Design — Estimates</option><option value="unknown">Unknown</option>
@@ -494,22 +497,22 @@ function OrdersSection() {
 
       <div className="card-premium p-4 md:p-6">
         {loading ? (
-          <div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" /></div>
+          <div className="flex items-center justify-center py-12" role="status" aria-label="Loading"><div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" /></div>
         ) : orders.length === 0 ? (
           <p className="text-center text-[#64748b] py-8">No orders found.</p>
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm" aria-label="Service connection orders">
                 <thead>
                   <tr className="border-b border-[#2d3a52]">
-                    <th className="text-left py-2 text-[#64748b] font-medium text-xs w-8" />
-                    <th className="text-left py-2 text-[#64748b] font-medium text-xs">Customer</th>
-                    <th className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">SO #</th>
-                    <th className="text-left py-2 text-[#64748b] font-medium text-xs">Stage</th>
-                    <th className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell cursor-help" title="Track A = meter installation only (≤3d). Track B = capital works required (≤30d). Design = estimation phase (≤12d).">Track</th>
-                    <th className="text-right py-2 text-[#64748b] font-medium text-xs">Days</th>
-                    <th className="text-right py-2 text-[#64748b] font-medium text-xs">Status</th>
+                    <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs w-8" />
+                    <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Customer</th>
+                    <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">SO #</th>
+                    <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Stage</th>
+                    <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell cursor-help" title="Track A = meter installation only (≤3d). Track B = capital works required (≤30d). Design = estimation phase (≤12d).">Track</th>
+                    <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Days</th>
+                    <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Status</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -36,6 +36,7 @@ export function TaskList({ tasks, showOverdueInfo, showDueDate, onEdit }: TaskLi
               className="h-4 w-4 text-blue-600 rounded border-gray-300"
               checked={task.status === 'done'}
               readOnly
+              aria-label={`Task completed: ${task.title}`}
             />
           </div>
           <div className="flex-1 min-w-0">

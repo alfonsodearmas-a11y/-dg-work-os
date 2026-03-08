@@ -155,7 +155,7 @@ export function ProjectList({ projects }: ProjectListProps) {
             </div>
             <div className="col-span-1 text-right">
               <div className="flex items-center justify-end space-x-2">
-                <div className="w-12 bg-gray-200 rounded-full h-2">
+                <div className="w-12 bg-gray-200 rounded-full h-2" role="progressbar" aria-valuenow={project.completion_percent || 0} aria-valuemin={0} aria-valuemax={100} aria-label={`Completion: ${project.completion_percent || 0}%`}>
                   <div
                     className={`h-2 rounded-full ${project.project_status === 'DELAYED' ? 'bg-red-500' : 'bg-blue-500'}`}
                     style={{ width: `${Math.min(project.completion_percent || 0, 100)}%` }}

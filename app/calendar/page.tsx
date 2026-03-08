@@ -13,6 +13,7 @@ export default function CalendarPage() {
         <Link
           href="/"
           className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors touch-active"
+          aria-label="Back"
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>

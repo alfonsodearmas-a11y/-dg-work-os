@@ -99,7 +99,7 @@ function BreakdownContent({
         <div className="px-3 py-2 space-y-1.5">
           {breakdown.map((item, i) => (
             <div key={i} className="flex items-center gap-2 text-xs">
-              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dotColor(item.score)}`} />
+              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dotColor(item.score)}`} aria-label={`Score: ${item.score >= 7 ? 'Good' : item.score >= 4 ? 'Warning' : 'Critical'}`} />
               <span className="text-[#94a3b8] flex-1 truncate">{item.factor}</span>
               <span className="text-[#64748b] w-9 text-right flex-shrink-0">{Math.round(item.weight * 100)}%</span>
               <span className="text-[#d4af37] w-14 text-right flex-shrink-0 truncate">{item.actualValue}</span>
@@ -262,10 +262,14 @@ export function HealthScoreTooltip({
       <div
         className="fixed inset-0 bg-black/50 z-[1100] transition-opacity duration-200"
         onClick={() => setOpen(false)}
+        aria-hidden="true"
       />
       {/* Sheet */}
       <div
         ref={popoverRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Health score breakdown"
         className="fixed bottom-0 left-0 right-0 z-[1101] bg-[#0a1628] border-t border-[#2d3a52] rounded-t-2xl animate-slide-up"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >

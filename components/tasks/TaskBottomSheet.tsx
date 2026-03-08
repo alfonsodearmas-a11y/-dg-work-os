@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Pencil, ArrowRight, Trash2 } from 'lucide-react';
 import { Task, TaskStatus } from '@/lib/task-types';
 
@@ -29,11 +29,31 @@ const NEXT_STATUS: Record<string, { label: string; value: TaskStatus }> = {
 export function TaskBottomSheet({ task, onClose, onEdit, onMove, onDelete }: TaskBottomSheetProps) {
   const [view, setView] = useState<'actions' | 'move' | 'confirmDelete'>('actions');
   const nextStatus = NEXT_STATUS[task.status];
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (sheetRef.current) {
+      const focusable = sheetRef.current.querySelector<HTMLElement>('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus();
+    }
+  }, []);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div
+        ref={sheetRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Task actions"
         className="relative w-full rounded-t-2xl bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border-t border-[#2d3a52] shadow-2xl animate-slide-up"
         style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
       >

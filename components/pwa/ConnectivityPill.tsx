@@ -16,7 +16,7 @@ export function ConnectivityPill({ isOnline, isSyncing, syncQueueCount }: Connec
   let classes: string;
 
   if (isSyncing) {
-    icon = <RefreshCw className="h-3 w-3 animate-spin" />;
+    icon = <RefreshCw className="h-3 w-3 animate-spin" aria-hidden="true" />;
     label = syncQueueCount > 0 ? `Syncing ${syncQueueCount}...` : 'Syncing...';
     classes = 'bg-[#d4af37]/15 text-[#d4af37] border-[#d4af37]/30';
   } else if (!isOnline) {
@@ -33,6 +33,8 @@ export function ConnectivityPill({ isOnline, isSyncing, syncQueueCount }: Connec
   return (
     <div
       className={`fixed bottom-4 left-4 z-[997] flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border backdrop-blur-sm transition-all duration-300 ${classes}`}
+      role="status"
+      aria-label={label}
     >
       {icon}
       {label}

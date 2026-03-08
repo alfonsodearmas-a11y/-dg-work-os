@@ -163,9 +163,9 @@ export function GCAADetail({ data }: GCAADetailProps) {
   // Loading without any data
   if (!data && insightsLoading) {
     return (
-      <div className="flex items-center justify-center py-24">
+      <div className="flex items-center justify-center py-24" role="status" aria-label="Loading">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-[#d4af37] animate-spin" />
+          <Loader2 className="w-8 h-8 text-[#d4af37] animate-spin" aria-hidden="true" />
           <p className="text-[#94a3b8] text-[15px]">Loading GCAA data...</p>
         </div>
       </div>
@@ -188,8 +188,8 @@ export function GCAADetail({ data }: GCAADetailProps) {
                 <HealthScoreTooltip score={health.score} severity={health.severity} breakdown={health.breakdown} size={100} />
               </div>
             ) : insightsLoading ? (
-              <div className="w-20 h-20 md:w-[100px] md:h-[100px] flex items-center justify-center">
-                <Loader2 className="w-6 h-6 text-[#64748b] animate-spin" />
+              <div className="w-20 h-20 md:w-[100px] md:h-[100px] flex items-center justify-center" role="status" aria-label="Loading">
+                <Loader2 className="w-6 h-6 text-[#64748b] animate-spin" aria-hidden="true" />
               </div>
             ) : null}
 
@@ -316,8 +316,8 @@ export function GCAADetail({ data }: GCAADetailProps) {
                   <div className="bg-[#1a2744] rounded-xl p-3 md:p-5 border border-[#2d3a52]">
                     <h4 className="text-[#94a3b8] text-sm mb-4">Compliance Audit Rate</h4>
                     <div className="flex flex-col items-center">
-                      <div className="relative w-32 h-32">
-                        <svg className="w-full h-full transform -rotate-90">
+                      <div className="relative w-32 h-32" role="progressbar" aria-valuenow={Math.round(data.complianceRate)} aria-valuemin={0} aria-valuemax={100} aria-label={`Compliance Audit Rate: ${data.complianceRate?.toFixed(1)}%`}>
+                        <svg className="w-full h-full transform -rotate-90" aria-hidden="true">
                           <circle cx="64" cy="64" r="56" stroke="#2d3a52" strokeWidth="12" fill="none" />
                           <circle
                             cx="64" cy="64" r="56"

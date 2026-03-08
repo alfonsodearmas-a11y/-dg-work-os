@@ -16,6 +16,22 @@ export function BudgetAIBrief({ allocation, onClose }: { allocation: Allocation;
   const [followUp, setFollowUp] = useState('');
   const contentRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const briefPanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (briefPanelRef.current) {
+      const focusable = briefPanelRef.current.querySelector<HTMLElement>('button, input, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus();
+    }
+  }, []);
 
   const streamAnalysis = useCallback(async (question?: string) => {
     setIsStreaming(true);
@@ -100,10 +116,10 @@ export function BudgetAIBrief({ allocation, onClose }: { allocation: Allocation;
   return (
     <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
 
       {/* Panel */}
-      <div className="relative w-full md:max-w-2xl md:max-h-[80vh] bg-gradient-to-b from-[#1a2744] to-[#0a1628] border border-[#2d3a52] rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col max-h-[85vh] animate-slide-up md:animate-fade-in">
+      <div ref={briefPanelRef} role="dialog" aria-modal="true" aria-labelledby="budget-ai-brief-title" className="relative w-full md:max-w-2xl md:max-h-[80vh] bg-gradient-to-b from-[#1a2744] to-[#0a1628] border border-[#2d3a52] rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col max-h-[85vh] animate-slide-up md:animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#2d3a52] shrink-0">
           <div className="flex items-center gap-3 min-w-0">
@@ -111,13 +127,13 @@ export function BudgetAIBrief({ allocation, onClose }: { allocation: Allocation;
               <Sparkles className="h-4 w-4 text-[#d4af37]" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-white font-semibold text-sm truncate">Defence Brief</h3>
+              <h3 id="budget-ai-brief-title" className="text-white font-semibold text-sm truncate">Defence Brief</h3>
               <p className="text-[#64748b] text-[10px] truncate">{allocation.line_item}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-[#d4af37] font-mono text-sm font-bold">{allocation.budget_2026_fmt}</span>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#2d3a52] text-[#64748b] hover:text-white transition-colors">
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#2d3a52] text-[#64748b] hover:text-white transition-colors" aria-label="Close">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -146,6 +162,7 @@ export function BudgetAIBrief({ allocation, onClose }: { allocation: Allocation;
               value={followUp}
               onChange={e => setFollowUp(e.target.value)}
               placeholder="Ask a follow-up question..."
+              aria-label="Ask a follow-up question about the budget brief"
               className="input-premium flex-1 text-sm py-2"
               disabled={isStreaming}
             />
@@ -153,6 +170,7 @@ export function BudgetAIBrief({ allocation, onClose }: { allocation: Allocation;
               type="submit"
               disabled={isStreaming || !followUp.trim()}
               className="px-3 py-2 rounded-lg bg-[#d4af37] text-[#0a1628] font-semibold disabled:opacity-40 hover:bg-[#f4d03f] transition-colors"
+              aria-label="Send"
             >
               <Send className="h-4 w-4" />
             </button>
@@ -242,12 +260,17 @@ function processBody(body: string): string {
       if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
         if (line.includes('---')) continue;
         if (!inTable) {
-          tableHtml += '<table class="ai-table"><tbody>';
+          tableHtml += '<table class="ai-table" aria-label="AI generated data table"><thead>';
           inTable = true;
         }
         const cells = line.split('|').filter(c => c.trim());
-        const tag = tableHtml.includes('<tr>') ? 'td' : 'th';
-        tableHtml += '<tr>' + cells.map(c => `<${tag}>${inlineMarkdown(c.trim())}</${tag}>`).join('') + '</tr>';
+        const isHeader = !tableHtml.includes('<tr>');
+        const tag = isHeader ? 'th' : 'td';
+        if (isHeader) {
+          tableHtml += '<tr>' + cells.map(c => `<th scope="col">${inlineMarkdown(c.trim())}</th>`).join('') + '</tr></thead><tbody>';
+        } else {
+          tableHtml += '<tr>' + cells.map(c => `<td>${inlineMarkdown(c.trim())}</td>`).join('') + '</tr>';
+        }
       } else {
         if (inTable) {
           tableHtml += '</tbody></table>';

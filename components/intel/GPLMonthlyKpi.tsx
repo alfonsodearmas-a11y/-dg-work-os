@@ -234,8 +234,8 @@ export function GPLMonthlyKpi() {
   // If loading
   if (loading && !latestKpis && trends.length === 0) {
     return (
-      <div className="bg-[#1a2744]/50 rounded-xl p-8 border border-[#2d3a52] text-center">
-        <RefreshCw className="w-8 h-8 text-[#64748b] animate-spin mx-auto mb-4" />
+      <div className="bg-[#1a2744]/50 rounded-xl p-8 border border-[#2d3a52] text-center" role="status" aria-label="Loading">
+        <RefreshCw className="w-8 h-8 text-[#64748b] animate-spin mx-auto mb-4" aria-hidden="true" />
         <p className="text-[#94a3b8]">Loading KPI data...</p>
       </div>
     );

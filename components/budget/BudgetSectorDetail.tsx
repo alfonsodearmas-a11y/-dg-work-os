@@ -84,8 +84,8 @@ export function BudgetSectorDetail({ sector }: { sector: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-3 p-8 justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" />
+      <div className="flex items-center gap-3 p-8 justify-center" role="status" aria-label="Loading">
+        <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" aria-hidden="true" />
         <span className="text-[#64748b] text-sm">Loading sector data...</span>
       </div>
     );
@@ -462,16 +462,16 @@ function GplDetailPanel({
         <div className="space-y-1">
           <p className="text-[#64748b] text-[10px] font-semibold uppercase tracking-wider pb-1">GPL 2026 Generation Plan (MWh)</p>
           <div className="overflow-x-auto">
-            <table className="w-full text-[11px]">
+            <table className="w-full text-[11px]" aria-label="GPL 2026 generation plan">
               <thead>
                 <tr className="text-[#64748b] text-[10px] uppercase tracking-wider">
-                  <th className="text-left py-2 px-2">Month</th>
-                  <th className="text-right py-2 px-2">Thermal</th>
-                  <th className="text-right py-2 px-2">Solar</th>
-                  <th className="text-right py-2 px-2">Wind</th>
-                  <th className="text-right py-2 px-2">Total</th>
-                  <th className="text-right py-2 px-2">Thermal %</th>
-                  <th className="text-right py-2 px-2">Solar %</th>
+                  <th scope="col" className="text-left py-2 px-2">Month</th>
+                  <th scope="col" className="text-right py-2 px-2">Thermal</th>
+                  <th scope="col" className="text-right py-2 px-2">Solar</th>
+                  <th scope="col" className="text-right py-2 px-2">Wind</th>
+                  <th scope="col" className="text-right py-2 px-2">Total</th>
+                  <th scope="col" className="text-right py-2 px-2">Thermal %</th>
+                  <th scope="col" className="text-right py-2 px-2">Solar %</th>
                 </tr>
               </thead>
               <tbody>

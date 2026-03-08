@@ -74,6 +74,7 @@ export function ProjectActivityLog({ projectId }: ProjectActivityLogProps) {
           onChange={e => setNewNote(e.target.value)}
           placeholder="Add a note..."
           rows={2}
+          aria-label="Add a note"
           className="flex-1 bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none resize-none"
         />
         <button

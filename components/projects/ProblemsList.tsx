@@ -37,7 +37,7 @@ export function ProblemsList({ projects }: ProblemsListProps) {
   }
 
   return (
-    <Table>
+    <Table ariaLabel="Flagged problem projects">
       <TableHeader>
         <TableRow>
           <TableHead>Project</TableHead>

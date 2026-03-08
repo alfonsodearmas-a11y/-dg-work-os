@@ -146,7 +146,7 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
                 <p className="text-sm font-medium text-white">Install DG Work OS</p>
                 <p className="text-xs text-[#64748b] mt-0.5">Add to your home screen for quick access</p>
               </div>
-              <button onClick={dismissInstall} className="text-[#64748b] hover:text-white transition-colors">
+              <button onClick={dismissInstall} className="text-[#64748b] hover:text-white transition-colors" aria-label="Dismiss">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -181,7 +181,7 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
                   &quot;Add to Home Screen&quot;
                 </p>
               </div>
-              <button onClick={dismissIOSInstall} className="text-[#64748b] hover:text-white transition-colors">
+              <button onClick={dismissIOSInstall} className="text-[#64748b] hover:text-white transition-colors" aria-label="Dismiss">
                 <X className="h-4 w-4" />
               </button>
             </div>

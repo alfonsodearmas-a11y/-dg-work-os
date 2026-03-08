@@ -34,8 +34,8 @@ export default function DocumentPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin"></div>
+      <div className="flex items-center justify-center py-24" role="status" aria-label="Loading">
+        <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" aria-hidden="true"></div>
       </div>
     );
   }
@@ -60,7 +60,7 @@ export default function DocumentPage() {
         href="/documents"
         className="inline-flex items-center p-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] transition-colors text-[#94a3b8] hover:text-white"
       >
-        <ArrowLeft className="h-5 w-5 mr-2" />
+        <ArrowLeft className="h-5 w-5 mr-2" aria-hidden="true" />
         Back to Documents
       </Link>
 

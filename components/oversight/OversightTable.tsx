@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X, CheckSquare, Square, ShieldAlert } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { EscalationControls } from '@/components/projects/EscalationControls';
@@ -13,6 +13,8 @@ import { HealthDot, ProgressBar } from './shared';
 export function ProjectSlidePanel({ project, onClose, userRole, onRefreshList }: {
   project: Project; onClose: () => void; userRole: string; onRefreshList: () => void;
 }) {
+  const slidePanelRef = useRef<HTMLDivElement>(null);
+
   // Lock body scroll on mobile when panel is open
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -20,15 +22,30 @@ export function ProjectSlidePanel({ project, onClose, userRole, onRefreshList }:
     return () => { document.body.style.overflow = prev; };
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (slidePanelRef.current) {
+      const focusable = slidePanelRef.current.querySelector<HTMLElement>('button, input, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus();
+    }
+  }, []);
+
   const ss = STATUS_STYLES[project.status] || STATUS_STYLES['Unknown'];
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm touch-none" onClick={onClose} />
-      <div className="fixed inset-0 md:inset-auto md:right-0 md:top-0 md:bottom-0 z-50 w-full md:max-w-xl bg-[#0f1d32] md:border-l border-[#2d3a52] shadow-2xl overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm touch-none" onClick={onClose} aria-hidden="true" />
+      <div ref={slidePanelRef} role="dialog" aria-modal="true" aria-labelledby="oversight-project-panel-title" className="fixed inset-0 md:inset-auto md:right-0 md:top-0 md:bottom-0 z-50 w-full md:max-w-xl bg-[#0f1d32] md:border-l border-[#2d3a52] shadow-2xl overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
         <div className="sticky top-0 z-10 bg-[#0f1d32] border-b border-[#2d3a52] px-4 md:px-5 py-4 flex items-center justify-between">
-          <h2 className="text-white font-semibold text-lg truncate pr-4">Project Detail</h2>
-          <button onClick={onClose} className="text-[#64748b] hover:text-white"><X className="h-5 w-5" /></button>
+          <h2 id="oversight-project-panel-title" className="text-white font-semibold text-lg truncate pr-4">Project Detail</h2>
+          <button onClick={onClose} className="text-[#64748b] hover:text-white" aria-label="Close"><X className="h-5 w-5" /></button>
         </div>
         <div className="p-4 md:p-5 space-y-5 md:space-y-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
           <EscalationControls
@@ -139,7 +156,7 @@ export function OversightProjectTable({ projects, loadingProjects, isMobile, sel
           {/* Select all header */}
           <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#2d3a52]">
             <button onClick={onToggleSelectAll} className="flex items-center gap-2 text-[#64748b] hover:text-white text-xs">
-              {selectedIds.size === projects.length && projects.length > 0 ? <CheckSquare className="h-4 w-4 text-[#d4af37]" /> : <Square className="h-4 w-4" />}
+              {selectedIds.size === projects.length && projects.length > 0 ? <CheckSquare className="h-4 w-4 text-[#d4af37]" aria-hidden="true" /> : <Square className="h-4 w-4" aria-hidden="true" />}
               Select all
             </button>
           </div>
@@ -161,7 +178,7 @@ export function OversightProjectTable({ projects, loadingProjects, isMobile, sel
                 return (
                   <div key={p.id} onClick={() => onSelectProject(p)} className={`p-3 cursor-pointer transition-colors active:bg-[#1a2744]/60 ${p.escalated ? 'bg-red-500/5 border-l-2 border-l-red-500' : ''} ${isSelected ? 'bg-[#d4af37]/5' : ''}`}>
                     <div className="flex items-start gap-2.5">
-                      <button onClick={e => { e.stopPropagation(); onToggleSelect(p.id); }} className="text-[#64748b] hover:text-white mt-0.5 shrink-0">
+                      <button onClick={e => { e.stopPropagation(); onToggleSelect(p.id); }} className="text-[#64748b] hover:text-white mt-0.5 shrink-0" aria-label={isSelected ? 'Deselect project' : 'Select project'}>
                         {isSelected ? <CheckSquare className="h-4 w-4 text-[#d4af37]" /> : <Square className="h-4 w-4" />}
                       </button>
                       <div className="flex-1 min-w-0">
@@ -203,18 +220,18 @@ export function OversightProjectTable({ projects, loadingProjects, isMobile, sel
       /* ── Desktop table layout ── */
       <div className="card-premium overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" aria-label="Oversight projects">
             <thead>
               <tr className="border-b border-[#2d3a52] text-[#64748b] text-xs uppercase">
-                <th className="px-3 py-3 text-center font-medium w-10"><button onClick={onToggleSelectAll} className="text-[#64748b] hover:text-white">{selectedIds.size === projects.length && projects.length > 0 ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}</button></th>
-                <th className="px-3 py-3 text-left font-medium">Status</th>
-                <th className="px-3 py-3 text-left font-medium">Health</th>
-                <th className="px-4 py-3 text-left font-medium">Project Name</th>
-                <th className="px-3 py-3 text-left font-medium">Agency</th>
-                <th className="px-3 py-3 text-left font-medium">Region</th>
-                <th className="px-3 py-3 text-right font-medium">Value</th>
-                <th className="px-3 py-3 text-left font-medium">End Date</th>
-                <th className="px-3 py-3 text-left font-medium">Completion</th>
+                <th scope="col" className="px-3 py-3 text-center font-medium w-10"><button onClick={onToggleSelectAll} className="text-[#64748b] hover:text-white" aria-label="Select all">{selectedIds.size === projects.length && projects.length > 0 ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}</button></th>
+                <th scope="col" className="px-3 py-3 text-left font-medium">Status</th>
+                <th scope="col" className="px-3 py-3 text-left font-medium">Health</th>
+                <th scope="col" className="px-4 py-3 text-left font-medium">Project Name</th>
+                <th scope="col" className="px-3 py-3 text-left font-medium">Agency</th>
+                <th scope="col" className="px-3 py-3 text-left font-medium">Region</th>
+                <th scope="col" className="px-3 py-3 text-right font-medium">Value</th>
+                <th scope="col" className="px-3 py-3 text-left font-medium">End Date</th>
+                <th scope="col" className="px-3 py-3 text-left font-medium">Completion</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#2d3a52]/50">
@@ -226,7 +243,7 @@ export function OversightProjectTable({ projects, loadingProjects, isMobile, sel
                   const displayName = p.short_name || p.project_name || '-';
                   return (
                     <tr key={p.id} onClick={() => onSelectProject(p)} className={`hover:bg-[#1a2744]/40 cursor-pointer transition-colors ${p.escalated ? 'bg-red-500/5 border-l-2 border-l-red-500' : ''} ${isSelected ? 'bg-[#d4af37]/5' : ''}`}>
-                      <td className="px-3 py-3 text-center" onClick={e => e.stopPropagation()}><button onClick={() => onToggleSelect(p.id)} className="text-[#64748b] hover:text-white">{isSelected ? <CheckSquare className="h-4 w-4 text-[#d4af37]" /> : <Square className="h-4 w-4" />}</button></td>
+                      <td className="px-3 py-3 text-center" onClick={e => e.stopPropagation()}><button onClick={() => onToggleSelect(p.id)} className="text-[#64748b] hover:text-white" aria-label={isSelected ? 'Deselect project' : 'Select project'}>{isSelected ? <CheckSquare className="h-4 w-4 text-[#d4af37]" /> : <Square className="h-4 w-4" />}</button></td>
                       <td className="px-3 py-3"><div className="flex items-center gap-1.5 flex-wrap"><Badge variant={ss.variant}>{ss.label}</Badge>{p.escalated && <ShieldAlert className="h-3.5 w-3.5 text-red-400" />}</div></td>
                       <td className="px-3 py-3"><HealthDot health={p.health} /></td>
                       <td className="px-4 py-3"><span className="text-white truncate block max-w-[300px]" title={p.project_name || ''}>{displayName}</span></td>

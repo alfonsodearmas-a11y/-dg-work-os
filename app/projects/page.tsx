@@ -292,6 +292,22 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const uploadModalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (uploadModalRef.current) {
+      const focusable = uploadModalRef.current.querySelector<HTMLElement>('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus();
+    }
+  }, []);
 
   async function handleFile(f: File) {
     if (f.size > MAX_FILE_SIZE) { setError('File too large. Maximum 4.5MB.'); return; }
@@ -309,17 +325,17 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="card-premium p-4 md:p-6 w-full max-w-lg md:mx-4 rounded-t-2xl md:rounded-2xl max-h-[90vh] md:max-h-none overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden="true">
+      <div ref={uploadModalRef} role="dialog" aria-modal="true" aria-labelledby="upload-project-modal-title" className="card-premium p-4 md:p-6 w-full max-w-lg md:mx-4 rounded-t-2xl md:rounded-2xl max-h-[90vh] md:max-h-none overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">Upload Project Listings</h2>
-          <button onClick={onClose} className="text-[#64748b] hover:text-white"><X className="h-5 w-5" /></button>
+          <h2 id="upload-project-modal-title" className="text-lg font-semibold text-white">Upload Project Listings</h2>
+          <button onClick={onClose} className="text-[#64748b] hover:text-white" aria-label="Close"><X className="h-5 w-5" /></button>
         </div>
         <label className="upload-zone p-8 text-center cursor-pointer block">
-          <input type="file" accept=".xlsx,.xls" className="hidden" onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} disabled={uploading} />
+          <input type="file" accept=".xlsx,.xls" className="hidden" onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} disabled={uploading} aria-label="Upload project Excel file" />
           {uploading ? (
-            <div className="flex flex-col items-center">
-              <Loader2 className="h-10 w-10 text-[#d4af37] animate-spin mb-3" />
+            <div className="flex flex-col items-center" role="status" aria-label="Processing">
+              <Loader2 className="h-10 w-10 text-[#d4af37] animate-spin mb-3" aria-hidden="true" />
               <p className="text-white font-medium">Processing...</p>
             </div>
           ) : (
@@ -367,6 +383,22 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
 function EscalationModal({ project, onClose, onDone }: { project: Project; onClose: () => void; onDone: () => void }) {
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const escalationModalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (escalationModalRef.current) {
+      const focusable = escalationModalRef.current.querySelector<HTMLElement>('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus();
+    }
+  }, []);
 
   async function handleSubmit() {
     if (!reason.trim()) return;
@@ -386,14 +418,14 @@ function EscalationModal({ project, onClose, onDone }: { project: Project; onClo
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="card-premium p-6 w-full max-w-md mx-4 rounded-2xl" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden="true">
+      <div ref={escalationModalRef} role="dialog" aria-modal="true" aria-labelledby="projects-escalation-modal-title" className="card-premium p-6 w-full max-w-md mx-4 rounded-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
             <ShieldAlert className="h-5 w-5 text-red-400" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-white">Escalate Project</h2>
+            <h2 id="projects-escalation-modal-title" className="text-lg font-semibold text-white">Escalate Project</h2>
             <p className="text-[#64748b] text-xs line-clamp-1">{project.project_name}</p>
           </div>
         </div>
@@ -401,6 +433,8 @@ function EscalationModal({ project, onClose, onDone }: { project: Project; onClo
           value={reason}
           onChange={e => setReason(e.target.value)}
           placeholder="Why does this project need escalation?"
+          aria-label="Escalation reason"
+          aria-required="true"
           className="w-full bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-3 text-sm text-white placeholder-[#64748b] focus:border-red-400 focus:outline-none resize-none h-28"
         />
         <div className="flex items-center justify-end gap-3 mt-4">
@@ -419,6 +453,22 @@ function EscalationModal({ project, onClose, onDone }: { project: Project; onClo
 function SaveFilterModal({ filterParams, onClose, onSaved }: { filterParams: Record<string, any>; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
+  const saveFilterModalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (saveFilterModalRef.current) {
+      const focusable = saveFilterModalRef.current.querySelector<HTMLElement>('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus();
+    }
+  }, []);
 
   async function handleSave() {
     if (!name.trim()) return;
@@ -436,14 +486,16 @@ function SaveFilterModal({ filterParams, onClose, onSaved }: { filterParams: Rec
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="card-premium p-6 w-full max-w-sm mx-4 rounded-2xl" onClick={e => e.stopPropagation()}>
-        <h2 className="text-lg font-semibold text-white mb-4">Save Filter Preset</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden="true">
+      <div ref={saveFilterModalRef} role="dialog" aria-modal="true" aria-labelledby="projects-save-filter-modal-title" className="card-premium p-6 w-full max-w-sm mx-4 rounded-2xl" onClick={e => e.stopPropagation()}>
+        <h2 id="projects-save-filter-modal-title" className="text-lg font-semibold text-white mb-4">Save Filter Preset</h2>
         <input
           type="text"
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="e.g. GPL Delayed Projects"
+          aria-label="Filter preset name"
+          aria-required="true"
           className="w-full bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2.5 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none"
           onKeyDown={e => e.key === 'Enter' && handleSave()}
           autoFocus
@@ -481,6 +533,22 @@ function ProjectSlidePanel({
   const [newNote, setNewNote] = useState('');
   const [addingNote, setAddingNote] = useState(false);
   const canDeescalate = ['dg', 'minister', 'ps'].includes(userRole);
+  const projectSlidePanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (projectSlidePanelRef.current) {
+      const focusable = projectSlidePanelRef.current.querySelector<HTMLElement>('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus();
+    }
+  }, []);
 
   useEffect(() => {
     // Fetch notes
@@ -540,12 +608,12 @@ function ProjectSlidePanel({
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-xl bg-[#0f1d32] border-l border-[#2d3a52] shadow-2xl overflow-y-auto">
+      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div ref={projectSlidePanelRef} role="dialog" aria-modal="true" aria-labelledby="projects-slide-panel-title" className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-xl bg-[#0f1d32] border-l border-[#2d3a52] shadow-2xl overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-[#0f1d32] border-b border-[#2d3a52] px-5 py-4 flex items-center justify-between">
-          <h2 className="text-white font-semibold text-lg truncate pr-4">Project Detail</h2>
-          <button onClick={onClose} className="text-[#64748b] hover:text-white"><X className="h-5 w-5" /></button>
+          <h2 id="projects-slide-panel-title" className="text-white font-semibold text-lg truncate pr-4">Project Detail</h2>
+          <button onClick={onClose} className="text-[#64748b] hover:text-white" aria-label="Close"><X className="h-5 w-5" /></button>
         </div>
 
         <div className="p-5 space-y-6">
@@ -715,6 +783,7 @@ function ProjectSlidePanel({
                 onChange={e => setNewNote(e.target.value)}
                 placeholder="Add a note..."
                 rows={2}
+                aria-label="Add a note"
                 className="flex-1 bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none resize-none"
               />
               <button
@@ -967,7 +1036,7 @@ function BulkActionBar({
       </button>
 
       {/* Clear */}
-      <button onClick={onClear} className="text-[#64748b] hover:text-white">
+      <button onClick={onClear} className="text-[#64748b] hover:text-white" aria-label="Clear selection">
         <X className="h-4 w-4" />
       </button>
     </div>
@@ -1265,11 +1334,11 @@ export default function ProjectsPage() {
           <p className="text-[#64748b] mt-1 text-xs md:text-sm">Capital projects from oversight.gov.gy</p>
         </div>
         <div className="flex items-center gap-2 md:gap-3 shrink-0">
-          <button onClick={handleRefresh} className="btn-navy flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2">
-            <RefreshCw className="h-4 w-4" /><span className="hidden md:inline">Refresh</span>
+          <button onClick={handleRefresh} className="btn-navy flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2" aria-label="Refresh">
+            <RefreshCw className="h-4 w-4" aria-hidden="true" /><span className="hidden md:inline">Refresh</span>
           </button>
-          <button onClick={() => setShowUpload(true)} className="btn-gold flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2">
-            <Upload className="h-4 w-4" /><span className="hidden md:inline">Upload Excel</span>
+          <button onClick={() => setShowUpload(true)} className="btn-gold flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2" aria-label="Upload Excel">
+            <Upload className="h-4 w-4" aria-hidden="true" /><span className="hidden md:inline">Upload Excel</span>
           </button>
         </div>
       </div>
@@ -1412,6 +1481,7 @@ export default function ProjectsPage() {
                   placeholder="Min $"
                   value={budgetMin}
                   onChange={e => setBudgetMin(e.target.value)}
+                  aria-label="Minimum budget"
                   className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-2 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none w-24"
                 />
                 <span className="text-[#64748b] text-xs">-</span>
@@ -1420,6 +1490,7 @@ export default function ProjectsPage() {
                   placeholder="Max $"
                   value={budgetMax}
                   onChange={e => setBudgetMax(e.target.value)}
+                  aria-label="Maximum budget"
                   className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-2 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none w-24"
                 />
               </div>
@@ -1432,6 +1503,7 @@ export default function ProjectsPage() {
                   value={contractor}
                   onChange={e => setContractor(e.target.value)}
                   placeholder="Contractor..."
+                  aria-label="Filter by contractor"
                   className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none w-40"
                 />
                 <datalist id="contractor-list">
@@ -1447,6 +1519,7 @@ export default function ProjectsPage() {
                   placeholder="Search projects, contractors, IDs..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
+                  aria-label="Search projects"
                   className="w-full bg-[#0a1628] border border-[#2d3a52] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none"
                 />
               </div>
@@ -1457,20 +1530,22 @@ export default function ProjectsPage() {
               <select
                 value={dateField}
                 onChange={e => setDateField(e.target.value)}
+                aria-label="Date field"
                 className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none"
               >
                 <option value="project_end_date">End Date</option>
                 <option value="start_date">Start Date</option>
                 <option value="updated_at">Last Updated</option>
               </select>
-              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none" />
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} aria-label="Date from" className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none" />
               <span className="text-[#64748b] text-xs">to</span>
-              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none" />
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} aria-label="Date to" className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none" />
 
               {/* Sort */}
               <select
                 value={sort}
                 onChange={e => setSort(e.target.value)}
+                aria-label="Sort by"
                 className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none"
               >
                 <option value="value">Sort: Value</option>
@@ -1523,7 +1598,7 @@ export default function ProjectsPage() {
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 text-sm">
               <Filter className="h-3.5 w-3.5 text-[#d4af37]" />
               <span className="text-[#d4af37]">Showing {summary?.total_projects || totalCount} projects</span>
-              <button onClick={clearFilters} className="ml-1 text-[#d4af37]/60 hover:text-[#d4af37]"><X className="h-3.5 w-3.5" /></button>
+              <button onClick={clearFilters} className="ml-1 text-[#d4af37]/60 hover:text-[#d4af37]" aria-label="Clear filters"><X className="h-3.5 w-3.5" /></button>
             </div>
           )}
           {!hasActiveFilters && summary && (
@@ -1549,6 +1624,7 @@ export default function ProjectsPage() {
             <select
               value={timelineGroupBy}
               onChange={e => setTimelineGroupBy(e.target.value as 'agency' | 'region')}
+              aria-label="Group timeline by"
               className="bg-transparent text-xs text-[#94a3b8] ml-2 focus:outline-none"
             >
               <option value="agency">By Agency</option>
@@ -1625,24 +1701,24 @@ export default function ProjectsPage() {
             /* Desktop: Full Table */
             <div className="card-premium overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm" aria-label="PSIP projects">
                   <thead>
                     <tr className="border-b border-[#2d3a52] text-[#64748b] text-xs uppercase">
-                      <th className="px-3 py-3 text-center font-medium w-10">
-                        <button onClick={toggleSelectAll} className="text-[#64748b] hover:text-white">
+                      <th scope="col" className="px-3 py-3 text-center font-medium w-10">
+                        <button onClick={toggleSelectAll} className="text-[#64748b] hover:text-white" aria-label="Select all">
                           {selectedIds.size === projects.length && projects.length > 0 ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
                         </button>
                       </th>
-                      <th className="px-3 py-3 text-left font-medium">Status</th>
-                      <th className="px-3 py-3 text-left font-medium">Health</th>
-                      <th className="px-4 py-3 text-left font-medium">Project Name</th>
-                      <th className="px-3 py-3 text-left font-medium">Agency</th>
-                      <th className="px-3 py-3 text-left font-medium">Region</th>
-                      <th className="px-3 py-3 text-left font-medium">Contractor</th>
-                      <th className="px-3 py-3 text-right font-medium">Value</th>
-                      <th className="px-3 py-3 text-left font-medium">Start Date</th>
-                      <th className="px-3 py-3 text-left font-medium">End Date</th>
-                      <th className="px-3 py-3 text-left font-medium">Completion</th>
+                      <th scope="col" className="px-3 py-3 text-left font-medium">Status</th>
+                      <th scope="col" className="px-3 py-3 text-left font-medium">Health</th>
+                      <th scope="col" className="px-4 py-3 text-left font-medium">Project Name</th>
+                      <th scope="col" className="px-3 py-3 text-left font-medium">Agency</th>
+                      <th scope="col" className="px-3 py-3 text-left font-medium">Region</th>
+                      <th scope="col" className="px-3 py-3 text-left font-medium">Contractor</th>
+                      <th scope="col" className="px-3 py-3 text-right font-medium">Value</th>
+                      <th scope="col" className="px-3 py-3 text-left font-medium">Start Date</th>
+                      <th scope="col" className="px-3 py-3 text-left font-medium">End Date</th>
+                      <th scope="col" className="px-3 py-3 text-left font-medium">Completion</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#2d3a52]/50">

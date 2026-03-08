@@ -333,6 +333,7 @@ export function MeetingRecorder({ title, attendees = [], onComplete }: MeetingRe
         <button
           onClick={stopRecording}
           className="w-16 h-16 rounded-full bg-red-500/20 border-2 border-red-500 flex items-center justify-center hover:bg-red-500/30 transition-colors group"
+          aria-label="Stop recording"
         >
           <Square className="h-6 w-6 text-red-400 group-hover:scale-110 transition-transform" />
         </button>

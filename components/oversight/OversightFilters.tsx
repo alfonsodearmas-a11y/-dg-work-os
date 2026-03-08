@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   SlidersHorizontal, ChevronDown, Search, X, BookmarkPlus, Bookmark, Loader2,
 } from 'lucide-react';
@@ -9,8 +9,25 @@ import type { SavedFilter } from './types';
 import { MultiSelect } from './shared';
 
 export function SaveFilterModal({ filterParams, onClose, onSaved }: { filterParams: Record<string, any>; onClose: () => void; onSaved: () => void }) {
+  const saveFilterRef = useRef<HTMLDivElement>(null);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (saveFilterRef.current) {
+      const focusable = saveFilterRef.current.querySelector<HTMLElement>('input, button, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus();
+    }
+  }, []);
+
   async function handleSave() {
     if (!name.trim()) return;
     setSaving(true);
@@ -23,9 +40,9 @@ export function SaveFilterModal({ filterParams, onClose, onSaved }: { filterPara
   }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="card-premium p-6 w-full max-w-sm mx-4 rounded-2xl" onClick={e => e.stopPropagation()}>
-        <h2 className="text-lg font-semibold text-white mb-4">Save Filter Preset</h2>
-        <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. GPL Delayed Projects" className="w-full bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2.5 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none" onKeyDown={e => e.key === 'Enter' && handleSave()} autoFocus />
+      <div ref={saveFilterRef} role="dialog" aria-modal="true" aria-labelledby="save-filter-modal-title" className="card-premium p-6 w-full max-w-sm mx-4 rounded-2xl" onClick={e => e.stopPropagation()}>
+        <h2 id="save-filter-modal-title" className="text-lg font-semibold text-white mb-4">Save Filter Preset</h2>
+        <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. GPL Delayed Projects" aria-label="Filter preset name" aria-required="true" className="w-full bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2.5 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none" onKeyDown={e => e.key === 'Enter' && handleSave()} autoFocus />
         <div className="flex justify-end gap-3 mt-4">
           <button onClick={onClose} className="btn-navy px-4 py-2 text-sm">Cancel</button>
           <button onClick={handleSave} disabled={!name.trim() || saving} className="btn-gold px-4 py-2 text-sm disabled:opacity-40">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}</button>
@@ -108,27 +125,27 @@ export function OversightFilterPanel({
             <MultiSelect label="Region" options={REGION_OPTIONS} selected={regions} onChange={onRegionsChange} />
             <MultiSelect label="Health" options={HEALTH_OPTIONS.map(h => ({ value: h.value, label: h.label }))} selected={healths} onChange={onHealthsChange} renderOption={opt => <span className="flex items-center gap-2 text-white"><span className={`w-2 h-2 rounded-full ${HEALTH_DOT[opt.value] || ''}`} />{opt.label}</span>} />
             <div className="flex items-center gap-1 col-span-2 md:col-span-1">
-              <input type="number" placeholder="Min $" value={budgetMin} onChange={e => onBudgetMinChange(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-2 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none w-full md:w-24" />
+              <input type="number" placeholder="Min $" value={budgetMin} onChange={e => onBudgetMinChange(e.target.value)} aria-label="Minimum budget" className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-2 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none w-full md:w-24" />
               <span className="text-[#64748b] text-xs">-</span>
-              <input type="number" placeholder="Max $" value={budgetMax} onChange={e => onBudgetMaxChange(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-2 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none w-full md:w-24" />
+              <input type="number" placeholder="Max $" value={budgetMax} onChange={e => onBudgetMaxChange(e.target.value)} aria-label="Maximum budget" className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-2 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none w-full md:w-24" />
             </div>
-            <input type="text" list="contractor-list" value={contractor} onChange={e => onContractorChange(e.target.value)} placeholder="Contractor..." className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none col-span-2 md:col-span-1 md:w-40" />
+            <input type="text" list="contractor-list" value={contractor} onChange={e => onContractorChange(e.target.value)} placeholder="Contractor..." aria-label="Filter by contractor" className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none col-span-2 md:col-span-1 md:w-40" />
             <datalist id="contractor-list">{contractors.slice(0, 50).map(c => <option key={c} value={c} />)}</datalist>
             <div className="relative col-span-2 md:col-span-1 md:flex-1 md:min-w-[180px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
-              <input type="text" placeholder="Search projects..." value={search} onChange={e => onSearchChange(e.target.value)} className="w-full bg-[#0a1628] border border-[#2d3a52] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none" />
+              <input type="text" placeholder="Search projects..." value={search} onChange={e => onSearchChange(e.target.value)} aria-label="Search projects" className="w-full bg-[#0a1628] border border-[#2d3a52] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none" />
             </div>
           </div>
           <div className="grid grid-cols-2 md:flex md:flex-wrap md:items-center gap-3">
-            <select value={dateField} onChange={e => onDateFieldChange(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none"><option value="project_end_date">End Date</option><option value="start_date">Start Date</option><option value="updated_at">Last Updated</option></select>
-            <select value={sort} onChange={e => onSortChange(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none"><option value="value">Sort: Value</option><option value="completion">Sort: Completion %</option><option value="end_date">Sort: End Date</option><option value="agency">Sort: Agency</option><option value="name">Sort: Name</option><option value="health">Sort: Health</option></select>
-            <input type="date" value={dateFrom} onChange={e => onDateFromChange(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none" />
-            <input type="date" value={dateTo} onChange={e => onDateToChange(e.target.value)} className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none" />
+            <select value={dateField} onChange={e => onDateFieldChange(e.target.value)} aria-label="Date field" className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none"><option value="project_end_date">End Date</option><option value="start_date">Start Date</option><option value="updated_at">Last Updated</option></select>
+            <select value={sort} onChange={e => onSortChange(e.target.value)} aria-label="Sort by" className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none"><option value="value">Sort: Value</option><option value="completion">Sort: Completion %</option><option value="end_date">Sort: End Date</option><option value="agency">Sort: Agency</option><option value="name">Sort: Name</option><option value="health">Sort: Health</option></select>
+            <input type="date" value={dateFrom} onChange={e => onDateFromChange(e.target.value)} aria-label="Date from" className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none" />
+            <input type="date" value={dateTo} onChange={e => onDateToChange(e.target.value)} aria-label="Date to" className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none" />
             <div className="hidden md:block flex-1" />
             {hasActiveFilters && (
               <>
-                <button onClick={onShowSaveFilter} className="text-[#d4af37] text-xs flex items-center gap-1 hover:text-[#e5c04b]"><BookmarkPlus className="h-3.5 w-3.5" /> Save Preset</button>
-                <button onClick={onClearFilters} className="text-[#64748b] hover:text-white text-xs flex items-center gap-1"><X className="h-3.5 w-3.5" /> Clear All</button>
+                <button onClick={onShowSaveFilter} className="text-[#d4af37] text-xs flex items-center gap-1 hover:text-[#e5c04b]"><BookmarkPlus className="h-3.5 w-3.5" aria-hidden="true" /> Save Preset</button>
+                <button onClick={onClearFilters} className="text-[#64748b] hover:text-white text-xs flex items-center gap-1"><X className="h-3.5 w-3.5" aria-hidden="true" /> Clear All</button>
               </>
             )}
           </div>
@@ -138,7 +155,7 @@ export function OversightFilterPanel({
               {savedFilters.map(sf => (
                 <div key={sf.id} className="flex items-center gap-1 bg-[#0a1628] border border-[#2d3a52] rounded-lg px-2 py-1">
                   <button onClick={() => onApplySavedFilter(sf)} className="text-[#d4af37] text-xs hover:text-[#e5c04b]">{sf.filter_name}</button>
-                  <button onClick={() => onDeleteSavedFilter(sf.id)} className="text-[#4a5568] hover:text-red-400"><X className="h-3 w-3" /></button>
+                  <button onClick={() => onDeleteSavedFilter(sf.id)} className="text-[#4a5568] hover:text-red-400" aria-label="Delete preset"><X className="h-3 w-3" /></button>
                 </div>
               ))}
             </div>

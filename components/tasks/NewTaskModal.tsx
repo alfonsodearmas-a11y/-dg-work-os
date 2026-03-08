@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useEffect } from 'react';
 import { Plus, X, FileText, Loader2 } from 'lucide-react';
 import { TaskTemplate } from '@/lib/task-types';
 
@@ -62,12 +63,32 @@ export function NewTaskModal({
   onLoadTemplates,
   onApplyTemplate,
 }: NewTaskModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const el = dialogRef.current;
+    if (el) {
+      const focusable = el.querySelector<HTMLElement>('input, button, select, textarea, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const formContent = (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-white font-medium text-sm">New Task</h3>
+        <h3 id="new-task-modal-title" className="text-white font-medium text-sm">New Task</h3>
         <div className="flex items-center gap-2">
           <button
             onClick={onLoadTemplates}
@@ -79,6 +100,7 @@ export function NewTaskModal({
           </button>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="p-1.5 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
             style={{ minWidth: isMobile ? 44 : undefined, minHeight: isMobile ? 44 : undefined }}
           >
@@ -120,6 +142,8 @@ export function NewTaskModal({
         onChange={(e) => onTitleChange(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && onSubmit()}
         autoFocus
+        aria-label="Task title"
+        aria-required="true"
         className="w-full px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37]"
         style={{ minHeight: isMobile ? 44 : undefined, fontSize: isMobile ? 16 : undefined }}
       />
@@ -129,6 +153,7 @@ export function NewTaskModal({
         value={description}
         onChange={(e) => onDescriptionChange(e.target.value)}
         rows={2}
+        aria-label="Task description"
         className="w-full px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] resize-none"
         style={{ minHeight: isMobile ? 80 : undefined, fontSize: isMobile ? 16 : undefined }}
       />
@@ -137,6 +162,7 @@ export function NewTaskModal({
         <select
           value={agency}
           onChange={(e) => onAgencyChange(e.target.value)}
+          aria-label="Agency"
           className="px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
           style={{ minHeight: isMobile ? 44 : undefined }}
         >
@@ -149,6 +175,7 @@ export function NewTaskModal({
         <select
           value={priority}
           onChange={(e) => onPriorityChange(e.target.value)}
+          aria-label="Priority"
           className="px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
           style={{ minHeight: isMobile ? 44 : undefined }}
         >
@@ -161,6 +188,7 @@ export function NewTaskModal({
           type="date"
           value={dueDate}
           onChange={(e) => onDueDateChange(e.target.value)}
+          aria-label="Due date"
           className="px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
           style={{ minHeight: isMobile ? 44 : undefined }}
         />
@@ -168,6 +196,7 @@ export function NewTaskModal({
         <select
           value={assignee}
           onChange={(e) => onAssigneeChange(e.target.value)}
+          aria-label="Assignee"
           className="px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
           style={{ minHeight: isMobile ? 44 : undefined }}
         >
@@ -182,14 +211,15 @@ export function NewTaskModal({
 
   if (isMobile) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-[#0a1628]">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="new-task-mobile-title" className="fixed inset-0 z-50 flex flex-col bg-[#0a1628]">
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-9 h-1 rounded-full bg-white/20" />
         </div>
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d3a52]">
-          <h2 className="text-lg font-semibold text-white">New Task</h2>
+          <h2 id="new-task-mobile-title" className="text-lg font-semibold text-white">New Task</h2>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="p-2 rounded-lg text-[#64748b] hover:text-white"
             style={{ minWidth: 44, minHeight: 44, touchAction: 'manipulation' }}
           >
@@ -215,7 +245,7 @@ export function NewTaskModal({
   }
 
   return (
-    <div className="p-4 rounded-xl bg-[#1a2744] border border-[#d4af37]/50">
+    <div ref={dialogRef} role="dialog" aria-labelledby="new-task-modal-title" className="p-4 rounded-xl bg-[#1a2744] border border-[#d4af37]/50">
       {formContent}
       <div className="flex justify-end gap-2 mt-3">
         <button

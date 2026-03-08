@@ -126,6 +126,7 @@ export function ActivityLogPanel({ hasPermission }: Props) {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search activity..."
+          aria-label="Search activity log"
           className="w-full pl-9 pr-4 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
         />
       </div>
@@ -135,6 +136,7 @@ export function ActivityLogPanel({ hasPermission }: Props) {
           <select
             value={filterAction}
             onChange={e => { setFilterAction(e.target.value); setOffset(0); }}
+            aria-label="Filter by action"
             className="px-3 py-1.5 bg-[#0a1628] border border-[#2d3a52] rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
           >
             <option value="">All Actions</option>
@@ -145,6 +147,7 @@ export function ActivityLogPanel({ hasPermission }: Props) {
           <select
             value={filterResult}
             onChange={e => setFilterResult(e.target.value)}
+            aria-label="Filter by result"
             className="px-3 py-1.5 bg-[#0a1628] border border-[#2d3a52] rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
           >
             <option value="">All Results</option>
@@ -166,8 +169,8 @@ export function ActivityLogPanel({ hasPermission }: Props) {
       {/* Log entries */}
       <div className="card-premium overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="w-6 h-6 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+          <div className="flex items-center justify-center py-12" role="status" aria-label="Loading">
+            <div className="w-6 h-6 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
           </div>
         ) : filteredLogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-[#64748b]">

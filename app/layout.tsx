@@ -49,6 +49,7 @@ export default function RootLayout({
         <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" href="/splash/splash-750x1334.png" />
       </head>
       <body suppressHydrationWarning className={`${outfit.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-white focus:text-black">Skip to main content</a>
         <AuthSessionProvider>
           <PWAWrapper>
             <AppShell>{children}</AppShell>

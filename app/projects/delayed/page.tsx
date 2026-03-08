@@ -37,7 +37,7 @@ export default function DelayedProjectsPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-start gap-4">
-        <Link href="/projects" className="p-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] transition-colors mt-1">
+        <Link href="/projects" className="p-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] transition-colors mt-1" aria-label="Back">
           <ArrowLeft className="h-5 w-5 text-[#94a3b8]" />
         </Link>
         <div>
@@ -50,8 +50,8 @@ export default function DelayedProjectsPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-24">
-          <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+        <div className="flex items-center justify-center py-24" role="status" aria-label="Loading">
+          <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
         </div>
       ) : projects.length === 0 ? (
         <div className="card-premium p-12 text-center">

@@ -129,6 +129,7 @@ export function TaskListView({
                 tasks.forEach(t => !selectedIds.has(t.id) && onToggleSelect(t.id));
               }
             }}
+            aria-label="Select all tasks"
             className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
           />
         </div>
@@ -214,6 +215,7 @@ export function TaskListView({
                     checked={isSelected}
                     onChange={(e) => { e.stopPropagation(); onToggleSelect(task.id); }}
                     onClick={(e) => e.stopPropagation()}
+                    aria-label={`Select task: ${task.title}`}
                     className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
                   />
                 </div>
@@ -260,6 +262,7 @@ export function TaskListView({
                     checked={isSelected}
                     onChange={(e) => { e.stopPropagation(); onToggleSelect(task.id); }}
                     onClick={(e) => e.stopPropagation()}
+                    aria-label={`Select task: ${task.title}`}
                     className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer shrink-0"
                   />
                 )}

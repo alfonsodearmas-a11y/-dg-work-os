@@ -34,7 +34,7 @@ function formatCurrency(value: number): string {
 
 export function AgencySummary({ data }: AgencySummaryProps) {
   return (
-    <Table>
+    <Table ariaLabel="Agency project summary">
       <TableHeader>
         <TableRow>
           <TableHead>Agency</TableHead>

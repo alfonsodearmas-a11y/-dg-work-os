@@ -136,7 +136,7 @@ export function GWIAnalysisPanel() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center py-20"><div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" /></div>;
+    return <div className="flex items-center justify-center py-20" role="status" aria-label="Loading"><div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" /></div>;
   }
 
   if (!analysis) {
@@ -233,13 +233,13 @@ export function GWIAnalysisPanel() {
             <h3 className="text-sm font-semibold text-white">Community Clusters (5+ pending)</h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="GWI community clusters">
               <thead>
                 <tr className="text-[#64748b] text-xs uppercase tracking-wider border-b border-[#2d3a52]">
-                  <th className="text-left py-2 pr-4">Village/Community</th>
-                  <th className="text-left py-2 px-3">Region</th>
-                  <th className="text-right py-2 px-3">Pending</th>
-                  <th className="text-right py-2 pl-3">Avg Wait</th>
+                  <th scope="col" className="text-left py-2 pr-4">Village/Community</th>
+                  <th scope="col" className="text-left py-2 px-3">Region</th>
+                  <th scope="col" className="text-right py-2 px-3">Pending</th>
+                  <th scope="col" className="text-right py-2 pl-3">Avg Wait</th>
                 </tr>
               </thead>
               <tbody>
@@ -285,6 +285,7 @@ export function GWIAnalysisPanel() {
               placeholder="Search name, reference, village..."
               value={searchInput}
               onChange={e => handleSearchChange(e.target.value)}
+              aria-label="Search GWI applications"
               className="w-full pl-10 pr-10 py-3 sm:py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-base sm:text-sm placeholder:text-[#64748b] focus:border-[#d4af37] focus:outline-none"
             />
             {searchInput && (
@@ -295,6 +296,7 @@ export function GWIAnalysisPanel() {
           </div>
           <div className="relative">
             <select value={regionFilter} onChange={e => setRegionFilter(e.target.value)}
+              aria-label="Filter by region"
               className="appearance-none w-full pl-3 pr-8 py-3 sm:py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-[#94a3b8] text-base sm:text-sm focus:border-[#d4af37] focus:outline-none cursor-pointer">
               <option value="">All Regions</option>
               {regionNames.map(r => <option key={r} value={r}>{r}</option>)}
@@ -305,21 +307,21 @@ export function GWIAnalysisPanel() {
 
         {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" aria-label="GWI pending applications">
             <thead>
               <tr className="text-[#64748b] text-xs uppercase tracking-wider border-b border-[#2d3a52] bg-[#0a1628]/50">
                 <SortHeader label="Name" field="last_name" current={sortBy} order={sortOrder} onSort={handleSort} />
-                <th className="text-left py-3 px-3">Customer Ref</th>
+                <th scope="col" className="text-left py-3 px-3">Customer Ref</th>
                 <SortHeader label="Region" field="region" current={sortBy} order={sortOrder} onSort={handleSort} />
-                <th className="text-left py-3 px-3">District</th>
-                <th className="text-left py-3 px-3">Village/Ward</th>
+                <th scope="col" className="text-left py-3 px-3">District</th>
+                <th scope="col" className="text-left py-3 px-3">Village/Ward</th>
                 <SortHeader label="Days" field="days_waiting" current={sortBy} order={sortOrder} onSort={handleSort} />
                 <SortHeader label="Applied" field="application_date" current={sortBy} order={sortOrder} onSort={handleSort} />
               </tr>
             </thead>
             <tbody>
               {loadingRecords ? (
-                <tr><td colSpan={7} className="py-12 text-center"><div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto" /></td></tr>
+                <tr><td colSpan={7} className="py-12 text-center"><div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto" role="status" aria-label="Loading" /></td></tr>
               ) : records.length === 0 ? (
                 <tr><td colSpan={7} className="py-12 text-center text-[#64748b]">No records found</td></tr>
               ) : records.map(r => (
@@ -332,7 +334,7 @@ export function GWIAnalysisPanel() {
         {/* Mobile Cards */}
         <div className="md:hidden space-y-2">
           {loadingRecords ? (
-            <div className="py-12 text-center"><div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto" /></div>
+            <div className="py-12 text-center" role="status" aria-label="Loading"><div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto" aria-hidden="true" /></div>
           ) : records.length === 0 ? (
             <div className="py-12 text-center text-[#64748b]">No records found</div>
           ) : records.map(r => (
@@ -432,7 +434,7 @@ export function GWIAnalysisPanel() {
 
 function SortHeader({ label, field, current, order, onSort }: { label: string; field: string; current: string; order: 'asc' | 'desc'; onSort: (f: string) => void }) {
   return (
-    <th className="text-left py-3 px-3 cursor-pointer hover:text-white transition-colors select-none whitespace-nowrap" onClick={() => onSort(field)}>
+    <th scope="col" className="text-left py-3 px-3 cursor-pointer hover:text-white transition-colors select-none whitespace-nowrap" onClick={() => onSort(field)}>
       <span className="inline-flex items-center gap-1">
         {label}
         <ArrowUpDown className={`h-3 w-3 ${current === field ? 'text-[#d4af37]' : ''}`} />

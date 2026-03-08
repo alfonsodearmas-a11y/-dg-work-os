@@ -108,8 +108,9 @@ export function BriefingDashboard() {
           onClick={handleRefresh}
           disabled={refreshing}
           className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#2d3a52]/50 bg-[#0f1d32] text-[#94a3b8] text-sm font-medium hover:text-white hover:border-[#d4af37]/30 transition-all duration-200 disabled:opacity-50 min-h-[44px]"
+          aria-label="Refresh"
         >
-          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
           <span className="hidden md:inline">{refreshing ? 'Refreshing...' : 'Refresh'}</span>
         </button>
       </div>

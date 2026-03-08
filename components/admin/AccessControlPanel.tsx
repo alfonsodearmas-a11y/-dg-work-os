@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Lock, UserPlus, Trash2, Search, ChevronDown,
   Eye, Edit3, Settings, Clock, AlertTriangle,
@@ -84,8 +84,8 @@ export function AccessControlPanel({ members, myPermissions, loading }: Props) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center py-16" role="status" aria-label="Loading">
+        <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -134,6 +134,7 @@ export function AccessControlPanel({ members, myPermissions, loading }: Props) {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search grants..."
+          aria-label="Search access grants"
           className="w-full pl-9 pr-4 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
         />
       </div>
@@ -141,8 +142,8 @@ export function AccessControlPanel({ members, myPermissions, loading }: Props) {
       {/* Grants list */}
       <div className="card-premium overflow-hidden">
         {grantsLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="w-6 h-6 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+          <div className="flex items-center justify-center py-12" role="status" aria-label="Loading">
+            <div className="w-6 h-6 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
           </div>
         ) : filteredGrants.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-[#64748b]">
@@ -198,6 +199,7 @@ export function AccessControlPanel({ members, myPermissions, loading }: Props) {
                       onClick={() => handleRevoke(g.id)}
                       className="p-1.5 rounded text-[#64748b] hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
                       title="Revoke access"
+                      aria-label="Revoke access"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -236,12 +238,28 @@ function GrantAccessModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const grantModalRef = useRef<HTMLDivElement>(null);
   const [targetUserId, setTargetUserId] = useState('');
   const [objectId, setObjectId] = useState('');
   const [accessLevel, setAccessLevel] = useState('view');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (grantModalRef.current) {
+      const focusable = grantModalRef.current.querySelector<HTMLElement>('select, input, button, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus();
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -278,10 +296,10 @@ function GrantAccessModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="card-premium w-full max-w-md p-6 space-y-5">
+      <div ref={grantModalRef} role="dialog" aria-modal="true" aria-labelledby="grant-access-modal-title" className="card-premium w-full max-w-md p-6 space-y-5">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-white">Grant Access</h3>
-          <button onClick={onClose} className="p-1 text-[#64748b] hover:text-white transition-colors">
+          <h3 id="grant-access-modal-title" className="text-lg font-bold text-white">Grant Access</h3>
+          <button onClick={onClose} className="p-1 text-[#64748b] hover:text-white transition-colors" aria-label="Close">
             <ChevronDown className="h-5 w-5 rotate-[-90deg]" />
           </button>
         </div>
@@ -298,11 +316,13 @@ function GrantAccessModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs text-[#94a3b8] mb-1.5">Team Member</label>
+            <label htmlFor="grant-team-member" className="block text-xs text-[#94a3b8] mb-1.5">Team Member</label>
             <select
+              id="grant-team-member"
               value={targetUserId}
               onChange={e => setTargetUserId(e.target.value)}
               required
+              aria-required="true"
               className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
             >
               <option value="">Select user...</option>
@@ -315,8 +335,9 @@ function GrantAccessModal({
           </div>
 
           <div>
-            <label className="block text-xs text-[#94a3b8] mb-1.5">Object ID (optional)</label>
+            <label htmlFor="grant-object-id" className="block text-xs text-[#94a3b8] mb-1.5">Object ID (optional)</label>
             <input
+              id="grant-object-id"
               type="text"
               value={objectId}
               onChange={e => setObjectId(e.target.value)}
@@ -351,8 +372,9 @@ function GrantAccessModal({
           </div>
 
           <div>
-            <label className="block text-xs text-[#94a3b8] mb-1.5">Reason (optional)</label>
+            <label htmlFor="grant-reason" className="block text-xs text-[#94a3b8] mb-1.5">Reason (optional)</label>
             <input
+              id="grant-reason"
               type="text"
               value={reason}
               onChange={e => setReason(e.target.value)}

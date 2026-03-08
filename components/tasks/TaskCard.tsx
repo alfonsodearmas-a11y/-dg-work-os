@@ -203,6 +203,7 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
               checked={!!isSelected}
               onChange={() => onToggleSelect?.(task.id)}
               onClick={(e) => e.stopPropagation()}
+              aria-label={`Select task: ${task.title}`}
               className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
             />
           </div>
@@ -214,6 +215,7 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
               checked={!!isSelected}
               onChange={() => onToggleSelect?.(task.id)}
               onClick={(e) => e.stopPropagation()}
+              aria-label={`Select task: ${task.title}`}
               className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
             />
           </div>
@@ -245,6 +247,7 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
               isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
             }`}
             style={{ minWidth: 28, minHeight: 28, touchAction: 'manipulation' }}
+            aria-label="Task options"
           >
             <MoreHorizontal className="h-4 w-4" />
           </button>
@@ -253,7 +256,7 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
         <div className={`${isMobile ? (selectionMode ? 'pl-6 pr-2' : 'pr-8') : (selectionMode ? 'pl-6 pr-2' : 'pl-4 pr-8')}`}>
           {/* Title row with priority dot */}
           <div className="flex items-start gap-2 mb-2">
-            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${task.priority ? (PRIORITY_DOT[task.priority] || PRIORITY_DOT.medium) : 'bg-[#3d4a62]'}`} />
+            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${task.priority ? (PRIORITY_DOT[task.priority] || PRIORITY_DOT.medium) : 'bg-[#3d4a62]'}`} aria-label={`Priority: ${task.priority || 'none'}`} />
             {expanded ? (
               <h4 className="text-white font-medium text-sm leading-snug flex-1">
                 {task.title}
@@ -330,6 +333,7 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
                   onMouseDown={(e) => e.stopPropagation()}
                   className="p-1 rounded text-[#64748b] hover:text-[#d4af37] hover:bg-[#d4af37]/10 transition-colors opacity-0 group-hover:opacity-100"
                   title="Add to Calendar"
+                  aria-label="Add to calendar"
                 >
                   <CalendarPlus className="h-3.5 w-3.5" />
                 </button>

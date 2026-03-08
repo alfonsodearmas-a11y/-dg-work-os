@@ -183,8 +183,9 @@ export function NotificationPreferences() {
               <p className="text-xs text-white/40 mb-3">Suppress toasts during these hours</p>
               <div className="flex items-center gap-3">
                 <div className="flex-1">
-                  <label className="text-xs text-white/30 uppercase tracking-wider block mb-1">Start</label>
+                  <label htmlFor="quiet-hours-start" className="text-xs text-white/30 uppercase tracking-wider block mb-1">Start</label>
                   <input
+                    id="quiet-hours-start"
                     type="time"
                     value={prefs.quiet_hours_start || ''}
                     onChange={e => update('quiet_hours_start', e.target.value || null)}
@@ -193,8 +194,9 @@ export function NotificationPreferences() {
                 </div>
                 <span className="text-white/30 mt-5">to</span>
                 <div className="flex-1">
-                  <label className="text-xs text-white/30 uppercase tracking-wider block mb-1">End</label>
+                  <label htmlFor="quiet-hours-end" className="text-xs text-white/30 uppercase tracking-wider block mb-1">End</label>
                   <input
+                    id="quiet-hours-end"
                     type="time"
                     value={prefs.quiet_hours_end || ''}
                     onChange={e => update('quiet_hours_end', e.target.value || null)}

@@ -10,6 +10,7 @@ export function BudgetAskPanel({ isOpen, onClose }: { isOpen: boolean; onClose: 
   const contentRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const budgetAskRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -19,6 +20,15 @@ export function BudgetAskPanel({ isOpen, onClose }: { isOpen: boolean; onClose: 
       setQuestion('');
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { abortRef.current?.abort(); onClose(); }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (contentRef.current) {
@@ -87,9 +97,9 @@ export function BudgetAskPanel({ isOpen, onClose }: { isOpen: boolean; onClose: 
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { abortRef.current?.abort(); onClose(); }} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { abortRef.current?.abort(); onClose(); }} aria-hidden="true" />
 
-      <div className="relative w-full md:max-w-2xl md:max-h-[80vh] bg-gradient-to-b from-[#1a2744] to-[#0a1628] border border-[#2d3a52] rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col max-h-[85vh] animate-slide-up md:animate-fade-in">
+      <div ref={budgetAskRef} role="dialog" aria-modal="true" aria-labelledby="budget-ask-panel-title" className="relative w-full md:max-w-2xl md:max-h-[80vh] bg-gradient-to-b from-[#1a2744] to-[#0a1628] border border-[#2d3a52] rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col max-h-[85vh] animate-slide-up md:animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#2d3a52] shrink-0">
           <div className="flex items-center gap-3">
@@ -97,11 +107,11 @@ export function BudgetAskPanel({ isOpen, onClose }: { isOpen: boolean; onClose: 
               <Sparkles className="h-4 w-4 text-[#d4af37]" />
             </div>
             <div>
-              <h3 className="text-white font-semibold text-sm">Ask About the Budget</h3>
+              <h3 id="budget-ask-panel-title" className="text-white font-semibold text-sm">Ask About the Budget</h3>
               <p className="text-[#64748b] text-[10px]">Powered by Claude Opus 4.6</p>
             </div>
           </div>
-          <button onClick={() => { abortRef.current?.abort(); onClose(); }} className="p-1.5 rounded-lg hover:bg-[#2d3a52] text-[#64748b] hover:text-white transition-colors">
+          <button onClick={() => { abortRef.current?.abort(); onClose(); }} aria-label="Close" className="p-1.5 rounded-lg hover:bg-[#2d3a52] text-[#64748b] hover:text-white transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -149,6 +159,7 @@ export function BudgetAskPanel({ isOpen, onClose }: { isOpen: boolean; onClose: 
               value={question}
               onChange={e => setQuestion(e.target.value)}
               placeholder="Ask about the budget..."
+              aria-label="Ask a question about the budget"
               className="input-premium flex-1 text-sm py-2"
               disabled={isStreaming}
             />
@@ -156,6 +167,7 @@ export function BudgetAskPanel({ isOpen, onClose }: { isOpen: boolean; onClose: 
               type="submit"
               disabled={isStreaming || !question.trim()}
               className="px-3 py-2 rounded-lg bg-[#d4af37] text-[#0a1628] font-semibold disabled:opacity-40 hover:bg-[#f4d03f] transition-colors"
+              aria-label="Send"
             >
               <Send className="h-4 w-4" />
             </button>

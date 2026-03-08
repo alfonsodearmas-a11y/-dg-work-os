@@ -62,8 +62,8 @@ export default function UploadPortalPage() {
 
   if (checking) {
     return (
-      <div className="min-h-screen bg-[#0a1628] flex items-center justify-center">
-        <Loader2 className="h-6 w-6 text-[#d4af37] animate-spin" />
+      <div className="min-h-screen bg-[#0a1628] flex items-center justify-center" role="status" aria-label="Loading">
+        <Loader2 className="h-6 w-6 text-[#d4af37] animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -92,7 +92,7 @@ export default function UploadPortalPage() {
               onClick={handleLogout}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors"
             >
-              <LogOut className="h-3.5 w-3.5" />
+              <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
               Logout
             </button>
           </div>
@@ -154,6 +154,7 @@ export default function UploadPortalPage() {
                 onChange={e => setCode(e.target.value)}
                 placeholder="Enter access code"
                 required
+                aria-required="true"
                 autoFocus
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] text-sm focus:outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37]/50"
               />

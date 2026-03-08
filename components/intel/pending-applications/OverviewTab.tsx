@@ -334,14 +334,14 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
         <div className="card-premium p-4 md:p-6">
           <h3 className="text-sm font-semibold text-white mb-4">Region Breakdown</h3>
           <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="Pending applications by region">
               <thead>
                 <tr className="text-[#64748b] text-sm sm:text-xs uppercase tracking-wider border-b border-[#2d3a52]">
-                  <th className="text-left py-3 px-3">Region</th>
-                  <th className="text-right py-3 px-3">Count</th>
-                  <th className="text-right py-3 px-3">Avg Wait</th>
-                  <th className="text-right py-3 px-3 hidden sm:table-cell">Max Wait</th>
-                  <th className="text-right py-3 px-3">% Over 30d</th>
+                  <th scope="col" className="text-left py-3 px-3">Region</th>
+                  <th scope="col" className="text-right py-3 px-3">Count</th>
+                  <th scope="col" className="text-right py-3 px-3">Avg Wait</th>
+                  <th scope="col" className="text-right py-3 px-3 hidden sm:table-cell">Max Wait</th>
+                  <th scope="col" className="text-right py-3 px-3">% Over 30d</th>
                 </tr>
               </thead>
               <tbody>
@@ -372,6 +372,7 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
               placeholder="Search name, phone, reference..."
               value={searchInput}
               onChange={e => handleSearchChange(e.target.value)}
+              aria-label="Search pending applications"
               className="w-full pl-10 pr-10 py-3 sm:py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-base sm:text-sm placeholder:text-[#64748b] focus:border-[#d4af37] focus:outline-none"
             />
             {searchInput && (
@@ -383,6 +384,7 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <div className="relative flex-1 sm:flex-none">
               <select value={regionFilter} onChange={e => setRegionFilter(e.target.value)}
+                aria-label="Filter by region"
                 className="appearance-none w-full pl-3 pr-8 py-3 sm:py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-[#94a3b8] text-base sm:text-sm focus:border-[#d4af37] focus:outline-none cursor-pointer">
                 <option value="">All Regions</option>
                 {allRegions.map(r => <option key={r} value={r}>{r}</option>)}
@@ -391,6 +393,7 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
             </div>
             <div className="relative flex-1 sm:flex-none">
               <select value={waitBracket} onChange={e => setWaitBracket(e.target.value as WaitBracket)}
+                aria-label="Filter by wait time"
                 className="appearance-none w-full pl-3 pr-8 py-3 sm:py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-[#94a3b8] text-base sm:text-sm focus:border-[#d4af37] focus:outline-none cursor-pointer">
                 <option value="all">All Wait Times</option>
                 <option value="0-6">&lt; 7 days</option>
@@ -407,21 +410,21 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
       {/* Customer Records Table */}
       <div className="card-premium overflow-hidden">
         <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" aria-label="Customer pending applications">
             <thead>
               <tr className="text-[#64748b] text-sm sm:text-xs uppercase tracking-wider border-b border-[#2d3a52] bg-[#0a1628]/50">
-                <th className="text-left py-3 px-3">Agency</th>
+                <th scope="col" className="text-left py-3 px-3">Agency</th>
                 <SortHeader label="Name" field="last_name" current={sortBy} order={sortOrder} onSort={handleSort} />
-                <th className="text-left py-3 px-3 hidden md:table-cell">Region</th>
-                <th className="text-left py-3 px-3 hidden lg:table-cell">District/Village</th>
+                <th scope="col" className="text-left py-3 px-3 hidden md:table-cell">Region</th>
+                <th scope="col" className="text-left py-3 px-3 hidden lg:table-cell">District/Village</th>
                 <SortHeader label="Applied" field="application_date" current={sortBy} order={sortOrder} onSort={handleSort} />
                 <SortHeader label="Days" field="days_waiting" current={sortBy} order={sortOrder} onSort={handleSort} />
-                <th className="text-left py-3 px-3 hidden md:table-cell">Ref No.</th>
+                <th scope="col" className="text-left py-3 px-3 hidden md:table-cell">Ref No.</th>
               </tr>
             </thead>
             <tbody>
               {loadingRecords ? (
-                <tr><td colSpan={7} className="py-12 text-center"><div className="w-6 h-6 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin mx-auto" /></td></tr>
+                <tr><td colSpan={7} className="py-12 text-center"><div className="w-6 h-6 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin mx-auto" role="status" aria-label="Loading" /></td></tr>
               ) : records.length === 0 ? (
                 <tr><td colSpan={7} className="py-12 text-center text-[#64748b]">No records found</td></tr>
               ) : records.map(record => (
@@ -509,7 +512,7 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
 
 function SortHeader({ label, field, current, order, onSort }: { label: string; field: string; current: string; order: 'asc' | 'desc'; onSort: (f: string) => void }) {
   return (
-    <th className="text-left py-3 px-3 cursor-pointer hover:text-white transition-colors select-none whitespace-nowrap" onClick={() => onSort(field)}>
+    <th scope="col" className="text-left py-3 px-3 cursor-pointer hover:text-white transition-colors select-none whitespace-nowrap" onClick={() => onSort(field)}>
       <span className="inline-flex items-center gap-1">
         {label}
         <ArrowUpDown className={`h-3 w-3 ${current === field ? 'text-[#d4af37]' : ''}`} />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, XCircle, Trash2, Loader2, MapPin, FileText, Sparkles, Video, Users, Bell, Repeat } from 'lucide-react';
 import { CalendarEvent } from '@/lib/calendar-types';
 
@@ -121,6 +121,23 @@ export function EventModal({
     return () => clearTimeout(timer);
   }, [attendeeInput, searchContacts]);
 
+  const eventModalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (!isOpen || !eventModalRef.current) return;
+    const focusable = eventModalRef.current.querySelector<HTMLElement>('input, button, select, textarea, [tabindex]:not([tabindex="-1"])');
+    focusable?.focus();
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleQuickParse = async () => {
@@ -220,15 +237,20 @@ export function EventModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col md:items-center md:justify-center md:p-4">
-      {/* Backdrop — fixed to cover entire viewport including behind header/nav */}
+      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/80"
         style={{ zIndex: -1 }}
         onClick={onClose}
+        aria-hidden="true"
       />
 
-      {/* Modal — full screen on mobile, centered card on desktop */}
+      {/* Modal */}
       <div
+        ref={eventModalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="event-modal-title"
         className="relative w-full md:max-w-lg bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border-t md:border border-[#2d3a52] shadow-2xl flex flex-col mt-auto md:mt-0 md:rounded-2xl animate-slide-up md:animate-fade-in"
         style={{
           maxHeight: 'min(100dvh, 100vh)',
@@ -237,11 +259,12 @@ export function EventModal({
       >
         {/* Header */}
         <div className="flex-shrink-0 flex items-center justify-between p-3 md:p-4 border-b border-[#2d3a52] bg-[#1a2744]/95 backdrop-blur-sm rounded-t-2xl md:rounded-t-2xl">
-          <h2 className="text-lg font-semibold text-white">
+          <h2 id="event-modal-title" className="text-lg font-semibold text-white">
             {isNew ? 'New Event' : 'Edit Event'}
           </h2>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
           >
             <X className="h-4 w-4" />
@@ -272,6 +295,7 @@ export function EventModal({
                 onKeyDown={(e) => e.key === 'Enter' && handleQuickParse()}
                 placeholder="e.g. Meeting with GPL team tomorrow at 2pm about load shedding"
                 autoFocus
+                aria-label="Quick create event description"
                 className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] transition-colors text-sm"
               />
               <div className="flex gap-2">
@@ -297,15 +321,17 @@ export function EventModal({
           {!showQuickCreate && (
             <>
               <div>
-                <label className="block text-sm font-medium text-[#94a3b8] mb-1.5">
+                <label htmlFor="event-title" className="block text-sm font-medium text-[#94a3b8] mb-1.5">
                   Event Title
                 </label>
                 <input
+                  id="event-title"
                   type="text"
                   value={formData.title}
                   onChange={(e) => { setError(null); setFormData({ ...formData, title: e.target.value }); }}
                   placeholder="Meeting with..."
                   autoFocus={!enableQuickCreate}
+                  aria-required="true"
                   className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] transition-colors"
                 />
               </div>
@@ -314,6 +340,9 @@ export function EventModal({
               <div className="flex items-center gap-3">
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={formData.all_day}
+                  aria-label="Toggle all-day event"
                   onClick={() => setFormData({ ...formData, all_day: !formData.all_day })}
                   className={`relative w-11 h-6 rounded-full transition-colors ${
                     formData.all_day ? 'bg-[#d4af37]' : 'bg-[#2d3a52]'
@@ -331,8 +360,9 @@ export function EventModal({
               {/* Date/Time */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-[#94a3b8] mb-1.5">Start</label>
+                  <label htmlFor="event-start" className="block text-sm font-medium text-[#94a3b8] mb-1.5">Start</label>
                   <input
+                    id="event-start"
                     type={formData.all_day ? 'date' : 'datetime-local'}
                     value={formatDateTimeForInput(formData.start_time)}
                     onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
@@ -340,8 +370,9 @@ export function EventModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#94a3b8] mb-1.5">End</label>
+                  <label htmlFor="event-end" className="block text-sm font-medium text-[#94a3b8] mb-1.5">End</label>
                   <input
+                    id="event-end"
                     type={formData.all_day ? 'date' : 'datetime-local'}
                     value={formatDateTimeForInput(formData.end_time)}
                     onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
@@ -352,11 +383,12 @@ export function EventModal({
 
               {/* Location */}
               <div>
-                <label className="block text-sm font-medium text-[#94a3b8] mb-1.5">
+                <label htmlFor="event-location" className="block text-sm font-medium text-[#94a3b8] mb-1.5">
                   <MapPin className="inline h-3.5 w-3.5 mr-1" />
                   Location
                 </label>
                 <input
+                  id="event-location"
                   type="text"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
@@ -369,6 +401,9 @@ export function EventModal({
               <div className="flex items-center gap-3">
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={formData.add_google_meet}
+                  aria-label="Toggle Google Meet"
                   onClick={() => setFormData({ ...formData, add_google_meet: !formData.add_google_meet })}
                   className={`relative w-11 h-6 rounded-full transition-colors ${
                     formData.add_google_meet ? 'bg-[#d4af37]' : 'bg-[#2d3a52]'
@@ -402,6 +437,7 @@ export function EventModal({
                         if (e.key === 'Enter') { e.preventDefault(); addAttendee(attendeeInput); }
                       }}
                       placeholder="email@example.com"
+                      aria-label="Attendee email address"
                       className="flex-1 px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] transition-colors text-sm"
                     />
                     <button
@@ -438,6 +474,7 @@ export function EventModal({
                         {email}
                         <button
                           onClick={() => removeAttendee(email)}
+                          aria-label={`Remove ${email}`}
                           className="text-[#64748b] hover:text-red-400 transition-colors"
                         >
                           <X className="h-3 w-3" />
@@ -451,11 +488,12 @@ export function EventModal({
               {/* Reminder + Recurrence row */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-[#94a3b8] mb-1.5">
+                  <label htmlFor="event-reminder" className="block text-sm font-medium text-[#94a3b8] mb-1.5">
                     <Bell className="inline h-3.5 w-3.5 mr-1" />
                     Reminder
                   </label>
                   <select
+                    id="event-reminder"
                     value={formData.reminder_minutes}
                     onChange={(e) => setFormData({ ...formData, reminder_minutes: Number(e.target.value) })}
                     className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white focus:outline-none focus:border-[#d4af37] transition-colors text-sm"
@@ -468,11 +506,12 @@ export function EventModal({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#94a3b8] mb-1.5">
+                  <label htmlFor="event-recurrence" className="block text-sm font-medium text-[#94a3b8] mb-1.5">
                     <Repeat className="inline h-3.5 w-3.5 mr-1" />
                     Recurrence
                   </label>
                   <select
+                    id="event-recurrence"
                     value={formData.recurrence}
                     onChange={(e) => setFormData({ ...formData, recurrence: e.target.value })}
                     className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white focus:outline-none focus:border-[#d4af37] transition-colors text-sm"
@@ -487,11 +526,12 @@ export function EventModal({
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-[#94a3b8] mb-1.5">
+                <label htmlFor="event-description" className="block text-sm font-medium text-[#94a3b8] mb-1.5">
                   <FileText className="inline h-3.5 w-3.5 mr-1" />
                   Description
                 </label>
                 <textarea
+                  id="event-description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Add details..."

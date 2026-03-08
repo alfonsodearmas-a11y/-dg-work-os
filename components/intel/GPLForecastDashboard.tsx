@@ -121,8 +121,8 @@ export function GPLForecastDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center py-12" role="status" aria-label="Loading">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" aria-hidden="true"></div>
         <span className="ml-3 text-[#94a3b8]">Loading forecast data...</span>
       </div>
     );
@@ -433,14 +433,14 @@ export function GPLForecastDashboard() {
               <p className="text-sm text-[#64748b]">90-day performance analysis</p>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-[#2d3a52]">
+              <table className="min-w-full divide-y divide-[#2d3a52]" aria-label="Station reliability">
                 <thead className="bg-[#0a1628]">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-[#64748b] uppercase">Station</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-[#64748b] uppercase">Uptime</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-[#64748b] uppercase">Utilization</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-[#64748b] uppercase">Units</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-[#64748b] uppercase">Status</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-[#64748b] uppercase">Station</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-[#64748b] uppercase">Uptime</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-[#64748b] uppercase">Utilization</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-[#64748b] uppercase">Units</th>
+                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-[#64748b] uppercase">Status</th>
                   </tr>
                 </thead>
                 <tbody className="bg-[#1a2744] divide-y divide-[#2d3a52]">
@@ -475,14 +475,14 @@ export function GPLForecastDashboard() {
               <p className="text-sm text-[#64748b]">High-risk units requiring attention</p>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-[#2d3a52]">
+              <table className="min-w-full divide-y divide-[#2d3a52]" aria-label="Units at risk">
                 <thead className="bg-[#0a1628]">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-[#64748b] uppercase">Unit</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-[#64748b] uppercase">Capacity</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-[#64748b] uppercase">Uptime</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-[#64748b] uppercase">Failures</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-[#64748b] uppercase">Risk</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-[#64748b] uppercase">Unit</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-[#64748b] uppercase">Capacity</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-[#64748b] uppercase">Uptime</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-[#64748b] uppercase">Failures</th>
+                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-[#64748b] uppercase">Risk</th>
                   </tr>
                 </thead>
                 <tbody className="bg-[#1a2744] divide-y divide-[#2d3a52]">

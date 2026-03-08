@@ -69,6 +69,7 @@ export function TaskFilters({ onFilterChange, showAssignee, assignees }: TaskFil
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           placeholder="Search tasks..."
+          aria-label="Search tasks"
           className="w-full pl-9 pr-3 py-2 bg-[#1a2744] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
         />
       </div>
@@ -76,6 +77,7 @@ export function TaskFilters({ onFilterChange, showAssignee, assignees }: TaskFil
       <select
         value={filters.agency || ''}
         onChange={(e) => update('agency', e.target.value)}
+        aria-label="Filter by agency"
         className="px-3 py-2 bg-[#1a2744] border border-[#2d3a52] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
       >
         {AGENCIES.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
@@ -84,6 +86,7 @@ export function TaskFilters({ onFilterChange, showAssignee, assignees }: TaskFil
       <select
         value={filters.priority || ''}
         onChange={(e) => update('priority', e.target.value)}
+        aria-label="Filter by priority"
         className="px-3 py-2 bg-[#1a2744] border border-[#2d3a52] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
       >
         {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
@@ -92,6 +95,7 @@ export function TaskFilters({ onFilterChange, showAssignee, assignees }: TaskFil
       <select
         value={filters.status || ''}
         onChange={(e) => update('status', e.target.value)}
+        aria-label="Filter by status"
         className="px-3 py-2 bg-[#1a2744] border border-[#2d3a52] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
       >
         {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -101,6 +105,7 @@ export function TaskFilters({ onFilterChange, showAssignee, assignees }: TaskFil
         <select
           value={filters.assignee_id || ''}
           onChange={(e) => update('assignee_id', e.target.value)}
+          aria-label="Filter by assignee"
           className="px-3 py-2 bg-[#1a2744] border border-[#2d3a52] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
         >
           <option value="">All Assignees</option>

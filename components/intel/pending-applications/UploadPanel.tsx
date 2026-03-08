@@ -131,7 +131,7 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
                     <p className="text-white font-medium">{file.name}</p>
                     <p className="text-xs text-[#64748b]">{(file.size / 1024).toFixed(1)} KB</p>
                   </div>
-                  <button onClick={reset} className="p-1.5 rounded-lg hover:bg-[#2d3a52] text-[#64748b] hover:text-white ml-2">
+                  <button onClick={reset} className="p-1.5 rounded-lg hover:bg-[#2d3a52] text-[#64748b] hover:text-white ml-2" aria-label="Remove file">
                     <X className="h-4 w-4" />
                   </button>
                 </div>
@@ -143,6 +143,7 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
                   <input
                     type="file"
                     accept=".xls,.xlsx"
+                    aria-label="Select Excel file to upload"
                     className="absolute inset-0 opacity-0 cursor-pointer"
                     onChange={e => { if (e.target.files?.[0]) selectFile(e.target.files[0]); }}
                   />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ShieldAlert, Flag, Loader2 } from 'lucide-react';
 
 interface EscalationControlsProps {
@@ -92,6 +92,22 @@ function EscalationModal({
 }) {
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const escalationModalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (escalationModalRef.current) {
+      const focusable = escalationModalRef.current.querySelector<HTMLElement>('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus();
+    }
+  }, []);
 
   async function handleSubmit() {
     if (!reason.trim()) return;
@@ -111,14 +127,14 @@ function EscalationModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="card-premium p-6 w-full max-w-md mx-4 rounded-2xl" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden="true">
+      <div ref={escalationModalRef} role="dialog" aria-modal="true" aria-labelledby="escalation-controls-modal-title" className="card-premium p-6 w-full max-w-md mx-4 rounded-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
             <ShieldAlert className="h-5 w-5 text-red-400" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-white">Escalate Project</h2>
+            <h2 id="escalation-controls-modal-title" className="text-lg font-semibold text-white">Escalate Project</h2>
             <p className="text-[#64748b] text-xs line-clamp-1">{projectName}</p>
           </div>
         </div>
@@ -126,6 +142,8 @@ function EscalationModal({
           value={reason}
           onChange={e => setReason(e.target.value)}
           placeholder="Why does this project need escalation?"
+          aria-label="Escalation reason"
+          aria-required="true"
           className="w-full bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-3 text-sm text-white placeholder-[#64748b] focus:border-red-400 focus:outline-none resize-none h-28"
         />
         <div className="flex items-center justify-end gap-3 mt-4">

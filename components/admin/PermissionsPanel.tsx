@@ -58,8 +58,8 @@ export function PermissionsPanel({ roles, allPermissions, myPermissions, myRole,
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center py-16" role="status" aria-label="Loading">
+        <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -89,6 +89,7 @@ export function PermissionsPanel({ roles, allPermissions, myPermissions, myRole,
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search permissions..."
+            aria-label="Search permissions"
             className="pl-9 pr-4 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50 w-56"
           />
         </div>
@@ -118,14 +119,14 @@ export function PermissionsPanel({ roles, allPermissions, myPermissions, myRole,
       {/* Matrix */}
       <div className="card-premium overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" aria-label="Permission matrix">
             <thead>
               <tr className="border-b border-[#2d3a52]">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-[#64748b] uppercase w-60">
+                <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-[#64748b] uppercase w-60">
                   Permission
                 </th>
                 {roles.map(r => (
-                  <th key={r.name} className="px-3 py-3 text-center">
+                  <th key={r.name} scope="col" className="px-3 py-3 text-center">
                     <span className={`text-xs font-semibold ${ROLE_COLORS[r.name] || 'text-white'}`}>
                       {r.display_name}
                     </span>

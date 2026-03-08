@@ -33,7 +33,7 @@ function BulkActionBar({ count, onUpdateHealth, onAssignOfficer, onExport, onCle
       <div className="relative">
         <button onClick={() => { closeAll(); setShowHealth(!showHealth); }} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1">Health <ChevronDown className="h-3 w-3" /></button>
         {showHealth && <div className="absolute bottom-full left-0 mb-2 bg-[#1a2744] border border-[#2d3a52] rounded-lg shadow-xl min-w-[140px]">
-          {HEALTH_OPTIONS.map(h => <button key={h.value} onClick={() => { onUpdateHealth(h.value); closeAll(); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-white hover:bg-[#0a1628]/60"><span className={`w-2 h-2 rounded-full ${h.color}`} />{h.label}</button>)}
+          {HEALTH_OPTIONS.map(h => <button key={h.value} onClick={() => { onUpdateHealth(h.value); closeAll(); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-white hover:bg-[#0a1628]/60"><span className={`w-2 h-2 rounded-full ${h.color}`} aria-hidden="true" />{h.label}</button>)}
         </div>}
       </div>
       <div className="relative">
@@ -43,8 +43,8 @@ function BulkActionBar({ count, onUpdateHealth, onAssignOfficer, onExport, onCle
           {officers.map(o => <button key={o.id} onClick={() => { onAssignOfficer(o.id); closeAll(); }} className="block w-full text-left px-3 py-2 text-sm text-white hover:bg-[#0a1628]/60">{o.name}</button>)}
         </div>}
       </div>
-      <button onClick={onExport} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1"><Download className="h-3 w-3" /> CSV</button>
-      <button onClick={onClear} className="text-[#64748b] hover:text-white"><X className="h-4 w-4" /></button>
+      <button onClick={onExport} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1"><Download className="h-3 w-3" aria-hidden="true" /> CSV</button>
+      <button onClick={onClear} className="text-[#64748b] hover:text-white" aria-label="Clear selection"><X className="h-4 w-4" /></button>
     </div>
   );
 }
@@ -276,8 +276,8 @@ export default function OversightPage() {
             <p className="text-[#64748b] text-xs md:text-sm truncate">Project monitoring &amp; intelligence</p>
           </div>
         </div>
-        <button onClick={handleRefresh} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] hover:text-white transition-colors shrink-0">
-          <RefreshCw className={`h-4 w-4 ${oversightLoading ? 'animate-spin' : ''}`} />
+        <button onClick={handleRefresh} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] hover:text-white transition-colors shrink-0" aria-label="Refresh">
+          <RefreshCw className={`h-4 w-4 ${oversightLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
           <span className="hidden md:inline text-sm">Refresh</span>
         </button>
       </div>
@@ -366,14 +366,14 @@ export default function OversightPage() {
                 <div className="inline-flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 text-xs md:text-sm min-w-0">
                   <Filter className="h-3.5 w-3.5 text-[#d4af37] shrink-0" />
                   <span className="text-[#d4af37] truncate">{psipSummary?.total_projects || totalCount} projects</span>
-                  <button onClick={clearFilters} className="text-[#d4af37]/60 hover:text-[#d4af37] shrink-0"><X className="h-3.5 w-3.5" /></button>
+                  <button onClick={clearFilters} className="text-[#d4af37]/60 hover:text-[#d4af37] shrink-0" aria-label="Clear filters"><X className="h-3.5 w-3.5" /></button>
                 </div>
               ) : psipSummary && <span className="text-[#64748b] text-xs md:text-sm">{psipSummary.total_projects} projects</span>}
             </div>
             <div className="flex items-center gap-1 bg-[#0a1628] border border-[#2d3a52] rounded-lg p-0.5">
               <button onClick={() => setViewMode('list')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'list' ? 'bg-[#d4af37]/20 text-[#d4af37]' : 'text-[#64748b] hover:text-white'}`}><List className="h-3.5 w-3.5 inline mr-1" />List</button>
               <button onClick={() => setViewMode('timeline')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'timeline' ? 'bg-[#d4af37]/20 text-[#d4af37]' : 'text-[#64748b] hover:text-white'}`}><GanttChart className="h-3.5 w-3.5 inline mr-1" />Timeline</button>
-              {viewMode === 'timeline' && <select value={timelineGroupBy} onChange={e => setTimelineGroupBy(e.target.value as 'agency' | 'region')} className="bg-transparent text-xs text-[#94a3b8] ml-2 focus:outline-none"><option value="agency">By Agency</option><option value="region">By Region</option></select>}
+              {viewMode === 'timeline' && <select value={timelineGroupBy} onChange={e => setTimelineGroupBy(e.target.value as 'agency' | 'region')} aria-label="Group timeline by" className="bg-transparent text-xs text-[#94a3b8] ml-2 focus:outline-none"><option value="agency">By Agency</option><option value="region">By Region</option></select>}
             </div>
           </div>
 

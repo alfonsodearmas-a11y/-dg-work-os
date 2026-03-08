@@ -87,11 +87,11 @@ export function ProjectUpload({ onUploadComplete }: ProjectUploadProps) {
           isDragActive ? 'drag-over' : ''
         } ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
-        <input {...getInputProps()} />
+        <input {...getInputProps()} aria-label="Upload project Excel file" />
 
         {uploading ? (
-          <div className="flex flex-col items-center">
-            <Loader2 className="h-12 w-12 text-[#d4af37] animate-spin mb-4" />
+          <div className="flex flex-col items-center" role="status" aria-label="Processing">
+            <Loader2 className="h-12 w-12 text-[#d4af37] animate-spin mb-4" aria-hidden="true" />
             <p className="text-white font-medium">Processing Excel file...</p>
             <p className="text-[#64748b] text-sm mt-1">Analyzing project data</p>
           </div>

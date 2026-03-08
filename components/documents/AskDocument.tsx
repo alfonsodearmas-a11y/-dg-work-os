@@ -68,6 +68,7 @@ export function AskDocument({ documentId, previousQueries }: AskDocumentProps) {
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAsk()}
             disabled={loading}
+            aria-label="Ask a question about this document"
             className="w-full px-4 py-3 bg-[#1a2744] border border-[#2d3a52] rounded-xl text-white placeholder-[#64748b] focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-colors disabled:opacity-50"
           />
           <Sparkles className="absolute right-4 top-3.5 h-5 w-5 text-[#d4af37]/50" />
@@ -76,6 +77,7 @@ export function AskDocument({ documentId, previousQueries }: AskDocumentProps) {
           onClick={handleAsk}
           disabled={loading || !question.trim()}
           className="btn-gold px-5 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="Send"
         >
           {loading ? (
             <Loader2 className="h-5 w-5 animate-spin" />

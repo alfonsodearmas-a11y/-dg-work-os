@@ -37,6 +37,7 @@ export function DocumentSearch({ onSearch }: DocumentSearchProps) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
+          aria-label="Search documents"
           className="w-full pl-12 pr-4 py-3 bg-[#1a2744] border border-[#2d3a52] rounded-xl text-white placeholder-[#64748b] focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-colors"
         />
         <Search className="absolute left-4 top-3.5 h-5 w-5 text-[#64748b]" />
@@ -46,6 +47,7 @@ export function DocumentSearch({ onSearch }: DocumentSearchProps) {
         <select
           value={agency}
           onChange={(e) => setAgency(e.target.value)}
+          aria-label="Filter by agency"
           className="w-full sm:w-auto px-4 py-3 pl-10 bg-[#1a2744] border border-[#2d3a52] rounded-xl text-white focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-colors appearance-none cursor-pointer"
           style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
         >
@@ -61,6 +63,7 @@ export function DocumentSearch({ onSearch }: DocumentSearchProps) {
         <select
           value={type}
           onChange={(e) => setType(e.target.value)}
+          aria-label="Filter by document type"
           className="w-full sm:w-auto px-4 py-3 pl-10 bg-[#1a2744] border border-[#2d3a52] rounded-xl text-white focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-colors appearance-none cursor-pointer capitalize"
           style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
         >
@@ -76,7 +79,7 @@ export function DocumentSearch({ onSearch }: DocumentSearchProps) {
         onClick={handleSearch}
         className="btn-gold px-6 py-3 font-medium flex items-center justify-center space-x-2"
       >
-        <Search className="h-4 w-4" />
+        <Search className="h-4 w-4" aria-hidden="true" />
         <span>Search</span>
       </button>
     </div>

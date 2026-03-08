@@ -17,6 +17,7 @@ export default function GPLIntelPage() {
         <Link
           href="/intel"
           className="p-2.5 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] transition-colors touch-active shrink-0"
+          aria-label="Back"
         >
           <ArrowLeft className="h-5 w-5 text-[#94a3b8]" />
         </Link>

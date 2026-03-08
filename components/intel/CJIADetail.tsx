@@ -229,9 +229,9 @@ export function CJIADetail({ data }: CJIADetailProps) {
   // Loading without any data
   if (!data && insightsLoading) {
     return (
-      <div className="flex items-center justify-center py-24">
+      <div className="flex items-center justify-center py-24" role="status" aria-label="Loading">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-[#d4af37] animate-spin" />
+          <Loader2 className="w-8 h-8 text-[#d4af37] animate-spin" aria-hidden="true" />
           <p className="text-[#94a3b8] text-[15px]">Loading CJIA data...</p>
         </div>
       </div>
@@ -254,8 +254,8 @@ export function CJIADetail({ data }: CJIADetailProps) {
                 <HealthScoreTooltip score={health.score} severity={health.severity} breakdown={health.breakdown} size={100} />
               </div>
             ) : insightsLoading ? (
-              <div className="w-20 h-20 md:w-[100px] md:h-[100px] flex items-center justify-center">
-                <Loader2 className="w-6 h-6 text-[#64748b] animate-spin" />
+              <div className="w-20 h-20 md:w-[100px] md:h-[100px] flex items-center justify-center" role="status" aria-label="Loading">
+                <Loader2 className="w-6 h-6 text-[#64748b] animate-spin" aria-hidden="true" />
               </div>
             ) : null}
 
@@ -468,19 +468,19 @@ export function CJIADetail({ data }: CJIADetailProps) {
 
                   {/* Arrivals vs Departures Split */}
                   <div className="space-y-3">
-                    <div className="h-2 rounded-full overflow-hidden flex">
+                    <div className="h-2 rounded-full overflow-hidden flex" role="progressbar" aria-valuenow={arrivalPercent} aria-valuemin={0} aria-valuemax={100} aria-label={`Arrivals ${arrivalPercent}%, Departures ${100 - arrivalPercent}%`}>
                       <div className="bg-teal-500 transition-all" style={{ width: `${arrivalPercent}%` }} />
                       <div className="bg-cyan-500 transition-all" style={{ width: `${100 - arrivalPercent}%` }} />
                     </div>
                     <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:gap-0 text-sm">
                       <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full bg-teal-500 flex-shrink-0" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-teal-500 flex-shrink-0" aria-hidden="true" />
                         <span className="text-[#94a3b8]">Arrivals</span>
                         <span className="text-teal-400 font-semibold">{metrics.currentArrivals.toLocaleString()}</span>
                         <span className="text-[#64748b] text-xs">({arrivalPercent}%)</span>
                       </div>
                       <div className="flex items-center gap-2 sm:flex-row-reverse">
-                        <div className="w-2.5 h-2.5 rounded-full bg-cyan-500 flex-shrink-0 sm:order-last" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-cyan-500 flex-shrink-0 sm:order-last" aria-hidden="true" />
                         <span className="text-[#94a3b8]">Departures</span>
                         <span className="text-cyan-400 font-semibold">{metrics.currentDepartures.toLocaleString()}</span>
                         <span className="text-[#64748b] text-xs">({100 - arrivalPercent}%)</span>

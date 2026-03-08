@@ -16,6 +16,7 @@ export default function CJIAIntelPage() {
         <Link
           href="/intel"
           className="p-2.5 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] transition-colors touch-active shrink-0"
+          aria-label="Back"
         >
           <ArrowLeft className="h-5 w-5 text-[#94a3b8]" />
         </Link>
@@ -33,8 +34,8 @@ export default function CJIAIntelPage() {
       {/* Self-managing CJIA Detail (mock data as fallback) */}
       <ErrorBoundary fallbackTitle="Failed to load CJIA dashboard">
         {isLoading ? (
-          <div className="flex items-center justify-center py-24">
-            <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+          <div className="flex items-center justify-center py-24" role="status" aria-label="Loading">
+            <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
           </div>
         ) : (
           <CJIADetail data={rawData.cjia} />

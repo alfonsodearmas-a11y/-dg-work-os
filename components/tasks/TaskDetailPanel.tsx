@@ -81,6 +81,7 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
 
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const descRef = useRef<HTMLTextAreaElement>(null);
+  const panelDialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (task) {
@@ -98,6 +99,21 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
       fetchActivity(task.id);
     }
   }, [task?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (!isOpen || !panelDialogRef.current) return;
+    const focusable = panelDialogRef.current.querySelector<HTMLElement>('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    focusable?.focus();
+  }, [isOpen]);
 
   const fetchSubtasks = async (taskId: string) => {
     try {
@@ -225,12 +241,14 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
               onBlur={handleTitleBlur}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleTitleBlur(); } }}
               autoFocus
+              aria-label="Task title"
               className="w-full bg-transparent text-white text-lg font-semibold leading-snug resize-none border-b border-[#d4af37]/50 focus:outline-none"
               rows={2}
               style={{ ...inputStyle, overflow: 'hidden' }}
             />
           ) : (
             <h2
+              id="task-detail-panel-title"
               className="text-lg font-semibold text-white leading-snug cursor-pointer hover:text-[#d4af37] transition-colors"
               onClick={() => { setEditingTitle(true); setTimeout(() => titleRef.current?.focus(), 0); }}
             >
@@ -276,6 +294,7 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
         </div>
         <button
           onClick={onClose}
+          aria-label="Close"
           className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors shrink-0"
           style={{ minWidth: isMobile ? 44 : undefined, minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
         >
@@ -397,6 +416,7 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
                 type="date"
                 value={task.due_date?.split('T')[0] || ''}
                 onChange={(e) => handleInlineUpdate({ due_date: e.target.value || null }, 'due_date')}
+                aria-label="Due date"
                 className="bg-transparent text-sm text-[#e2e8f0] px-2 py-1 rounded hover:bg-[#2d3a52] transition-colors border-none focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50 cursor-pointer"
                 style={inputStyle}
               />
@@ -424,6 +444,7 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
               onBlur={handleDescBlur}
               autoFocus
               rows={4}
+              aria-label="Task description"
               className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] resize-none"
               style={{ ...inputStyle, minHeight: 80 }}
               placeholder="Add a description..."
@@ -472,6 +493,7 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
                   onClick={() => handleToggleSubtask(st)}
                   className="shrink-0 text-[#64748b] hover:text-[#d4af37] transition-colors"
                   style={{ minWidth: isMobile ? 44 : undefined, minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+                  aria-label={st.done ? 'Mark subtask incomplete' : 'Mark subtask complete'}
                 >
                   {st.done ? (
                     <CheckSquare className="h-4 w-4 text-emerald-400" />
@@ -485,6 +507,7 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
                 <button
                   onClick={() => handleDeleteSubtask(st.id)}
                   className="opacity-0 group-hover:opacity-100 p-1 text-[#64748b] hover:text-red-400 transition-all"
+                  aria-label="Delete subtask"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -500,6 +523,7 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
               onChange={(e) => setNewSubtaskTitle(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleAddSubtask(); }}
               placeholder="Add subtask..."
+              aria-label="New subtask title"
               className="flex-1 px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm placeholder-[#64748b] focus:outline-none focus:border-[#d4af37]"
               style={inputStyle}
             />
@@ -508,6 +532,7 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
               disabled={!newSubtaskTitle.trim() || addingSubtask}
               className="p-2 rounded-lg bg-[#2d3a52] text-[#94a3b8] hover:text-white hover:bg-[#3d4a62] transition-colors disabled:opacity-50"
               style={{ minWidth: isMobile ? 44 : undefined, minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+              aria-label="Add subtask"
             >
               {addingSubtask ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             </button>
@@ -582,7 +607,7 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
   // Mobile: full-screen bottom sheet
   if (isMobile) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-[#0a1628]">
+      <div ref={panelDialogRef} role="dialog" aria-modal="true" aria-labelledby="task-detail-panel-title" className="fixed inset-0 z-50 flex flex-col bg-[#0a1628]">
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-9 h-1 rounded-full bg-white/20" />
         </div>
@@ -594,8 +619,8 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
   // Desktop: side panel
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
-      <div className="fixed top-0 right-0 bottom-0 z-50 w-[380px] bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border-l border-[#2d3a52] shadow-2xl flex flex-col animate-slide-in-right">
+      <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} aria-hidden="true" />
+      <div ref={panelDialogRef} role="dialog" aria-modal="true" aria-labelledby="task-detail-panel-title" className="fixed top-0 right-0 bottom-0 z-50 w-[380px] bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border-l border-[#2d3a52] shadow-2xl flex flex-col animate-slide-in-right">
         {panelContent}
       </div>
     </>

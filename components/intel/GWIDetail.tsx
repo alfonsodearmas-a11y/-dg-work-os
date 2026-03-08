@@ -206,12 +206,12 @@ function ContractTable({ data, title }: {
   return (
     <div>
       <p className="text-[#94a3b8] text-sm font-medium mb-2">{title}</p>
-      <table className="w-full text-sm">
+      <table className="w-full text-sm" aria-label={title}>
         <thead>
           <tr className="border-b border-[#2d3a52]">
-            <th className="text-left py-2 text-[#64748b] font-medium">Type</th>
-            <th className="text-right py-2 text-[#64748b] font-medium">Count</th>
-            <th className="text-right py-2 text-[#64748b] font-medium">Value</th>
+            <th scope="col" className="text-left py-2 text-[#64748b] font-medium">Type</th>
+            <th scope="col" className="text-right py-2 text-[#64748b] font-medium">Count</th>
+            <th scope="col" className="text-right py-2 text-[#64748b] font-medium">Value</th>
           </tr>
         </thead>
         <tbody>
@@ -482,8 +482,8 @@ export function GWIDetail() {
                 <HealthScoreTooltip score={insights.overall.health_score} size={100} />
               </div>
             ) : insightsLoading ? (
-              <div className="w-20 h-20 md:w-[100px] md:h-[100px] flex items-center justify-center">
-                <Loader2 className="w-6 h-6 text-[#64748b] animate-spin" />
+              <div className="w-20 h-20 md:w-[100px] md:h-[100px] flex items-center justify-center" role="status" aria-label="Loading">
+                <Loader2 className="w-6 h-6 text-[#64748b] animate-spin" aria-hidden="true" />
               </div>
             ) : null}
 
@@ -513,6 +513,7 @@ export function GWIDetail() {
                 <select
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
+                  aria-label="Select report month"
                   className="bg-[#0a1628] text-[#94a3b8] text-sm border border-[#2d3a52] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#d4af37]"
                 >
                   {availableMonths.map(m => (

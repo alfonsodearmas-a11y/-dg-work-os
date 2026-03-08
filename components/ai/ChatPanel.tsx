@@ -257,11 +257,11 @@ function MarkdownTable({ rows, onAgencyClick }: { rows: string[][]; onAgencyClic
 
   return (
     <div className="overflow-x-auto my-3 rounded-lg border border-white/10">
-      <table className="w-full text-xs">
+      <table className="w-full text-xs" aria-label="Data table">
         <thead>
           <tr className="bg-white/5 border-b border-white/10">
             {headers.map((h, i) => (
-              <th key={i} className="px-3 py-2 text-left text-[#d4af37] font-semibold whitespace-nowrap">
+              <th key={i} scope="col" className="px-3 py-2 text-left text-[#d4af37] font-semibold whitespace-nowrap">
                 {renderInline(h.trim(), onAgencyClick)}
               </th>
             ))}

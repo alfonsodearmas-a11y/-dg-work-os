@@ -63,6 +63,8 @@ export function QuickAddTask({ status, isMobile, users, onAdd, onCancel }: Quick
           if (e.key === 'Escape') onCancel();
         }}
         autoFocus
+        aria-label="Task title"
+        aria-required="true"
         className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm placeholder-[#64748b] focus:outline-none focus:border-[#d4af37]"
         style={inputStyle}
       />
@@ -93,6 +95,7 @@ export function QuickAddTask({ status, isMobile, users, onAdd, onCancel }: Quick
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
+            aria-label="Due date"
             className="w-[120px] px-2 py-1 rounded text-xs bg-[#0a1628] border border-[#2d3a52] text-[#94a3b8] focus:outline-none focus:border-[#d4af37]"
             style={{ minHeight: isMobile ? 36 : undefined }}
           />
@@ -103,6 +106,7 @@ export function QuickAddTask({ status, isMobile, users, onAdd, onCancel }: Quick
           <select
             value={assignee}
             onChange={(e) => setAssignee(e.target.value)}
+            aria-label="Assignee"
             className="px-2 py-1 rounded text-xs bg-[#0a1628] border border-[#2d3a52] text-[#94a3b8] focus:outline-none focus:border-[#d4af37]"
             style={{ maxWidth: 120, minHeight: isMobile ? 36 : undefined }}
           >

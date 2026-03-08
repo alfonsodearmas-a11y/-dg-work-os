@@ -15,8 +15,8 @@ import dynamic from 'next/dynamic';
 import { Loader2 } from 'lucide-react';
 
 const PanelLoader = () => (
-  <div className="flex items-center justify-center py-24">
-    <Loader2 className="h-6 w-6 text-[#d4af37] animate-spin" />
+  <div className="flex items-center justify-center py-24" role="status" aria-label="Loading">
+    <Loader2 className="h-6 w-6 text-[#d4af37] animate-spin" aria-hidden="true" />
   </div>
 );
 
@@ -67,8 +67,9 @@ export default function IntelPage() {
           onClick={refresh}
           disabled={isLoading}
           className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] hover:text-white transition-colors disabled:opacity-50 shrink-0 touch-active"
+          aria-label="Refresh"
         >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
           <span className="text-sm hidden md:inline">Refresh</span>
         </button>
       </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, Loader2, Calendar, Flag, Building2, CheckCircle } from 'lucide-react';
 
 interface Task {
@@ -33,11 +33,27 @@ const priorities = [
 const agencies = ['GPL', 'GWI', 'HECI', 'MARAD', 'GCAA', 'CJIA', 'HAS', 'MOPUA'];
 
 export function TaskEditModal({ task, onClose, onSave }: TaskEditModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
   const [dueDate, setDueDate] = useState(task.due_date || '');
   const [status, setStatus] = useState(task.status || 'new');
   const [priority, setPriority] = useState(task.priority || '');
   const [agency, setAgency] = useState(task.agency || '');
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (modalRef.current) {
+      const focusable = modalRef.current.querySelector<HTMLElement>('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus();
+    }
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -65,12 +81,13 @@ export function TaskEditModal({ task, onClose, onSave }: TaskEditModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end md:items-center justify-center z-50">
-      <div className="bg-[#0f1d32] border border-[#2d3a52] rounded-t-2xl md:rounded-2xl shadow-2xl w-full max-w-md md:mx-4 overflow-hidden max-h-[90vh] overflow-y-auto animate-slide-up md:animate-fade-in" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="task-edit-modal-title" className="bg-[#0f1d32] border border-[#2d3a52] rounded-t-2xl md:rounded-2xl shadow-2xl w-full max-w-md md:mx-4 overflow-hidden max-h-[90vh] overflow-y-auto animate-slide-up md:animate-fade-in" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-[#2d3a52] bg-gradient-to-r from-[#1a2744] to-[#0f1d32]">
-          <h2 className="text-lg font-semibold text-white">Edit Task</h2>
+          <h2 id="task-edit-modal-title" className="text-lg font-semibold text-white">Edit Task</h2>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
           >
             <X className="h-5 w-5" />
@@ -99,6 +116,7 @@ export function TaskEditModal({ task, onClose, onSave }: TaskEditModalProps) {
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
+              aria-label="Due date"
               className="w-full px-4 py-3 bg-[#1a2744] border border-[#2d3a52] rounded-xl text-white focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-colors [color-scheme:dark]"
             />
           </div>
@@ -112,6 +130,7 @@ export function TaskEditModal({ task, onClose, onSave }: TaskEditModalProps) {
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
+              aria-label="Status"
               className="w-full px-4 py-3 bg-[#1a2744] border border-[#2d3a52] rounded-xl text-white focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-colors appearance-none cursor-pointer"
               style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em' }}
             >
@@ -130,6 +149,7 @@ export function TaskEditModal({ task, onClose, onSave }: TaskEditModalProps) {
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value)}
+              aria-label="Priority"
               className="w-full px-4 py-3 bg-[#1a2744] border border-[#2d3a52] rounded-xl text-white focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-colors appearance-none cursor-pointer"
               style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em' }}
             >
@@ -149,6 +169,7 @@ export function TaskEditModal({ task, onClose, onSave }: TaskEditModalProps) {
             <select
               value={agency}
               onChange={(e) => setAgency(e.target.value)}
+              aria-label="Agency"
               className="w-full px-4 py-3 bg-[#1a2744] border border-[#2d3a52] rounded-xl text-white focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-colors appearance-none cursor-pointer"
               style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em' }}
             >

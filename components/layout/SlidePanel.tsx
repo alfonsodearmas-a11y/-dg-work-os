@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, ReactNode } from 'react';
+import { useEffect, useRef, ReactNode } from 'react';
 import { X, ArrowLeft } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -15,6 +15,8 @@ interface SlidePanelProps {
 }
 
 export function SlidePanel({ isOpen, onClose, title, subtitle, icon: Icon, accentColor, children }: SlidePanelProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -28,6 +30,8 @@ export function SlidePanel({ isOpen, onClose, title, subtitle, icon: Icon, accen
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      const focusable = panelRef.current?.querySelector<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus();
     } else {
       document.body.style.overflow = '';
     }
@@ -44,10 +48,15 @@ export function SlidePanel({ isOpen, onClose, title, subtitle, icon: Icon, accen
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Panel */}
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="slide-panel-title"
         className={`fixed inset-y-0 right-0 w-full sm:w-[600px] lg:w-[700px] bg-[#0a1628] border-l border-[#2d3a52] z-50 flex flex-col transform transition-transform duration-300 ease-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
@@ -59,22 +68,24 @@ export function SlidePanel({ isOpen, onClose, title, subtitle, icon: Icon, accen
               <button
                 onClick={onClose}
                 className="p-2.5 -ml-2 rounded-lg hover:bg-[#2d3a52] text-[#94a3b8] hover:text-white transition-colors lg:hidden touch-active"
+                aria-label="Close panel"
               >
                 <ArrowLeft size={20} />
               </button>
               {Icon && (
                 <div className={`p-2.5 rounded-xl bg-gradient-to-br ${accentColor}`}>
-                  <Icon className="text-white" size={22} />
+                  <Icon className="text-white" size={22} aria-hidden="true" />
                 </div>
               )}
               <div>
-                <h2 className="text-xl font-bold text-white">{title}</h2>
+                <h2 id="slide-panel-title" className="text-xl font-bold text-white">{title}</h2>
                 {subtitle && <p className="text-[#94a3b8] text-sm">{subtitle}</p>}
               </div>
             </div>
             <button
               onClick={onClose}
               className="hidden lg:flex p-2 rounded-lg hover:bg-[#2d3a52] text-[#94a3b8] hover:text-white transition-colors"
+              aria-label="Close panel"
             >
               <X size={20} />
             </button>

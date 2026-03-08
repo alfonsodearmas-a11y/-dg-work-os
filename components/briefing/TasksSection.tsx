@@ -255,6 +255,8 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
             required
+            aria-label="Task title"
+            aria-required="true"
             className={inputClasses}
             autoFocus
           />
@@ -262,6 +264,7 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
             <select
               value={newAgency}
               onChange={(e) => setNewAgency(e.target.value)}
+              aria-label="Agency"
               className={inputClasses}
             >
               <option value="">Agency (optional)</option>
@@ -274,6 +277,7 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
             <select
               value={newPriority}
               onChange={(e) => setNewPriority(e.target.value)}
+              aria-label="Priority"
               className={inputClasses}
             >
               <option value="">Priority (optional)</option>
@@ -286,6 +290,7 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
               type="date"
               value={newDueDate}
               onChange={(e) => setNewDueDate(e.target.value)}
+              aria-label="Due date"
               className={inputClasses}
             />
           </div>

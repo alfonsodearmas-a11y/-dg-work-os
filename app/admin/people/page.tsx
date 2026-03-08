@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import {
   Search, Users, UserCheck, UserX, UserPlus, Shield, ShieldOff,
@@ -335,8 +335,9 @@ export default function PeoplePage() {
           <button
             onClick={() => setShowInvite(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#d4af37]/20 text-[#d4af37] hover:bg-[#d4af37]/30 transition-colors text-sm font-medium"
+            aria-label="Invite User"
           >
-            <UserPlus className="h-4 w-4" />
+            <UserPlus className="h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:inline">Invite User</span>
           </button>
         )}
@@ -356,8 +357,9 @@ export default function PeoplePage() {
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               topTab === t.key ? 'border-[#d4af37] text-[#d4af37]' : 'border-transparent text-[#64748b] hover:text-white'
             }`}
+            aria-label={t.label}
           >
-            <t.icon className="h-3.5 w-3.5" />
+            <t.icon className="h-3.5 w-3.5" aria-hidden="true" />
             <span className="hidden sm:inline">{t.label}</span>
           </button>
         ))}
@@ -439,6 +441,7 @@ export default function PeoplePage() {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search by name or email..."
+            aria-label="Search users by name or email"
             className="w-full pl-10 pr-4 py-2.5 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
           />
         </div>
@@ -450,7 +453,7 @@ export default function PeoplePage() {
             hasActiveFilters ? 'border-[#d4af37]/50 text-[#d4af37] bg-[#d4af37]/10' : 'border-[#2d3a52] text-[#94a3b8] hover:text-white'
           }`}
         >
-          <Filter className="h-4 w-4" />
+          <Filter className="h-4 w-4" aria-hidden="true" />
           Filters
           {hasActiveFilters && (
             <span className="w-5 h-5 rounded-full bg-[#d4af37] text-[#0a1628] text-xs flex items-center justify-center font-bold">
@@ -464,8 +467,9 @@ export default function PeoplePage() {
           <button
             onClick={() => handleSort(sortField)}
             className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#2d3a52] text-sm text-[#94a3b8] hover:text-white transition-colors"
+            aria-label="Sort"
           >
-            <ArrowUpDown className="h-4 w-4" />
+            <ArrowUpDown className="h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:inline">{sortField === 'name' ? 'Name' : sortField === 'role' ? 'Role' : sortField === 'last_seen' ? 'Last Active' : sortField}</span>
             <span className="text-[10px]">{sortDir === 'asc' ? 'A-Z' : 'Z-A'}</span>
           </button>
@@ -478,6 +482,7 @@ export default function PeoplePage() {
           <select
             value={filterRole}
             onChange={e => setFilterRole(e.target.value)}
+            aria-label="Filter by role"
             className="px-3 py-1.5 bg-[#0a1628] border border-[#2d3a52] rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
           >
             <option value="">All Roles</option>
@@ -486,6 +491,7 @@ export default function PeoplePage() {
           <select
             value={filterAgency}
             onChange={e => setFilterAgency(e.target.value)}
+            aria-label="Filter by agency"
             className="px-3 py-1.5 bg-[#0a1628] border border-[#2d3a52] rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
           >
             <option value="">All Agencies</option>
@@ -495,6 +501,7 @@ export default function PeoplePage() {
             <select
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
+              aria-label="Filter by status"
               className="px-3 py-1.5 bg-[#0a1628] border border-[#2d3a52] rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
             >
               <option value="">All Statuses</option>
@@ -570,7 +577,7 @@ export default function PeoplePage() {
             <Trash2 className="h-3.5 w-3.5" />
             Delete
           </button>
-          <button onClick={clearSelection} className="p-1.5 rounded text-[#64748b] hover:text-white transition-colors">
+          <button onClick={clearSelection} className="p-1.5 rounded text-[#64748b] hover:text-white transition-colors" aria-label="Clear selection">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -579,20 +586,21 @@ export default function PeoplePage() {
       {/* Table */}
       <div className="card-premium overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+          <div className="flex items-center justify-center py-16" role="status" aria-label="Loading">
+            <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="User directory">
               <thead>
                 <tr className="border-b border-[#2d3a52]">
                   {isDG && (
-                    <th className="w-10 px-3 py-3">
+                    <th scope="col" className="w-10 px-3 py-3">
                       <input
                         type="checkbox"
                         checked={sorted.length > 0 && selectedIds.size === sorted.length}
                         onChange={toggleSelectAll}
+                        aria-label="Select all users"
                         className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
                       />
                     </th>
@@ -602,7 +610,7 @@ export default function PeoplePage() {
                   <SortHeader label="Agency" field="agency" current={sortField} dir={sortDir} onSort={handleSort} className="hidden md:table-cell" />
                   <SortHeader label="Status" field="status" current={sortField} dir={sortDir} onSort={handleSort} className="hidden sm:table-cell" />
                   <SortHeader label="Last Active" field="last_seen" current={sortField} dir={sortDir} onSort={handleSort} className="hidden lg:table-cell" />
-                  <th className="w-10 px-3 py-3" />
+                  <th scope="col" className="w-10 px-3 py-3" />
                 </tr>
               </thead>
               <tbody>
@@ -625,6 +633,7 @@ export default function PeoplePage() {
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => toggleSelect(u.id)}
+                            aria-label={`Select ${u.name || u.email}`}
                             className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
                           />
                         </td>
@@ -739,6 +748,7 @@ function SortHeader({ label, field, current, dir, onSort, className = '' }: {
   const active = current === field;
   return (
     <th
+      scope="col"
       onClick={() => onSort(field)}
       className={`text-left px-4 py-3 text-xs font-semibold uppercase cursor-pointer select-none transition-colors ${
         active ? 'text-[#d4af37]' : 'text-[#64748b] hover:text-[#94a3b8]'
@@ -756,7 +766,7 @@ function FilterPill({ label, onRemove }: { label: string; onRemove: () => void }
   return (
     <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#d4af37]/10 text-[#d4af37] text-xs font-medium">
       {label}
-      <button onClick={onRemove} className="hover:text-white transition-colors">
+      <button onClick={onRemove} className="hover:text-white transition-colors" aria-label="Remove filter">
         <X className="h-3 w-3" />
       </button>
     </span>
@@ -777,6 +787,22 @@ function InviteModal({
   const [role, setRole] = useState('officer');
   const [agency, setAgency] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const inviteModalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (inviteModalRef.current) {
+      const focusable = inviteModalRef.current.querySelector<HTMLElement>('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus();
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -808,11 +834,11 @@ function InviteModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="card-premium w-full max-w-md p-6 space-y-5">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" aria-hidden="true">
+      <div ref={inviteModalRef} role="dialog" aria-modal="true" aria-labelledby="people-invite-modal-title" className="card-premium w-full max-w-md p-6 space-y-5">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white">Invite User</h2>
-          <button onClick={onClose} className="p-1 rounded text-[#64748b] hover:text-white transition-colors">
+          <h2 id="people-invite-modal-title" className="text-lg font-bold text-white">Invite User</h2>
+          <button onClick={onClose} className="p-1 rounded text-[#64748b] hover:text-white transition-colors" aria-label="Close">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -823,32 +849,37 @@ function InviteModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs text-[#94a3b8] mb-1.5">Full Name</label>
+            <label htmlFor="invite-name" className="block text-xs text-[#94a3b8] mb-1.5">Full Name</label>
             <input
+              id="invite-name"
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="John Smith"
               required
+              aria-required="true"
               className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-[#94a3b8] mb-1.5">Email (Google account)</label>
+            <label htmlFor="invite-email" className="block text-xs text-[#94a3b8] mb-1.5">Email (Google account)</label>
             <input
+              id="invite-email"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="john@agency.gov.gy"
               required
+              aria-required="true"
               className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-[#94a3b8] mb-1.5">Role</label>
+            <label htmlFor="invite-role" className="block text-xs text-[#94a3b8] mb-1.5">Role</label>
             <select
+              id="invite-role"
               value={role}
               onChange={e => setRole(e.target.value)}
               className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
@@ -860,11 +891,13 @@ function InviteModal({
           </div>
 
           <div>
-            <label className="block text-xs text-[#94a3b8] mb-1.5">Agency</label>
+            <label htmlFor="invite-agency" className="block text-xs text-[#94a3b8] mb-1.5">Agency</label>
             <select
+              id="invite-agency"
               value={agency}
               onChange={e => setAgency(e.target.value)}
               required={role === 'agency_admin'}
+              aria-required={role === 'agency_admin' ? 'true' : undefined}
               className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
             >
               <option value="">

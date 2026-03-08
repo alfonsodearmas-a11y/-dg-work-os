@@ -24,7 +24,7 @@ export function HealthDot({ health }: { health: string }) {
   const labels: Record<string, string> = { green: 'On Track', amber: 'Minor Issues', red: 'Critical' };
   return (
     <span className="inline-flex items-center gap-1.5" title={labels[health] || health}>
-      <span className={`w-2.5 h-2.5 rounded-full ${dot}`} />
+      <span className={`w-2.5 h-2.5 rounded-full ${dot}`} aria-label={`Health: ${labels[health] || health}`} />
       <span className="text-xs text-[#94a3b8] hidden lg:inline">{labels[health] || health}</span>
     </span>
   );
@@ -35,7 +35,7 @@ export function ProgressBar({ pct }: { pct: number }) {
   const color = safePct >= 100 ? 'bg-emerald-500' : safePct >= 80 ? 'bg-emerald-500' : safePct >= 40 ? 'bg-amber-500' : safePct > 0 ? 'bg-red-500' : 'bg-[#2d3a52]';
   return (
     <div className="flex items-center gap-2">
-      <div className="w-16 h-1.5 bg-[#2d3a52] rounded-full overflow-hidden">
+      <div className="w-16 h-1.5 bg-[#2d3a52] rounded-full overflow-hidden" role="progressbar" aria-valuenow={safePct} aria-valuemin={0} aria-valuemax={100} aria-label={`Completion: ${safePct}%`}>
         <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.min(safePct, 100)}%` }} />
       </div>
       <span className="text-xs text-[#94a3b8] w-8 text-right">{safePct}%</span>

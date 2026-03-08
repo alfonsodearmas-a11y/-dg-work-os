@@ -178,7 +178,7 @@ function GPLPendingAnalysis() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center py-20"><div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" /></div>;
+    return <div className="flex items-center justify-center py-20" role="status" aria-label="Loading"><div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" /></div>;
   }
 
   if (!analysis) {
@@ -263,12 +263,12 @@ function GPLPendingAnalysis() {
         <div className="card-premium p-4 md:p-6">
           <h3 className="text-sm font-semibold text-white mb-4">Account Types</h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="GPL account types">
               <thead>
                 <tr className="text-[#64748b] text-xs uppercase tracking-wider border-b border-[#2d3a52]">
-                  <th className="text-left py-2 pr-4">Type</th>
-                  <th className="text-right py-2 px-3">Count</th>
-                  <th className="text-right py-2 pl-3">Avg Wait</th>
+                  <th scope="col" className="text-left py-2 pr-4">Type</th>
+                  <th scope="col" className="text-right py-2 px-3">Count</th>
+                  <th scope="col" className="text-right py-2 pl-3">Avg Wait</th>
                 </tr>
               </thead>
               <tbody>
@@ -313,6 +313,7 @@ function GPLPendingAnalysis() {
               placeholder="Search name, reference, address..."
               value={searchInput}
               onChange={e => handleSearchChange(e.target.value)}
+              aria-label="Search GPL applications"
               className="w-full pl-10 pr-10 py-3 sm:py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-base sm:text-sm placeholder:text-[#64748b] focus:border-[#d4af37] focus:outline-none"
             />
             {searchInput && (
@@ -323,6 +324,7 @@ function GPLPendingAnalysis() {
           </div>
           <div className="relative">
             <select value={stageFilter} onChange={e => setStageFilter(e.target.value)}
+              aria-label="Filter by pipeline stage"
               className="appearance-none w-full pl-3 pr-8 py-3 sm:py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-[#94a3b8] text-base sm:text-sm focus:border-[#d4af37] focus:outline-none cursor-pointer">
               <option value="">All Stages</option>
               {stages.map(s => <option key={s} value={s}>{s}</option>)}
@@ -333,21 +335,21 @@ function GPLPendingAnalysis() {
 
         {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" aria-label="GPL pending applications">
             <thead>
               <tr className="text-[#64748b] text-xs uppercase tracking-wider border-b border-[#2d3a52] bg-[#0a1628]/50">
                 <SortHeader label="Name" field="last_name" current={sortBy} order={sortOrder} onSort={handleSort} />
-                <th className="text-left py-3 px-3">Customer#</th>
-                <th className="text-left py-3 px-3">Stage</th>
-                <th className="text-left py-3 px-3">Town/City</th>
+                <th scope="col" className="text-left py-3 px-3">Customer#</th>
+                <th scope="col" className="text-left py-3 px-3">Stage</th>
+                <th scope="col" className="text-left py-3 px-3">Town/City</th>
                 <SortHeader label="Days" field="days_waiting" current={sortBy} order={sortOrder} onSort={handleSort} />
                 <SortHeader label="Applied" field="application_date" current={sortBy} order={sortOrder} onSort={handleSort} />
-                <th className="text-left py-3 px-3">Account Type</th>
+                <th scope="col" className="text-left py-3 px-3">Account Type</th>
               </tr>
             </thead>
             <tbody>
               {loadingRecords ? (
-                <tr><td colSpan={7} className="py-12 text-center"><div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto" /></td></tr>
+                <tr><td colSpan={7} className="py-12 text-center"><div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto" role="status" aria-label="Loading" /></td></tr>
               ) : records.length === 0 ? (
                 <tr><td colSpan={7} className="py-12 text-center text-[#64748b]">No records found</td></tr>
               ) : records.map(r => (
@@ -360,7 +362,7 @@ function GPLPendingAnalysis() {
         {/* Mobile Cards */}
         <div className="md:hidden space-y-2">
           {loadingRecords ? (
-            <div className="py-12 text-center"><div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto" /></div>
+            <div className="py-12 text-center" role="status" aria-label="Loading"><div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto" aria-hidden="true" /></div>
           ) : records.length === 0 ? (
             <div className="py-12 text-center text-[#64748b]">No records found</div>
           ) : records.map(r => (
@@ -460,7 +462,7 @@ function GPLPendingAnalysis() {
 
 function SortHeader({ label, field, current, order, onSort }: { label: string; field: string; current: string; order: 'asc' | 'desc'; onSort: (f: string) => void }) {
   return (
-    <th className="text-left py-3 px-3 cursor-pointer hover:text-white transition-colors select-none whitespace-nowrap" onClick={() => onSort(field)}>
+    <th scope="col" className="text-left py-3 px-3 cursor-pointer hover:text-white transition-colors select-none whitespace-nowrap" onClick={() => onSort(field)}>
       <span className="inline-flex items-center gap-1">
         {label}
         <ArrowUpDown className={`h-3 w-3 ${current === field ? 'text-[#d4af37]' : ''}`} />

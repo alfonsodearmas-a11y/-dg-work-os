@@ -67,8 +67,8 @@ export function TrackBPipeline() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center py-20" role="status" aria-label="Loading">
+        <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -213,21 +213,21 @@ export function TrackBPipeline() {
         </div>
 
         {recordsLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+          <div className="flex items-center justify-center py-8" role="status" aria-label="Loading">
+            <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
           </div>
         ) : records.length === 0 ? (
           <p className="text-center text-[#64748b] py-4">No waiting applications.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="Waiting applications">
               <thead>
                 <tr className="border-b border-[#2d3a52]">
-                  <th className="text-left py-2 text-[#64748b] font-medium text-xs">Account</th>
-                  <th className="text-left py-2 text-[#64748b] font-medium text-xs">Customer</th>
-                  <th className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Location</th>
-                  <th className="text-right py-2 text-[#64748b] font-medium text-xs">Days</th>
-                  <th className="text-right py-2 text-[#64748b] font-medium text-xs">Status</th>
+                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Account</th>
+                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Customer</th>
+                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Location</th>
+                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Days</th>
+                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -275,12 +275,12 @@ function StageComparisonCard({ title, outMetrics, compMetrics, slaTarget, color 
         <h4 className="text-xs font-semibold text-white">{title}</h4>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-xs">
+        <table className="w-full text-xs" aria-label={`${title} stage comparison`}>
           <thead>
             <tr className="border-b border-[#2d3a52]">
-              <th className="text-left py-1.5 text-[#64748b]">Metric</th>
-              <th className="text-right py-1.5 text-[#64748b]">Waiting</th>
-              <th className="text-right py-1.5 text-[#64748b]">Completed</th>
+              <th scope="col" className="text-left py-1.5 text-[#64748b]">Metric</th>
+              <th scope="col" className="text-right py-1.5 text-[#64748b]">Waiting</th>
+              <th scope="col" className="text-right py-1.5 text-[#64748b]">Completed</th>
             </tr>
           </thead>
           <tbody>

@@ -724,6 +724,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                   value={selectedDate}
                   onChange={(e) => handleDateChange(e.target.value)}
                   disabled={historyLoading}
+                  aria-label="Select report date"
                   className="bg-[#0a1628] text-[#94a3b8] text-sm border border-[#2d3a52] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#d4af37] disabled:opacity-50"
                 >
                   {historyDates.map(h => (
@@ -850,7 +851,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                         alert.severity === 'critical' ? 'bg-red-500' :
                         alert.severity === 'high' ? 'bg-orange-500' :
                         alert.severity === 'medium' ? 'bg-blue-500' : 'bg-[#64748b]'
-                      }`} />
+                      }`} aria-label={`Severity: ${alert.severity}`} />
                       <span className="text-[#e2e8f0] text-sm flex-1 truncate">{alert.title}</span>
                       {alert.station && (
                         <span className="text-xs px-1.5 py-0.5 rounded bg-[#2d3a52] text-[#94a3b8] flex-shrink-0">{alert.station}</span>
@@ -1205,8 +1206,8 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
             <GPLMonthlyKpi />
 
             {kpiLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <RefreshCw className="w-6 h-6 text-[#64748b] animate-spin" />
+              <div className="flex items-center justify-center py-12" role="status" aria-label="Loading">
+                <RefreshCw className="w-6 h-6 text-[#64748b] animate-spin" aria-hidden="true" />
               </div>
             ) : (
               <>
@@ -1384,8 +1385,8 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
             </div>
 
             {enhancedLoading || enhancedRegenerating ? (
-              <div className="flex flex-col items-center justify-center py-16 gap-3">
-                <RefreshCw className="w-8 h-8 text-[#d4af37] animate-spin" />
+              <div className="flex flex-col items-center justify-center py-16 gap-3" role="status" aria-label="Loading">
+                <RefreshCw className="w-8 h-8 text-[#d4af37] animate-spin" aria-hidden="true" />
                 <p className="text-[#94a3b8] text-[15px]">
                   {enhancedRegenerating ? 'Generating enhanced forecast with Claude Opus...' : 'Loading enhanced forecast...'}
                 </p>
@@ -1514,16 +1515,16 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
                   badge={{ text: '24 months' }}
                 >
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm" aria-label="Scenario comparison">
                       <thead>
                         <tr className="border-b border-[#2d3a52] bg-[#0a1628]">
-                          <th className="text-left py-3 px-4 text-[#94a3b8] font-medium">Timeframe</th>
-                          <th className="text-right py-3 px-4 text-blue-400 font-medium">Conservative</th>
-                          <th className="text-right py-3 px-4 text-[#d4af37] font-medium">Most Likely</th>
-                          <th className="text-right py-3 px-4 text-red-400 font-medium">Aggressive</th>
-                          <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Capacity</th>
-                          <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Reserve (ML)</th>
-                          <th className="text-center py-3 px-4 text-[#94a3b8] font-medium">Seasonal</th>
+                          <th scope="col" className="text-left py-3 px-4 text-[#94a3b8] font-medium">Timeframe</th>
+                          <th scope="col" className="text-right py-3 px-4 text-blue-400 font-medium">Conservative</th>
+                          <th scope="col" className="text-right py-3 px-4 text-[#d4af37] font-medium">Most Likely</th>
+                          <th scope="col" className="text-right py-3 px-4 text-red-400 font-medium">Aggressive</th>
+                          <th scope="col" className="text-right py-3 px-4 text-[#94a3b8] font-medium">Capacity</th>
+                          <th scope="col" className="text-right py-3 px-4 text-[#94a3b8] font-medium">Reserve (ML)</th>
+                          <th scope="col" className="text-center py-3 px-4 text-[#94a3b8] font-medium">Seasonal</th>
                         </tr>
                       </thead>
                       <tbody>

@@ -782,6 +782,24 @@ export default function MeetingsPage() {
     };
   }, []);
 
+  const reviewModalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showReviewModal) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowReviewModal(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showReviewModal]);
+
+  useEffect(() => {
+    if (showReviewModal && reviewModalRef.current) {
+      const focusable = reviewModalRef.current.querySelector<HTMLElement>('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus();
+    }
+  }, [showReviewModal]);
+
   // ── New Meeting Callback ──────────────────────────────────────────────────
 
   function handleNewMeetingComplete(meetingId: string) {
@@ -936,8 +954,8 @@ export default function MeetingsPage() {
     if (status === 'TRANSCRIBING' || status === 'ANALYZING') {
       const label = status === 'TRANSCRIBING' ? 'Transcribing audio...' : 'Analyzing transcript...';
       return (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <Loader2 className="h-10 w-10 text-[#d4af37] animate-spin mb-4" />
+        <div className="flex flex-col items-center justify-center py-12 text-center" role="status" aria-label="Processing">
+          <Loader2 className="h-10 w-10 text-[#d4af37] animate-spin mb-4" aria-hidden="true" />
           <h3 className="text-white font-medium mb-1">{label}</h3>
           <p className="text-[#64748b] text-sm">This may take a minute. Auto-refreshing...</p>
         </div>
@@ -1016,6 +1034,7 @@ export default function MeetingsPage() {
           <textarea
             value={editTranscriptText}
             onChange={(e) => setEditTranscriptText(e.target.value)}
+            aria-label="Edit transcript"
             className="input-premium w-full min-h-[300px] text-sm font-mono leading-relaxed resize-y"
           />
           {selectedMeeting.status === 'ANALYZED' && (
@@ -1147,6 +1166,7 @@ export default function MeetingsPage() {
               placeholder="Task description..."
               value={newActionTask}
               onChange={(e) => setNewActionTask(e.target.value)}
+              aria-label="New action item task description"
               className="input-premium w-full text-sm"
               autoFocus
             />
@@ -1156,12 +1176,14 @@ export default function MeetingsPage() {
                 placeholder="Owner"
                 value={newActionOwner}
                 onChange={(e) => setNewActionOwner(e.target.value)}
+                aria-label="New action item owner"
                 className="input-premium flex-1 text-sm"
               />
               <input
                 type="date"
                 value={newActionDue}
                 onChange={(e) => setNewActionDue(e.target.value)}
+                aria-label="New action item due date"
                 className="input-premium flex-1 text-sm"
               />
             </div>
@@ -1203,6 +1225,7 @@ export default function MeetingsPage() {
                   type="text"
                   value={editActionTask}
                   onChange={(e) => setEditActionTask(e.target.value)}
+                  aria-label="Edit action item task description"
                   className="input-premium w-full text-sm"
                   autoFocus
                 />
@@ -1212,12 +1235,14 @@ export default function MeetingsPage() {
                     placeholder="Owner"
                     value={editActionOwner}
                     onChange={(e) => setEditActionOwner(e.target.value)}
+                    aria-label="Edit action item owner"
                     className="input-premium flex-1 text-sm"
                   />
                   <input
                     type="date"
                     value={editActionDue}
                     onChange={(e) => setEditActionDue(e.target.value)}
+                    aria-label="Edit action item due date"
                     className="input-premium flex-1 text-sm"
                   />
                 </div>
@@ -1440,6 +1465,7 @@ export default function MeetingsPage() {
             value={notesText}
             onChange={(e) => handleNotesChange(e.target.value)}
             placeholder="Write meeting notes here... (Markdown supported)"
+            aria-label="Meeting notes"
             className="input-premium w-full flex-1 min-h-[300px] text-sm leading-relaxed resize-y font-mono"
           />
         )}
@@ -1457,6 +1483,7 @@ export default function MeetingsPage() {
           <Link
             href="/"
             className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors touch-active"
+            aria-label="Back"
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
@@ -1471,8 +1498,9 @@ export default function MeetingsPage() {
         <button
           onClick={() => setShowNewModal(true)}
           className="btn-gold flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2 text-sm"
+          aria-label="New Meeting"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-4 w-4" aria-hidden="true" />
           <span className="hidden md:inline">New Meeting</span>
         </button>
       </div>
@@ -1532,6 +1560,7 @@ export default function MeetingsPage() {
               placeholder="Search meetings..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search meetings"
               className="input-premium w-full py-2.5 text-sm"
               style={{ paddingLeft: '2.5rem' }}
             />
@@ -1615,8 +1644,8 @@ export default function MeetingsPage() {
               </div>
             </div>
           ) : detailLoading ? (
-            <div className="card-premium flex-1 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 text-[#d4af37] animate-spin" />
+            <div className="card-premium flex-1 flex items-center justify-center" role="status" aria-label="Loading">
+              <Loader2 className="h-8 w-8 text-[#d4af37] animate-spin" aria-hidden="true" />
             </div>
           ) : detailError && !selectedMeeting ? (
             <div className="card-premium flex-1 flex items-center justify-center">
@@ -1650,6 +1679,7 @@ export default function MeetingsPage() {
                       type="text"
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
+                      aria-label="Meeting title"
                       className="input-premium w-full text-lg font-semibold"
                       placeholder="Meeting title"
                       autoFocus
@@ -1658,6 +1688,7 @@ export default function MeetingsPage() {
                       type="text"
                       value={editAttendees}
                       onChange={(e) => setEditAttendees(e.target.value)}
+                      aria-label="Meeting attendees"
                       className="input-premium w-full text-sm"
                       placeholder="Attendees (comma-separated)"
                     />
@@ -1691,6 +1722,7 @@ export default function MeetingsPage() {
                           onClick={startEditHeader}
                           className="p-1.5 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
                           title="Edit title & attendees"
+                          aria-label="Edit title and attendees"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
@@ -1698,6 +1730,7 @@ export default function MeetingsPage() {
                           onClick={() => setShowDeleteConfirm(true)}
                           className="p-1.5 rounded-lg text-[#64748b] hover:text-red-400 hover:bg-red-500/10 transition-colors"
                           title="Delete meeting"
+                          aria-label="Delete meeting"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -1705,11 +1738,12 @@ export default function MeetingsPage() {
                           onClick={() => setShowCalendarModal(true)}
                           className="p-1.5 rounded-lg text-[#64748b] hover:text-[#d4af37] hover:bg-[#d4af37]/10 transition-colors"
                           title="Add to Google Calendar"
+                          aria-label="Add to Google Calendar"
                         >
                           <CalendarPlus className="h-3.5 w-3.5" />
                         </button>
-                        <button className="btn-navy flex items-center gap-1.5 px-3 py-1.5 text-xs">
-                          <Download className="h-3.5 w-3.5" />
+                        <button className="btn-navy flex items-center gap-1.5 px-3 py-1.5 text-xs" aria-label="Export">
+                          <Download className="h-3.5 w-3.5" aria-hidden="true" />
                           <span className="hidden sm:inline">Export</span>
                         </button>
                       </div>
@@ -1838,12 +1872,12 @@ export default function MeetingsPage() {
 
       {/* Review Modal */}
       {showReviewModal && reviewItems.length > 0 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-[#2d3a52] bg-[#0f1d32] shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" aria-hidden="true">
+          <div ref={reviewModalRef} role="dialog" aria-modal="true" aria-labelledby="review-action-items-modal-title" className="w-full max-w-lg rounded-2xl border border-[#2d3a52] bg-[#0f1d32] shadow-2xl">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-[#2d3a52]">
               <div>
-                <h2 className="text-white font-bold text-lg">Review Action Items</h2>
+                <h2 id="review-action-items-modal-title" className="text-white font-bold text-lg">Review Action Items</h2>
                 <p className="text-[#64748b] text-xs mt-0.5">
                   Reviewing {reviewIndex + 1} of {reviewItems.length}
                 </p>
@@ -1851,6 +1885,7 @@ export default function MeetingsPage() {
               <button
                 onClick={() => setShowReviewModal(false)}
                 className="p-1.5 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
+                aria-label="Close"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1876,10 +1911,11 @@ export default function MeetingsPage() {
 
               {/* Task text */}
               <div>
-                <label className="text-[#64748b] text-xs font-medium uppercase tracking-wider mb-1.5 block">
+                <label htmlFor="review-task" className="text-[#64748b] text-xs font-medium uppercase tracking-wider mb-1.5 block">
                   Task
                 </label>
                 <textarea
+                  id="review-task"
                   value={reviewTask}
                   onChange={(e) => setReviewTask(e.target.value)}
                   className="input-premium w-full text-sm min-h-[60px] resize-none"
@@ -1889,10 +1925,11 @@ export default function MeetingsPage() {
 
               {/* Owner */}
               <div>
-                <label className="text-[#64748b] text-xs font-medium uppercase tracking-wider mb-1.5 block">
+                <label htmlFor="review-owner" className="text-[#64748b] text-xs font-medium uppercase tracking-wider mb-1.5 block">
                   Owner
                 </label>
                 <input
+                  id="review-owner"
                   type="text"
                   value={reviewOwner}
                   onChange={(e) => setReviewOwner(e.target.value)}
@@ -1911,10 +1948,11 @@ export default function MeetingsPage() {
 
               {/* Due date */}
               <div>
-                <label className="text-[#64748b] text-xs font-medium uppercase tracking-wider mb-1.5 block">
+                <label htmlFor="review-due" className="text-[#64748b] text-xs font-medium uppercase tracking-wider mb-1.5 block">
                   Due Date
                 </label>
                 <input
+                  id="review-due"
                   type="date"
                   value={reviewDue}
                   onChange={(e) => setReviewDue(e.target.value)}

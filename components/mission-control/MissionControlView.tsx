@@ -287,7 +287,7 @@ function LiveAgencyCard({ name, fullName, color, score, kpi, pendingCount }: {
         )}
 
         {/* Score bar */}
-        <div className="w-full h-1.5 rounded-full bg-[#2d3a52]">
+        <div className="w-full h-1.5 rounded-full bg-[#2d3a52]" role="progressbar" aria-valuenow={displayScore} aria-valuemin={0} aria-valuemax={100} aria-label={`Health score: ${displayScore}%`}>
           <div
             className="h-full rounded-full transition-all duration-[1400ms] ease-out"
             style={{

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   X, Shield, ShieldOff, Archive, RotateCcw, LogOut, Trash2, Mail,
   ChevronDown, AlertTriangle, Clock, UserCheck, UserX,
@@ -100,6 +100,7 @@ const AUDIT_LABELS: Record<string, string> = {
 };
 
 export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, onUserUpdated, showToast }: UserDetailDrawerProps) {
+  const drawerRef = useRef<HTMLDivElement>(null);
   const [editRole, setEditRole] = useState('');
   const [editAgency, setEditAgency] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -158,6 +159,12 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
     if (isOpen) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = '';
     return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !drawerRef.current) return;
+    const focusable = drawerRef.current.querySelector<HTMLElement>('button, input, select, [tabindex]:not([tabindex="-1"])');
+    focusable?.focus();
   }, [isOpen]);
 
   const handleFieldChange = (field: string, value: string | null) => {
@@ -282,10 +289,15 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Drawer */}
       <div
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="user-detail-drawer-title"
         className={`fixed inset-y-0 right-0 w-full sm:w-[440px] bg-[#0a1628] border-l border-[#2d3a52] z-50 flex flex-col transform transition-transform duration-300 ease-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
@@ -293,8 +305,8 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
         {/* Header */}
         <div className="flex-shrink-0 border-b border-[#2d3a52] px-5 py-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-white">User Details</h2>
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-[#2d3a52] text-[#94a3b8] hover:text-white transition-colors">
+            <h2 id="user-detail-drawer-title" className="text-lg font-bold text-white">User Details</h2>
+            <button onClick={onClose} className="p-2 rounded-lg hover:bg-[#2d3a52] text-[#94a3b8] hover:text-white transition-colors" aria-label="Close">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -331,6 +343,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                     type="text"
                     value={editName}
                     onChange={e => handleFieldChange('name', e.target.value)}
+                    aria-label="User name"
                     className="w-full px-3 py-1.5 bg-[#0a1628] border border-[#2d3a52] rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
                   />
                 ) : (
@@ -384,6 +397,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                   <select
                     value={editRole}
                     onChange={e => handleFieldChange('role', e.target.value)}
+                    aria-label="User role"
                     className="w-full px-3 py-1.5 bg-[#0a1628] border border-[#2d3a52] rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
                   >
                     {ROLE_OPTIONS.map(r => (
@@ -401,6 +415,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                   <select
                     value={editAgency || ''}
                     onChange={e => handleFieldChange('agency', e.target.value || null)}
+                    aria-label="User agency"
                     className="w-full px-3 py-1.5 bg-[#0a1628] border border-[#2d3a52] rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
                   >
                     <option value="">No agency</option>
@@ -503,6 +518,8 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                         value={deleteConfirmEmail}
                         onChange={e => setDeleteConfirmEmail(e.target.value)}
                         placeholder={user.email}
+                        aria-label="Type email to confirm deletion"
+                        aria-required="true"
                         className="w-full px-3 py-1.5 bg-[#0a1628] border border-red-500/30 rounded text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-red-500/50"
                       />
                       <div className="flex gap-2">
@@ -650,7 +667,7 @@ function ActionButton({ icon: Icon, label, desc, color, loading, onClick }: {
       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm disabled:opacity-50 ${color}`}
     >
       {loading ? (
-        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />
+        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" role="status" aria-label="Loading" />
       ) : (
         <Icon className="h-4 w-4 shrink-0" />
       )}

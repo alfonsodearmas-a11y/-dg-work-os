@@ -67,8 +67,8 @@ export function ExecutiveBriefHero({
       {/* Narrative */}
       {loading ? (
         <div className="mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-5 h-5 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+          <div className="flex items-center gap-3 mb-4" role="status" aria-label="Loading">
+            <div className="w-5 h-5 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
             <span className="text-[#d4af37] text-sm font-medium">Generating briefing...</span>
           </div>
           <div className="space-y-3">

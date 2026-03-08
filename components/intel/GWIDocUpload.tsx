@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   Upload, FileText, CheckCircle, AlertCircle, Loader2, X,
@@ -55,6 +55,23 @@ interface GWIDocUploadProps {
 const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB Vercel limit
 
 export function GWIDocUpload({ reportPeriod, onClose, onSaved }: GWIDocUploadProps) {
+  const gwiModalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (gwiModalRef.current) {
+      const focusable = gwiModalRef.current.querySelector<HTMLElement>('button, input, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus();
+    }
+  }, []);
+
   const [zones, setZones] = useState<Record<string, ZoneState>>({
     management: { file: null, stage: 'idle', preview: null, error: null },
     cscr: { file: null, stage: 'idle', preview: null, error: null },
@@ -168,16 +185,16 @@ export function GWIDocUpload({ reportPeriod, onClose, onSaved }: GWIDocUploadPro
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-4">
-      <div className="bg-[#0a1628] rounded-t-2xl md:rounded-2xl border border-[#2d3a52] w-full md:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <div ref={gwiModalRef} role="dialog" aria-modal="true" aria-labelledby="gwi-doc-upload-title" className="bg-[#0a1628] rounded-t-2xl md:rounded-2xl border border-[#2d3a52] w-full md:max-w-3xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-[#2d3a52]">
           <div>
-            <h2 className="text-lg md:text-[22px] font-bold text-white">Upload GWI Reports</h2>
+            <h2 id="gwi-doc-upload-title" className="text-lg md:text-[22px] font-bold text-white">Upload GWI Reports</h2>
             <p className="text-[#64748b] text-sm mt-0.5">
               Upload .docx reports for {new Date(`${reportPeriod}-01`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-[#2d3a52] rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 hover:bg-[#2d3a52] rounded-lg transition-colors" aria-label="Close">
             <X className="w-5 h-5 text-[#94a3b8]" />
           </button>
         </div>
@@ -261,7 +278,7 @@ function DropZone({ zone, state, onDrop, onParse, onConfirm, onReset }: DropZone
                 isDragActive ? 'border-cyan-400 bg-cyan-400/10' : 'border-[#2d3a52] hover:border-[#4d5a72]'
               }`}
             >
-              <input {...getInputProps()} />
+              <input {...getInputProps()} aria-label="Select document file to upload" />
               <Upload className={`w-6 h-6 mx-auto mb-2 ${isDragActive ? 'text-cyan-400' : 'text-[#64748b]'}`} />
               {state.file ? (
                 <p className="text-white text-sm">{state.file.name}</p>

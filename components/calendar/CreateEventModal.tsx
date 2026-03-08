@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { EventModal, EventFormData } from './EventModal';
 import { CalendarEvent } from '@/lib/calendar-types';
 import { ExternalLink, CheckCircle2 } from 'lucide-react';
@@ -43,18 +43,36 @@ export function CreateEventModal({
     onClose();
   };
 
+  const successRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, handleClose]);
+
+  useEffect(() => {
+    if (isOpen && createdEvent && successRef.current) {
+      const focusable = successRef.current.querySelector<HTMLElement>('a, button, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus();
+    }
+  }, [isOpen, createdEvent]);
+
   if (!isOpen) return null;
 
   // Success state
   if (createdEvent) {
     return (
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-        <div className="fixed inset-0 bg-black/80" style={{ zIndex: -1 }} onClick={handleClose} />
-        <div className="relative w-full max-w-sm bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border border-[#2d3a52] rounded-2xl shadow-2xl p-6 text-center animate-fade-in">
+        <div className="fixed inset-0 bg-black/80" style={{ zIndex: -1 }} onClick={handleClose} aria-hidden="true" />
+        <div ref={successRef} role="dialog" aria-modal="true" aria-labelledby="create-event-success-title" className="relative w-full max-w-sm bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border border-[#2d3a52] rounded-2xl shadow-2xl p-6 text-center animate-fade-in">
           <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 className="h-7 w-7 text-emerald-400" />
           </div>
-          <h3 className="text-white font-semibold text-lg mb-1">Event Created</h3>
+          <h3 id="create-event-success-title" className="text-white font-semibold text-lg mb-1">Event Created</h3>
           <p className="text-[#64748b] text-sm mb-4">
             &quot;{createdEvent.title}&quot; has been added to your Google Calendar.
           </p>

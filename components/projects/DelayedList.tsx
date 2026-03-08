@@ -45,7 +45,7 @@ export function DelayedList({ projects }: DelayedListProps) {
   }
 
   return (
-    <Table>
+    <Table ariaLabel="Delayed projects">
       <TableHeader>
         <TableRow>
           <TableHead>Reference</TableHead>

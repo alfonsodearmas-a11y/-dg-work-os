@@ -99,6 +99,7 @@ export function KanbanColumn({
                 type="checkbox"
                 checked={allSelected}
                 onChange={handleSelectAll}
+                aria-label={`Select all ${title} tasks`}
                 className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
               />
             )}

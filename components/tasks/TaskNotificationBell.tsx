@@ -74,6 +74,7 @@ export function TaskNotificationBell({ basePath = '/dashboard' }: { basePath?: s
       <button
         onClick={() => setOpen(!open)}
         className="relative p-2 rounded-lg hover:bg-[#2d3a52]/50 text-[#64748b] hover:text-white transition-colors"
+        aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (

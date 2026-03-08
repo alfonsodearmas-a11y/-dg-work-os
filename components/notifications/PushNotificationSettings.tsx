@@ -302,6 +302,7 @@ export function PushNotificationSettings() {
                     onClick={() => isCurrent ? handleDisableThisDevice() : handleDeleteDevice(sub.id)}
                     className="p-1.5 rounded-lg hover:bg-white/5 transition-colors flex-shrink-0"
                     title={isCurrent ? 'Disable push on this device' : 'Remove device'}
+                    aria-label={isCurrent ? 'Disable push on this device' : 'Remove device'}
                   >
                     <Trash2 className="h-3.5 w-3.5 text-white/30 hover:text-[#dc2626]" />
                   </button>

@@ -515,7 +515,7 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
           Upload GPL DBIS Excel
         </h3>
         {onCancel && (
-          <button onClick={onCancel} className="text-[#94a3b8] hover:text-white">
+          <button onClick={onCancel} className="text-[#94a3b8] hover:text-white" aria-label="Close">
             <X className="w-5 h-5" />
           </button>
         )}
@@ -552,6 +552,7 @@ export function GPLExcelUpload({ onSuccess, onCancel }: GPLExcelUploadProps) {
                 type="file"
                 accept=".xlsx"
                 onChange={handleFileSelect}
+                aria-label="Select DBIS Excel file"
                 className="hidden"
               />
             </label>

@@ -112,6 +112,7 @@ export function DocumentViewer({ document, onDelete }: DocumentViewerProps) {
           <button
             onClick={handleDelete}
             className="p-3 rounded-xl text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition-all"
+            aria-label="Delete document"
           >
             <Trash2 className="h-5 w-5" />
           </button>

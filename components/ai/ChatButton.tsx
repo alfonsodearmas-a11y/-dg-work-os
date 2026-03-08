@@ -64,6 +64,7 @@ export function ChatButton() {
             animation: 'chatFabPulse 10s ease-in-out infinite',
           }}
           title={`Ask AI (${navigator?.platform?.includes('Mac') ? '\u2318' : 'Ctrl+'}K)`}
+          aria-label="Open AI assistant"
         >
           <Sparkles className={`text-white transition-all duration-200 ${isHovered && !isMobile ? 'h-5 w-5' : 'h-6 w-6'}`} />
           {isHovered && !isMobile && (

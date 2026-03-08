@@ -20,8 +20,8 @@ export function HealthScoreGauge({ score, size, label = 'Health Score', compact 
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <div className="relative" style={{ width: effectiveSize, height: effectiveSize }}>
-        <svg width={effectiveSize} height={effectiveSize} className="-rotate-90">
+      <div className="relative" style={{ width: effectiveSize, height: effectiveSize }} role="progressbar" aria-valuenow={Math.round(clamped * 10)} aria-valuemin={0} aria-valuemax={100} aria-label={`${label}: ${clamped.toFixed(1)} out of 10`}>
+        <svg width={effectiveSize} height={effectiveSize} className="-rotate-90" aria-hidden="true">
           <circle
             cx={effectiveSize / 2}
             cy={effectiveSize / 2}

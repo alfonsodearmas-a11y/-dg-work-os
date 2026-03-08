@@ -221,7 +221,7 @@ export function DailyExcelUpload({ onSuccess, onCancel }: DailyExcelUploadProps)
             </div>
           </div>
           {onCancel && (
-            <button onClick={onCancel} className="text-white/70 hover:text-white p-2">
+            <button onClick={onCancel} className="text-white/70 hover:text-white p-2" aria-label="Close">
               <X size={24} />
             </button>
           )}
@@ -356,6 +356,7 @@ export function DailyExcelUpload({ onSuccess, onCancel }: DailyExcelUploadProps)
                   type="file"
                   accept=".xlsx"
                   onChange={handleFileSelect}
+                  aria-label="Select daily Excel file"
                   className="hidden"
                 />
               </label>

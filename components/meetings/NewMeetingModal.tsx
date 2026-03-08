@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   X,
@@ -159,6 +159,23 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
 
   // ── Render ──────────────────────────────────────────────────────────────
 
+  const meetingModalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !pipelineRunning) handleClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, pipelineRunning, handleClose]);
+
+  useEffect(() => {
+    if (!isOpen || !meetingModalRef.current) return;
+    const focusable = meetingModalRef.current.querySelector<HTMLElement>('input, button, select, textarea, [tabindex]:not([tabindex="-1"])');
+    focusable?.focus();
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const attendees = attendeesStr
@@ -172,10 +189,15 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={handleClose}
+        aria-hidden="true"
       />
 
       {/* Panel */}
       <div
+        ref={meetingModalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-meeting-modal-title"
         className="relative w-full max-w-lg rounded-t-2xl md:rounded-2xl bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border border-[#2d3a52] shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up md:animate-fade-in"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
@@ -190,13 +212,14 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
                 <ArrowLeft className="h-4 w-4" />
               </button>
             )}
-            <h2 className="text-lg font-semibold text-white">
+            <h2 id="new-meeting-modal-title" className="text-lg font-semibold text-white">
               {step === 1 ? 'New Meeting' : inputMode === 'record' ? 'Record & Process' : 'Upload & Process'}
             </h2>
           </div>
           <button
             onClick={handleClose}
             disabled={pipelineRunning}
+            aria-label="Close"
             className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors disabled:opacity-50"
           >
             <X className="h-4 w-4" />
@@ -209,23 +232,26 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
           {step === 1 && (
             <>
               <div>
-                <label className="block text-sm font-medium text-[#94a3b8] mb-1.5">
+                <label htmlFor="new-meeting-title" className="block text-sm font-medium text-[#94a3b8] mb-1.5">
                   Title <span className="text-red-400">*</span>
                 </label>
                 <input
+                  id="new-meeting-title"
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. GPL Board Review"
                   className="input-premium w-full"
                   autoFocus
+                  aria-required="true"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#94a3b8] mb-1.5">
+                <label htmlFor="new-meeting-attendees" className="block text-sm font-medium text-[#94a3b8] mb-1.5">
                   Attendees <span className="text-[#64748b]">(optional, comma-separated)</span>
                 </label>
                 <input
+                  id="new-meeting-attendees"
                   type="text"
                   value={attendeesStr}
                   onChange={(e) => setAttendeesStr(e.target.value)}
@@ -294,7 +320,7 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
                           isDragActive ? 'drag-over' : ''
                         }`}
                       >
-                        <input {...getInputProps()} />
+                        <input {...getInputProps()} aria-label="Select audio or video file to upload" />
                         {audioFile ? (
                           <div>
                             <FileText className="h-8 w-8 text-[#d4af37] mx-auto mb-2" />

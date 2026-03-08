@@ -91,8 +91,8 @@ export default function ProjectDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center py-24" role="status" aria-label="Loading">
+        <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -121,6 +121,7 @@ export default function ProjectDetailPage() {
         <Link
           href="/projects"
           className="p-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] transition-colors mt-1"
+          aria-label="Back"
         >
           <ArrowLeft className="h-5 w-5 text-[#94a3b8]" />
         </Link>
@@ -384,15 +385,15 @@ export default function ProjectDetailPage() {
           </button>
           {fundingOpen && (
             <div className="mt-4 overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm" aria-label="Funding distributions">
                 <thead>
                   <tr className="border-b border-[#2d3a52] text-[#64748b]">
-                    <th className="text-left py-2 pr-4">Date</th>
-                    <th className="text-left py-2 pr-4">Type</th>
-                    <th className="text-right py-2 pr-4">Distributed</th>
-                    <th className="text-right py-2 pr-4">Expended</th>
-                    <th className="text-right py-2 pr-4">Balance</th>
-                    <th className="text-left py-2">Ref</th>
+                    <th scope="col" className="text-left py-2 pr-4">Date</th>
+                    <th scope="col" className="text-left py-2 pr-4">Type</th>
+                    <th scope="col" className="text-right py-2 pr-4">Distributed</th>
+                    <th scope="col" className="text-right py-2 pr-4">Expended</th>
+                    <th scope="col" className="text-right py-2 pr-4">Balance</th>
+                    <th scope="col" className="text-left py-2">Ref</th>
                   </tr>
                 </thead>
                 <tbody>

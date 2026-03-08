@@ -104,7 +104,7 @@ export function SCUpload({ onSuccess }: { onSuccess?: () => void }) {
           <h3 className="text-sm font-semibold text-white">Upload Service Connection Excel</h3>
         </div>
         {file && (
-          <button onClick={reset} className="text-[#64748b] hover:text-white">
+          <button onClick={reset} className="text-[#64748b] hover:text-white" aria-label="Remove file">
             <X className="h-4 w-4" />
           </button>
         )}
@@ -125,6 +125,7 @@ export function SCUpload({ onSuccess }: { onSuccess?: () => void }) {
             onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
             className="hidden"
             id="sc-upload-input"
+            aria-label="Upload GPL Service Connection Excel file"
           />
           <label htmlFor="sc-upload-input" className="cursor-pointer">
             <FileSpreadsheet className="h-8 w-8 text-[#64748b] mx-auto mb-2" />

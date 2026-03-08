@@ -176,8 +176,8 @@ export function DataQuality() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center py-20" role="status" aria-label="Loading">
+        <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -253,13 +253,13 @@ export function DataQuality() {
         <div className="card-premium p-4 md:p-6">
           <h3 className="text-sm font-semibold text-white mb-4">Issue Summary</h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="Data quality issue summary">
               <thead>
                 <tr className="border-b border-[#2d3a52]">
-                  <th className="text-left py-2 text-[#64748b] font-medium text-xs">Issue</th>
-                  <th className="text-right py-2 text-[#64748b] font-medium text-xs w-16">Count</th>
-                  <th className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Impact</th>
-                  <th className="text-left py-2 text-[#64748b] font-medium text-xs hidden lg:table-cell">Action</th>
+                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Issue</th>
+                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs w-16">Count</th>
+                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Impact</th>
+                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden lg:table-cell">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -315,17 +315,17 @@ export function DataQuality() {
           <p className="text-[#64748b] text-sm py-4">No chronic delays at this time.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="Chronic delays watchlist">
               <thead>
                 <tr className="border-b border-[#2d3a52]">
-                  <th className="text-left py-2 text-[#64748b] font-medium text-xs">Account</th>
-                  <th className="text-left py-2 text-[#64748b] font-medium text-xs">Customer</th>
-                  <th className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Location</th>
-                  <th className="text-left py-2 text-[#64748b] font-medium text-xs">Category</th>
-                  <th className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">First Seen</th>
-                  <th className="text-right py-2 text-[#64748b] font-medium text-xs">Age</th>
-                  <th className="text-right py-2 text-[#64748b] font-medium text-xs">Snapshots</th>
-                  <th className="text-left py-2 text-[#64748b] font-medium text-xs hidden lg:table-cell">Created</th>
+                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Account</th>
+                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Customer</th>
+                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Location</th>
+                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Category</th>
+                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">First Seen</th>
+                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Age</th>
+                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Snapshots</th>
+                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden lg:table-cell">Created</th>
                 </tr>
               </thead>
               <tbody>

@@ -107,6 +107,7 @@ export function Sidebar() {
         <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
         />
       )}
 
@@ -143,7 +144,7 @@ export function Sidebar() {
         </div>
 
         {/* Main Navigation */}
-        <nav className="flex-1 py-6 overflow-y-auto">
+        <nav className="flex-1 py-6 overflow-y-auto" role="navigation" aria-label="Main navigation">
           <div className="px-4 mb-2">
             <span className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">Main Menu</span>
           </div>
@@ -156,10 +157,11 @@ export function Sidebar() {
                 href={item.href}
                 onClick={handleNavClick}
                 className={`sidebar-item ${active ? 'active' : ''}`}
+                {...(active ? { 'aria-current': 'page' as const } : {})}
               >
-                <Icon className={active ? 'text-[#d4af37]' : ''} />
+                <Icon className={active ? 'text-[#d4af37]' : ''} aria-hidden="true" />
                 <span className="text-[15px]">{item.label}</span>
-                {active && <ChevronRight className="ml-auto h-4 w-4" />}
+                {active && <ChevronRight className="ml-auto h-4 w-4" aria-hidden="true" />}
               </Link>
             );
           })}
@@ -170,12 +172,14 @@ export function Sidebar() {
               <button
                 onClick={() => setAgenciesOpen(!agenciesOpen)}
                 className="w-full px-4 mb-2 flex items-center justify-between"
+                aria-expanded={agenciesOpen}
+                aria-label="Agencies"
               >
                 <span className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">Agencies</span>
                 {agenciesOpen ? (
-                  <ChevronDown className="h-3 w-3 text-[#64748b]" />
+                  <ChevronDown className="h-3 w-3 text-[#64748b]" aria-hidden="true" />
                 ) : (
-                  <ChevronRight className="h-3 w-3 text-[#64748b]" />
+                  <ChevronRight className="h-3 w-3 text-[#64748b]" aria-hidden="true" />
                 )}
               </button>
               {agenciesOpen && (
@@ -190,8 +194,9 @@ export function Sidebar() {
                         href={href}
                         onClick={handleNavClick}
                         className={`sidebar-item ${active ? 'active' : ''}`}
+                        {...(active ? { 'aria-current': 'page' as const } : {})}
                       >
-                        <Icon className={`h-4 w-4 ${active ? 'text-[#d4af37]' : ''}`} />
+                        <Icon className={`h-4 w-4 ${active ? 'text-[#d4af37]' : ''}`} aria-hidden="true" />
                         <span className="text-[15px]">{agency.label}</span>
                         <span className="ml-auto text-xs text-[#64748b] hidden group-hover:inline">{agency.name}</span>
                       </Link>
@@ -217,8 +222,9 @@ export function Sidebar() {
                     href={item.href}
                     onClick={handleNavClick}
                     className={`sidebar-item ${active ? 'active' : ''}`}
+                    {...(active ? { 'aria-current': 'page' as const } : {})}
                   >
-                    <Icon className={active ? 'text-[#d4af37]' : ''} />
+                    <Icon className={active ? 'text-[#d4af37]' : ''} aria-hidden="true" />
                     <span className="text-[15px]">{item.label}</span>
                   </Link>
                 );
@@ -240,7 +246,7 @@ export function Sidebar() {
             onClick={handleSignOut}
             className="flex items-center gap-2 w-full px-4 py-2.5 rounded-lg text-[#64748b] hover:text-red-400 hover:bg-red-500/10 transition-colors text-sm"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-4 w-4" aria-hidden="true" />
             Sign Out
           </button>
         </div>
