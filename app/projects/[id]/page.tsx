@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import {
   ArrowLeft, Building2, Calendar, DollarSign, Clock,
@@ -9,6 +10,9 @@ import {
   CheckCircle, Camera, Banknote, MessageSquare, RefreshCw,
   ChevronDown, ChevronUp,
 } from 'lucide-react';
+import { EscalationControls } from '@/components/projects/EscalationControls';
+import { ProjectAISummary } from '@/components/projects/ProjectAISummary';
+import { ProjectActivityLog } from '@/components/projects/ProjectActivityLog';
 
 const AGENCY_NAMES: Record<string, string> = {
   GPL: 'Guyana Power & Light',
@@ -26,6 +30,14 @@ const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
   Delayed: { bg: 'bg-red-500/20', text: 'text-red-400' },
   'In Progress': { bg: 'bg-blue-500/20', text: 'text-blue-400' },
   'Not Started': { bg: 'bg-[#64748b]/20', text: 'text-[#94a3b8]' },
+  'On Hold': { bg: 'bg-amber-500/20', text: 'text-amber-400' },
+  Cancelled: { bg: 'bg-red-500/20', text: 'text-red-300' },
+};
+
+const HEALTH_DOT: Record<string, { color: string; label: string }> = {
+  green: { color: 'bg-emerald-400', label: 'On Track' },
+  amber: { color: 'bg-amber-400', label: 'Minor Issues' },
+  red: { color: 'bg-red-400', label: 'Critical' },
 };
 
 function fmtCurrency(value: number | string | null | undefined): string {
@@ -56,12 +68,14 @@ function fmtRegion(code: string | null): string {
 export default function ProjectDetailPage() {
   const params = useParams();
   const projectId = params.id as string;
+  const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role || 'officer';
   const [project, setProject] = useState<any>(null);
   const [funding, setFunding] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [fundingOpen, setFundingOpen] = useState(false);
 
-  useEffect(() => {
+  const loadProject = useCallback(() => {
     setLoading(true);
     Promise.all([
       fetch(`/api/projects/${projectId}`).then(r => r.ok ? r.json() : null),
@@ -70,6 +84,8 @@ export default function ProjectDetailPage() {
       .then(([p, f]) => { setProject(p); setFunding(f); })
       .finally(() => setLoading(false));
   }, [projectId]);
+
+  useEffect(() => { loadProject(); }, [loadProject]);
 
   if (loading) {
     return (
@@ -94,6 +110,7 @@ export default function ProjectDetailPage() {
   const isDelayed = project.status === 'Delayed';
   const pct = project.completion_pct || 0;
   const progressColor = pct >= 80 ? 'bg-emerald-500' : pct >= 40 ? 'bg-amber-500' : pct > 0 ? 'bg-red-500' : 'bg-[#2d3a52]';
+  const healthInfo = HEALTH_DOT[project.health] || HEALTH_DOT.green;
 
   return (
     <div className="space-y-8 max-w-6xl">
@@ -113,6 +130,11 @@ export default function ProjectDetailPage() {
             <span className={`px-3 py-1.5 rounded-lg text-sm font-medium ${ss.bg} ${ss.text}`}>
               {project.status}
             </span>
+            {/* Health dot */}
+            <span className="inline-flex items-center gap-1.5" title={healthInfo.label}>
+              <span className={`w-2.5 h-2.5 rounded-full ${healthInfo.color}`} />
+              <span className="text-xs text-[#94a3b8]">{healthInfo.label}</span>
+            </span>
             {isDelayed && project.days_overdue > 0 && (
               <span className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500/20 text-red-400 flex items-center gap-1">
                 <AlertTriangle className="h-4 w-4" />
@@ -129,6 +151,16 @@ export default function ProjectDetailPage() {
           <p className="text-[#64748b] font-mono text-sm mt-1">{project.project_id}</p>
         </div>
       </div>
+
+      {/* Escalation Controls */}
+      <EscalationControls
+        projectId={project.id}
+        projectName={project.project_name || ''}
+        escalated={!!project.escalated}
+        escalationReason={project.escalation_reason}
+        userRole={userRole}
+        onUpdate={loadProject}
+      />
 
       {/* Key Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -386,6 +418,14 @@ export default function ProjectDetailPage() {
           )}
         </div>
       )}
+
+      {/* AI Summary */}
+      <ProjectAISummary projectId={project.id} />
+
+      {/* Activity Log */}
+      <div className="card-premium p-6">
+        <ProjectActivityLog projectId={project.id} />
+      </div>
 
       {/* Metadata */}
       <div className="text-sm text-[#64748b] text-center">
