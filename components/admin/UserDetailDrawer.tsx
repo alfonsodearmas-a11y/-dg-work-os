@@ -3,9 +3,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   X, Shield, ShieldOff, Archive, RotateCcw, LogOut, Trash2, Mail,
-  ChevronDown, AlertTriangle, Clock, UserCheck, UserX,
+  ChevronDown, AlertTriangle, Clock, UserCheck, UserX, Blocks,
 } from 'lucide-react';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
+
+interface ModuleInfo {
+  id: string;
+  slug: string;
+  name: string;
+  icon: string | null;
+  default_roles: string[];
+  is_active: boolean;
+}
 
 interface User {
   id: string;
@@ -113,6 +122,12 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [expandedSection, setExpandedSection] = useState<string | null>('profile');
 
+  // Module access state
+  const [allModules, setAllModules] = useState<ModuleInfo[]>([]);
+  const [userModuleGrants, setUserModuleGrants] = useState<string[]>([]);
+  const [modulesLoading, setModulesLoading] = useState(false);
+  const [moduleToggling, setModuleToggling] = useState<string | null>(null);
+
   const isSelf = user?.id === currentUserId;
   const status = user?.status || (user?.is_active ? 'active' : 'inactive');
 
@@ -128,6 +143,59 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
       setExpandedSection('profile');
     }
   }, [user]);
+
+  // Fetch modules + user grants
+  const fetchModuleAccess = useCallback(async () => {
+    if (!user || !isDG) return;
+    setModulesLoading(true);
+    try {
+      const [modulesRes, grantsRes] = await Promise.all([
+        fetch('/api/admin/modules'),
+        fetch(`/api/admin/modules/access?userId=${user.id}`),
+      ]);
+      if (modulesRes.ok) {
+        const data = await modulesRes.json();
+        setAllModules(data.modules || []);
+      }
+      if (grantsRes.ok) {
+        const data = await grantsRes.json();
+        setUserModuleGrants(data.grants || []);
+      }
+    } catch {}
+    setModulesLoading(false);
+  }, [user, isDG]);
+
+  useEffect(() => {
+    if (isOpen && user && isDG) fetchModuleAccess();
+  }, [isOpen, user, isDG, fetchModuleAccess]);
+
+  const toggleModuleAccess = async (moduleSlug: string, currentlyHasAccess: boolean) => {
+    if (!user) return;
+    setModuleToggling(moduleSlug);
+    try {
+      const res = await fetch('/api/admin/modules/access', {
+        method: currentlyHasAccess ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, moduleSlug }),
+      });
+      if (res.ok) {
+        if (currentlyHasAccess) {
+          setUserModuleGrants(prev => prev.filter(s => s !== moduleSlug));
+        } else {
+          setUserModuleGrants(prev => [...prev, moduleSlug]);
+        }
+        showToast(
+          currentlyHasAccess ? `Revoked access to ${moduleSlug}` : `Granted access to ${moduleSlug}`,
+          'success'
+        );
+      } else {
+        showToast('Failed to update module access', 'error');
+      }
+    } catch {
+      showToast('Failed to update module access', 'error');
+    }
+    setModuleToggling(null);
+  };
 
   // Fetch audit log
   const fetchAudit = useCallback(async () => {
@@ -434,6 +502,63 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
               )}
             </div>
           </Section>
+
+          {/* Module Access Section (DG only, not self) */}
+          {isDG && !isSelf && user.role !== 'dg' && (
+            <Section title="Module Access" id="modules" expanded={expandedSection === 'modules'} onToggle={() => toggleSection('modules')}>
+              {modulesLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <div className="w-5 h-5 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {allModules
+                    .filter(m => m.is_active)
+                    .map(mod => {
+                      const isDefaultForRole = mod.default_roles.includes(user.role);
+                      const hasExplicitGrant = userModuleGrants.includes(mod.slug);
+                      const hasAccess = isDefaultForRole || hasExplicitGrant;
+                      const isToggling = moduleToggling === mod.slug;
+
+                      return (
+                        <label
+                          key={mod.slug}
+                          className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                            hasAccess ? 'bg-[#d4af37]/5' : 'hover:bg-[#2d3a52]/30'
+                          } ${isToggling ? 'opacity-50' : ''}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={hasAccess}
+                            onChange={() => {
+                              if (isDefaultForRole && !hasExplicitGrant) {
+                                // Can't revoke default role access via this UI
+                                return;
+                              }
+                              toggleModuleAccess(mod.slug, hasExplicitGrant);
+                            }}
+                            disabled={isToggling || (isDefaultForRole && !hasExplicitGrant)}
+                            className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer disabled:cursor-not-allowed"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-white">{mod.name}</p>
+                            {isDefaultForRole && (
+                              <p className="text-[10px] text-[#d4af37]">Default for {ROLE_LABELS[user.role] || user.role}</p>
+                            )}
+                            {hasExplicitGrant && !isDefaultForRole && (
+                              <p className="text-[10px] text-green-400">Explicitly granted</p>
+                            )}
+                          </div>
+                          {isToggling && (
+                            <div className="w-3.5 h-3.5 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin shrink-0" />
+                          )}
+                        </label>
+                      );
+                    })}
+                </div>
+              )}
+            </Section>
+          )}
 
           {/* Security Section (DG only, not self) */}
           {isDG && !isSelf && (

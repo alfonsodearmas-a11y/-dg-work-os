@@ -773,6 +773,14 @@ function FilterPill({ label, onRemove }: { label: string; onRemove: () => void }
   );
 }
 
+interface InviteModule {
+  id: string;
+  slug: string;
+  name: string;
+  default_roles: string[];
+  is_active: boolean;
+}
+
 function InviteModal({
   onClose,
   onSuccess,
@@ -787,6 +795,8 @@ function InviteModal({
   const [role, setRole] = useState('officer');
   const [agency, setAgency] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [modules, setModules] = useState<InviteModule[]>([]);
+  const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set());
   const inviteModalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -804,6 +814,39 @@ function InviteModal({
     }
   }, []);
 
+  // Fetch available modules
+  useEffect(() => {
+    fetch('/api/admin/modules')
+      .then(r => r.json())
+      .then(data => {
+        if (data.modules) setModules(data.modules.filter((m: InviteModule) => m.is_active));
+      })
+      .catch(() => {});
+  }, []);
+
+  // When role changes, update selected modules to reflect defaults
+  useEffect(() => {
+    // Keep existing explicit selections, but remove any that are now defaults
+    setSelectedModules(prev => {
+      const next = new Set(prev);
+      for (const m of modules) {
+        if (m.default_roles.includes(role)) {
+          next.delete(m.slug); // no need for explicit grant if default
+        }
+      }
+      return next;
+    });
+  }, [role, modules]);
+
+  const toggleModule = (slug: string) => {
+    setSelectedModules(prev => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim()) return;
@@ -818,6 +861,7 @@ function InviteModal({
           email: email.trim(),
           role,
           agency: agency || null,
+          moduleGrants: Array.from(selectedModules),
         }),
       });
       const data = await res.json();
@@ -833,9 +877,12 @@ function InviteModal({
     setSubmitting(false);
   };
 
+  // Modules that are NOT default for the selected role (candidates for explicit grants)
+  const nonDefaultModules = modules.filter(m => !m.default_roles.includes(role));
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" aria-hidden="true">
-      <div ref={inviteModalRef} role="dialog" aria-modal="true" aria-labelledby="people-invite-modal-title" className="card-premium w-full max-w-md p-6 space-y-5">
+      <div ref={inviteModalRef} role="dialog" aria-modal="true" aria-labelledby="people-invite-modal-title" className="card-premium w-full max-w-md p-6 space-y-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 id="people-invite-modal-title" className="text-lg font-bold text-white">Invite User</h2>
           <button onClick={onClose} className="p-1 rounded text-[#64748b] hover:text-white transition-colors" aria-label="Close">
@@ -908,6 +955,34 @@ function InviteModal({
               ))}
             </select>
           </div>
+
+          {/* Module Access */}
+          {nonDefaultModules.length > 0 && (
+            <div>
+              <label className="block text-xs text-[#94a3b8] mb-1.5">Additional Module Access</label>
+              <p className="text-[10px] text-[#4a5568] mb-2">
+                This role already has default access to most modules. Grant additional access below:
+              </p>
+              <div className="space-y-1 max-h-40 overflow-y-auto rounded-lg border border-[#2d3a52] p-2 bg-[#0a1628]">
+                {nonDefaultModules.map(mod => (
+                  <label
+                    key={mod.slug}
+                    className={`flex items-center gap-2.5 px-2 py-1.5 rounded cursor-pointer transition-colors ${
+                      selectedModules.has(mod.slug) ? 'bg-[#d4af37]/10' : 'hover:bg-[#2d3a52]/30'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedModules.has(mod.slug)}
+                      onChange={() => toggleModule(mod.slug)}
+                      className="w-3.5 h-3.5 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
+                    />
+                    <span className="text-xs text-white">{mod.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           <button
             type="submit"

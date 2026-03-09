@@ -10,6 +10,7 @@ import { BottomNav } from './BottomNav';
 import { HeaderDate } from './HeaderDate';
 import { ChatButton } from '@/components/ai/ChatButton';
 import { ActivityPanel } from './ActivityPanel';
+import { ModuleGate } from './ModuleGate';
 import { NotificationProvider } from '@/components/notifications/NotificationProvider';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { NotificationPanel } from '@/components/notifications/NotificationPanel';
@@ -80,7 +81,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           {/* Page Content */}
           <div className="p-3 md:p-8 pb-24 md:pb-8">
-            {children}
+            <ModuleGate>{children}</ModuleGate>
           </div>
         </main>
 

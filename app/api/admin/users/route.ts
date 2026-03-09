@@ -4,7 +4,8 @@ import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { insertNotification } from '@/lib/notifications';
 import { sendInviteEmail } from '@/lib/invite-email';
-import { parseBody, withErrorHandler } from '@/lib/api-utils';
+import { withErrorHandler } from '@/lib/api-utils';
+import { grantModuleAccess } from '@/lib/modules/access';
 
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps']);
@@ -40,10 +41,14 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 
-  const { data, error } = await parseBody(request, inviteSchema);
-  if (error) return error;
+  const body = await request.json();
+  const parsed = inviteSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+  }
 
-  const { email, name, role, agency } = data!;
+  const { email, name, role, agency } = parsed.data;
+  const moduleGrants: string[] = Array.isArray(body.moduleGrants) ? body.moduleGrants : [];
 
   const { data: existing } = await supabaseAdmin
     .from('users')
@@ -81,6 +86,13 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     agency: newUser.agency,
     inviterName: session.user.name || 'The Director General',
   }).catch(() => {});
+
+  // Grant explicit module access
+  if (moduleGrants.length > 0) {
+    await Promise.all(
+      moduleGrants.map(slug => grantModuleAccess(newUser.id, slug, session.user.id))
+    );
+  }
 
   await insertNotification({
     user_id: session.user.id,

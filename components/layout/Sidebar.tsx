@@ -22,10 +22,12 @@ import {
   Eye,
   CheckSquare,
   CalendarDays,
+  ClipboardList,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useSidebar } from './SidebarContext';
+import { useModuleAccess } from '@/hooks/useModuleAccess';
 
 const ROLE_LABELS: Record<string, string> = {
   dg: 'Director General',
@@ -36,26 +38,27 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const mainNavItems = [
-  { href: '/', label: 'Mission Control', icon: LayoutDashboard },
-  { href: '/intel', label: 'Agency Intel', icon: Activity },
-  { href: '/tasks', label: 'Tasks', icon: CheckSquare },
-  { href: '/oversight', label: 'Oversight', icon: Eye },
-  { href: '/budget', label: 'Budget 2026', icon: DollarSign },
-  { href: '/meetings', label: 'Meetings', icon: Mic },
-  { href: '/calendar', label: 'Calendar', icon: CalendarDays },
-  { href: '/documents', label: 'Documents', icon: FileText },
+  { href: '/', label: 'Mission Control', icon: LayoutDashboard, moduleSlug: 'briefing' },
+  { href: '/intel', label: 'Agency Intel', icon: Activity, moduleSlug: 'agency-intel' },
+  { href: '/tasks', label: 'Tasks', icon: CheckSquare, moduleSlug: 'tasks' },
+  { href: '/oversight', label: 'Oversight', icon: Eye, moduleSlug: 'oversight' },
+  { href: '/budget', label: 'Budget 2026', icon: DollarSign, moduleSlug: 'budget' },
+  { href: '/meetings', label: 'Meetings', icon: Mic, moduleSlug: 'meetings' },
+  { href: '/calendar', label: 'Calendar', icon: CalendarDays, moduleSlug: 'calendar' },
+  { href: '/documents', label: 'Documents', icon: FileText, moduleSlug: 'documents' },
+  { href: '/applications', label: 'Applications', icon: ClipboardList, moduleSlug: 'applications' },
 ];
 
 const agencies = [
-  { code: 'gpl', label: 'GPL', name: 'Guyana Power & Light', icon: Zap },
-  { code: 'cjia', label: 'CJIA', name: 'CJIA Airport', icon: Plane },
-  { code: 'gwi', label: 'GWI', name: 'Guyana Water Inc.', icon: Droplets },
-  { code: 'gcaa', label: 'GCAA', name: 'Civil Aviation', icon: Shield },
+  { code: 'gpl', label: 'GPL', name: 'Guyana Power & Light', icon: Zap, moduleSlug: 'gpl-deep-dive' },
+  { code: 'cjia', label: 'CJIA', name: 'CJIA Airport', icon: Plane, moduleSlug: 'cjia-deep-dive' },
+  { code: 'gwi', label: 'GWI', name: 'Guyana Water Inc.', icon: Droplets, moduleSlug: 'gwi-deep-dive' },
+  { code: 'gcaa', label: 'GCAA', name: 'Civil Aviation', icon: Shield, moduleSlug: 'gcaa-deep-dive' },
 ];
 
 const adminItems = [
-  { href: '/admin/people', label: 'People', icon: Users },
-  { href: '/admin', label: 'Settings', icon: Settings },
+  { href: '/admin/people', label: 'People', icon: Users, moduleSlug: 'people' },
+  { href: '/admin', label: 'Settings', icon: Settings, moduleSlug: 'settings' },
 ];
 
 // Roles that can see the admin section
@@ -68,6 +71,7 @@ export function Sidebar() {
   const { data: session } = useSession();
   const [agenciesOpen, setAgenciesOpen] = useState(true);
   const { mobileOpen, setMobileOpen } = useSidebar();
+  const { canAccess } = useModuleAccess();
 
   const userRole = (session?.user as { role?: string })?.role || 'officer';
   const userAgency = (session?.user as { agency?: string | null })?.agency || null;
@@ -81,6 +85,11 @@ export function Sidebar() {
   const visibleAgencies = isMinistry
     ? agencies
     : agencies.filter(a => a.code === userAgency?.toLowerCase());
+
+  // Filter by module access
+  const filteredMainNav = mainNavItems.filter(item => canAccess(item.moduleSlug));
+  const filteredAgencies = visibleAgencies.filter(a => canAccess(a.moduleSlug));
+  const filteredAdminItems = adminItems.filter(item => canAccess(item.moduleSlug));
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/login' });
@@ -148,7 +157,7 @@ export function Sidebar() {
           <div className="px-4 mb-2">
             <span className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">Main Menu</span>
           </div>
-          {mainNavItems.map((item) => {
+          {filteredMainNav.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
             return (
@@ -167,7 +176,7 @@ export function Sidebar() {
           })}
 
           {/* Agencies Section */}
-          {visibleAgencies.length > 0 && (
+          {filteredAgencies.length > 0 && (
             <div className="mt-8">
               <button
                 onClick={() => setAgenciesOpen(!agenciesOpen)}
@@ -184,7 +193,7 @@ export function Sidebar() {
               </button>
               {agenciesOpen && (
                 <div className="space-y-0.5">
-                  {visibleAgencies.map((agency) => {
+                  {filteredAgencies.map((agency) => {
                     const Icon = agency.icon;
                     const href = `/intel/${agency.code}`;
                     const active = pathname.startsWith(href);
@@ -208,12 +217,12 @@ export function Sidebar() {
           )}
 
           {/* Admin Section (DG, Minister, PS only) */}
-          {showAdmin && (
+          {showAdmin && filteredAdminItems.length > 0 && (
             <>
               <div className="mt-8 px-4 mb-2">
                 <span className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">Admin</span>
               </div>
-              {adminItems.map((item) => {
+              {filteredAdminItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
                 return (
