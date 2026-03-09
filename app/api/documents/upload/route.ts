@@ -7,6 +7,17 @@ import { logger } from '@/lib/logger';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
+function sanitizeFileName(name: string): string {
+  const ext = name.split('.').pop()?.toLowerCase() || '';
+  const base = name.replace(/\.[^/.]+$/, '');
+  const sanitized = base
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `${sanitized}-${Date.now()}.${ext}`;
+}
+
 export async function POST(request: NextRequest) {
   const result = await requireRole(['dg', 'ps', 'agency_admin', 'officer']);
   if (result instanceof NextResponse) return result;
@@ -24,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const filename = `${Date.now()}-${file.name}`;
+    const filename = sanitizeFileName(file.name);
 
     // 1. Upload to Supabase Storage
     const { error: uploadError } = await supabaseAdmin.storage
