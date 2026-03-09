@@ -25,8 +25,8 @@ export async function GET(req: NextRequest) {
   const offset = (page - 1) * limit;
 
   let query = supabaseAdmin
-    .from('pending_applications')
-    .select('*, application_documents(id)', { count: 'exact' });
+    .from('customer_applications')
+    .select('*, customer_application_documents(id)', { count: 'exact' });
 
   // Agency scoping: DG sees all, others see only their agency
   if (session.user.role !== 'dg') {
@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Get summary stats (agency-scoped)
-  let statsQuery = supabaseAdmin.from('pending_applications').select('status');
+  let statsQuery = supabaseAdmin.from('customer_applications').select('status');
   if (session.user.role !== 'dg') {
     statsQuery = statsQuery.eq('agency', session.user.agency || '');
   }
@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
 
   // Count approved/rejected in last 30 days
   let recentQuery = supabaseAdmin
-    .from('pending_applications')
+    .from('customer_applications')
     .select('status')
     .in('status', ['approved', 'rejected'])
     .gte('updated_at', thirtyDaysAgo);
@@ -92,8 +92,8 @@ export async function GET(req: NextRequest) {
   // Map docs count
   const applications = (data || []).map((app: Record<string, unknown>) => ({
     ...app,
-    docs_count: Array.isArray(app.application_documents) ? app.application_documents.length : 0,
-    application_documents: undefined,
+    docs_count: Array.isArray(app.customer_application_documents) ? app.customer_application_documents.length : 0,
+    customer_application_documents: undefined,
   }));
 
   return NextResponse.json({
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { data, error } = await supabaseAdmin
-    .from('pending_applications')
+    .from('customer_applications')
     .insert({
       agency,
       applicant_name: applicant_name.trim(),
@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Log activity
-  await supabaseAdmin.from('application_activity_log').insert({
+  await supabaseAdmin.from('customer_application_activity_log').insert({
     application_id: data.id,
     action: 'created',
     new_value: 'pending',

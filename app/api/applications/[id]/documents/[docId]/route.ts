@@ -21,8 +21,8 @@ export async function DELETE(
 
   // Fetch document
   const { data: doc } = await supabaseAdmin
-    .from('application_documents')
-    .select('*, pending_applications!inner(agency)')
+    .from('customer_application_documents')
+    .select('*, customer_applications!inner(agency)')
     .eq('id', docId)
     .eq('application_id', id)
     .single();
@@ -43,7 +43,7 @@ export async function DELETE(
 
   // Delete DB record
   const { error } = await supabaseAdmin
-    .from('application_documents')
+    .from('customer_application_documents')
     .delete()
     .eq('id', docId);
 
@@ -52,7 +52,7 @@ export async function DELETE(
   }
 
   // Log activity
-  await supabaseAdmin.from('application_activity_log').insert({
+  await supabaseAdmin.from('customer_application_activity_log').insert({
     application_id: id,
     action: 'document_deleted',
     old_value: doc.file_name,

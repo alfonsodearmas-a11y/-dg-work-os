@@ -28,7 +28,7 @@ export async function POST(
 
   // Verify application exists and user has agency access
   const { data: app } = await supabaseAdmin
-    .from('pending_applications')
+    .from('customer_applications')
     .select('id, agency')
     .eq('id', id)
     .single();
@@ -73,7 +73,7 @@ export async function POST(
 
   // Create DB record
   const { data: doc, error: dbError } = await supabaseAdmin
-    .from('application_documents')
+    .from('customer_application_documents')
     .insert({
       application_id: id,
       file_name: file.name,
@@ -90,7 +90,7 @@ export async function POST(
   }
 
   // Log activity
-  await supabaseAdmin.from('application_activity_log').insert({
+  await supabaseAdmin.from('customer_application_activity_log').insert({
     application_id: id,
     action: 'document_uploaded',
     new_value: file.name,

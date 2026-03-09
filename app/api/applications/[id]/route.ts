@@ -20,7 +20,7 @@ export async function GET(
   }
 
   const { data: app, error } = await supabaseAdmin
-    .from('pending_applications')
+    .from('customer_applications')
     .select('*')
     .eq('id', id)
     .single();
@@ -36,14 +36,14 @@ export async function GET(
 
   // Fetch documents
   const { data: documents } = await supabaseAdmin
-    .from('application_documents')
+    .from('customer_application_documents')
     .select('*, users:uploaded_by(name)')
     .eq('application_id', id)
     .order('uploaded_at', { ascending: false });
 
   // Fetch activity log
   const { data: activity } = await supabaseAdmin
-    .from('application_activity_log')
+    .from('customer_application_activity_log')
     .select('*, users:performed_by(name)')
     .eq('application_id', id)
     .order('performed_at', { ascending: false });
@@ -88,7 +88,7 @@ export async function PATCH(
 
   // Fetch current application
   const { data: app } = await supabaseAdmin
-    .from('pending_applications')
+    .from('customer_applications')
     .select('*')
     .eq('id', id)
     .single();
@@ -130,7 +130,7 @@ export async function PATCH(
     updates.status = status;
 
     // Log status change
-    await supabaseAdmin.from('application_activity_log').insert({
+    await supabaseAdmin.from('customer_application_activity_log').insert({
       application_id: id,
       action: 'status_changed',
       old_value: app.status,
@@ -146,7 +146,7 @@ export async function PATCH(
 
   if (note?.trim() && !status) {
     // Adding a note without status change
-    await supabaseAdmin.from('application_activity_log').insert({
+    await supabaseAdmin.from('customer_application_activity_log').insert({
       application_id: id,
       action: 'note_added',
       new_value: note.trim(),
@@ -155,7 +155,7 @@ export async function PATCH(
   }
 
   const { data, error } = await supabaseAdmin
-    .from('pending_applications')
+    .from('customer_applications')
     .update(updates)
     .eq('id', id)
     .select()
