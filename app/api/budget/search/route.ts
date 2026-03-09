@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchBudget } from '@/lib/budget-db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
     const results = searchBudget(q, { sector, agency, programme });
     return NextResponse.json(results);
   } catch (error) {
-    console.error('Search error:', error);
+    logger.error({ err: error, q, sector, agency, programme }, 'Budget search failed');
     return NextResponse.json({ error: 'Search failed' }, { status: 500 });
   }
 }

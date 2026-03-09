@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { parseBody, apiError } from '@/lib/api-utils';
 import { getProjectNotes, addProjectNote } from '@/lib/project-queries';
+import { logger } from '@/lib/logger';
 
 const addNoteSchema = z.object({
   note_text: z.string().min(1),
@@ -21,7 +22,7 @@ export async function GET(
     const notes = await getProjectNotes(id);
     return NextResponse.json(notes);
   } catch (error) {
-    console.error('Project notes error:', error);
+    logger.error({ err: error }, 'Project notes error');
     return NextResponse.json({ error: 'Failed to fetch notes' }, { status: 500 });
   }
 }
@@ -41,7 +42,7 @@ export async function POST(
     const note = await addProjectNote(id, authResult.session.user.id, data.note_text.trim(), data.note_type || 'general');
     return NextResponse.json(note);
   } catch (err) {
-    console.error('Add note error:', err);
+    logger.error({ err }, 'Add note error');
     return apiError('ADD_NOTE_FAILED', 'Failed to add note', 500);
   }
 }

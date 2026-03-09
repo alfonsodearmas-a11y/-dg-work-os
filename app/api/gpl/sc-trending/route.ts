@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
       metrics: metrics ?? [],
     });
   } catch (err) {
-    console.error('[gpl/sc-trending] Error:', err);
+    logger.error({ err }, 'GPL SC trending data fetch failed');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

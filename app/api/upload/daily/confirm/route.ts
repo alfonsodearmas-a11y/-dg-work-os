@@ -5,6 +5,7 @@ import { auditService } from '@/lib/audit';
 import { analyzeMetrics } from '@/lib/ai-analysis';
 import { auth } from '@/lib/auth';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 const confirmSchema = z.object({
   date: z.string().min(1),
@@ -62,11 +63,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
           [result.uploadId, date, analysis.analysis?.executive_summary, JSON.stringify(analysis.analysis?.anomalies), JSON.stringify(analysis.analysis?.attention_items), JSON.stringify(analysis.analysis?.agency_summaries), analysis.meta?.model, analysis.meta?.processingTimeMs]
         );
       } catch (err: unknown) {
-        const e = err as Error;
-        console.error('[upload/daily] Failed to save analysis:', e.message);
+        logger.error({ err, uploadId: result.uploadId, date }, 'Failed to save daily upload analysis');
       }
     }
-  }).catch((err: Error) => console.error('[upload/daily] AI analysis failed:', err.message));
+  }).catch((err: Error) => logger.error({ err, uploadId: result.uploadId, date }, 'Daily upload AI analysis failed'));
 
   return NextResponse.json({
     success: true,

@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
 import { computeEfficiencyMetrics } from '@/lib/service-connection-analysis';
 import type { ServiceConnection } from '@/lib/service-connection-types';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -23,7 +24,7 @@ export async function GET() {
     const metrics = computeEfficiencyMetrics((data || []) as ServiceConnection[]);
     return NextResponse.json(metrics);
   } catch (err) {
-    console.error('[service-connections/stats] Error:', err);
+    logger.error({ err }, 'Service connections stats error');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

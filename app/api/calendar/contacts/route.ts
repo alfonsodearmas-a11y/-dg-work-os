@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { searchCalendarContacts, getRecentContacts } from '@/lib/calendar-contacts';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(contacts);
   } catch (error) {
-    console.error('Failed to fetch contacts:', error);
+    logger.error({ err: error }, 'Failed to fetch calendar contacts');
     return NextResponse.json(
       { error: 'Failed to fetch contacts' },
       { status: 500 }

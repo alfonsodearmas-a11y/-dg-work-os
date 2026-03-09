@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { generateGCAAInsights } from '@/lib/gcaa-insights';
 import { requireRole } from '@/lib/auth-helpers';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 const saveReportSchema = z.object({
   report_month: z.string().min(7),
@@ -42,7 +43,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   }
 
   generateGCAAInsights(normalizedMonth).catch(err =>
-    console.error('[gcaa/report/save] Background insights generation failed:', err)
+    logger.error({ err, reportMonth: normalizedMonth }, 'GCAA background insights generation failed')
   );
 
   return NextResponse.json({ success: true, data: saved });

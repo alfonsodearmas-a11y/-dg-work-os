@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { parseBody, apiError } from '@/lib/api-utils';
 import { fetchMonthEvents, fetchWeekEvents, createEvent, classifyCalendarError } from '@/lib/google-calendar';
+import { logger } from '@/lib/logger';
 
 const createEventSchema = z.object({
   title: z.string().min(1),
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ events });
   } catch (err) {
-    console.error('Fetch calendar events error:', err);
+    logger.error({ err }, 'Fetch calendar events error');
     const classified = classifyCalendarError(err);
 
     if (classified.type === 'token_expired' || classified.type === 'invalid_credentials') {
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ event });
   } catch (err) {
-    console.error('Create calendar event error:', err);
+    logger.error({ err }, 'Create calendar event error');
     const classified = classifyCalendarError(err);
     return NextResponse.json(
       { error: 'Failed to create event', _errorType: classified.type, _errorMessage: classified.message },

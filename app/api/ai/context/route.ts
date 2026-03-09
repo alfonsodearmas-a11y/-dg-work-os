@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { assembleSystemContext } from '@/lib/ai/context-engine';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
       headers: { 'Content-Type': 'text/plain; charset=utf-8' },
     });
   } catch (err: any) {
-    console.error('[ai/context] Error:', err.message);
+    logger.error({ err, page: request.nextUrl.searchParams.get('page') }, 'AI context assembly failed');
     return NextResponse.json(
       { error: 'Failed to assemble context' },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,7 @@ async function handleCron(request: NextRequest) {
     .not('next_occurrence', 'is', null);
 
   if (fetchError) {
-    console.error('[cron/recurring] Fetch error:', fetchError.message);
+    logger.error({ err: fetchError }, 'Recurring tasks fetch error');
     return NextResponse.json({ error: fetchError.message }, { status: 500 });
   }
 
@@ -53,7 +54,7 @@ async function handleCron(request: NextRequest) {
       });
 
     if (insertError) {
-      console.error(`[cron/recurring] Failed for template ${template.id}:`, insertError.message);
+      logger.error({ err: insertError, templateId: template.id }, 'Failed to create recurring task');
       continue;
     }
 

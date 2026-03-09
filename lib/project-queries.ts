@@ -409,13 +409,22 @@ export async function getProjectsList(filters: {
   const page = filters.page || 1;
   const limit = filters.limit || 50;
 
-  // Only apply DB-level pagination when no client-side filtering is needed
-  if (!needsClientFilter) {
+  // When client-side filtering is needed, fetch all rows (up to a high limit)
+  // to avoid Supabase's default 1000-row cap silently truncating results.
+  // When no client-side filtering, use normal DB-level pagination.
+  if (needsClientFilter) {
+    query = query.range(0, 4999);
+  } else {
     const from = (page - 1) * limit;
     query = query.range(from, from + limit - 1);
   }
 
-  const { data, count } = await query;
+  const { data, error: queryError, count } = await query;
+
+  if (queryError) {
+    console.error('getProjectsList query error:', queryError);
+    return { projects: [], total: 0 };
+  }
 
   let projects = (data || []).map(enrichProject);
 

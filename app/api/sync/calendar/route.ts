@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { fetchWeekEvents, classifyCalendarError } from '@/lib/google-calendar';
 import { supabaseAdmin } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -28,7 +29,7 @@ export async function GET() {
       synced: events.length
     });
   } catch (error) {
-    console.error('Calendar sync error:', error);
+    logger.error({ err: error }, 'Calendar sync failed');
     // Return structured error so the client can distinguish auth vs network issues
     const classified = classifyCalendarError(error);
     const isAuth = classified.type === 'token_expired' || classified.type === 'invalid_credentials';

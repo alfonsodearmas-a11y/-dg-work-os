@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { parseBody, apiError } from '@/lib/api-utils';
 import { supabaseAdmin } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 const exportSchema = z.object({
   project_ids: z.array(z.string().min(1)).min(1),
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err) {
-    console.error('Export error:', err);
+    logger.error({ err }, 'Project export failed');
     return apiError('EXPORT_FAILED', 'Failed to export projects', 500);
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 import { computeGPLAnalysis, computeGWIAnalysis } from '@/lib/pending-applications-analysis';
 import type { PendingApplication } from '@/lib/pending-applications-types';
 
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ agency, analysis, recordCount: records.length });
   } catch (err) {
-    console.error('[pending-applications/analysis] Error:', err);
+    logger.error({ err }, 'Pending applications analysis error');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

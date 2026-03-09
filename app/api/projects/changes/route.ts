@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -15,7 +16,7 @@ export async function GET() {
 
     return NextResponse.json(data || []);
   } catch (error) {
-    console.error('Changes error:', error);
+    logger.error({ err: error }, 'Project changes fetch failed');
     return NextResponse.json({ error: 'Failed to fetch changes' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
 
@@ -57,7 +58,7 @@ export const POST = withErrorHandler(async (
 
     return NextResponse.json({ audioPath: storagePath });
   } catch (err) {
-    console.error('[Meetings Upload] Error:', err);
+    logger.error({ err, meetingId: id }, 'Meeting audio upload failed');
     const message = err instanceof Error ? err.message : 'Upload failed';
     return NextResponse.json({ error: message }, { status: 500 });
   }

@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/auth-helpers';
 import { parseBody, apiError } from '@/lib/api-utils';
 import { escalateProject, deescalateProject } from '@/lib/project-queries';
 import { supabaseAdmin } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 const escalateSchema = z.object({
   reason: z.string().min(1),
@@ -85,7 +86,7 @@ export async function POST(
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error('Escalate error:', err);
+    logger.error({ err, projectId: (await params).id }, 'Project escalation failed');
     return apiError('ESCALATE_FAILED', 'Failed to escalate project', 500);
   }
 }
@@ -103,7 +104,7 @@ export async function DELETE(
     await deescalateProject(id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('De-escalate error:', error);
+    logger.error({ err: error, projectId: (await params).id }, 'Project de-escalation failed');
     return NextResponse.json({ error: 'Failed to de-escalate project' }, { status: 500 });
   }
 }

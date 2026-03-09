@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data ?? []);
   } catch (error) {
-    console.error('Documents list error:', error);
+    logger.error({ err: error }, 'Failed to list documents');
     return NextResponse.json(
       { error: 'Failed to fetch documents' },
       { status: 500 }

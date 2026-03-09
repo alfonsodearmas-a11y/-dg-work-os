@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDelayedProjects } from '@/lib/project-queries';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -10,7 +11,7 @@ export async function GET() {
     const projects = await getDelayedProjects();
     return NextResponse.json(projects);
   } catch (error) {
-    console.error('Delayed projects error:', error);
+    logger.error({ err: error }, 'Delayed projects error');
     return NextResponse.json({ error: 'Failed to fetch delayed projects' }, { status: 500 });
   }
 }

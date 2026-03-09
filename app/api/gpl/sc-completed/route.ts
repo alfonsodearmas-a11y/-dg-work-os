@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
       totalPages: Math.ceil((breachOnly ? tagged.length : (count ?? 0)) / pageSize),
     });
   } catch (err) {
-    console.error('[gpl/sc-completed] Error:', err);
+    logger.error({ err }, 'Failed to fetch completed SC records');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

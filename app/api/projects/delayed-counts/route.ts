@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -36,7 +37,7 @@ export async function GET() {
       total: (data || []).length,
     });
   } catch (error) {
-    console.error('Delayed counts error:', error);
+    logger.error({ err: error }, 'Delayed project counts fetch failed');
     return NextResponse.json(
       { error: 'Failed to fetch delayed counts' },
       { status: 500 }

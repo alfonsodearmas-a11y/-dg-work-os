@@ -6,6 +6,7 @@ import { computeGPLAnalysis, computeGWIAnalysis } from '@/lib/pending-applicatio
 import { generateGPLDeepAnalysis, generateGWIDeepAnalysis } from '@/lib/pending-applications-ai';
 import type { PendingApplication } from '@/lib/pending-applications-types';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 function mapRow(row: Record<string, unknown>): PendingApplication {
   return {
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (err) {
-    console.error('[deep-analysis GET] Error:', err);
+    logger.error({ err, agency: request.nextUrl.searchParams.get('agency') }, 'Deep analysis GET error');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -132,7 +133,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     .single();
 
   if (saveError) {
-    console.error('[deep-analysis] Save error:', saveError.message);
+    logger.error({ err: saveError, agency }, 'Deep analysis save error');
   }
 
   return NextResponse.json({

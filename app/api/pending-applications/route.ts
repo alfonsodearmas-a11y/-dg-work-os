@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 const COLUMNS = 'id,agency,customer_reference,first_name,last_name,telephone,region,district,village_ward,street,lot,event_code,event_description,application_date,days_waiting,data_as_of,pipeline_stage,account_type,service_order_type,service_order_number,account_status,cycle,division_code';
 
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
     const { data, count, error } = await query;
 
     if (error) {
-      console.error('[pending-applications] DB error:', error.message);
+      logger.error({ err: error, dbMessage: error.message }, 'Pending applications DB error');
       return NextResponse.json({ error: 'Failed to fetch records' }, { status: 500 });
     }
 
@@ -106,7 +107,7 @@ export async function GET(request: NextRequest) {
       totalPages: Math.ceil((count || 0) / pageSize),
     });
   } catch (err) {
-    console.error('[pending-applications] Error:', err);
+    logger.error({ err }, 'Pending applications error');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

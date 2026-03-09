@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -43,7 +44,7 @@ export async function GET() {
       },
     });
   } catch (error: any) {
-    console.error('[gpl-forecast-multivariate] GET Error:', error.message);
+    logger.error({ err: error }, 'Failed to fetch multivariate forecast');
     return NextResponse.json(
       { success: false, error: 'Failed to fetch multivariate forecast' },
       { status: 500 }
@@ -57,10 +58,10 @@ export const POST = withErrorHandler(async (_request: NextRequest) => {
   let forecastResult;
   try {
     const { generateForecast } = await import('@/lib/gpl-multivariate-forecast');
-    console.log(`[gpl-forecast-multivariate] Generation triggered by ${userId}`);
+    logger.info({ userId }, 'Multivariate forecast generation triggered');
     forecastResult = await generateForecast();
   } catch (importError: any) {
-    console.warn('[gpl-forecast-multivariate] Module unavailable:', importError.message);
+    logger.warn({ err: importError }, 'Multivariate forecast module unavailable');
     return NextResponse.json({
       success: true,
       message: 'Multivariate forecast generation is not yet available. The module is still being set up.',

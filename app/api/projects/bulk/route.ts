@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/auth-helpers';
 import { parseBody, apiError } from '@/lib/api-utils';
 import { bulkUpdateProjects } from '@/lib/project-queries';
 import { supabaseAdmin } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 const bulkUpdateSchema = z.object({
   project_ids: z.array(z.string().min(1)).min(1),
@@ -53,7 +54,7 @@ export async function PATCH(request: NextRequest) {
     await bulkUpdateProjects(project_ids, updates);
     return NextResponse.json({ success: true, updated: project_ids.length });
   } catch (err) {
-    console.error('Bulk update error:', err);
+    logger.error({ err }, 'Bulk project update failed');
     return apiError('BULK_UPDATE_FAILED', 'Failed to bulk update projects', 500);
   }
 }

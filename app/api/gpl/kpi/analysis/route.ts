@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/db';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireRole } from '@/lib/auth-helpers';
 import { withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 // In-memory cache — invalidated when row count changes (new upload)
 let cachedAnalysis: { analysis: any; generatedAt: number; rowCount: number } | null = null;
@@ -162,7 +163,7 @@ Respond in JSON format:
       analysis,
     });
   } catch (error: any) {
-    console.error('[gpl-kpi-analysis] Error:', error.message);
+    logger.error({ err: error }, 'Failed to generate KPI analysis');
     return NextResponse.json(
       { success: false, error: 'Failed to generate KPI analysis' },
       { status: 500 }

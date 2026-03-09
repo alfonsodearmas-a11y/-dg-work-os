@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET(
   _request: NextRequest,
@@ -34,7 +35,7 @@ export async function GET(
 
     return NextResponse.json({ ...data, linkedOrder });
   } catch (err) {
-    console.error('[service-connections/[id]] Error:', err);
+    logger.error({ err }, 'Service connection detail fetch failed');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

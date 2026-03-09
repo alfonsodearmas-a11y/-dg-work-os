@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -75,7 +76,7 @@ export async function GET() {
       kpis,
     });
   } catch (error: any) {
-    console.error('[gpl-kpi-latest] Error:', error.message);
+    logger.error({ err: error }, 'Failed to fetch latest KPIs');
     return NextResponse.json(
       { success: false, error: 'Failed to fetch latest KPIs' },
       { status: 500 }

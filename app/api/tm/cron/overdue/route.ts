@@ -3,6 +3,7 @@ import { query } from '@/lib/db-pg';
 import { createTaskNotification, sendTaskEmail } from '@/lib/task-notifications';
 import { taskOverdueEmail } from '@/lib/task-email-templates';
 import { apiError, withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 // Vercel crons use GET
 export { handleCron as GET };
@@ -47,7 +48,7 @@ async function handleCron(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: { marked: result.rowCount, notified } });
   } catch (error: any) {
-    console.error('[cron/overdue] Error:', error.message);
+    logger.error({ err: error }, 'Cron overdue task processing failed');
     return apiError('INTERNAL_ERROR', error.message, 500);
   }
 }

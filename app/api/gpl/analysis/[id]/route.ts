@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { generateGPLBriefing } from '@/lib/ai-analysis';
 import { requireRole } from '@/lib/auth-helpers';
 import { withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 const EXCLUDED_STATIONS = ['onverwagt'];
 
@@ -153,7 +154,7 @@ export async function GET(
       },
     });
   } catch (error: any) {
-    console.error('[gpl/analysis] GET Error:', error.message);
+    logger.error({ err: error }, 'Failed to fetch GPL analysis');
     return NextResponse.json(
       { success: false, error: 'Failed to fetch GPL analysis' },
       { status: 500 }

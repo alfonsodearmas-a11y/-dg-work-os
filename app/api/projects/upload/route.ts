@@ -5,6 +5,7 @@ import { parseProjectsExcelWithDebug, ProjectRow, FundingRow } from '@/lib/excel
 import { detectChanges } from '@/lib/change-detector';
 import { requireRole } from '@/lib/auth-helpers';
 import { apiError } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 const scrapedProjectSchema = z.object({
   project_id: z.string().min(1),
@@ -89,7 +90,7 @@ async function upsertFundingRows(fundingRows: FundingRow[], projectIds: string[]
       .from('funding_distributions')
       .insert(chunk);
     if (error) {
-      console.error('Funding insert error:', error);
+      logger.error({ err: error }, 'Funding distribution insert failed');
     }
   }
 
@@ -159,16 +160,31 @@ async function handleJsonUpload(body: z.infer<typeof jsonUploadSchema>) {
     // First upload
   }
 
-  // Upsert projects with all detail fields
+  // Strip null detail fields from upsert data so we don't overwrite existing
+  // non-null DB values with nulls when the scraper doesn't have that data.
+  // This matches the XLSX upload behavior (presentDetailFields logic).
+  const upsertData = projects.map((p, i) => {
+    const raw = body.projects[i]; // original data before mapping
+    const obj: Record<string, any> = { ...p, updated_at: now };
+    for (const key of DETAIL_FIELD_KEYS) {
+      if (obj[key] === null || obj[key] === undefined) {
+        delete obj[key];
+      }
+    }
+    // Also protect core fields that the scraper may not have
+    if (raw.contract_value == null) delete obj.contract_value;
+    if (raw.contractor == null || raw.contractor === '-') delete obj.contractor;
+    if (raw.completion_pct == null) delete obj.completion_pct;
+    return obj;
+  });
+
+  // Upsert projects — null detail fields stripped to preserve existing DB values
   const { error: upsertError } = await supabaseAdmin
     .from('projects')
-    .upsert(
-      projects.map(p => ({ ...p, updated_at: now })),
-      { onConflict: 'project_id', ignoreDuplicates: false }
-    );
+    .upsert(upsertData, { onConflict: 'project_id', ignoreDuplicates: false });
 
   if (upsertError) {
-    console.error('JSON upsert error:', upsertError);
+    logger.error({ err: upsertError }, 'JSON project upsert failed');
     return NextResponse.json({ error: 'Database error while saving projects' }, { status: 500 });
   }
 
@@ -281,7 +297,7 @@ export async function POST(request: NextRequest) {
       .upsert(upsertData, { onConflict: 'project_id', ignoreDuplicates: false });
 
     if (upsertError) {
-      console.error('Upsert error:', upsertError);
+      logger.error({ err: upsertError }, 'Excel project upsert failed');
       return NextResponse.json({
         error: 'Database error while saving projects',
       }, { status: 500 });
@@ -317,7 +333,7 @@ export async function POST(request: NextRequest) {
       changes,
     });
   } catch (err) {
-    console.error('Upload error:', err);
+    logger.error({ err }, 'Project upload failed');
     return apiError('UPLOAD_FAILED', 'Failed to process upload', 500);
   }
 }

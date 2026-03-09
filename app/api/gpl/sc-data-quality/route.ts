@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ snapshots: snapshots ?? [] });
   } catch (err) {
-    console.error('[gpl/sc-data-quality] Error:', err);
+    logger.error({ err }, 'GPL SC data quality fetch failed');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -5,6 +5,7 @@ import { auditService } from '@/lib/audit';
 import { generateGPLBriefing } from '@/lib/ai-analysis';
 import { requireRole, canUploadData } from '@/lib/auth-helpers';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 const confirmSchema = z.object({
   uploadData: z.record(z.string(), z.any()),
@@ -200,14 +201,14 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
             });
 
           if (analysisError) {
-            console.error('[gpl/upload/confirm] Failed to save analysis:', analysisError.message);
+            logger.error({ err: analysisError, uploadId, reportDate }, 'Failed to save GPL analysis');
           }
         } catch (err: any) {
-          console.error('[gpl/upload/confirm] Failed to save analysis:', err.message);
+          logger.error({ err, uploadId, reportDate }, 'Failed to save GPL analysis');
         }
       })
       .catch((err: any) => {
-        console.error('[gpl/upload/confirm] AI analysis failed:', err.message);
+        logger.error({ err, uploadId, reportDate }, 'GPL AI analysis generation failed');
       });
 
     return NextResponse.json(

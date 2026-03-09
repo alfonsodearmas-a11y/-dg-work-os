@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSnapshots } from '@/lib/pending-applications-snapshots';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ snapshots });
   } catch (err) {
-    console.error('[pending-applications/trends] Error:', err);
+    logger.error({ err }, 'Pending applications trends error');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

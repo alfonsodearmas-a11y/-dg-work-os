@@ -311,6 +311,7 @@ export default function OversightPage() {
           expandedAgency={expandedAgency}
           onExpandedAgencyChange={setExpandedAgency}
           projectsByAgency={projectsByAgency}
+          onSelectProject={setSelectedProject}
         />
       )}
 

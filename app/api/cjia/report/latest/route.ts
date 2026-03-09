@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -23,7 +24,7 @@ export async function GET() {
       previous: data?.[1] ?? null,
     });
   } catch (err: unknown) {
-    console.error('[cjia/report/latest] Error:', err);
+    logger.error({ err }, 'Failed to fetch latest CJIA report');
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

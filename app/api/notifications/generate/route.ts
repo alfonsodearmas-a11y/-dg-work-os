@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/db';
 import { generateAll } from '@/lib/notifications';
 import { sendPushForNotifications } from '@/lib/push';
+import { logger } from '@/lib/logger';
 
 // Vercel crons use GET
 export { handleGenerate as GET };
@@ -56,7 +57,7 @@ async function handleGenerate(request: NextRequest) {
       },
     });
   } catch (err) {
-    console.error('POST /api/notifications/generate error:', err);
+    logger.error({ err }, 'Notification generation failed');
     return NextResponse.json({ error: 'Failed to generate notifications' }, { status: 500 });
   }
 }

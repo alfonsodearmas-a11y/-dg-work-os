@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getGoogleConnectionStatus } from '@/lib/integration-tokens';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -12,7 +13,7 @@ export async function GET() {
 
     return NextResponse.json(status);
   } catch (err) {
-    console.error('[Google Status] Error:', err);
+    logger.error({ err }, 'Google connection status check failed');
     return NextResponse.json(
       { connected: false, error: 'Failed to check status' },
       { status: 500 }

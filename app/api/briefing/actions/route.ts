@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 // Actions are now sourced from the native tasks table — no Notion dependency
 
@@ -142,7 +143,7 @@ export async function GET() {
     cache = { data: result, expiry: Date.now() + CACHE_TTL_MS };
     return NextResponse.json(result);
   } catch (err) {
-    console.error('[Briefing Actions] Error:', err);
+    logger.error({ err }, 'Briefing actions fetch failed');
     return NextResponse.json({ error: 'Failed to fetch briefing actions' }, { status: 500 });
   }
 }

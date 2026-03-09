@@ -82,18 +82,18 @@ export function ProjectSlidePanel({ project, onClose, userRole, onRefreshList }:
           </div>
 
           {/* Oversight Detail Fields */}
-          {(project.balance_remaining != null || project.total_distributed != null || project.total_expended != null || project.project_extended) && (
+          {((project.balance_remaining != null && project.balance_remaining !== 0) || (project.total_distributed != null && project.total_distributed !== 0) || (project.total_expended != null && project.total_expended !== 0) || project.project_extended) && (
             <div className="space-y-4">
               {/* Financial Summary */}
               <div className="grid grid-cols-2 gap-4 text-sm">
-                {project.balance_remaining != null && (
-                  <div><span className="text-[#64748b] text-xs">Balance Remaining</span><p className="text-white font-semibold">{fmtCurrency(project.balance_remaining)}</p></div>
+                {project.balance_remaining != null && project.balance_remaining !== 0 && (
+                  <div><span className="text-[#64748b] text-xs">Balance Remaining</span><p className="text-white font-semibold">{fmtCurrency(project.balance_remaining, true)}</p></div>
                 )}
-                {project.total_distributed != null && (
-                  <div><span className="text-[#64748b] text-xs">Total Distributed</span><p className="text-white font-semibold">{fmtCurrency(project.total_distributed)}</p></div>
+                {project.total_distributed != null && project.total_distributed !== 0 && (
+                  <div><span className="text-[#64748b] text-xs">Total Distributed</span><p className="text-white font-semibold">{fmtCurrency(project.total_distributed, true)}</p></div>
                 )}
-                {project.total_expended != null && (
-                  <div><span className="text-[#64748b] text-xs">Total Expended</span><p className="text-white font-semibold">{fmtCurrency(project.total_expended)}</p></div>
+                {project.total_expended != null && project.total_expended !== 0 && (
+                  <div><span className="text-[#64748b] text-xs">Total Expended</span><p className="text-white font-semibold">{fmtCurrency(project.total_expended, true)}</p></div>
                 )}
                 {project.total_distributed != null && project.total_expended != null && project.total_distributed > 0 && (
                   <div>
@@ -194,11 +194,11 @@ export function OversightProjectTable({ projects, loadingProjects, isMobile, sel
                           <span className="text-[#d4af37] font-mono">{fmtCurrency(p.contract_value)}</span>
                         </div>
                         {/* Funding preview */}
-                        {(p.balance_remaining != null || p.total_distributed != null || p.total_expended != null) && (
+                        {((p.balance_remaining != null && p.balance_remaining !== 0) || (p.total_distributed != null && p.total_distributed !== 0) || (p.total_expended != null && p.total_expended !== 0)) && (
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs">
-                            {p.total_distributed != null && <span className="text-[#94a3b8]">Distributed: <span className="text-white font-medium">{fmtCurrency(p.total_distributed)}</span></span>}
-                            {p.total_expended != null && <span className="text-[#94a3b8]">Expended: <span className="text-white font-medium">{fmtCurrency(p.total_expended)}</span></span>}
-                            {p.balance_remaining != null && <span className="text-[#94a3b8]">Balance: <span className="text-white font-medium">{fmtCurrency(p.balance_remaining)}</span></span>}
+                            {p.total_distributed != null && p.total_distributed !== 0 && <span className="text-[#94a3b8]">Distributed: <span className="text-white font-medium">{fmtCurrency(p.total_distributed, true)}</span></span>}
+                            {p.total_expended != null && p.total_expended !== 0 && <span className="text-[#94a3b8]">Expended: <span className="text-white font-medium">{fmtCurrency(p.total_expended, true)}</span></span>}
+                            {p.balance_remaining != null && p.balance_remaining !== 0 && <span className="text-[#94a3b8]">Balance: <span className="text-white font-medium">{fmtCurrency(p.balance_remaining, true)}</span></span>}
                           </div>
                         )}
                         {/* Remarks preview */}

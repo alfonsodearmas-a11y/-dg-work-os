@@ -11,6 +11,7 @@ import {
   markDelivered,
 } from '@/lib/notifications';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ notifications, unread_count });
   } catch (err) {
-    console.error('GET /api/notifications error:', err);
+    logger.error({ err }, 'Failed to fetch notifications');
     return NextResponse.json({ error: 'Failed to fetch notifications' }, { status: 500 });
   }
 }

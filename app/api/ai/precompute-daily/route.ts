@@ -4,6 +4,7 @@ import { assembleRawData } from '@/lib/ai/context-engine';
 import { cleanupExpiredCache } from '@/lib/ai/response-cache';
 import { MetricSnapshot, RawContextData } from '@/lib/ai/types';
 import { isPast, isToday } from 'date-fns';
+import { logger } from '@/lib/logger';
 
 // ── POST /api/ai/precompute-daily ───────────────────────────────────────────
 // Called by Vercel cron at 6 AM GYT. Precomputes the metric snapshot and
@@ -45,7 +46,7 @@ async function handlePrecompute(request: NextRequest) {
       cache_cleaned: cleaned,
     });
   } catch (err: any) {
-    console.error('[ai/precompute] Error:', err.message);
+    logger.error({ err }, 'AI daily precompute failed');
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

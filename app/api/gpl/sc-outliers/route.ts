@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -19,7 +20,7 @@ export async function GET() {
 
     return NextResponse.json({ outliers: outliers ?? [] });
   } catch (err) {
-    console.error('[gpl/sc-outliers] Error:', err);
+    logger.error({ err }, 'GPL SC outliers fetch failed');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

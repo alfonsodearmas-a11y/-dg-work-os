@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ZodSchema } from 'zod'
+import { logger } from '@/lib/logger'
 
 type ParseSuccess<T> = { data: T; error: null }
 type ParseFailure = { data: null; error: NextResponse }
@@ -45,11 +46,7 @@ export function withErrorHandler(
     try {
       return await handler(req, ctx)
     } catch (err) {
-      console.error({
-        timestamp: new Date().toISOString(),
-        route: req.nextUrl.pathname,
-        error: String(err),
-      })
+      logger.error({ err, route: req.nextUrl.pathname }, 'Unhandled API error')
       return apiError('INTERNAL_ERROR', 'Something went wrong', 500)
     }
   }

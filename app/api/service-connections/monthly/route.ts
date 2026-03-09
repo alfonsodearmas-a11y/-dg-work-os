@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -19,7 +20,7 @@ export async function GET() {
 
     return NextResponse.json({ stats: data || [] });
   } catch (err) {
-    console.error('[service-connections/monthly] Error:', err);
+    logger.error({ err }, 'Service connection monthly stats fetch failed');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

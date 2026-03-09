@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { GET as getActions } from '../actions/route';
 import { GET as getCalendar } from '../calendar/route';
 import { GET as getMeetings } from '../meetings/route';
+import { logger } from '@/lib/logger';
 
 const MODEL = 'claude-sonnet-4-5-20250929';
 
@@ -175,7 +176,7 @@ export async function GET() {
   try {
     sourceData = await fetchSourceData();
   } catch (err) {
-    console.error('[Briefing Generate] Failed to fetch source data:', err);
+    logger.error({ err }, 'Briefing generate failed to fetch source data');
     return NextResponse.json(
       { error: 'Failed to fetch briefing data' },
       { status: 502 },
@@ -207,7 +208,7 @@ export async function GET() {
 
     return NextResponse.json(result);
   } catch (err) {
-    console.error('[Briefing Generate] Claude API failed, using fallback:', err);
+    logger.error({ err, model: MODEL }, 'Briefing generate Claude API failed, using fallback');
 
     const result: BriefingResponse = {
       briefing: buildFallbackBriefing(sourceData),

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getPreferences, updatePreferences } from '@/lib/notifications';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -11,7 +12,7 @@ export async function GET() {
     const prefs = await getPreferences(userId);
     return NextResponse.json(prefs);
   } catch (err) {
-    console.error('GET /api/notifications/preferences error:', err);
+    logger.error({ err }, 'Notification preferences fetch failed');
     return NextResponse.json({ error: 'Failed to fetch preferences' }, { status: 500 });
   }
 }
@@ -26,7 +27,7 @@ export async function PUT(request: NextRequest) {
     const updated = await updatePreferences(userId, prefs);
     return NextResponse.json(updated);
   } catch (err) {
-    console.error('PUT /api/notifications/preferences error:', err);
+    logger.error({ err }, 'Notification preferences update failed');
     return NextResponse.json({ error: 'Failed to update preferences' }, { status: 500 });
   }
 }

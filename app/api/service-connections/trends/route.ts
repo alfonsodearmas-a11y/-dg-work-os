@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
 import { computeMonthlyVolumes } from '@/lib/service-connection-analysis';
 import type { ServiceConnection } from '@/lib/service-connection-types';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ months: recentMonths, track });
   } catch (err) {
-    console.error('[service-connections/trends] Error:', err);
+    logger.error({ err }, 'Service connection trends fetch failed');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getEnhancedForecast, getLatestCachedForecast } from '@/lib/gpl-enhanced-forecast';
 import { requireRole } from '@/lib/auth-helpers';
 import { withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/gpl/forecast/enhanced
@@ -39,7 +40,7 @@ export async function GET(_request: NextRequest) {
       { status: result.error?.includes('Insufficient') ? 422 : 500 }
     );
   } catch (error: any) {
-    console.error('[forecast/enhanced] GET error:', error.message);
+    logger.error({ err: error }, 'Enhanced forecast GET error');
     return NextResponse.json(
       { success: false, error: 'Failed to fetch enhanced forecast' },
       { status: 500 }

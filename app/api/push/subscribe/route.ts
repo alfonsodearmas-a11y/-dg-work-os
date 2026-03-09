@@ -8,6 +8,7 @@ import {
   deleteSubscription,
 } from '@/lib/push';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 const subscribeSchema = z.object({
   subscription: z.object({
@@ -47,7 +48,7 @@ export async function GET() {
     const subscriptions = await getAllSubscriptionsForUser(session.user.id);
     return NextResponse.json({ subscriptions });
   } catch (err) {
-    console.error('GET /api/push/subscribe error:', err);
+    logger.error({ err }, 'Failed to fetch push subscriptions');
     return NextResponse.json({ error: 'Failed to fetch subscriptions' }, { status: 500 });
   }
 }
@@ -67,7 +68,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error('DELETE /api/push/subscribe error:', err);
+    logger.error({ err }, 'Failed to delete push subscription');
     return NextResponse.json({ error: 'Failed to delete subscription' }, { status: 500 });
   }
 }

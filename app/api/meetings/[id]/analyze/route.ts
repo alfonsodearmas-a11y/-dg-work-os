@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import Anthropic from '@anthropic-ai/sdk';
+import { logger } from '@/lib/logger';
 
 export const maxDuration = 60;
 
@@ -213,7 +214,7 @@ export const POST = withErrorHandler(async (
       actionItems: createdActions,
     });
   } catch (err) {
-    console.error('[Meetings Analyze] Error:', err);
+    logger.error({ err, meetingId: id }, 'Meeting analysis failed');
 
     await supabaseAdmin
       .from('meetings')

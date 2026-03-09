@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDocumentContent } from '@/lib/budget-db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
       full_text: sections.map(s => s.text_content).join('\n\n---\n\n'),
     });
   } catch (error) {
-    console.error('Document error:', error);
+    logger.error({ err: error, agency, doc }, 'Failed to load budget document');
     return NextResponse.json({ error: 'Failed to load document' }, { status: 500 });
   }
 }

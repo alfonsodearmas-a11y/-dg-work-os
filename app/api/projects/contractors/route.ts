@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { getContractors } from '@/lib/project-queries';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -10,7 +11,7 @@ export async function GET() {
     const contractors = await getContractors();
     return NextResponse.json(contractors);
   } catch (error) {
-    console.error('Contractors error:', error);
+    logger.error({ err: error }, 'Contractors error');
     return NextResponse.json({ error: 'Failed to fetch contractors' }, { status: 500 });
   }
 }

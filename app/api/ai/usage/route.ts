@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUsageStats } from '@/lib/ai/token-budget';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 // ── GET /api/ai/usage ───────────────────────────────────────────────────────
 // Admin endpoint for AI usage statistics.
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(stats);
   } catch (err: any) {
-    console.error('[ai/usage] Error:', err.message);
+    logger.error({ err }, 'AI usage stats fetch failed');
     return NextResponse.json({ error: 'Failed to fetch usage stats' }, { status: 500 });
   }
 }

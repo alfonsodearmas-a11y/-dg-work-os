@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET(
   _request: NextRequest,
@@ -27,7 +28,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data });
   } catch (err: unknown) {
-    console.error('[gcaa/report] Error:', err);
+    logger.error({ err, month }, 'Failed to fetch GCAA report for month');
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

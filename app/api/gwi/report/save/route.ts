@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { generateGWIInsights } from '@/lib/gwi-insights';
 import { requireRole } from '@/lib/auth-helpers';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 const saveReportSchema = z.object({
   report_month: z.string().min(7),
@@ -44,7 +45,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   }
 
   generateGWIInsights(normalizedMonth).catch(err =>
-    console.error('[gwi/report/save] Background insights generation failed:', err)
+    logger.error({ err, reportMonth: normalizedMonth }, 'GWI background insights generation failed')
   );
 
   return NextResponse.json({ success: true, data: saved });

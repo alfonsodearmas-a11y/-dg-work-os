@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 import type { PendingApplicationStats } from '@/lib/pending-applications-types';
 
 const COLUMNS = 'id,agency,customer_reference,first_name,last_name,telephone,region,district,village_ward,street,lot,event_code,event_description,application_date,days_waiting,data_as_of,pipeline_stage,account_type,service_order_type,service_order_number,account_status,cycle,division_code';
@@ -130,7 +131,7 @@ export async function GET() {
       gwi: buildStats(gwiRows),
     });
   } catch (err) {
-    console.error('[pending-applications/stats] Error:', err);
+    logger.error({ err }, 'Pending applications stats error');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

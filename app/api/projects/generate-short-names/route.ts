@@ -3,6 +3,7 @@ import { requireRole } from '@/lib/auth-helpers';
 import { apiError } from '@/lib/api-utils';
 import { supabaseAdmin } from '@/lib/db';
 import Anthropic from '@anthropic-ai/sdk';
+import { logger } from '@/lib/logger';
 
 let client: Anthropic | null = null;
 function getClient(): Anthropic {
@@ -92,7 +93,7 @@ ${projectList}`;
 
     return NextResponse.json({ updated: totalUpdated, total: projects.length });
   } catch (err) {
-    console.error('Generate short names error:', err);
+    logger.error({ err }, 'Failed to generate short names');
     return apiError('GENERATE_SHORT_NAMES_FAILED', 'Failed to generate short names', 500);
   }
 }

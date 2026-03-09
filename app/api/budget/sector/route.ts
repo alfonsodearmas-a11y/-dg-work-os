@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSectorDetail } from '@/lib/budget-db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
     const data = getSectorDetail(sector);
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Sector detail error:', error);
+    logger.error({ err: error, sector }, 'Failed to load sector detail');
     return NextResponse.json({ error: 'Failed to load sector detail' }, { status: 500 });
   }
 }

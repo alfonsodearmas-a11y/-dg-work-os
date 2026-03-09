@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
 import { computeEfficiencyMetrics } from '@/lib/service-connection-analysis';
 import type { ServiceConnection } from '@/lib/service-connection-types';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -15,7 +16,7 @@ export async function GET() {
       .order('application_date', { ascending: false });
 
     if (error) {
-      console.error('[service-connections/analysis] DB error:', error.message);
+      logger.error({ err: error }, 'Service connection analysis DB query failed');
       return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 });
     }
 
@@ -51,7 +52,7 @@ export async function GET() {
       })),
     });
   } catch (err) {
-    console.error('[service-connections/analysis] Error:', err);
+    logger.error({ err }, 'Service connection analysis failed');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@ import { google } from 'googleapis';
 import { auth } from '@/lib/auth';
 import { upsertGoogleCalendarToken } from '@/lib/integration-tokens';
 import { invalidateCalendarClientCache } from '@/lib/google-calendar';
+import { logger } from '@/lib/logger';
 
 function getRedirectUri(): string {
   const base =
@@ -94,7 +95,7 @@ export async function GET(request: NextRequest) {
 
     return adminRedirect(request, 'google=connected');
   } catch (err) {
-    console.error('[Google OAuth Callback] Error:', err);
+    logger.error({ err }, 'Google OAuth callback error');
     const reason = err instanceof Error ? err.message : 'unknown';
     return adminRedirect(request, `google=error&reason=${encodeURIComponent(reason)}`);
   }

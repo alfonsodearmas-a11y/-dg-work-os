@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 // Meetings are now stored natively — no Notion dependency
 
@@ -81,7 +82,7 @@ export async function GET() {
     cache = { data: result, expiry: Date.now() + CACHE_TTL_MS };
     return NextResponse.json(result);
   } catch (err) {
-    console.error('[Briefing Meetings] Error:', err);
+    logger.error({ err }, 'Briefing meetings fetch failed');
     return NextResponse.json({ error: 'Failed to fetch meetings' }, { status: 500 });
   }
 }

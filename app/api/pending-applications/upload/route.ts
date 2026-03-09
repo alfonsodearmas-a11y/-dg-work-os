@@ -8,6 +8,7 @@ import type { PendingRecord } from '@/lib/pending-applications-types';
 import { classifyTrack } from '@/lib/service-connection-track';
 import { auth } from '@/lib/auth';
 import { withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 export const maxDuration = 60; // Vercel: allow up to 60s for large uploads
 
@@ -185,7 +186,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       try {
         diffResult = await processUploadDiff(outstandingRecords, result.dataAsOf);
       } catch (diffErr) {
-        console.error('[upload] Diff engine error (non-fatal):', diffErr);
+        logger.error({ err: diffErr, agency }, 'Diff engine error (non-fatal)');
       }
 
       // Insert completed records directly into service_connections
@@ -193,7 +194,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         try {
           await insertCompletedConnections(completedRecords, result.dataAsOf);
         } catch (compErr) {
-          console.error('[upload] Completed records insert error (non-fatal):', compErr);
+          logger.error({ err: compErr, agency, count: completedRecords.length }, 'Completed records insert error (non-fatal)');
         }
       }
     }
@@ -225,7 +226,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         .select('id');
 
       if (insertError) {
-        console.error(`[upload] Insert error at batch ${i}:`, insertError.message);
+        logger.error({ err: insertError, agency, batchOffset: i }, 'Pending applications insert error');
       } else {
         insertedCount += data?.length || 0;
       }

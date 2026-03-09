@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { parseBody } from '@/lib/api-utils';
 import { updateEvent, deleteEvent, classifyCalendarError } from '@/lib/google-calendar';
+import { logger } from '@/lib/logger';
 
 const updateEventSchema = z.object({
   title: z.string().min(1).optional(),
@@ -41,7 +42,7 @@ export async function PATCH(
 
     return NextResponse.json({ event });
   } catch (err) {
-    console.error('Update calendar event error:', err);
+    logger.error({ err }, 'Update calendar event error');
     const classified = classifyCalendarError(err);
     return NextResponse.json(
       { error: 'Failed to update event', _errorType: classified.type, _errorMessage: classified.message },
@@ -64,7 +65,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error('Delete calendar event error:', err);
+    logger.error({ err }, 'Delete calendar event error');
     const classified = classifyCalendarError(err);
     return NextResponse.json(
       { error: 'Failed to delete event', _errorType: classified.type, _errorMessage: classified.message },

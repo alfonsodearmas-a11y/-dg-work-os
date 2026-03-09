@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { parseBody, apiError } from '@/lib/api-utils';
 import { getSavedFilters, saveFilter, deleteFilter } from '@/lib/project-queries';
+import { logger } from '@/lib/logger';
 
 const saveFilterSchema = z.object({
   filter_name: z.string().min(1),
@@ -17,7 +18,7 @@ export async function GET() {
     const filters = await getSavedFilters(authResult.session.user.id);
     return NextResponse.json(filters);
   } catch (error) {
-    console.error('Saved filters error:', error);
+    logger.error({ err: error, userId: authResult.session.user.id }, 'Failed to fetch saved filters');
     return NextResponse.json({ error: 'Failed to fetch saved filters' }, { status: 500 });
   }
 }
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
     const saved = await saveFilter(authResult.session.user.id, data.filter_name.trim(), data.filter_params || {});
     return NextResponse.json(saved);
   } catch (err) {
-    console.error('Save filter error:', err);
+    logger.error({ err, userId: authResult.session.user.id, filterName: data.filter_name }, 'Failed to save filter');
     return apiError('SAVE_FILTER_FAILED', 'Failed to save filter', 500);
   }
 }
@@ -47,7 +48,7 @@ export async function DELETE(request: NextRequest) {
     await deleteFilter(id, authResult.session.user.id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Delete filter error:', error);
+    logger.error({ err: error, userId: authResult.session.user.id }, 'Failed to delete filter');
     return NextResponse.json({ error: 'Failed to delete filter' }, { status: 500 });
   }
 }

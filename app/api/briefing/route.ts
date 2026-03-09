@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { generateBriefing } from '@/lib/briefing';
 import { auth } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -12,7 +13,7 @@ export async function GET() {
     const briefing = await generateBriefing(session.user.id, session.user.role);
     return NextResponse.json(briefing);
   } catch (error) {
-    console.error('Briefing error:', error);
+    logger.error({ err: error }, 'Briefing generation failed');
     return NextResponse.json(
       { error: 'Failed to generate briefing' },
       { status: 500 }

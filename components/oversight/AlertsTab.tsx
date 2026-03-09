@@ -5,9 +5,45 @@ import {
   AlertTriangle, ShieldAlert, Clock, FileWarning, TrendingUp,
   Building2, ChevronRight, ChevronDown,
 } from 'lucide-react';
-import type { OversightData } from './types';
+import type { OversightData, Project } from './types';
 import { formatCurrency } from './types';
 import { StatusBadge, OversightKpiCard } from './shared';
+
+/** Map a scraped oversight project object to the Project shape used by ProjectSlidePanel */
+function mapScrapedToProject(p: any): Project {
+  return {
+    id: p.id || p.p3Id || '',
+    project_id: p.reference || p.id || p.p3Id || '',
+    executing_agency: p.executingAgency || p.agency || null,
+    sub_agency: p.subAgency || p.agency || null,
+    project_name: p.name || p.projectName || null,
+    short_name: null,
+    region: p.regionCode || p.region || null,
+    contract_value: p.contractValue ?? null,
+    contractor: p.contractor || null,
+    project_end_date: p.endDate || p.projectEndDate || null,
+    completion_pct: p.completion ?? 0,
+    has_images: 0,
+    status: p.status || p.projectStatus || 'Unknown',
+    days_overdue: p.daysOverdue ?? 0,
+    health: p.daysOverdue > 0 ? 'red' : p.daysRemaining != null && p.daysRemaining < 30 ? 'amber' : 'green',
+    escalated: false,
+    escalation_reason: null,
+    assigned_to: null,
+    start_date: p.startDate || null,
+    revised_start_date: null,
+    balance_remaining: p.balanceRemaining ?? null,
+    remarks: p.remarks || null,
+    project_status: p.projectStatus || null,
+    extension_reason: p.extensionReason || null,
+    extension_date: p.extensionDate || null,
+    project_extended: !!p.projectExtended,
+    total_distributed: p.totalDistributed ?? null,
+    total_expended: p.totalExpended ?? null,
+    created_at: '',
+    updated_at: '',
+  };
+}
 
 function CollapsibleSection({ title, icon: Icon, count, accent, defaultOpen = false, children }: {
   title: string; icon: any; count: number; accent: string; defaultOpen?: boolean; children: React.ReactNode;
@@ -28,9 +64,15 @@ function CollapsibleSection({ title, icon: Icon, count, accent, defaultOpen = fa
   );
 }
 
-function ProjectRow({ project, tag }: { project: any; tag?: string }) {
+function ProjectRow({ project, tag, onClick }: { project: any; tag?: string; onClick?: () => void }) {
   return (
-    <div className="flex items-start gap-3 px-4 py-3 hover:bg-[#2d3a52]/20 transition-colors border-b border-[#2d3a52]/50 last:border-0">
+    <div
+      className={`flex items-start gap-3 px-4 py-3 hover:bg-[#2d3a52]/20 transition-colors border-b border-[#2d3a52]/50 last:border-0${onClick ? ' cursor-pointer' : ''}`}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+    >
       <div className="flex-1 min-w-0">
         <p className="text-white text-sm font-medium truncate">{project.name || 'Unnamed'}</p>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-[#64748b]">
@@ -60,7 +102,7 @@ function ProjectRow({ project, tag }: { project: any; tag?: string }) {
 export function AlertsTabContent({
   oversightData, oversightLoading, oversightError,
   expandedAgency, onExpandedAgencyChange,
-  projectsByAgency,
+  projectsByAgency, onSelectProject,
 }: {
   oversightData: OversightData | null;
   oversightLoading: boolean;
@@ -68,7 +110,11 @@ export function AlertsTabContent({
   expandedAgency: string | null;
   onExpandedAgencyChange: (agency: string | null) => void;
   projectsByAgency: Record<string, { project: any; tag: string }[]>;
+  onSelectProject?: (project: Project) => void;
 }) {
+  const handleProjectClick = (scrapedProject: any) => {
+    if (onSelectProject) onSelectProject(mapScrapedToProject(scrapedProject));
+  };
   return (
     <>
       {oversightLoading ? (
@@ -125,10 +171,10 @@ export function AlertsTabContent({
           </div>
 
           {/* Collapsible Alert Sections */}
-          {oversightData.overdue.length > 0 && <CollapsibleSection title="Overdue Projects" icon={AlertTriangle} count={oversightData.overdue.length} accent="bg-red-500/20 text-red-400" defaultOpen>{oversightData.overdue.sort((a: any, b: any) => (b.daysOverdue || 0) - (a.daysOverdue || 0)).map((p: any, i: number) => <ProjectRow key={p.p3Id || i} project={p} tag="overdue" />)}</CollapsibleSection>}
-          {oversightData.atRisk.length > 0 && <CollapsibleSection title="At-Risk Projects" icon={ShieldAlert} count={oversightData.atRisk.length} accent="bg-yellow-500/20 text-yellow-400">{oversightData.atRisk.sort((a: any, b: any) => (a.daysRemaining || 0) - (b.daysRemaining || 0)).map((p: any, i: number) => <ProjectRow key={p.p3Id || i} project={p} tag="at-risk" />)}</CollapsibleSection>}
-          {oversightData.endingSoon.length > 0 && <CollapsibleSection title="Ending Soon" icon={Clock} count={oversightData.endingSoon.length} accent="bg-blue-500/20 text-blue-400">{oversightData.endingSoon.sort((a: any, b: any) => (a.daysRemaining || 0) - (b.daysRemaining || 0)).map((p: any, i: number) => <ProjectRow key={p.p3Id || i} project={p} tag="ending-soon" />)}</CollapsibleSection>}
-          {oversightData.bondWarnings.length > 0 && <CollapsibleSection title="Bond Warnings" icon={FileWarning} count={oversightData.bondWarnings.length} accent="bg-purple-500/20 text-purple-400">{oversightData.bondWarnings.map((p: any, i: number) => <ProjectRow key={p.p3Id || i} project={p} tag="bond-warning" />)}</CollapsibleSection>}
+          {oversightData.overdue.length > 0 && <CollapsibleSection title="Overdue Projects" icon={AlertTriangle} count={oversightData.overdue.length} accent="bg-red-500/20 text-red-400" defaultOpen>{oversightData.overdue.sort((a: any, b: any) => (b.daysOverdue || 0) - (a.daysOverdue || 0)).map((p: any, i: number) => <ProjectRow key={p.p3Id || i} project={p} tag="overdue" onClick={() => handleProjectClick(p)} />)}</CollapsibleSection>}
+          {oversightData.atRisk.length > 0 && <CollapsibleSection title="At-Risk Projects" icon={ShieldAlert} count={oversightData.atRisk.length} accent="bg-yellow-500/20 text-yellow-400">{oversightData.atRisk.sort((a: any, b: any) => (a.daysRemaining || 0) - (b.daysRemaining || 0)).map((p: any, i: number) => <ProjectRow key={p.p3Id || i} project={p} tag="at-risk" onClick={() => handleProjectClick(p)} />)}</CollapsibleSection>}
+          {oversightData.endingSoon.length > 0 && <CollapsibleSection title="Ending Soon" icon={Clock} count={oversightData.endingSoon.length} accent="bg-blue-500/20 text-blue-400">{oversightData.endingSoon.sort((a: any, b: any) => (a.daysRemaining || 0) - (b.daysRemaining || 0)).map((p: any, i: number) => <ProjectRow key={p.p3Id || i} project={p} tag="ending-soon" onClick={() => handleProjectClick(p)} />)}</CollapsibleSection>}
+          {oversightData.bondWarnings.length > 0 && <CollapsibleSection title="Bond Warnings" icon={FileWarning} count={oversightData.bondWarnings.length} accent="bg-purple-500/20 text-purple-400">{oversightData.bondWarnings.map((p: any, i: number) => <ProjectRow key={p.p3Id || i} project={p} tag="bond-warning" onClick={() => handleProjectClick(p)} />)}</CollapsibleSection>}
 
           {/* Agency Breakdown */}
           <div className="bg-[#1a2744] border border-[#2d3a52] rounded-xl overflow-hidden">
@@ -156,7 +202,7 @@ export function AlertsTabContent({
                         </div>
                       )}
                     </button>
-                    {isExp && <div className="bg-[#0a1628]/60 border-t border-[#2d3a52]/50">{agencyProjects.length > 0 ? <div className="max-h-[400px] overflow-y-auto">{agencyProjects.map((item, i) => <ProjectRow key={item.project.id || item.project.p3Id || i} project={item.project} tag={item.tag} />)}</div> : <p className="px-4 py-6 text-[#64748b] text-sm text-center">No flagged projects for this agency</p>}</div>}
+                    {isExp && <div className="bg-[#0a1628]/60 border-t border-[#2d3a52]/50">{agencyProjects.length > 0 ? <div className="max-h-[400px] overflow-y-auto">{agencyProjects.map((item, i) => <ProjectRow key={item.project.id || item.project.p3Id || i} project={item.project} tag={item.tag} onClick={() => handleProjectClick(item.project)} />)}</div> : <p className="px-4 py-6 text-[#64748b] text-sm text-center">No flagged projects for this agency</p>}</div>}
                   </div>
                 );
               })}
@@ -178,7 +224,7 @@ export function AlertsTabContent({
                           <td className="px-4 py-3 text-[#d4af37] text-right font-mono">{a.totalValueDisplay || formatCurrency(a.totalValue)}</td>
                           <td className="px-4 py-3 text-right">{a.avgCompletion != null ? <div className="flex items-center justify-end gap-2"><div className="w-16 h-1.5 bg-[#2d3a52] rounded-full"><div className="h-full rounded-full bg-[#d4af37]" style={{ width: `${a.avgCompletion}%` }} /></div><span className="text-[#94a3b8] font-mono text-xs">{a.avgCompletion}%</span></div> : <span className="text-[#64748b]">-</span>}</td>
                         </tr>
-                        {isExp && <tr><td colSpan={5} className="p-0"><div className="bg-[#0a1628]/60 border-t border-[#2d3a52]/50">{agencyProjects.length > 0 ? <div className="max-h-[400px] overflow-y-auto">{agencyProjects.map((item, i) => <ProjectRow key={item.project.id || item.project.p3Id || i} project={item.project} tag={item.tag} />)}</div> : <p className="px-4 py-6 text-[#64748b] text-sm text-center">No flagged projects for this agency</p>}</div></td></tr>}
+                        {isExp && <tr><td colSpan={5} className="p-0"><div className="bg-[#0a1628]/60 border-t border-[#2d3a52]/50">{agencyProjects.length > 0 ? <div className="max-h-[400px] overflow-y-auto">{agencyProjects.map((item, i) => <ProjectRow key={item.project.id || item.project.p3Id || i} project={item.project} tag={item.tag} onClick={() => handleProjectClick(item.project)} />)}</div> : <p className="px-4 py-6 text-[#64748b] text-sm text-center">No flagged projects for this agency</p>}</div></td></tr>}
                       </Fragment>
                     );
                   })}
@@ -190,7 +236,14 @@ export function AlertsTabContent({
           {/* Top 10 */}
           <CollapsibleSection title="Top 10 by Contract Value" icon={TrendingUp} count={oversightData.top10.length} accent="bg-[#d4af37]/20 text-[#d4af37]">
             {oversightData.top10.map((p: any, i: number) => (
-              <div key={p.id || i} className="flex items-center gap-3 px-4 py-3 border-b border-[#2d3a52]/50 last:border-0 hover:bg-[#2d3a52]/20">
+              <div
+                key={p.id || i}
+                className={`flex items-center gap-3 px-4 py-3 border-b border-[#2d3a52]/50 last:border-0 hover:bg-[#2d3a52]/20 transition-colors${onSelectProject ? ' cursor-pointer' : ''}`}
+                onClick={() => handleProjectClick(p)}
+                role={onSelectProject ? 'button' : undefined}
+                tabIndex={onSelectProject ? 0 : undefined}
+                onKeyDown={onSelectProject ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleProjectClick(p); } } : undefined}
+              >
                 <span className="text-[#d4af37] font-mono text-sm w-6 text-right shrink-0">#{p.rank || i + 1}</span>
                 <div className="flex-1 min-w-0"><p className="text-white text-sm font-medium truncate">{p.name}</p><p className="text-[#64748b] text-xs">{p.agency} &middot; {p.contractValueDisplay || formatCurrency(p.contractValue)}</p></div>
                 {p.completion != null && <span className="text-[#94a3b8] font-mono text-xs shrink-0">{p.completion}%</span>}

@@ -15,6 +15,7 @@ import { getAnthropicTools, buildActionProposal, isQueryTool, executeQueryTool }
 import { ModelTier, MODEL_IDS, MAX_TOKENS, TIER_LABELS, MetricSnapshot, ChatStreamEvent } from '@/lib/ai/types';
 import { auth } from '@/lib/auth';
 import { parseBody } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 // ── Rate Limiting (in-memory, per-session) ───────────────────────────────────
 
@@ -236,7 +237,7 @@ export async function POST(request: NextRequest) {
       const level = contextLevelForTier(tier);
       contextStr = assembleCompressedContext(raw, current_page, level);
     } catch (err) {
-      console.error('[ai/chat] Context assembly failed:', err);
+      logger.error({ err, userId, currentPage: current_page }, 'AI chat context assembly failed');
       contextStr = `=== SYSTEM DATA PARTIALLY UNAVAILABLE ===\nContext assembly encountered errors.\nUser is on: ${current_page}`;
     }
 
@@ -441,7 +442,7 @@ export async function POST(request: NextRequest) {
           controller.close();
         } catch (err: any) {
           const errorMsg = err.message || 'Stream error';
-          console.error('[ai/chat] Stream error:', errorMsg);
+          logger.error({ err, userId, tier, sessionId: session_id }, 'AI chat stream error');
           controller.enqueue(encoder.encode(sseEvent({ type: 'error', error: errorMsg })));
           controller.close();
         }
@@ -458,7 +459,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err: any) {
-    console.error('[ai/chat] Error:', err.message);
+    logger.error({ err }, 'AI chat request failed');
     return new Response(
       JSON.stringify({ error: err.message || 'Internal server error' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }

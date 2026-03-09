@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
       totalPages: Math.ceil((count || 0) / pageSize),
     });
   } catch (err) {
-    console.error('[service-connections/list] Error:', err);
+    logger.error({ err }, 'Service connection list fetch failed');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

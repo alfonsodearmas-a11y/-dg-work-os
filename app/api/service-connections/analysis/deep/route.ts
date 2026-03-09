@@ -5,6 +5,7 @@ import { computeEfficiencyMetrics } from '@/lib/service-connection-analysis';
 import { generateEfficiencyAnalysis, getCachedAnalysis, saveAnalysis } from '@/lib/service-connection-ai';
 import type { ServiceConnection } from '@/lib/service-connection-types';
 import { withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -16,7 +17,7 @@ export async function GET() {
     }
     return NextResponse.json({ analysis: null, cached: false });
   } catch (err) {
-    console.error('[service-connections/analysis/deep] GET error:', err);
+    logger.error({ err }, 'Service connections deep analysis GET error');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

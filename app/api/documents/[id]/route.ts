@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET(
   request: NextRequest,
@@ -9,9 +10,9 @@ export async function GET(
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
 
-  try {
-    const { id } = await params;
+  const { id } = await params;
 
+  try {
     const { data: doc, error } = await supabaseAdmin
       .from('documents')
       .select('*')
@@ -37,7 +38,7 @@ export async function GET(
       queries: queries || []
     });
   } catch (error) {
-    console.error('Get document error:', error);
+    logger.error({ err: error, documentId: id }, 'Failed to fetch document');
     return NextResponse.json(
       { error: 'Failed to fetch document' },
       { status: 500 }
@@ -49,9 +50,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params;
+  const { id } = await params;
 
+  try {
     // Get document to find storage path
     const { data: doc } = await supabaseAdmin
       .from('documents')
@@ -76,7 +77,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Delete document error:', error);
+    logger.error({ err: error, documentId: id }, 'Failed to delete document');
     return NextResponse.json(
       { error: 'Failed to delete document' },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPortfolioSummary } from '@/lib/project-queries';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
     });
     return NextResponse.json(summary);
   } catch (error) {
-    console.error('Summary error:', error);
+    logger.error({ err: error }, 'Summary error');
     return NextResponse.json({ error: 'Failed to fetch summary' }, { status: 500 });
   }
 }

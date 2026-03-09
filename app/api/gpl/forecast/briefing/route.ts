@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -39,7 +40,7 @@ export async function GET() {
       },
     });
   } catch (error: any) {
-    console.error('[gpl-forecast-briefing] Error:', error.message);
+    logger.error({ err: error }, 'Failed to fetch GPL AI strategic briefing');
     return NextResponse.json(
       { success: false, error: 'Failed to fetch AI strategic briefing' },
       { status: 500 }

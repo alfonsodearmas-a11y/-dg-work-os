@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
     const { data: records, count, error } = await query;
 
     if (error) {
-      console.error('[gpl/sc-outstanding] DB error:', error.message);
+      logger.error({ err: error, message: error.message }, 'GPL SC outstanding DB query failed');
       return NextResponse.json({ error: 'Failed to fetch records' }, { status: 500 });
     }
 
@@ -84,7 +85,7 @@ export async function GET(request: NextRequest) {
       totalPages: Math.ceil((slaStatus ? filtered.length : (count ?? 0)) / pageSize),
     });
   } catch (err) {
-    console.error('[gpl/sc-outstanding] Error:', err);
+    logger.error({ err }, 'GPL SC outstanding records fetch failed');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

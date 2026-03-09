@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { parseBody, apiError } from '@/lib/api-utils';
 import { parseNaturalLanguageEvent } from '@/lib/calendar-nlp';
+import { logger } from '@/lib/logger';
 
 const parseEventSchema = z.object({
   input: z.string().min(1),
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     const parsed = await parseNaturalLanguageEvent(data.input.trim());
     return NextResponse.json(parsed);
   } catch (err) {
-    console.error('Failed to parse event:', err);
+    logger.error({ err }, 'Failed to parse event');
     return apiError('PARSE_FAILED', 'Failed to parse event description', 500);
   }
 }

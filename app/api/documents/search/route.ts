@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchDocuments } from '@/lib/document-search';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(results);
   } catch (error) {
-    console.error('Search error:', error);
+    logger.error({ err: error }, 'Document search failed');
     return NextResponse.json(
       { error: 'Search failed' },
       { status: 500 }

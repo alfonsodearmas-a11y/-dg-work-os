@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
 import { apiError } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 export async function POST() {
   const result = await requireRole(['dg']);
@@ -13,7 +14,7 @@ export async function POST() {
     if (error) throw error;
     return NextResponse.json({ success: true, message: 'All project data cleared' });
   } catch (err) {
-    console.error('Clear projects error:', err);
+    logger.error({ err }, 'Failed to clear projects');
     return apiError('CLEAR_FAILED', 'Failed to clear projects', 500);
   }
 }

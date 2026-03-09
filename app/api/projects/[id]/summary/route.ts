@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/auth-helpers';
 import { parseBody, apiError } from '@/lib/api-utils';
 import { getProjectById, getProjectNotes, getProjectSummary, upsertProjectSummary } from '@/lib/project-queries';
 import Anthropic from '@anthropic-ai/sdk';
+import { logger } from '@/lib/logger';
 
 const generateSummarySchema = z.object({
   force: z.boolean().optional(),
@@ -31,7 +32,7 @@ export async function GET(
     const summary = await getProjectSummary(id);
     return NextResponse.json(summary);
   } catch (error) {
-    console.error('Project summary error:', error);
+    logger.error({ err: error, projectId: (await params).id }, 'Failed to fetch project summary');
     return NextResponse.json({ error: 'Failed to fetch summary' }, { status: 500 });
   }
 }
@@ -121,7 +122,7 @@ Respond ONLY with valid JSON matching this structure:
     const result = await getProjectSummary(id);
     return NextResponse.json(result);
   } catch (err) {
-    console.error('AI summary error:', err);
+    logger.error({ err, projectId: (await params).id }, 'AI project summary generation failed');
     return apiError('SUMMARY_FAILED', 'Failed to generate summary', 500);
   }
 }

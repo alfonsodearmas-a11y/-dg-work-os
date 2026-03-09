@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { fetchTodayEvents, fetchWeekEvents, classifyCalendarError } from '@/lib/google-calendar';
 import type { CalendarEvent } from '@/lib/calendar-types';
+import { logger } from '@/lib/logger';
 
 const AGENCY_KEYWORDS: Record<string, string[]> = {
   GPL: ['GPL', 'Guyana Power', 'power company'],
@@ -108,7 +109,7 @@ export async function GET() {
     return NextResponse.json({ today, upcoming });
   } catch (err) {
     const classified = classifyCalendarError(err);
-    console.error('[Briefing Calendar] Error:', classified.type, classified.message);
+    logger.error({ err, errorType: classified.type, errorMessage: classified.message }, 'Briefing calendar fetch failed');
 
     if (classified.type === 'token_expired' || classified.type === 'invalid_credentials' || classified.type === 'no_refresh_token') {
       return NextResponse.json({

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -13,7 +14,7 @@ export async function GET() {
       .limit(20);
 
     if (error) {
-      console.error('Projects fetch error:', error);
+      logger.error({ err: error }, 'Projects fetch error');
       return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 });
     }
 
@@ -22,7 +23,7 @@ export async function GET() {
       projects: data || []
     });
   } catch (error) {
-    console.error('Projects all error:', error);
+    logger.error({ err: error }, 'Projects all error');
     return NextResponse.json(
       { error: 'Failed to fetch projects' },
       { status: 500 }

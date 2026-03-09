@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProjectsList } from '@/lib/project-queries';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 // Backwards-compatible route — redirects to /api/projects/list logic
 export async function GET(request: NextRequest) {
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
     });
     return NextResponse.json(projects);
   } catch (error) {
-    console.error('Projects error:', error);
+    logger.error({ err: error }, 'Projects list fetch failed');
     return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 });
   }
 }

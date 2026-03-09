@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { extractText } from '@/lib/document-parser';
 import { analyzeDocument } from '@/lib/document-analyzer';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
     if (dbError) throw dbError;
 
     // 3. Process asynchronously
-    processDocument(doc.id, buffer, file.type, file.name).catch(console.error);
+    processDocument(doc.id, buffer, file.type, file.name).catch((err) => logger.error({ err, documentId: doc.id }, 'Background document processing failed'));
 
     return NextResponse.json({
       id: doc.id,
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
       processing_status: 'processing'
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    logger.error({ err: error }, 'Document upload failed');
     return NextResponse.json(
       { error: 'Failed to upload document' },
       { status: 500 }
@@ -113,7 +114,7 @@ async function processDocument(
       .eq('id', docId);
 
   } catch (error) {
-    console.error('Document processing failed:', error);
+    logger.error({ err: error, documentId: docId }, 'Document processing failed');
     await supabaseAdmin
       .from('documents')
       .update({ processing_status: 'failed' })

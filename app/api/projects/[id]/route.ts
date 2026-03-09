@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProjectById } from '@/lib/project-queries';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET(
   request: NextRequest,
@@ -19,7 +20,7 @@ export async function GET(
 
     return NextResponse.json(project);
   } catch (error) {
-    console.error('Project detail error:', error);
+    logger.error({ err: error }, 'Project detail error');
     return NextResponse.json({ error: 'Failed to fetch project' }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 export const POST = withErrorHandler(async (_request: NextRequest) => {
   const session = await auth();
@@ -8,10 +9,10 @@ export const POST = withErrorHandler(async (_request: NextRequest) => {
   let result;
   try {
     const { runAllForecasts } = await import('@/lib/gpl-forecasting');
-    console.log(`[gpl-forecast-refresh] Triggered by ${userId}`);
+    logger.info({ userId }, 'GPL forecast refresh triggered');
     result = await runAllForecasts();
   } catch (importError: any) {
-    console.error('[gpl-forecast-refresh] gpl-forecasting module error:', importError.message);
+    logger.error({ err: importError, userId }, 'GPL forecasting module error');
     return NextResponse.json({
       success: false,
       error: `Forecasting module failed: ${importError.message}`,

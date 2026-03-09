@@ -4,6 +4,7 @@ import { MetricSnapshot } from '@/lib/ai/types';
 import { assembleRawData, computeGPLHealth, computeGWIHealth, computeCJIAHealth, computeGCAAHealth } from '@/lib/ai/context-engine';
 import { isPast, isToday } from 'date-fns';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 // ── GET /api/ai/snapshot ────────────────────────────────────────────────────
 // Returns today's metric snapshot for the ChatPanel's local answer engine.
@@ -42,7 +43,7 @@ export async function GET(_request: NextRequest) {
 
     return NextResponse.json(snapshot);
   } catch (err: any) {
-    console.error('[ai/snapshot] Error:', err.message);
+    logger.error({ err }, 'AI snapshot build failed');
     return NextResponse.json({ error: 'Failed to build snapshot' }, { status: 500 });
   }
 }

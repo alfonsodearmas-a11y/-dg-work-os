@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -33,7 +34,7 @@ export async function GET() {
       },
     });
   } catch (err: unknown) {
-    console.error('[gwi/complaints/latest] Error:', err);
+    logger.error({ err }, 'GWI complaints latest error');
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

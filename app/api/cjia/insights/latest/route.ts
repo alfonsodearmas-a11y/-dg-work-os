@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getLatestCJIAInsights } from '@/lib/cjia-insights';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -15,7 +16,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, data: insights, hasInsights: true });
   } catch (err: unknown) {
-    console.error('[cjia/insights/latest] Error:', err);
+    logger.error({ err }, 'Failed to fetch latest CJIA insights');
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }
