@@ -349,6 +349,12 @@ export async function getProjectsList(filters: {
   page?: number;
   limit?: number;
 }): Promise<{ projects: Project[]; total: number }> {
+  // Determine if we need client-side filtering (status/health are computed fields)
+  const statusFilters = filters.statuses?.length ? filters.statuses : (filters.status ? [filters.status] : []);
+  const needsClientFilter = statusFilters.length > 0 || (filters.healths?.length ?? 0) > 0;
+
+  // When status/health filters are active, we must fetch ALL matching rows first,
+  // apply computed filters, THEN paginate — otherwise pagination skips matching rows.
   let query = supabaseAdmin.from('projects').select('*', { count: 'exact' });
 
   // Multi-select agency filter (new) or single agency (backward compat)
@@ -358,8 +364,6 @@ export async function getProjectsList(filters: {
   // Multi-select region filter (new) or single region (backward compat)
   if (filters.regions?.length) query = query.in('region', filters.regions);
   else if (filters.region) query = query.eq('region', filters.region);
-
-  // Health filter applied client-side after computation (DB column may lag)
 
   // Budget range
   if (filters.budgetMin != null) query = query.gte('contract_value', filters.budgetMin);
@@ -402,28 +406,35 @@ export async function getProjectsList(filters: {
   const s = sortMap[sortField] || sortMap.value;
   query = query.order(s.col, { ascending: s.asc, nullsFirst: false });
 
-  // Pagination
   const page = filters.page || 1;
   const limit = filters.limit || 50;
-  const from = (page - 1) * limit;
-  query = query.range(from, from + limit - 1);
+
+  // Only apply DB-level pagination when no client-side filtering is needed
+  if (!needsClientFilter) {
+    const from = (page - 1) * limit;
+    query = query.range(from, from + limit - 1);
+  }
 
   const { data, count } = await query;
 
   let projects = (data || []).map(enrichProject);
 
-  // Client-side status filter (status is computed, not a DB column)
-  const statusFilters = filters.statuses?.length ? filters.statuses : (filters.status ? [filters.status] : []);
+  // Apply computed-field filters (status and health are derived, not stored reliably)
   if (statusFilters.length) {
     projects = projects.filter(p => statusFilters.includes(p.status));
   }
-
-  // Client-side health filter (health is computed on the fly, DB may lag)
   if (filters.healths?.length) {
     projects = projects.filter(p => filters.healths!.includes(p.health));
   }
 
-  return { projects, total: count || 0 };
+  // When client-side filtering was used, paginate the filtered results
+  const total = needsClientFilter ? projects.length : (count || 0);
+  if (needsClientFilter) {
+    const from = (page - 1) * limit;
+    projects = projects.slice(from, from + limit);
+  }
+
+  return { projects, total };
 }
 
 export async function getProjectById(projectId: string): Promise<Project | null> {

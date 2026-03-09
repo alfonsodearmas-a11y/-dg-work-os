@@ -118,7 +118,7 @@ export function ProjectSlidePanel({ project, onClose, userRole, onRefreshList }:
               {project.remarks && (
                 <div>
                   <span className="text-[#64748b] text-xs">Remarks</span>
-                  <p className="text-[#94a3b8] text-xs mt-1 leading-relaxed whitespace-pre-wrap md:line-clamp-4">{project.remarks}</p>
+                  <p className="text-[#94a3b8] text-xs mt-1 leading-relaxed whitespace-pre-wrap break-words overflow-wrap-anywhere">{project.remarks}</p>
                 </div>
               )}
             </div>
@@ -203,7 +203,7 @@ export function OversightProjectTable({ projects, loadingProjects, isMobile, sel
                         )}
                         {/* Remarks preview */}
                         {p.remarks && (
-                          <p className="text-[#64748b] text-xs mt-1 line-clamp-2 italic">{p.remarks}</p>
+                          <p className="text-[#64748b] text-xs mt-1 line-clamp-2 italic" title={p.remarks}>{p.remarks}</p>
                         )}
                         <div className="flex items-center justify-between mt-2">
                           <span className={`text-xs ${p.status === 'Delayed' ? 'text-red-400 font-semibold' : 'text-[#94a3b8]'}`}>{fmtDate(p.project_end_date)}</span>

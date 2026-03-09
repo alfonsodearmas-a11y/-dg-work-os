@@ -97,7 +97,7 @@ export function ChangesLog({ changes }: ChangesLogProps) {
           <div className="space-y-2">
             {changes.status_changes.slice(0, 5).map((change) => (
               <div key={change.project_reference} className="p-2 bg-yellow-50 rounded text-sm flex items-center justify-between">
-                <span className="truncate flex-1">{change.project_name}</span>
+                <span className="truncate flex-1" title={change.project_name}>{change.project_name}</span>
                 <div className="flex items-center space-x-2 ml-2">
                   <Badge variant="default">{change.from_status || '?'}</Badge>
                   <span>→</span>
@@ -121,7 +121,7 @@ export function ChangesLog({ changes }: ChangesLogProps) {
           <div className="space-y-2">
             {changes.completion_changes.slice(0, 5).map((change) => (
               <div key={change.project_reference} className="p-2 bg-blue-50 rounded text-sm flex items-center justify-between">
-                <span className="truncate flex-1">{change.project_name}</span>
+                <span className="truncate flex-1" title={change.project_name}>{change.project_name}</span>
                 <span className={change.delta > 0 ? 'text-green-600' : 'text-red-600'}>
                   {change.delta > 0 ? '+' : ''}{change.delta.toFixed(0)}%
                 </span>

@@ -135,7 +135,7 @@ function EscalationModal({
           </div>
           <div>
             <h2 id="escalation-controls-modal-title" className="text-lg font-semibold text-white">Escalate Project</h2>
-            <p className="text-[#64748b] text-xs line-clamp-1">{projectName}</p>
+            <p className="text-[#64748b] text-xs line-clamp-1" title={projectName}>{projectName}</p>
           </div>
         </div>
         <textarea
