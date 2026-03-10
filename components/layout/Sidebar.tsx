@@ -22,7 +22,6 @@ import {
   Eye,
   CheckSquare,
   CalendarDays,
-  ClipboardList,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
@@ -46,7 +45,6 @@ const mainNavItems = [
   { href: '/meetings', label: 'Meetings', icon: Mic, moduleSlug: 'meetings' },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays, moduleSlug: 'calendar' },
   { href: '/documents', label: 'Documents', icon: FileText, moduleSlug: 'documents' },
-  { href: '/applications', label: 'Applications', icon: ClipboardList, moduleSlug: 'applications' },
 ];
 
 const agencies = [
