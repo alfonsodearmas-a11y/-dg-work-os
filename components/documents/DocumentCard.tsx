@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { FileText, Clock, Building2, ChevronRight, ChevronDown, Loader2, ExternalLink, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { FileText, Clock, Building2, ChevronRight, ChevronDown, Loader2, ExternalLink, Trash2, RefreshCw, AlertTriangle, CloudDownload } from 'lucide-react';
 import Link from 'next/link';
 
 interface Document {
@@ -15,6 +15,7 @@ interface Document {
   tags: string[] | null;
   uploaded_at: string;
   processing_status: string;
+  sync_source?: string | null;
 }
 
 interface DocumentCardProps {
@@ -43,6 +44,7 @@ export function DocumentCard({ document, expandable = false, onDelete }: Documen
   const isProcessing = document.processing_status === 'processing' || reanalyzing;
   const isFailed = document.processing_status === 'failed';
   const hasNoAnalysis = !document.summary || document.summary === 'Unable to analyze document';
+  const isFromDrive = document.sync_source === 'google_drive';
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -107,6 +109,12 @@ export function DocumentCard({ document, expandable = false, onDelete }: Documen
               {isProcessing && (
                 <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400">
                   Processing...
+                </span>
+              )}
+              {isFromDrive && (
+                <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-400 flex items-center gap-1">
+                  <CloudDownload className="h-3 w-3" />
+                  Drive
                 </span>
               )}
             </div>
@@ -176,6 +184,12 @@ export function DocumentCard({ document, expandable = false, onDelete }: Documen
             {isFailed && (
               <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-red-500/20 text-red-400">
                 Analysis failed
+              </span>
+            )}
+            {isFromDrive && (
+              <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 text-blue-400 flex items-center gap-0.5">
+                <CloudDownload className="h-2.5 w-2.5" />
+                Drive
               </span>
             )}
           </div>

@@ -6,6 +6,7 @@ import { UploadZone } from '@/components/documents/UploadZone';
 import { DocumentCard } from '@/components/documents/DocumentCard';
 import { DocumentSearch } from '@/components/documents/DocumentSearch';
 import { CrossDocumentQuery } from '@/components/documents/CrossDocumentQuery';
+import { DriveSyncButton } from '@/components/documents/DriveSyncButton';
 import { LoadingSkeleton } from '@/components/intel/common/LoadingSkeleton';
 
 interface Document {
@@ -18,6 +19,7 @@ interface Document {
   tags: string[] | null;
   uploaded_at: string;
   processing_status: string;
+  sync_source?: string | null;
 }
 
 export default function DocumentsPage() {
@@ -105,6 +107,12 @@ export default function DocumentsPage() {
             <RefreshCw className="h-4 w-4" />
             <span className="hidden md:inline">Refresh</span>
           </button>
+          <DriveSyncButton
+            onSyncComplete={() => {
+              fetchDocuments();
+              setTimeout(() => fetchDocuments(), 8000);
+            }}
+          />
           <button
             onClick={() => { setShowQuery(!showQuery); if (showUpload) setShowUpload(false); }}
             className={`flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2 rounded-xl border transition-colors text-sm font-medium ${
