@@ -39,8 +39,15 @@ export function UploadZone({ onUploadComplete }: UploadZoneProps) {
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Upload failed');
+        let errorMsg = 'Upload failed';
+        try {
+          const body = await res.json();
+          errorMsg = body.error || errorMsg;
+        } catch {
+          // Response wasn't JSON — use status text
+          errorMsg = `Upload failed (${res.status})`;
+        }
+        throw new Error(errorMsg);
       }
 
       setStatus('success');

@@ -37,7 +37,14 @@ export function SyncToast() {
       if (type === 'sync-complete') {
         addToast('success', 'All changes synced');
       } else if (type === 'sync-error') {
-        const path = url ? new URL(url).pathname : 'request';
+        let path = 'request';
+        if (url) {
+          try {
+            path = new URL(url, window.location.origin).pathname;
+          } catch {
+            path = url;
+          }
+        }
         addToast('error', `Sync failed: ${path}${error ? ` — ${error}` : ''}`);
       }
     };

@@ -76,14 +76,24 @@ export function DriveSyncButton({ onSyncComplete, autoSync = true }: DriveSyncBu
 
     try {
       const res = await fetch('/api/documents/sync/drive', { method: 'POST' });
-      const data = await res.json();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let data: any;
+      try {
+        data = await res.json();
+      } catch {
+        setError('Drive sync failed. Please try again.');
+        return;
+      }
 
       if (!res.ok) {
         if (data.authError) {
           setAuthError(true);
           setError('Google Drive access not authorized. Sign out and sign back in to grant Drive permissions.');
         } else {
-          setError(data.error || 'Sync failed');
+          // Sanitize cryptic errors into user-friendly messages
+          const raw = String(data.error || '');
+          const isCryptic = raw.includes('pattern') || raw.includes('URL') || raw.length > 200;
+          setError(isCryptic ? 'Drive sync encountered an error. Please try again.' : (raw || 'Sync failed'));
         }
         return;
       }

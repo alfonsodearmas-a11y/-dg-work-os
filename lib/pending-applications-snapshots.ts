@@ -2,11 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 import type { PendingRecord, Snapshot } from './pending-applications-types';
 
 function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error('Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
+  }
+  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
 export async function createSnapshot(agency: 'GPL' | 'GWI', records: PendingRecord[], dataAsOf: string): Promise<void> {

@@ -92,6 +92,18 @@ const serwist = new Serwist({
         ],
       }),
     },
+    // Non-mutation POSTs that should NOT be retried via BackgroundSync
+    // (Drive sync, document queries, AI analysis — these are read-like or idempotent)
+    {
+      matcher: ({ request, url }) =>
+        (request.method === 'POST' || request.method === 'PUT' || request.method === 'PATCH') &&
+        (url.pathname.includes('/sync/') ||
+         url.pathname.includes('/query') ||
+         url.pathname.includes('/ask/') ||
+         url.pathname.includes('/reanalyze') ||
+         url.pathname.includes('/analysis')),
+      handler: new NetworkOnly(),
+    },
     // Mutation endpoints: NetworkOnly + BackgroundSync
     {
       matcher: ({ request, url }) =>
