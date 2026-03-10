@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   TrendingDown, TrendingUp, AlertTriangle, Clock, Info,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -213,52 +214,95 @@ export function ExecutiveSummary() {
 
       {/* Third Row: Chronic Delays Alert Table */}
       {outliers.length > 0 && (
-        <div className="card-premium p-4 md:p-6">
-          <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-red-400" />
-            Chronic Delays ({outliers.length})
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" aria-label="Chronic delays">
-              <thead>
-                <tr className="border-b border-[#2d3a52]">
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Account</th>
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Customer</th>
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Location</th>
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Category</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Days</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Snapshots</th>
-                </tr>
-              </thead>
-              <tbody>
-                {outliers.slice(0, 10).map(o => (
-                  <tr key={o.id} className="border-b border-[#2d3a52]/50">
-                    <td className="py-2 text-[#94a3b8] font-mono text-xs">{o.account_number}</td>
-                    <td className="py-2 text-white text-xs">{o.customer_name || '--'}</td>
-                    <td className="py-2 text-[#94a3b8] text-xs hidden md:table-cell">{o.town_city || '--'}</td>
-                    <td className="py-2">
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                        o.stage === 'design' ? 'bg-purple-500/20 text-purple-400'
-                          : o.stage === 'execution' ? 'bg-amber-500/20 text-amber-400'
-                          : 'bg-emerald-500/20 text-emerald-400'
-                      }`}>
-                        {stageLabel(o.track, o.stage)}
-                      </span>
-                    </td>
-                    <td className="py-2 text-right text-red-400 font-medium text-xs">{o.latest_days_elapsed}d</td>
-                    <td className="py-2 text-right text-[#64748b] text-xs">{o.consecutive_snapshots}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <ChronicDelaysTable outliers={outliers} />
       )}
     </div>
   );
 }
 
 // ── Sub-components ──────────────────────────────────────────────────────────
+
+const CHRONIC_PAGE_SIZE = 20;
+
+function ChronicDelaysTable({ outliers }: { outliers: GPLChronicOutlierRow[] }) {
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(outliers.length / CHRONIC_PAGE_SIZE);
+  const pageRows = useMemo(
+    () => outliers.slice(page * CHRONIC_PAGE_SIZE, (page + 1) * CHRONIC_PAGE_SIZE),
+    [outliers, page],
+  );
+
+  // Reset to page 0 if data changes and current page is out of range
+  useEffect(() => {
+    if (page >= totalPages && totalPages > 0) setPage(0);
+  }, [outliers.length, totalPages, page]);
+
+  return (
+    <div className="card-premium p-4 md:p-6">
+      <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+        <AlertTriangle className="h-4 w-4 text-red-400" />
+        Chronic Delays ({outliers.length})
+      </h3>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm" aria-label="Chronic delays">
+          <thead>
+            <tr className="border-b border-[#2d3a52]">
+              <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Account</th>
+              <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Customer</th>
+              <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Location</th>
+              <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Category</th>
+              <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Days</th>
+              <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Snapshots</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pageRows.map(o => (
+              <tr key={o.id} className="border-b border-[#2d3a52]/50">
+                <td className="py-2 text-[#94a3b8] font-mono text-xs">{o.account_number}</td>
+                <td className="py-2 text-white text-xs">{o.customer_name || '--'}</td>
+                <td className="py-2 text-[#94a3b8] text-xs hidden md:table-cell">{o.town_city || '--'}</td>
+                <td className="py-2">
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                    o.stage === 'design' ? 'bg-purple-500/20 text-purple-400'
+                      : o.stage === 'execution' ? 'bg-amber-500/20 text-amber-400'
+                      : 'bg-emerald-500/20 text-emerald-400'
+                  }`}>
+                    {stageLabel(o.track, o.stage)}
+                  </span>
+                </td>
+                <td className="py-2 text-right text-red-400 font-medium text-xs">{o.latest_days_elapsed}d</td>
+                <td className="py-2 text-right text-[#64748b] text-xs">{o.consecutive_snapshots}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#2d3a52]">
+          <button
+            onClick={() => setPage(p => p - 1)}
+            disabled={page === 0}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:text-[#64748b] disabled:cursor-not-allowed text-white hover:bg-[#2d3a52]"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            Previous
+          </button>
+          <span className="text-xs text-[#94a3b8]">
+            Page {page + 1} of {totalPages}
+          </span>
+          <button
+            onClick={() => setPage(p => p + 1)}
+            disabled={page >= totalPages - 1}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:text-[#64748b] disabled:cursor-not-allowed text-white hover:bg-[#2d3a52]"
+          >
+            Next
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function DeltaIndicator({ current, previous }: { current: number; previous: number | null }) {
   if (previous === null) return null;
