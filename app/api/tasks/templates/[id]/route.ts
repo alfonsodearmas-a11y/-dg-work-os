@@ -10,7 +10,7 @@ const patchTemplateSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
   agency_slug: z.string().optional(),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+  priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
   checklist: z.array(z.unknown()).optional(),
   recurrence_rule: z.string().optional(),
   recurrence_enabled: z.boolean().optional(),

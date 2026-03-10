@@ -9,7 +9,7 @@ const createTaskSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
   status: z.enum(['new', 'active', 'blocked', 'done']).optional(),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+  priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
   due_date: z.string().optional(),
   agency: z.string().optional(),
   role: z.string().optional(),

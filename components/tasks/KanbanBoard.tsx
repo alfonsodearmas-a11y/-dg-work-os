@@ -260,11 +260,16 @@ export function KanbanBoard() {
     }
 
     try {
-      await fetch(`/api/tasks/${taskId}`, {
+      const res = await fetch(`/api/tasks/${taskId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
       });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        console.error('Failed to update task:', { status: res.status, ...errData });
+        fetchTasks(); // Roll back optimistic update
+      }
     } catch (error) {
       console.error('Failed to update task:', error);
       fetchTasks();
