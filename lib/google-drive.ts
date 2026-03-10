@@ -4,8 +4,6 @@ import { extractText } from './document-parser';
 import { analyzeDocument } from './document-analyzer';
 import { logger } from './logger';
 
-const FOLDER_NAME = 'MPUA Doc Vault';
-
 // Supported MIME types and their export formats for Google Workspace files
 const GOOGLE_EXPORT_MAP: Record<string, { mime: string; ext: string }> = {
   'application/vnd.google-apps.document': { mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ext: 'docx' },
@@ -61,21 +59,55 @@ async function getDriveClient(userId: string): Promise<drive_v3.Drive> {
   return google.drive({ version: 'v3', auth: client });
 }
 
-// --- Folder Discovery ---
+// --- Folder Management ---
 
-async function findFolder(drive: drive_v3.Drive): Promise<string | null> {
-  const res = await drive.files.list({
-    q: `name = '${FOLDER_NAME}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
-    fields: 'files(id, name)',
-    spaces: 'drive',
-    pageSize: 1,
-  });
-
-  return res.data.files?.[0]?.id || null;
+export interface DriveFolder {
+  id: string;
+  name: string;
 }
 
-export async function getOrFindFolderId(userId: string): Promise<string | null> {
-  // Check stored folder ID first
+/** List folders in the user's Drive (for the picker UI) */
+export async function listDriveFolders(userId: string, query?: string): Promise<DriveFolder[]> {
+  const drive = await getDriveClient(userId);
+
+  let q = "mimeType = 'application/vnd.google-apps.folder' and trashed = false";
+  if (query) {
+    const sanitized = query.replace(/'/g, "\\'");
+    q += ` and name contains '${sanitized}'`;
+  }
+
+  const res = await drive.files.list({
+    q,
+    fields: 'files(id, name)',
+    spaces: 'drive',
+    orderBy: 'name',
+    pageSize: 50,
+  });
+
+  return (res.data.files || []).map(f => ({ id: f.id!, name: f.name! }));
+}
+
+/** Save the user's chosen folder ID */
+export async function setFolderId(userId: string, folderId: string, folderName: string): Promise<void> {
+  await supabaseAdmin.from('user_settings').upsert(
+    { user_id: userId, key: 'google_drive_folder_id', value: folderId },
+    { onConflict: 'user_id,key' }
+  );
+  await supabaseAdmin.from('user_settings').upsert(
+    { user_id: userId, key: 'google_drive_folder_name', value: folderName },
+    { onConflict: 'user_id,key' }
+  );
+}
+
+/** Clear the stored folder (disconnect) */
+export async function clearFolderId(userId: string): Promise<void> {
+  await supabaseAdmin.from('user_settings').delete().eq('user_id', userId).eq('key', 'google_drive_folder_id');
+  await supabaseAdmin.from('user_settings').delete().eq('user_id', userId).eq('key', 'google_drive_folder_name');
+  await supabaseAdmin.from('user_settings').delete().eq('user_id', userId).eq('key', 'drive_last_synced_at');
+}
+
+/** Get the stored folder ID (returns null if user hasn't picked one) */
+export async function getStoredFolderId(userId: string): Promise<string | null> {
   const { data: setting } = await supabaseAdmin
     .from('user_settings')
     .select('value')
@@ -83,23 +115,7 @@ export async function getOrFindFolderId(userId: string): Promise<string | null> 
     .eq('key', 'google_drive_folder_id')
     .single();
 
-  if (setting?.value) {
-    return setting.value;
-  }
-
-  // Search for the folder
-  const drive = await getDriveClient(userId);
-  const folderId = await findFolder(drive);
-
-  if (folderId) {
-    // Store it for next time
-    await supabaseAdmin.from('user_settings').upsert(
-      { user_id: userId, key: 'google_drive_folder_id', value: folderId },
-      { onConflict: 'user_id,key' }
-    );
-  }
-
-  return folderId;
+  return setting?.value || null;
 }
 
 // --- File Operations ---
@@ -299,8 +315,8 @@ export async function syncDriveFolder(userId: string): Promise<SyncResult> {
     folderFound: false,
   };
 
-  // Get or find the Drive folder
-  const folderId = await getOrFindFolderId(userId);
+  // Get the user's chosen folder
+  const folderId = await getStoredFolderId(userId);
   if (!folderId) {
     result.folderFound = false;
     return result;
@@ -412,6 +428,7 @@ export async function syncDriveFolder(userId: string): Promise<SyncResult> {
 export async function getDriveSyncStatus(userId: string): Promise<{
   folderConnected: boolean;
   folderId: string | null;
+  folderName: string | null;
   lastSyncedAt: string | null;
 }> {
   const { data: folderSetting } = await supabaseAdmin
@@ -419,6 +436,13 @@ export async function getDriveSyncStatus(userId: string): Promise<{
     .select('value')
     .eq('user_id', userId)
     .eq('key', 'google_drive_folder_id')
+    .single();
+
+  const { data: nameSetting } = await supabaseAdmin
+    .from('user_settings')
+    .select('value')
+    .eq('user_id', userId)
+    .eq('key', 'google_drive_folder_name')
     .single();
 
   const { data: lastSyncSetting } = await supabaseAdmin
@@ -431,6 +455,7 @@ export async function getDriveSyncStatus(userId: string): Promise<{
   return {
     folderConnected: !!folderSetting?.value,
     folderId: folderSetting?.value || null,
+    folderName: nameSetting?.value || null,
     lastSyncedAt: lastSyncSetting?.value || null,
   };
 }
