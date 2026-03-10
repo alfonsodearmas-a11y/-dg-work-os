@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Trash2, Loader2, Plus, Check, Square, CheckSquare, Clock } from 'lucide-react';
 import { Task, TaskUpdate, TaskStatus, Subtask, TaskActivity } from '@/lib/task-types';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
+import { TaskComments } from './TaskComments';
 
 interface UserOption {
   id: string;
@@ -537,6 +538,11 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
               {addingSubtask ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             </button>
           </div>
+        </div>
+
+        {/* COMMENTS section */}
+        <div className="border-b border-[#2d3a52]">
+          <TaskComments taskId={task.id} users={users} />
         </div>
 
         {/* ACTIVITY section */}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Trash2, Loader2 } from 'lucide-react';
 import { Task, TaskUpdate } from '@/lib/task-types';
+import { TaskComments } from './TaskComments';
 
 interface UserOption {
   id: string;
@@ -364,6 +365,11 @@ export function TaskDetailModal({ task, isOpen, isMobile, onClose, onUpdate, onD
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-4 py-4">
           {formContent}
+          {task && (
+            <div className="mt-4 border-t border-[#2d3a52]">
+              <TaskComments taskId={task.id} users={users || []} />
+            </div>
+          )}
         </div>
 
         {/* Sticky footer */}
@@ -397,6 +403,11 @@ export function TaskDetailModal({ task, isOpen, isMobile, onClose, onUpdate, onD
         {/* Content */}
         <div className="p-3 md:p-4">
           {formContent}
+          {task && (
+            <div className="mt-4 border-t border-[#2d3a52]">
+              <TaskComments taskId={task.id} users={users || []} />
+            </div>
+          )}
         </div>
 
         {/* Footer */}
