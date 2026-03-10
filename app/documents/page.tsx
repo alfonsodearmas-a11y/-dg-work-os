@@ -5,6 +5,7 @@ import { Upload, FileText, Building2, FolderOpen, RefreshCw, Search } from 'luci
 import { UploadZone } from '@/components/documents/UploadZone';
 import { DocumentCard } from '@/components/documents/DocumentCard';
 import { DocumentSearch } from '@/components/documents/DocumentSearch';
+import { CrossDocumentQuery } from '@/components/documents/CrossDocumentQuery';
 import { LoadingSkeleton } from '@/components/intel/common/LoadingSkeleton';
 
 interface Document {
@@ -23,6 +24,7 @@ export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
+  const [showQuery, setShowQuery] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
@@ -53,6 +55,10 @@ export default function DocumentsPage() {
 
   const handleSearch = (query: string, filters: { agency?: string; type?: string }) => {
     fetchDocuments(query, filters);
+  };
+
+  const handleDelete = (id: string) => {
+    setDocuments((prev) => prev.filter((doc) => doc.id !== id));
   };
 
   // Group documents by agency (memoized to avoid recomputing on every render)
@@ -100,7 +106,18 @@ export default function DocumentsPage() {
             <span className="hidden md:inline">Refresh</span>
           </button>
           <button
-            onClick={() => setShowUpload(!showUpload)}
+            onClick={() => { setShowQuery(!showQuery); if (showUpload) setShowUpload(false); }}
+            className={`flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2 rounded-xl border transition-colors text-sm font-medium ${
+              showQuery
+                ? 'bg-[#d4af37]/20 border-[#d4af37]/30 text-[#d4af37]'
+                : 'btn-navy'
+            }`}
+          >
+            <Search className="h-4 w-4" />
+            <span className="hidden md:inline">Query AI</span>
+          </button>
+          <button
+            onClick={() => { setShowUpload(!showUpload); if (showQuery) setShowQuery(false); }}
             className="btn-gold flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2"
           >
             <Upload className="h-4 w-4" />
@@ -165,6 +182,13 @@ export default function DocumentsPage() {
         </div>
       )}
 
+      {/* Cross-Document Query */}
+      {showQuery && (
+        <div className="card-premium p-4 md:p-6">
+          <CrossDocumentQuery />
+        </div>
+      )}
+
       {/* Search */}
       <div className="card-premium p-4 md:p-6">
         <DocumentSearch onSearch={handleSearch} />
@@ -193,7 +217,12 @@ export default function DocumentsPage() {
             ) : (
               <div className="space-y-3">
                 {documents.slice(0, 10).map((doc) => (
-                  <DocumentCard key={doc.id} document={doc} expandable />
+                  <DocumentCard
+                    key={doc.id}
+                    document={doc}
+                    expandable
+                    onDelete={handleDelete}
+                  />
                 ))}
               </div>
             )}

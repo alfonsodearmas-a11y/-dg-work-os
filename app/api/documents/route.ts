@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     let query = supabaseAdmin
       .from('documents')
       .select('*')
-      .in('processing_status', ['completed', 'processing']);
+      .in('processing_status', ['completed', 'processing', 'failed']);
 
     if (agency) {
       query = query.eq('agency', agency);

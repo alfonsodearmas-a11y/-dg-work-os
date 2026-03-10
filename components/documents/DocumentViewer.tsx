@@ -1,7 +1,8 @@
 'use client';
 
 import { format } from 'date-fns';
-import { FileText, Trash2, Calendar, DollarSign, User, AlertCircle, Clock, Building2, Tag } from 'lucide-react';
+import { useState } from 'react';
+import { FileText, Trash2, Calendar, DollarSign, User, AlertCircle, Clock, Building2, Tag, RefreshCw, Loader2, AlertTriangle } from 'lucide-react';
 import { AskDocument } from './AskDocument';
 
 interface ExtractedData {
@@ -30,6 +31,7 @@ interface Document {
   extracted_data: ExtractedData | null;
   uploaded_at: string;
   file_path: string;
+  processing_status: string;
   queries: Query[];
 }
 
@@ -50,9 +52,12 @@ const typeStyles: Record<string, { bg: string; text: string }> = {
 };
 
 export function DocumentViewer({ document, onDelete }: DocumentViewerProps) {
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this document?')) return;
+  const [reanalyzing, setReanalyzing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
+  const handleDelete = async () => {
+    setDeleting(true);
     const res = await fetch(`/api/documents/${document.id}`, {
       method: 'DELETE'
     });
@@ -60,9 +65,27 @@ export function DocumentViewer({ document, onDelete }: DocumentViewerProps) {
     if (res.ok) {
       onDelete?.();
     }
+    setDeleting(false);
+    setShowDeleteConfirm(false);
+  };
+
+  const handleReanalyze = async () => {
+    setReanalyzing(true);
+    try {
+      const res = await fetch(`/api/documents/${document.id}/reanalyze`, { method: 'POST' });
+      if (res.ok) {
+        window.location.reload();
+      }
+    } catch {
+      // fail silently
+    } finally {
+      setReanalyzing(false);
+    }
   };
 
   const typeStyle = typeStyles[document.document_type || ''] || { bg: 'bg-[#4a5568]/30', text: 'text-[#94a3b8]' };
+  const isFailed = document.processing_status === 'failed';
+  const hasNoAnalysis = !document.summary || document.summary === 'Unable to analyze document';
 
   return (
     <div className="space-y-6">
@@ -109,18 +132,74 @@ export function DocumentViewer({ document, onDelete }: DocumentViewerProps) {
               </div>
             </div>
           </div>
-          <button
-            onClick={handleDelete}
-            className="p-3 rounded-xl text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition-all"
-            aria-label="Delete document"
-          >
-            <Trash2 className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleReanalyze}
+              disabled={reanalyzing}
+              className="p-3 rounded-xl text-[#d4af37] hover:bg-[#d4af37]/10 border border-transparent hover:border-[#d4af37]/30 transition-all disabled:opacity-50"
+              aria-label="Re-analyze document"
+              title="Re-analyze with AI"
+            >
+              {reanalyzing ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-5 w-5" />
+              )}
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="p-3 rounded-xl text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition-all"
+              aria-label="Delete document"
+            >
+              <Trash2 className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Summary */}
-      {document.summary && (
+      {/* Summary / Analysis Status */}
+      {isFailed && !reanalyzing ? (
+        <div className="card-premium p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-white">Analysis Failed</h2>
+                <p className="text-sm text-[#64748b]">AI was unable to analyze this document.</p>
+              </div>
+            </div>
+            <button
+              onClick={handleReanalyze}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#d4af37]/20 text-[#d4af37] hover:bg-[#d4af37]/30 transition-colors text-sm font-medium"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Retry Analysis
+            </button>
+          </div>
+        </div>
+      ) : reanalyzing ? (
+        <div className="card-premium p-6">
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-5 w-5 text-[#d4af37] animate-spin" />
+            <p className="text-[#94a3b8]">Claude Opus is re-analyzing this document...</p>
+          </div>
+        </div>
+      ) : hasNoAnalysis ? (
+        <div className="card-premium p-6">
+          <div className="flex items-center justify-between">
+            <p className="text-[#94a3b8]">No analysis available for this document.</p>
+            <button
+              onClick={handleReanalyze}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#d4af37]/20 text-[#d4af37] hover:bg-[#d4af37]/30 transition-colors text-sm font-medium"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Analyze Now
+            </button>
+          </div>
+        </div>
+      ) : document.summary ? (
         <div className="card-premium p-6">
           <h2 className="text-lg font-semibold text-white flex items-center mb-4">
             <FileText className="h-5 w-5 mr-2 text-[#d4af37]" />
@@ -128,7 +207,7 @@ export function DocumentViewer({ document, onDelete }: DocumentViewerProps) {
           </h2>
           <p className="text-[#94a3b8] leading-relaxed">{document.summary}</p>
         </div>
-      )}
+      ) : null}
 
       {/* Extracted Data */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -231,6 +310,51 @@ export function DocumentViewer({ document, onDelete }: DocumentViewerProps) {
         </h2>
         <AskDocument documentId={document.id} previousQueries={document.queries} />
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowDeleteConfirm(false)}
+        >
+          <div
+            className="card-premium p-6 max-w-sm mx-4 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
+                <Trash2 className="h-5 w-5 text-red-400" />
+              </div>
+              <h3 className="text-white font-semibold">Delete Document</h3>
+            </div>
+            <p className="text-[#94a3b8] text-sm">
+              Delete <strong className="text-white">{document.title || document.original_filename}</strong>? This cannot be undone.
+            </p>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-[#1a2744] border border-[#2d3a52] text-[#94a3b8] hover:text-white hover:border-[#4a5568] transition-colors text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
