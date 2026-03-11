@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, X } from 'lucide-react';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 2000;
 
 interface UploadPanelProps {
   onSuccess?: () => void;
@@ -19,13 +21,16 @@ interface UploadResult {
   warnings: string[];
 }
 
+type Phase = 'idle' | 'uploading' | 'processing' | 'done' | 'error';
+
 export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [phase, setPhase] = useState<Phase>('idle');
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [agencyOverride, setAgencyOverride] = useState<'' | 'GPL' | 'GWI'>('');
+  const abortRef = useRef<AbortController | null>(null);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -47,6 +52,7 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
   const selectFile = (f: File) => {
     setError(null);
     setResult(null);
+    setPhase('idle');
     const name = f.name.toLowerCase();
     if (!name.endsWith('.xls') && !name.endsWith('.xlsx')) {
       setError('Invalid file type. Only .xls and .xlsx files are accepted.');
@@ -59,49 +65,115 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
     setFile(f);
   };
 
+  /** Fetch with retry + exponential backoff for transient errors */
+  async function fetchWithRetry(
+    url: string,
+    options: RequestInit,
+    retries = MAX_RETRIES
+  ): Promise<Response> {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      const res = await fetch(url, options);
+      // Retry on 502/503/504 (gateway/timeout errors), not on 4xx
+      if (res.ok || res.status < 500 || res.status === 500 || attempt === retries) {
+        return res;
+      }
+      await new Promise(r => setTimeout(r, RETRY_DELAY_MS * Math.pow(2, attempt)));
+    }
+    // Unreachable, but TypeScript needs it
+    throw new Error('Retry limit exceeded');
+  }
+
+  /** Parse JSON response, handling non-JSON (HTML error pages from gateway) */
+  async function parseResponse(res: Response): Promise<{ ok: boolean; data: Record<string, unknown>; status: number }> {
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      const errorMsg = res.status === 504
+        ? 'Server timed out processing the request. Please try again.'
+        : res.status === 502
+        ? 'Server temporarily unavailable. Please try again in a moment.'
+        : `Server error (${res.status}). Please try again.`;
+      return { ok: false, data: { error: errorMsg }, status: res.status };
+    }
+    const data = await res.json();
+    return { ok: res.ok, data, status: res.status };
+  }
+
   const handleUpload = async () => {
     if (!file) return;
-    setUploading(true);
     setError(null);
+    setResult(null);
+
+    const abort = new AbortController();
+    abortRef.current = abort;
 
     try {
+      // ── Phase 1: Upload file to storage ──
+      setPhase('uploading');
+
       const formData = new FormData();
       formData.append('file', file);
       const agency = lockedAgency || agencyOverride;
       if (agency) formData.append('agency', agency);
 
-      const res = await fetch('/api/pending-applications/upload', { method: 'POST', body: formData });
+      const uploadRes = await fetchWithRetry(
+        '/api/pending-applications/upload',
+        { method: 'POST', body: formData, signal: abort.signal }
+      );
+      const upload = await parseResponse(uploadRes);
 
-      // Handle non-JSON responses (timeouts, server errors return HTML)
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) {
-        setError(res.status === 504 ? 'Request timed out — the file may be too large. Try again.' : `Server error (${res.status})`);
-        setUploading(false);
+      if (!upload.ok) {
+        setError((upload.data.error as string) || 'Upload failed');
+        setPhase('error');
         return;
       }
 
-      const data = await res.json();
+      const { storagePath, agency: detectedAgency } = upload.data as {
+        storagePath: string;
+        agency: string;
+      };
 
-      if (!res.ok) {
-        setError(data.error || 'Upload failed');
-      } else {
-        setResult(data);
-        setFile(null);
-        onSuccess?.();
+      // ── Phase 2: Process the uploaded file ──
+      setPhase('processing');
+
+      const processRes = await fetchWithRetry(
+        '/api/pending-applications/process',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storagePath, agency: detectedAgency }),
+          signal: abort.signal,
+        }
+      );
+      const processed = await parseResponse(processRes);
+
+      if (!processed.ok) {
+        setError((processed.data.error as string) || 'Processing failed');
+        setPhase('error');
+        return;
       }
+
+      setResult(processed.data as unknown as UploadResult);
+      setFile(null);
+      setPhase('done');
+      onSuccess?.();
     } catch (err) {
+      if (abort.signal.aborted) return;
       const message = err instanceof Error ? err.message : 'Unknown error';
       setError(`Network error: ${message}`);
+      setPhase('error');
     }
-    setUploading(false);
   };
 
   const reset = () => {
+    abortRef.current?.abort();
     setFile(null);
     setError(null);
     setResult(null);
+    setPhase('idle');
     setAgencyOverride('');
   };
+
+  const isWorking = phase === 'uploading' || phase === 'processing';
 
   return (
     <div className="space-y-6">
@@ -112,7 +184,7 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
         </p>
 
         {/* Drop Zone */}
-        {!result && (
+        {phase !== 'done' && (
           <>
             <div
               onDragOver={handleDragOver}
@@ -131,9 +203,11 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
                     <p className="text-white font-medium">{file.name}</p>
                     <p className="text-xs text-navy-600">{(file.size / 1024).toFixed(1)} KB</p>
                   </div>
-                  <button onClick={reset} className="p-1.5 rounded-lg hover:bg-navy-800 text-navy-600 hover:text-white ml-2" aria-label="Remove file">
-                    <X className="h-4 w-4" />
-                  </button>
+                  {!isWorking && (
+                    <button onClick={reset} className="p-1.5 rounded-lg hover:bg-navy-800 text-navy-600 hover:text-white ml-2" aria-label="Remove file">
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               ) : (
                 <>
@@ -151,8 +225,8 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
               )}
             </div>
 
-            {/* Agency Override (hidden when agency is locked) */}
-            {file && !lockedAgency && (
+            {/* Agency Override (hidden when agency is locked or working) */}
+            {file && !lockedAgency && !isWorking && (
               <div className="mt-4 flex items-center gap-3">
                 <label className="text-sm text-navy-600">Agency override (optional):</label>
                 <div className="flex gap-2">
@@ -173,19 +247,44 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
               </div>
             )}
 
-            {/* Upload Button */}
+            {/* Upload Button / Progress */}
             {file && (
-              <button
-                onClick={handleUpload}
-                disabled={uploading}
-                className="mt-4 w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gold-500 text-navy-950 font-semibold hover:bg-[#e5c547] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {uploading ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" />Uploading &amp; Processing...</>
+              <div className="mt-4">
+                {isWorking ? (
+                  <div className="space-y-3">
+                    {/* Progress steps */}
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-navy-900/50 border border-navy-800">
+                      <Loader2 className="h-4 w-4 animate-spin text-gold-500 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white font-medium">
+                          {phase === 'uploading' ? 'Uploading file...' : 'Processing records...'}
+                        </p>
+                        <p className="text-xs text-navy-600 mt-0.5">
+                          {phase === 'uploading'
+                            ? 'Storing file securely'
+                            : 'Parsing Excel, updating database, running analysis'}
+                        </p>
+                      </div>
+                    </div>
+                    {/* Step indicators */}
+                    <div className="flex items-center gap-2 px-1">
+                      <div className={`h-1.5 flex-1 rounded-full transition-colors ${
+                        phase === 'uploading' ? 'bg-gold-500 animate-pulse' : 'bg-emerald-500'
+                      }`} />
+                      <div className={`h-1.5 flex-1 rounded-full transition-colors ${
+                        phase === 'processing' ? 'bg-gold-500 animate-pulse' : 'bg-navy-800'
+                      }`} />
+                    </div>
+                  </div>
                 ) : (
-                  <><Upload className="h-4 w-4" />Upload &amp; Import</>
+                  <button
+                    onClick={handleUpload}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gold-500 text-navy-950 font-semibold hover:bg-[#e5c547] transition-colors"
+                  >
+                    <Upload className="h-4 w-4" />Upload &amp; Import
+                  </button>
                 )}
-              </button>
+              </div>
             )}
           </>
         )}
@@ -194,9 +293,19 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
         {error && (
           <div className="mt-4 flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/30">
             <AlertCircle className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm text-red-400 font-medium">Upload Failed</p>
+            <div className="flex-1">
+              <p className="text-sm text-red-400 font-medium">
+                {phase === 'error' && file ? 'Upload Failed' : 'Error'}
+              </p>
               <p className="text-xs text-red-400/80 mt-1">{error}</p>
+              {phase === 'error' && file && (
+                <button
+                  onClick={handleUpload}
+                  className="mt-2 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-xs font-medium hover:bg-red-500/30 transition-colors"
+                >
+                  Retry
+                </button>
+              )}
             </div>
           </div>
         )}
