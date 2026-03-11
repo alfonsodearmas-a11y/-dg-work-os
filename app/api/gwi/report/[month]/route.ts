@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 
-const REPORT_COLUMNS = 'id, report_month, report_type, financial_data, collections_data, customer_service_data, procurement_data, ai_insights, created_at, updated_at';
+const REPORT_COLUMNS = 'id, report_month, report_type, financial_data, collections_data, customer_service_data, procurement_data, created_at';
 
 export async function GET(
   _request: NextRequest,
@@ -25,6 +25,7 @@ export async function GET(
       .single();
 
     if (error) {
+      logger.error({ error, month: normalizedMonth }, 'GWI report by month: Supabase query failed');
       return NextResponse.json({ success: false, error: 'Report not found' }, { status: 404 });
     }
 

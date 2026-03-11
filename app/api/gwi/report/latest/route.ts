@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 
-const REPORT_COLUMNS = 'id, report_month, report_type, financial_data, collections_data, customer_service_data, procurement_data, ai_insights, created_at, updated_at';
+const REPORT_COLUMNS = 'id, report_month, report_type, financial_data, collections_data, customer_service_data, procurement_data, created_at';
 
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -17,6 +17,7 @@ export async function GET() {
       .limit(2);
 
     if (error) {
+      logger.error({ error }, 'GWI report latest: Supabase query failed');
       return NextResponse.json({ success: false, error: 'Failed to fetch report' }, { status: 500 });
     }
 
