@@ -19,6 +19,7 @@ const patchUserSchema = z.object({
   role: z.enum(['dg', 'minister', 'ps', 'agency_admin', 'officer'] as const).optional(),
   agency: z.enum(['gpl', 'cjia', 'gwi', 'gcaa', 'heci', 'marad', 'has'] as const).nullable().optional(),
   name: z.string().min(1).optional(),
+  formal_title: z.string().min(1).optional(),
   is_active: z.boolean().optional(),
 });
 
@@ -124,6 +125,10 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
     updates.name = data!.name;
   }
 
+  if (data!.formal_title !== undefined) {
+    updates.formal_title = data!.formal_title;
+  }
+
   if (data!.is_active !== undefined) {
     updates.is_active = data!.is_active;
     updates.status = data!.is_active ? 'active' : 'inactive';
@@ -145,13 +150,13 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
   }
 
-  const { data: beforeUser } = await supabaseAdmin.from('users').select('role, agency, is_active, status, name').eq('id', id).single();
+  const { data: beforeUser } = await supabaseAdmin.from('users').select('role, agency, is_active, status, name, formal_title').eq('id', id).single();
 
   const { data: updatedUser, error: dbError } = await supabaseAdmin
     .from('users')
     .update(updates)
     .eq('id', id)
-    .select('id, email, name, role, agency, is_active, status')
+    .select('id, email, name, role, formal_title, agency, is_active, status')
     .single();
 
   if (dbError) {
@@ -163,6 +168,7 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
   if (updates.agency !== undefined && updates.agency !== beforeUser?.agency) changes.agency = { from: beforeUser?.agency, to: updates.agency };
   if (updates.is_active !== undefined && updates.is_active !== beforeUser?.is_active) changes.is_active = { from: beforeUser?.is_active, to: updates.is_active };
   if (updates.name && updates.name !== beforeUser?.name) changes.name = { from: beforeUser?.name, to: updates.name };
+  if (updates.formal_title && updates.formal_title !== beforeUser?.formal_title) changes.formal_title = { from: beforeUser?.formal_title, to: updates.formal_title };
 
   if (Object.keys(changes).length > 0) {
     await logAudit(session.user.id, id, 'updated', changes);

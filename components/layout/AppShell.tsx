@@ -20,13 +20,7 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { CommandPalette } from '@/components/ui/CommandPalette';
 import { KeyboardShortcutsHelp } from '@/components/ui/KeyboardShortcutsHelp';
 
-const ROLE_LABELS: Record<string, string> = {
-  dg: 'Director General',
-  minister: 'Minister',
-  ps: 'Permanent Secretary',
-  agency_admin: 'Agency Admin',
-  officer: 'Officer',
-};
+import { ROLE_LABELS } from '@/lib/people-types';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -35,7 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const userName = session?.user?.name || 'User';
   const userRole = (session?.user as { role?: string })?.role || 'officer';
-  const roleLabel = ROLE_LABELS[userRole] || userRole;
+  const roleLabel = ROLE_LABELS[userRole as keyof typeof ROLE_LABELS] || userRole;
   const initials = userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   // Login and upload portal pages get bare layout — no sidebar, header, or bottom nav

@@ -8,7 +8,8 @@ export async function GET() {
     if (authResult instanceof NextResponse) return authResult;
 
     const result = await query(
-      `SELECT * FROM alerts WHERE is_active = true AND resolved_at IS NULL
+      `SELECT id, agency, severity, metric_name, current_value, threshold_value, message, is_active, created_at, acknowledged_at, acknowledged_by, resolved_at, resolved_by
+       FROM alerts WHERE is_active = true AND resolved_at IS NULL
        ORDER BY severity DESC, created_at DESC LIMIT 50`
     );
     return NextResponse.json({ success: true, data: result.rows });

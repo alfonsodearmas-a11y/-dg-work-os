@@ -15,12 +15,13 @@ interface MentionAutocompleteProps {
   onSelect: (user: MentionUser, triggerStart: number, queryLength: number) => void;
 }
 
-const ROLE_LABELS: Record<string, string> = {
+// Short labels for compact mention popover
+const MENTION_ROLE_LABELS: Record<string, string> = {
   dg: 'DG',
   minister: 'Minister',
-  ps: 'PS',
-  agency_admin: 'Admin',
-  officer: 'Officer',
+  ps: 'Perm. Sec.',
+  agency_admin: 'Manager',
+  officer: 'Analyst',
 };
 
 export function MentionAutocomplete({ users, textareaRef, onSelect }: MentionAutocompleteProps) {
@@ -182,7 +183,7 @@ export function MentionAutocomplete({ users, textareaRef, onSelect }: MentionAut
           <div className="flex-1 min-w-0">
             <p className="text-sm text-white truncate">{user.name}</p>
             <p className="text-xs text-navy-600 truncate">
-              {ROLE_LABELS[user.role] || user.role}
+              {MENTION_ROLE_LABELS[user.role] || user.role}
               {user.agency && ` · ${user.agency}`}
             </p>
           </div>

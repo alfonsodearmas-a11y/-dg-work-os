@@ -658,11 +658,23 @@ export async function getContractors(): Promise<string[]> {
 // ── Batch health recalculation ────────────────────────────────────────────
 
 export async function recalculateAllHealth(): Promise<{ updated: number; total: number; breakdown: Record<string, number> }> {
-  const { data } = await supabaseAdmin
-    .from('projects')
-    .select('id, completion_pct, project_end_date, start_date, project_status, escalated, health, updated_at');
+  // Fetch all projects in pages of 1000 to avoid Supabase's default row cap
+  const HEALTH_FETCH_COLUMNS = 'id, completion_pct, project_end_date, start_date, project_status, escalated, health, updated_at';
+  const MAX_PAGES = 10;
+  let allData: any[] = [];
+  for (let p = 0; p < MAX_PAGES; p++) {
+    const rangeStart = p * 1000;
+    const { data: pageData } = await supabaseAdmin
+      .from('projects')
+      .select(HEALTH_FETCH_COLUMNS)
+      .range(rangeStart, rangeStart + 999);
+    if (!pageData || pageData.length === 0) break;
+    allData = allData.concat(pageData);
+    if (pageData.length < 1000) break;
+  }
+  const data = allData;
 
-  if (!data) return { updated: 0, total: 0, breakdown: {} };
+  if (!data.length) return { updated: 0, total: 0, breakdown: {} };
 
   const breakdown: Record<string, number> = { green: 0, amber: 0, red: 0 };
 

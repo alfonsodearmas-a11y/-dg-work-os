@@ -6,6 +6,8 @@ import { insertNotification } from '@/lib/notifications';
 import { sendInviteEmail } from '@/lib/invite-email';
 import { withErrorHandler } from '@/lib/api-utils';
 import { grantModuleAccess } from '@/lib/modules/access';
+import { ROLE_LABELS } from '@/lib/people-types';
+import type { Role } from '@/lib/people-types';
 
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps']);
@@ -13,7 +15,7 @@ export async function GET() {
 
   const { data, error } = await supabaseAdmin
     .from('users')
-    .select('id, email, name, avatar_url, role, agency, is_active, status, last_login, login_count, invited_at, first_login_at, last_seen_at, created_at')
+    .select('id, email, name, avatar_url, role, formal_title, agency, is_active, status, last_login, login_count, invited_at, first_login_at, last_seen_at, created_at')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -23,17 +25,18 @@ export async function GET() {
   return NextResponse.json({ users: data });
 }
 
-const VALID_INVITE_ROLES = ['agency_admin', 'officer'] as const;
+const ALL_INVITE_ROLES = ['dg', 'minister', 'ps', 'agency_admin', 'officer'] as const;
 const VALID_AGENCIES = ['gpl', 'cjia', 'gwi', 'gcaa', 'heci', 'marad', 'has'] as const;
+const MINISTRY_ROLES = ['dg', 'minister', 'ps'];
 
 const inviteSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
-  role: z.enum(VALID_INVITE_ROLES),
+  role: z.enum(ALL_INVITE_ROLES),
   agency: z.enum(VALID_AGENCIES).optional(),
 }).refine(
   (d) => d.role !== 'agency_admin' || !!d.agency,
-  { message: 'Agency is required for agency_admin role', path: ['agency'] },
+  { message: 'Agency is required for Agency Manager role', path: ['agency'] },
 );
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
@@ -50,6 +53,11 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   const { email, name, role, agency } = parsed.data;
   const moduleGrants: string[] = Array.isArray(body.moduleGrants) ? body.moduleGrants : [];
 
+  // Only DG (super admin) can invite senior roles (minister, ps, dg)
+  if (MINISTRY_ROLES.includes(role) && session.user.role !== 'dg') {
+    return NextResponse.json({ error: 'Only the Director General can invite senior roles' }, { status: 403 });
+  }
+
   const { data: existing } = await supabaseAdmin
     .from('users')
     .select('id, email')
@@ -60,19 +68,23 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     return NextResponse.json({ error: 'A user with this email already exists' }, { status: 409 });
   }
 
+  // Derive formal_title from role, or use custom title if provided
+  const formalTitle: string = body.formal_title?.trim() || ROLE_LABELS[role as Role] || role;
+
   const { data: newUser, error: dbError } = await supabaseAdmin
     .from('users')
     .insert({
       email: email.toLowerCase().trim(),
       name: name.trim(),
       role,
-      agency: agency || null,
+      formal_title: formalTitle,
+      agency: MINISTRY_ROLES.includes(role) ? null : (agency || null),
       is_active: false,
       status: 'pending',
       invited_by: session.user.id,
       invited_at: new Date().toISOString(),
     })
-    .select('id, email, name, role, agency, status')
+    .select('id, email, name, role, formal_title, agency, status')
     .single();
 
   if (dbError) {

@@ -13,14 +13,16 @@ export interface ModuleRecord {
   sort_order: number;
 }
 
+const FULL_ACCESS_ROLES: Role[] = ['dg', 'minister', 'ps'];
+
 /**
  * Get all modules the user can access.
- * DG always gets ALL active modules (hardcoded bypass).
+ * Ministry roles (DG, Minister, PS) always get ALL active modules.
  * Others get modules where their role is in default_roles OR there's an explicit grant.
  */
 export async function getUserModules(userId: string, userRole: Role): Promise<string[]> {
-  // DG sees everything active
-  if (userRole === 'dg') {
+  // Ministry roles see everything active
+  if (FULL_ACCESS_ROLES.includes(userRole)) {
     const { data } = await supabaseAdmin
       .from('modules')
       .select('slug')
@@ -60,8 +62,8 @@ export async function getUserModules(userId: string, userRole: Role): Promise<st
  * Check if a specific user can access a specific module.
  */
 export async function canAccessModule(userId: string, userRole: Role, moduleSlug: string): Promise<boolean> {
-  if (userRole === 'dg') {
-    // DG can access any active module
+  if (FULL_ACCESS_ROLES.includes(userRole)) {
+    // Ministry roles can access any active module
     const { data } = await supabaseAdmin
       .from('modules')
       .select('id')

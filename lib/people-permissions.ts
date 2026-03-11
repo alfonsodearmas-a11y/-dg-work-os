@@ -321,6 +321,8 @@ export function canManageUser(
   actorRole: Role,
   targetRole: Role
 ): boolean {
+  // DG is the system administrator — can manage all users regardless of hierarchy
+  if (actorRole === 'dg') return true;
   return ROLE_HIERARCHY[actorRole] > ROLE_HIERARCHY[targetRole];
 }
 

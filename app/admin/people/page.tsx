@@ -14,6 +14,7 @@ import { ActivityLogPanel } from '@/components/admin/ActivityLogPanel';
 import { usePermissions } from '@/hooks/usePeople';
 import { Spinner } from '@/components/ui/Spinner';
 import { formatDistanceToNow, parseISO } from 'date-fns';
+import { ROLE_LABELS, ROLE_COLORS, ROLE_OPTIONS, MINISTRY_ROLES } from '@/lib/people-types';
 
 interface User {
   id: string;
@@ -21,6 +22,7 @@ interface User {
   name: string | null;
   avatar_url: string | null;
   role: string;
+  formal_title: string | null;
   agency: string | null;
   is_active: boolean;
   status: string | null;
@@ -38,22 +40,6 @@ type TopTab = 'directory' | 'permissions' | 'access' | 'activity';
 type SortField = 'name' | 'role' | 'agency' | 'status' | 'last_seen';
 type SortDir = 'asc' | 'desc';
 
-const ROLE_LABELS: Record<string, string> = {
-  dg: 'Director General',
-  minister: 'Minister',
-  ps: 'Permanent Secretary',
-  agency_admin: 'Agency Admin',
-  officer: 'Officer',
-};
-
-const ROLE_COLORS: Record<string, string> = {
-  dg: 'bg-gold-500/20 text-gold-500 border border-gold-500/30',
-  minister: 'bg-purple-500/20 text-purple-400 border border-purple-500/30',
-  ps: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
-  agency_admin: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30',
-  officer: 'bg-navy-700/20 text-slate-400 border border-navy-700/30',
-};
-
 const STATUS_STYLES: Record<string, string> = {
   active: 'bg-green-500/20 text-green-400',
   pending: 'bg-amber-500/20 text-amber-400',
@@ -69,19 +55,6 @@ const STATUS_LABELS: Record<string, string> = {
   suspended: 'Suspended',
   archived: 'Archived',
 };
-
-const ROLE_OPTIONS = [
-  { value: 'dg', label: 'Director General' },
-  { value: 'minister', label: 'Minister' },
-  { value: 'ps', label: 'Permanent Secretary' },
-  { value: 'agency_admin', label: 'Agency Admin' },
-  { value: 'officer', label: 'Officer' },
-];
-
-const INVITE_ROLE_OPTIONS = [
-  { value: 'agency_admin', label: 'Agency Admin' },
-  { value: 'officer', label: 'Officer' },
-];
 
 const AGENCY_OPTIONS = [
   { value: 'gpl', label: 'GPL' },
@@ -524,7 +497,7 @@ export default function PeoplePage() {
       {hasActiveFilters && (
         <div className="flex flex-wrap gap-2">
           {filterRole && (
-            <FilterPill label={`Role: ${ROLE_LABELS[filterRole]}`} onRemove={() => setFilterRole('')} />
+            <FilterPill label={`Role: ${ROLE_LABELS[filterRole as keyof typeof ROLE_LABELS] || filterRole}`} onRemove={() => setFilterRole('')} />
           )}
           {filterAgency && (
             <FilterPill label={`Agency: ${filterAgency.toUpperCase()}`} onRemove={() => setFilterAgency('')} />
@@ -655,13 +628,13 @@ export default function PeoplePage() {
                           </div>
                           {/* Mobile: inline role badge */}
                           <span className={`sm:hidden text-[10px] px-1.5 py-0.5 rounded shrink-0 ${ROLE_COLORS[u.role] || ROLE_COLORS.officer}`}>
-                            {u.role === 'agency_admin' ? 'Admin' : ROLE_LABELS[u.role] || u.role}
+                            {u.formal_title || ROLE_LABELS[u.role as keyof typeof ROLE_LABELS] || u.role}
                           </span>
                         </div>
                       </td>
                       <td className="px-4 py-3 hidden sm:table-cell">
                         <span className={`text-xs px-2 py-0.5 rounded ${ROLE_COLORS[u.role] || ROLE_COLORS.officer}`}>
-                          {ROLE_LABELS[u.role] || u.role}
+                          {u.formal_title || ROLE_LABELS[u.role as keyof typeof ROLE_LABELS] || u.role}
                         </span>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
@@ -791,10 +764,20 @@ function InviteModal({
   onSuccess: () => void;
   onError: (msg: string) => void;
 }) {
+  const { data: session } = useSession();
+  const isDG = session?.user?.role === 'dg';
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('officer');
   const [agency, setAgency] = useState('');
+
+  // DG can assign all roles; others only agency_admin and officer
+  const availableRoles = isDG
+    ? ROLE_OPTIONS
+    : ROLE_OPTIONS.filter(r => !MINISTRY_ROLES.includes(r.value));
+
+  const isMinistryRole = MINISTRY_ROLES.includes(role);
   const [submitting, setSubmitting] = useState(false);
   const [modules, setModules] = useState<InviteModule[]>([]);
   const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set());
@@ -929,33 +912,45 @@ function InviteModal({
             <select
               id="invite-role"
               value={role}
-              onChange={e => setRole(e.target.value)}
+              onChange={e => {
+                setRole(e.target.value);
+                // Clear agency when switching to a ministry role
+                if (MINISTRY_ROLES.includes(e.target.value)) setAgency('');
+              }}
               className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
             >
-              {INVITE_ROLE_OPTIONS.map(r => (
+              {availableRoles.map(r => (
                 <option key={r.value} value={r.value}>{r.label}</option>
               ))}
             </select>
+            {isMinistryRole && (
+              <p className="text-[10px] text-gold-500 mt-1">
+                Ministry role — full access to all agencies and modules.
+              </p>
+            )}
           </div>
 
-          <div>
-            <label htmlFor="invite-agency" className="block text-xs text-slate-400 mb-1.5">Agency</label>
-            <select
-              id="invite-agency"
-              value={agency}
-              onChange={e => setAgency(e.target.value)}
-              required={role === 'agency_admin'}
-              aria-required={role === 'agency_admin' ? 'true' : undefined}
-              className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
-            >
-              <option value="">
-                {role === 'agency_admin' ? 'Select agency (required)' : 'Select agency (optional)'}
-              </option>
-              {AGENCY_OPTIONS.map(a => (
-                <option key={a.value} value={a.value}>{a.label}</option>
-              ))}
-            </select>
-          </div>
+          {/* Agency (hidden for ministry roles) */}
+          {!isMinistryRole && (
+            <div>
+              <label htmlFor="invite-agency" className="block text-xs text-slate-400 mb-1.5">Agency</label>
+              <select
+                id="invite-agency"
+                value={agency}
+                onChange={e => setAgency(e.target.value)}
+                required={role === 'agency_admin'}
+                aria-required={role === 'agency_admin' ? 'true' : undefined}
+                className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
+              >
+                <option value="">
+                  {role === 'agency_admin' ? 'Select agency (required)' : 'Select agency (optional)'}
+                </option>
+                {AGENCY_OPTIONS.map(a => (
+                  <option key={a.value} value={a.value}>{a.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Module Access */}
           {nonDefaultModules.length > 0 && (

@@ -1,12 +1,5 @@
 import { sendEmail } from './email';
-
-const ROLE_LABELS: Record<string, string> = {
-  dg: 'Director General',
-  minister: 'Minister',
-  ps: 'Permanent Secretary',
-  agency_admin: 'Agency Administrator',
-  officer: 'Officer',
-};
+import { ROLE_LABELS } from './people-types';
 
 interface SendInviteParams {
   to: string;
@@ -21,7 +14,7 @@ export async function sendInviteEmail({ to, name, role, agency, inviterName }: S
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
     : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
   const loginUrl = `${baseUrl}/login`;
-  const roleLabel = ROLE_LABELS[role] || role;
+  const roleLabel = ROLE_LABELS[role as keyof typeof ROLE_LABELS] || role;
   const agencyLabel = agency ? ` (${agency.toUpperCase()})` : '';
 
   const html = `

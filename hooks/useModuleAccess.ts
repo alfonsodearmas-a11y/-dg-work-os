@@ -43,8 +43,8 @@ export function useModuleAccess(): ModuleAccessState {
 
   const canAccess = useCallback(
     (slug: string) => {
-      // DG always has access (client-side optimistic check)
-      if (userRole === 'dg') return true;
+      // Ministry roles always have full access (client-side optimistic check)
+      if (userRole === 'dg' || userRole === 'minister' || userRole === 'ps') return true;
       // While loading, optimistically allow access (server will enforce)
       if (loading) return true;
       return modules.includes(slug);

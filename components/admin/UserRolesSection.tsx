@@ -1,6 +1,7 @@
 'use client';
 
 import { Spinner } from '@/components/ui/Spinner';
+import { ROLE_LABELS, ROLE_COLORS, ROLE_OPTIONS, MINISTRY_ROLES } from '@/lib/people-types';
 
 export interface ModuleInfo {
   id: string;
@@ -14,16 +15,9 @@ export interface ModuleInfo {
 export interface UserRolesUser {
   id: string;
   role: string;
+  formal_title?: string | null;
   agency: string | null;
 }
-
-const ROLE_OPTIONS = [
-  { value: 'dg', label: 'Director General' },
-  { value: 'minister', label: 'Minister' },
-  { value: 'ps', label: 'Permanent Secretary' },
-  { value: 'agency_admin', label: 'Agency Admin' },
-  { value: 'officer', label: 'Officer' },
-];
 
 const AGENCY_OPTIONS = [
   { value: 'gpl', label: 'GPL' },
@@ -34,24 +28,6 @@ const AGENCY_OPTIONS = [
   { value: 'marad', label: 'MARAD' },
   { value: 'has', label: 'HAS' },
 ];
-
-const ROLE_LABELS: Record<string, string> = {
-  dg: 'Director General',
-  minister: 'Minister',
-  ps: 'Permanent Secretary',
-  agency_admin: 'Agency Admin',
-  officer: 'Officer',
-};
-
-const ROLE_COLORS: Record<string, string> = {
-  dg: 'bg-gold-500/20 text-gold-500 border border-gold-500/30',
-  minister: 'bg-purple-500/20 text-purple-400 border border-purple-500/30',
-  ps: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
-  agency_admin: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30',
-  officer: 'bg-navy-700/20 text-slate-400 border border-navy-700/30',
-};
-
-const MINISTRY_ROLES = ['dg', 'minister', 'ps'];
 
 interface UserRolesSectionProps {
   user: UserRolesUser;
@@ -86,7 +62,7 @@ export function UserRolesSection({
           </select>
         ) : (
           <span className={`text-xs px-2.5 py-1 rounded ${ROLE_COLORS[user.role] || ROLE_COLORS.officer}`}>
-            {ROLE_LABELS[user.role] || user.role}
+            {user.formal_title || ROLE_LABELS[user.role as keyof typeof ROLE_LABELS] || user.role}
           </span>
         )}
       </Field>
@@ -176,7 +152,7 @@ export function ModuleAccessSection({
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-white">{mod.name}</p>
                 {isDefaultForRole && (
-                  <p className="text-[10px] text-gold-500">Default for {ROLE_LABELS[user.role] || user.role}</p>
+                  <p className="text-[10px] text-gold-500">Default for {ROLE_LABELS[user.role as keyof typeof ROLE_LABELS] || user.role}</p>
                 )}
                 {hasExplicitGrant && !isDefaultForRole && (
                   <p className="text-[10px] text-green-400">Explicitly granted</p>

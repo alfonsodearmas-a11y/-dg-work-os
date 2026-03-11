@@ -12,6 +12,7 @@ import { UserActivitySection } from './UserActivitySection';
 import type { ModuleInfo } from './UserRolesSection';
 import type { AuditEntry } from './UserActivitySection';
 import { UserCheck, UserX, Clock } from 'lucide-react';
+import { ROLE_LABELS, ROLE_COLORS } from '@/lib/people-types';
 
 interface User {
   id: string;
@@ -19,6 +20,7 @@ interface User {
   name: string | null;
   avatar_url: string | null;
   role: string;
+  formal_title: string | null;
   agency: string | null;
   is_active: boolean;
   status: string | null;
@@ -326,6 +328,9 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
             )}
             <div className="flex-1 min-w-0">
               <p className="text-white font-semibold truncate">{user.name || 'No name'}</p>
+              <p className={`text-xs font-medium truncate ${ROLE_COLORS[user.role]?.includes('text-') ? ROLE_COLORS[user.role].split(' ').find(c => c.startsWith('text-'))! : 'text-gold-500'}`}>
+                {user.formal_title || ROLE_LABELS[user.role as keyof typeof ROLE_LABELS] || user.role}
+              </p>
               <p className="text-navy-600 text-xs truncate">{user.email}</p>
             </div>
             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusInfo.bg}`}>
@@ -364,8 +369,8 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
             />
           </Section>
 
-          {/* Module Access Section (DG only, not self) */}
-          {isDG && !isSelf && user.role !== 'dg' && (
+          {/* Module Access Section (DG only, not self, skip ministry roles who have full access) */}
+          {isDG && !isSelf && !['dg', 'minister', 'ps'].includes(user.role) && (
             <Section title="Module Access" id="modules" expanded={expandedSection === 'modules'} onToggle={() => toggleSection('modules')}>
               <ModuleAccessSection
                 user={user}

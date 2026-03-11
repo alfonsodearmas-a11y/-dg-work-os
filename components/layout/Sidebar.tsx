@@ -29,13 +29,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useSidebar } from './SidebarContext';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
 
-const ROLE_LABELS: Record<string, string> = {
-  dg: 'Director General',
-  minister: 'Minister',
-  ps: 'Permanent Secretary',
-  agency_admin: 'Agency Admin',
-  officer: 'Officer',
-};
+import { ROLE_LABELS } from '@/lib/people-types';
 
 const mainNavItems = [
   { href: '/', label: 'Mission Control', icon: LayoutDashboard, moduleSlug: 'briefing' },
@@ -75,7 +69,7 @@ export function Sidebar() {
   const userRole = (session?.user as { role?: string })?.role || 'officer';
   const userAgency = (session?.user as { agency?: string | null })?.agency || null;
   const userName = session?.user?.name || 'User';
-  const roleLabel = ROLE_LABELS[userRole] || userRole;
+  const roleLabel = ROLE_LABELS[userRole as keyof typeof ROLE_LABELS] || userRole;
 
   const showAdmin = ADMIN_ROLES.includes(userRole);
   const isMinistry = MINISTRY_ROLES.includes(userRole);
