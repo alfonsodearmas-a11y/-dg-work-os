@@ -24,12 +24,51 @@ import {
   CalendarDays,
   ChevronsLeft,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useSession, signOut } from 'next-auth/react';
 import { useSidebar } from './SidebarContext';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
 
 import { ROLE_LABELS } from '@/lib/people-types';
+
+// ---------------------------------------------------------------------------
+// Sidebar Tooltip — glassmorphism floating label for collapsed icon rail
+// ---------------------------------------------------------------------------
+
+function SidebarTooltip({ label, anchorRect }: { label: string; anchorRect: DOMRect | null }) {
+  if (!anchorRect) return null;
+  const top = anchorRect.top + anchorRect.height / 2 - 16;
+  const left = anchorRect.right + 10;
+  return createPortal(
+    <div
+      className="sidebar-tooltip"
+      style={{ position: 'fixed', top, left, zIndex: 9999 }}
+    >
+      {label}
+    </div>,
+    document.body,
+  );
+}
+
+function useTooltip() {
+  const [tooltip, setTooltip] = useState<{ label: string; rect: DOMRect } | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const onEnter = useCallback((label: string, el: HTMLElement) => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      setTooltip({ label, rect: el.getBoundingClientRect() });
+    }, 150);
+  }, []);
+
+  const onLeave = useCallback(() => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setTooltip(null);
+  }, []);
+
+  return { tooltip, onEnter, onLeave };
+}
 
 const mainNavItems = [
   { href: '/', label: 'Mission Control', icon: LayoutDashboard, moduleSlug: 'briefing' },
@@ -65,6 +104,7 @@ export function Sidebar() {
   const [agenciesOpen, setAgenciesOpen] = useState(true);
   const { mobileOpen, setMobileOpen, collapsed, toggleCollapse } = useSidebar();
   const { canAccess } = useModuleAccess();
+  const { tooltip, onEnter, onLeave } = useTooltip();
 
   const userRole = (session?.user as { role?: string })?.role || 'officer';
   const userAgency = (session?.user as { agency?: string | null })?.agency || null;
@@ -114,7 +154,7 @@ export function Sidebar() {
       )}
 
       <aside
-        className={`sidebar min-h-screen flex flex-col shrink-0 fixed inset-y-0 left-0 z-50 transition-all duration-300 ease-out md:static md:translate-x-0 ${
+        className={`sidebar min-h-screen flex flex-col shrink-0 fixed inset-y-0 left-0 z-50 md:static md:translate-x-0 sidebar-transition ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         } ${collapsed ? 'md:w-16' : 'w-64'}`}
       >
@@ -162,12 +202,13 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 onClick={handleNavClick}
-                title={collapsed ? item.label : undefined}
-                className={`sidebar-item ${active ? 'active' : ''} ${collapsed ? 'justify-center px-2' : ''}`}
+                className={`sidebar-item ${active ? 'active' : ''} ${collapsed ? 'sidebar-item-collapsed' : ''}`}
                 {...(active ? { 'aria-current': 'page' as const } : {})}
+                onMouseEnter={collapsed ? (e) => onEnter(item.label, e.currentTarget) : undefined}
+                onMouseLeave={collapsed ? onLeave : undefined}
               >
                 <Icon className={active ? 'text-gold-500' : ''} aria-hidden="true" />
-                {!collapsed && <span className="text-[15px]">{item.label}</span>}
+                {!collapsed && <span className="sidebar-label">{item.label}</span>}
                 {active && !collapsed && <ChevronRight className="ml-auto h-4 w-4" aria-hidden="true" />}
               </Link>
             );
@@ -202,12 +243,13 @@ export function Sidebar() {
                         key={agency.code}
                         href={href}
                         onClick={handleNavClick}
-                        title={collapsed ? agency.label : undefined}
-                        className={`sidebar-item ${active ? 'active' : ''} ${collapsed ? 'justify-center px-2' : ''}`}
+                        className={`sidebar-item ${active ? 'active' : ''} ${collapsed ? 'sidebar-item-collapsed' : ''}`}
                         {...(active ? { 'aria-current': 'page' as const } : {})}
+                        onMouseEnter={collapsed ? (e) => onEnter(agency.label, e.currentTarget) : undefined}
+                        onMouseLeave={collapsed ? onLeave : undefined}
                       >
                         <Icon className={`h-4 w-4 ${active ? 'text-gold-500' : ''}`} aria-hidden="true" />
-                        {!collapsed && <span className="text-[15px]">{agency.label}</span>}
+                        {!collapsed && <span className="sidebar-label">{agency.label}</span>}
                         {!collapsed && <span className="ml-auto text-xs text-navy-600 hidden group-hover:inline">{agency.name}</span>}
                       </Link>
                     );
@@ -234,12 +276,13 @@ export function Sidebar() {
                     key={item.href}
                     href={item.href}
                     onClick={handleNavClick}
-                    title={collapsed ? item.label : undefined}
-                    className={`sidebar-item ${active ? 'active' : ''} ${collapsed ? 'justify-center px-2' : ''}`}
+                    className={`sidebar-item ${active ? 'active' : ''} ${collapsed ? 'sidebar-item-collapsed' : ''}`}
                     {...(active ? { 'aria-current': 'page' as const } : {})}
+                    onMouseEnter={collapsed ? (e) => onEnter(item.label, e.currentTarget) : undefined}
+                    onMouseLeave={collapsed ? onLeave : undefined}
                   >
                     <Icon className={active ? 'text-gold-500' : ''} aria-hidden="true" />
-                    {!collapsed && <span className="text-[15px]">{item.label}</span>}
+                    {!collapsed && <span className="sidebar-label">{item.label}</span>}
                   </Link>
                 );
               })}
@@ -250,11 +293,11 @@ export function Sidebar() {
           <div className="hidden md:block mt-auto pt-4 px-2">
             <button
               onClick={toggleCollapse}
-              className="w-full flex items-center justify-center p-2 rounded-lg text-navy-600 hover:text-gold-500 hover:bg-gold-500/10 transition-colors"
+              className="sidebar-collapse-btn"
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-expanded={!collapsed}
             >
-              <ChevronsLeft className={`h-4 w-4 transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`} />
+              <ChevronsLeft className={`h-4 w-4 sidebar-chevron ${collapsed ? 'rotate-180' : ''}`} />
             </button>
           </div>
         </nav>
@@ -295,6 +338,11 @@ export function Sidebar() {
           )}
         </div>
       </aside>
+
+      {/* Tooltip portal for collapsed state */}
+      {collapsed && tooltip && (
+        <SidebarTooltip label={tooltip.label} anchorRect={tooltip.rect} />
+      )}
     </>
   );
 }

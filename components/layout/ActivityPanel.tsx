@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Calendar, CheckSquare, Bell, Clock, ExternalLink } from 'lucide-react';
+import { Calendar, CheckSquare, Bell, Clock, ExternalLink, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import type { Notification } from '@/lib/notifications';
 import { resolveNotificationUrl } from '@/components/notifications/NotificationPanel';
+import { useSidebar } from './SidebarContext';
 
 interface PanelTask {
   id: string;
@@ -66,6 +67,7 @@ function isOverdue(dateStr: string | null): boolean {
 
 export function ActivityPanel() {
   const pathname = usePathname();
+  const { rightCollapsed, toggleRightCollapse } = useSidebar();
   const [tasks, setTasks] = useState<PanelTask[]>([]);
   const [events, setEvents] = useState<PanelEvent[]>([]);
   const [notifications, setNotifications] = useState<PanelNotification[]>([]);
@@ -101,9 +103,45 @@ export function ActivityPanel() {
   // Don't render on login/upload pages (AppShell handles this, but just in case)
   if (pathname === '/login' || pathname.startsWith('/upload')) return null;
 
+  // Task count for the floating tab badge
+  const taskCount = tasks.length;
+
   return (
-    <aside className="hidden xl:flex flex-col w-[272px] shrink-0 border-l border-navy-800/50 bg-[#0d1a2d] overflow-y-auto max-h-screen sticky top-0">
-      <div className="p-4 space-y-4">
+    <>
+      {/* Floating re-open tab — shown when right sidebar is collapsed */}
+      {rightCollapsed && (
+        <button
+          onClick={toggleRightCollapse}
+          className="activity-panel-tab"
+          aria-label="Open activity panel"
+        >
+          <PanelRightOpen size={16} />
+          {taskCount > 0 && (
+            <span className="activity-panel-tab-badge">{taskCount}</span>
+          )}
+        </button>
+      )}
+
+      <aside
+        className={`hidden xl:flex flex-col shrink-0 border-l border-navy-800/50 bg-[#0d1a2d] overflow-y-auto max-h-screen sticky top-0 activity-panel-transition ${
+          rightCollapsed ? 'activity-panel-collapsed' : 'activity-panel-expanded'
+        }`}
+        style={{ boxShadow: rightCollapsed ? 'none' : 'inset 1px 0 0 rgba(212, 175, 55, 0.06)' }}
+      >
+      <div className="p-4 space-y-4 activity-panel-content" style={{ opacity: rightCollapsed ? 0 : 1 }}>
+        {/* Close button */}
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] uppercase tracking-wider text-navy-600 font-semibold">Activity</span>
+          <button
+            onClick={toggleRightCollapse}
+            className="p-1.5 rounded-lg text-navy-600 hover:text-gold-500 hover:bg-gold-500/10 transition-colors"
+            aria-label="Close activity panel"
+            aria-expanded={!rightCollapsed}
+          >
+            <PanelRightClose size={14} />
+          </button>
+        </div>
+
         {/* Today's Schedule */}
         <PanelSection
           label="Today's Schedule"
@@ -227,6 +265,7 @@ export function ActivityPanel() {
         </PanelSection>
       </div>
     </aside>
+    </>
   );
 }
 

@@ -342,6 +342,190 @@ p, li, td, th, span, label, div {
   height: 20px;
 }
 
+/* Sidebar label — smooth fade for collapse */
+.sidebar-label {
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity 0.15s ease 0.05s;
+}
+
+/* Collapsed sidebar item overrides */
+.sidebar-item-collapsed {
+  justify-content: center;
+  padding: 0.75rem;
+  margin: 0.25rem 0.375rem;
+}
+
+.sidebar-item-collapsed svg {
+  margin-right: 0;
+}
+
+.sidebar-item-collapsed.active {
+  border-left: none;
+  margin-left: 0.375rem;
+  position: relative;
+}
+
+/* Gold highlight pill on active icon in collapsed rail */
+.sidebar-item-collapsed.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 3px;
+  border-radius: 3px;
+  background: #d4af37;
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.4);
+}
+
+/* Sidebar transition — GPU-friendly */
+.sidebar-transition {
+  transition: width 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 300ms ease-out;
+  will-change: width;
+}
+
+/* Sidebar collapse toggle button */
+.sidebar-collapse-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem;
+  border-radius: 8px;
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.sidebar-collapse-btn:hover {
+  color: #d4af37;
+  background: rgba(212, 175, 55, 0.1);
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.08);
+}
+
+/* Chevron rotation */
+.sidebar-chevron {
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Sidebar inner glow when expanded */
+.sidebar {
+  box-shadow: inset -1px 0 0 rgba(212, 175, 55, 0.06);
+}
+
+/* Sidebar glassmorphism tooltip */
+.sidebar-tooltip {
+  pointer-events: none;
+  padding: 0.5rem 0.875rem;
+  border-radius: 8px;
+  background: rgba(26, 39, 68, 0.9);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(45, 58, 82, 0.6);
+  border-left: 2px solid rgba(212, 175, 55, 0.5);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  animation: sidebarTooltipIn 0.12s ease-out;
+}
+
+@keyframes sidebarTooltipIn {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Activity Panel (Right Sidebar) */
+.activity-panel-transition {
+  transition: width 250ms cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 200ms ease;
+  will-change: width;
+}
+
+.activity-panel-expanded {
+  width: 272px;
+}
+
+.activity-panel-collapsed {
+  width: 0;
+  overflow: hidden;
+  border-left-color: transparent;
+}
+
+.activity-panel-content {
+  transition: opacity 150ms ease;
+  min-width: 272px;
+}
+
+/* Floating re-open tab for right sidebar */
+.activity-panel-tab {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 40;
+  display: none;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.625rem 0.5rem;
+  border-radius: 8px 0 0 8px;
+  background: rgba(26, 39, 68, 0.9);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(45, 58, 82, 0.6);
+  border-right: none;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  animation: activityTabIn 0.15s ease-out;
+}
+
+.activity-panel-tab:hover {
+  color: #d4af37;
+  background: rgba(26, 39, 68, 0.95);
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.1);
+}
+
+@keyframes activityTabIn {
+  from { opacity: 0; transform: translateY(-50%) translateX(8px); }
+  to { opacity: 1; transform: translateY(-50%) translateX(0); }
+}
+
+.activity-panel-tab-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #d4af37;
+  background: rgba(212, 175, 55, 0.15);
+  padding: 1px 5px;
+  border-radius: 6px;
+  line-height: 1.4;
+}
+
+/* Main content transition */
+.main-content-transition {
+  transition: margin 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Focus mode enter animation — subtle scale pulse */
+@keyframes focusModeEnter {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.003); }
+  100% { transform: scale(1); }
+}
+
+.focus-mode-enter {
+  animation: focusModeEnter 0.3s ease-out;
+}
+
+/* Show floating tab only on xl screens */
+@media (min-width: 1280px) {
+  .activity-panel-tab {
+    display: flex;
+  }
+}
+
 /* Badge Styles */
 .badge-gold {
   background: rgba(212, 175, 55, 0.2);

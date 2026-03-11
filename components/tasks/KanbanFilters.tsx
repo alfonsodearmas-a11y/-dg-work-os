@@ -2,13 +2,14 @@
 
 import {
   Search, X, User, SlidersHorizontal, ArrowUpDown,
-  LayoutGrid, List, Zap, Plus, RefreshCw,
+  LayoutGrid, List, Zap, Plus, RefreshCw, Maximize2, Minimize2,
 } from 'lucide-react';
 import type { Dispatch } from 'react';
 import type {
   BoardAction, BoardState, DueDateFilter,
 } from '@/hooks/useBoardReducer';
 import type { SortField } from '@/components/tasks/TaskListView';
+import { useSidebar } from '@/components/layout/SidebarContext';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -212,7 +213,8 @@ export function KanbanToolbar({
         )}
       </div>
 
-      {/* Standup (desktop only) */}
+      {/* Focus Mode + Standup (desktop only) */}
+      {!isMobile && <FocusModeButton />}
       {!isMobile && (
         <button
           onClick={onGenerateStandup}
@@ -245,6 +247,31 @@ export function KanbanToolbar({
         <RefreshCw className={`h-4 w-4 ${state.syncing ? 'animate-spin' : ''}`} />
       </button>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Focus Mode Button
+// ---------------------------------------------------------------------------
+
+function FocusModeButton() {
+  const { focusMode, toggleFocusMode } = useSidebar();
+  const Icon = focusMode ? Minimize2 : Maximize2;
+  return (
+    <button
+      onClick={toggleFocusMode}
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
+        focusMode
+          ? 'bg-gold-500/20 border-gold-500/50 text-gold-500'
+          : 'bg-navy-900 border-navy-800 text-slate-400 hover:border-gold-500/50 hover:text-gold-500'
+      }`}
+      aria-label={focusMode ? 'Exit focus mode' : 'Enter focus mode'}
+      aria-pressed={focusMode}
+      title={`Focus Mode (${navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl'}+\\)`}
+    >
+      <Icon className="h-4 w-4" />
+      {focusMode ? 'Exit Focus' : 'Focus'}
+    </button>
   );
 }
 

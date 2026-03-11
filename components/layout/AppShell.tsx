@@ -1,10 +1,11 @@
 'use client';
 
+import { useEffect } from 'react';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Sidebar } from './Sidebar';
-import { SidebarProvider } from './SidebarContext';
+import { SidebarProvider, useSidebar } from './SidebarContext';
 import { MobileMenuButton } from './MobileMenuButton';
 import { BottomNav } from './BottomNav';
 import { HeaderDate } from './HeaderDate';
@@ -22,9 +23,11 @@ import { KeyboardShortcutsHelp } from '@/components/ui/KeyboardShortcutsHelp';
 
 import { ROLE_LABELS } from '@/lib/people-types';
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+// Inner component that can use useSidebar (needs to be inside SidebarProvider)
+function AppShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const { toggleCollapse, toggleRightCollapse, toggleFocusMode, focusMode } = useSidebar();
   const isBareLayout = pathname === '/login' || pathname.startsWith('/upload');
 
   const userName = session?.user?.name || 'User';
@@ -32,13 +35,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const roleLabel = ROLE_LABELS[userRole as keyof typeof ROLE_LABELS] || userRole;
   const initials = userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
+  // Keyboard shortcuts: Cmd+[ (left), Cmd+] (right), Cmd+\ (focus)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+
+      if (e.key === '[') {
+        e.preventDefault();
+        toggleCollapse();
+      } else if (e.key === ']') {
+        e.preventDefault();
+        toggleRightCollapse();
+      } else if (e.key === '\\') {
+        e.preventDefault();
+        toggleFocusMode();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [toggleCollapse, toggleRightCollapse, toggleFocusMode]);
+
   // Login and upload portal pages get bare layout — no sidebar, header, or bottom nav
   if (isBareLayout) {
     return <>{children}</>;
   }
 
   return (
-    <SidebarProvider>
     <NotificationProvider>
     <ToastProvider>
       <div className="min-h-screen flex">
@@ -46,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Sidebar />
 
         {/* Main Content */}
-        <main id="main-content" className="flex-1 min-h-screen min-w-0">
+        <main id="main-content" className={`flex-1 min-h-screen min-w-0 main-content-transition ${focusMode ? 'focus-mode-enter' : ''}`}>
           {/* Top Bar */}
           <header className="h-14 md:h-16 border-b border-navy-800/50 bg-navy-950 md:bg-navy-950/80 md:backdrop-blur-sm sticky top-0 z-40">
             <div className="h-full px-3 md:px-8 flex items-center justify-between">
@@ -103,8 +129,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <NotificationPanel />
       <NotificationToast />
       <PushPromptBanner />
+
+      {/* Focus mode aria announcement */}
+      <div aria-live="polite" className="sr-only">
+        {focusMode ? 'Focus mode enabled — sidebars collapsed' : ''}
+      </div>
     </ToastProvider>
     </NotificationProvider>
+  );
+}
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <SidebarProvider>
+      <AppShellInner>{children}</AppShellInner>
     </SidebarProvider>
   );
 }

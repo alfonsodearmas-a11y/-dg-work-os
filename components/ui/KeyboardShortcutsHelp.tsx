@@ -5,6 +5,9 @@ import { X, Keyboard } from 'lucide-react';
 
 const SHORTCUTS = [
   { keys: ['\u2318', 'K'], description: 'Open command palette' },
+  { keys: ['\u2318', '['], description: 'Toggle left sidebar' },
+  { keys: ['\u2318', ']'], description: 'Toggle right sidebar' },
+  { keys: ['\u2318', '\\'], description: 'Toggle focus mode' },
   { keys: ['Shift', '?'], description: 'Show this help' },
   { keys: ['Esc'], description: 'Close panel / deselect' },
   { keys: ['\u2191', '\u2193'], description: 'Navigate lists' },
