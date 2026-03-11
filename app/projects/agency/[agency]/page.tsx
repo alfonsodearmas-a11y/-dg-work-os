@@ -5,36 +5,9 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Building2, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
-
-const AGENCY_NAMES: Record<string, string> = {
-  GPL: 'Guyana Power & Light',
-  GWI: 'Guyana Water Inc.',
-  HECI: 'Hinterland Electrification Company Inc.',
-  CJIA: 'Cheddi Jagan International Airport',
-  MARAD: 'Maritime Administration Department',
-  GCAA: 'Guyana Civil Aviation Authority',
-  MOPUA: 'Ministry of Public Works',
-  HAS: 'Harbour & Aviation Services',
-};
-
-function fmtCurrency(value: number | string | null | undefined): string {
-  if (value === null || value === undefined || value === '-') return '-';
-  const num = typeof value === 'string' ? parseFloat(value.replace(/[$,]/g, '')) : Number(value);
-  if (isNaN(num) || num <= 0) return '-';
-  if (num > 1e11) return '-';
-  const abs = Math.abs(num);
-  if (abs >= 1e9) return `$${(num / 1e9).toFixed(1)}B`;
-  if (abs >= 1e6) return `$${(num / 1e6).toFixed(1)}M`;
-  if (abs >= 1e3) return `$${(num / 1e3).toFixed(1)}K`;
-  return `$${num.toLocaleString()}`;
-}
-
-function fmtDate(iso: string | null): string {
-  if (!iso) return '-';
-  const d = new Date(iso + 'T00:00:00');
-  if (isNaN(d.getTime())) return '-';
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-}
+import { fmtCurrency, fmtDate } from '@/lib/format';
+import { AGENCY_NAMES } from '@/lib/constants/agencies';
+import { Spinner } from '@/components/ui/Spinner';
 
 function fmtRegion(code: string | null): string {
   if (!code) return '-';
@@ -87,36 +60,36 @@ export default function AgencyPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-start gap-4">
-        <Link href="/projects" className="p-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] transition-colors mt-1" aria-label="Back">
-          <ArrowLeft className="h-5 w-5 text-[#94a3b8]" />
+        <Link href="/projects" className="p-2 rounded-lg bg-navy-900 border border-navy-800 hover:border-gold-500 transition-colors mt-1" aria-label="Back">
+          <ArrowLeft className="h-5 w-5 text-slate-400" />
         </Link>
         <div>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center">
-              <Building2 className="h-6 w-6 text-[#0a1628]" />
+              <Building2 className="h-6 w-6 text-navy-950" />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-white">{agency}</h1>
-              <p className="text-[#64748b]">{AGENCY_NAMES[agency] || agency}</p>
+              <p className="text-navy-600">{AGENCY_NAMES[agency] || agency}</p>
             </div>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="card-premium p-5"><p className="stat-number">{stats.total}</p><p className="text-[#64748b] text-sm mt-1">Total</p></div>
-        <div className="card-premium p-5"><p className="stat-number">{stats.commenced}</p><p className="text-[#64748b] text-sm mt-1">Commenced</p></div>
-        <div className="card-premium p-5"><p className="stat-number text-red-400">{stats.delayed}</p><p className="text-[#64748b] text-sm mt-1">Delayed</p></div>
-        <div className="card-premium p-5"><p className="stat-number text-emerald-400">{stats.completed}</p><p className="text-[#64748b] text-sm mt-1">Completed</p></div>
-        <div className="card-premium p-5"><p className="stat-number">{fmtCurrency(stats.totalValue)}</p><p className="text-[#64748b] text-sm mt-1">Total Value</p></div>
+        <div className="card-premium p-5"><p className="stat-number">{stats.total}</p><p className="text-navy-600 text-sm mt-1">Total</p></div>
+        <div className="card-premium p-5"><p className="stat-number">{stats.commenced}</p><p className="text-navy-600 text-sm mt-1">Commenced</p></div>
+        <div className="card-premium p-5"><p className="stat-number text-red-400">{stats.delayed}</p><p className="text-navy-600 text-sm mt-1">Delayed</p></div>
+        <div className="card-premium p-5"><p className="stat-number text-emerald-400">{stats.completed}</p><p className="text-navy-600 text-sm mt-1">Completed</p></div>
+        <div className="card-premium p-5"><p className="stat-number">{fmtCurrency(stats.totalValue)}</p><p className="text-navy-600 text-sm mt-1">Total Value</p></div>
       </div>
 
-      <div className="flex gap-2 border-b border-[#2d3a52] overflow-x-auto">
+      <div className="flex gap-2 border-b border-navy-800 overflow-x-auto">
         {tabs.map(t => (
           <button
             key={t.key}
             onClick={() => setStatusFilter(t.key)}
-            className={`px-4 py-3 font-medium border-b-2 transition-colors whitespace-nowrap ${statusFilter === t.key ? 'border-[#d4af37] text-[#d4af37]' : 'border-transparent text-[#64748b] hover:text-white'}`}
+            className={`px-4 py-3 font-medium border-b-2 transition-colors whitespace-nowrap ${statusFilter === t.key ? 'border-gold-500 text-gold-500' : 'border-transparent text-navy-600 hover:text-white'}`}
           >
             {t.label} ({t.count})
           </button>
@@ -124,35 +97,35 @@ export default function AgencyPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12" role="status" aria-label="Loading">
-          <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+        <div className="flex items-center justify-center py-12">
+          <Spinner />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-[#64748b]">No projects found</div>
+        <div className="text-center py-12 text-navy-600">No projects found</div>
       ) : (
         <div className="space-y-3">
           {filtered.sort((a: any, b: any) => (Number(b.contract_value) || 0) - (Number(a.contract_value) || 0)).map((p: any) => (
-            <Link key={p.id} href={`/projects/${p.id}`} className="card-premium p-5 block hover:border-[#d4af37]/50">
+            <Link key={p.id} href={`/projects/${p.id}`} className="card-premium p-5 block hover:border-gold-500/50">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2">
                     <Badge variant={statusVariant(p.status)}>{p.status}</Badge>
-                    <span className="text-[#64748b] text-xs">{fmtRegion(p.region)}</span>
+                    <span className="text-navy-600 text-xs">{fmtRegion(p.region)}</span>
                   </div>
                   <h3 className="text-lg font-semibold text-white truncate">{p.project_name}</h3>
-                  <p className="text-[#94a3b8] mt-1">{p.contractor || 'No contractor assigned'}</p>
+                  <p className="text-slate-400 mt-1">{p.contractor || 'No contractor assigned'}</p>
                 </div>
                 <div className="text-right ml-4">
-                  <p className="text-xl font-bold text-[#d4af37]">{fmtCurrency(p.contract_value)}</p>
+                  <p className="text-xl font-bold text-gold-500">{fmtCurrency(p.contract_value)}</p>
                   <div className="flex items-center justify-end gap-2 mt-2">
-                    <div className="w-20 bg-[#2d3a52] rounded-full h-2">
+                    <div className="w-20 bg-navy-800 rounded-full h-2">
                       <div className="progress-gold h-2 rounded-full" style={{ width: `${Math.min(p.completion_pct || 0, 100)}%` }} />
                     </div>
                     <span className="text-sm font-medium text-white">{p.completion_pct || 0}%</span>
                   </div>
-                  <p className="text-[#64748b] text-xs mt-1">End: {fmtDate(p.project_end_date)}</p>
+                  <p className="text-navy-600 text-xs mt-1">End: {fmtDate(p.project_end_date)}</p>
                 </div>
-                <ChevronRight className="h-5 w-5 text-[#64748b] ml-4 shrink-0" />
+                <ChevronRight className="h-5 w-5 text-navy-600 ml-4 shrink-0" />
               </div>
             </Link>
           ))}

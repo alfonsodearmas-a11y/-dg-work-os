@@ -5,6 +5,7 @@ import {
   X, Shield, ShieldOff, Archive, RotateCcw, LogOut, Trash2, Mail,
   ChevronDown, AlertTriangle, Clock, UserCheck, UserX, Blocks,
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/Spinner';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
 
 interface ModuleInfo {
@@ -79,11 +80,11 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const ROLE_COLORS: Record<string, string> = {
-  dg: 'bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/30',
+  dg: 'bg-gold-500/20 text-gold-500 border border-gold-500/30',
   minister: 'bg-purple-500/20 text-purple-400 border border-purple-500/30',
   ps: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
   agency_admin: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30',
-  officer: 'bg-[#4a5568]/20 text-[#94a3b8] border border-[#4a5568]/30',
+  officer: 'bg-navy-700/20 text-slate-400 border border-navy-700/30',
 };
 
 const STATUS_STYLES: Record<string, { bg: string; label: string; icon: typeof UserCheck }> = {
@@ -366,15 +367,15 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
         role="dialog"
         aria-modal="true"
         aria-labelledby="user-detail-drawer-title"
-        className={`fixed inset-y-0 right-0 w-full sm:w-[440px] bg-[#0a1628] border-l border-[#2d3a52] z-50 flex flex-col transform transition-transform duration-300 ease-out ${
+        className={`fixed inset-y-0 right-0 w-full sm:w-[440px] bg-navy-950 border-l border-navy-800 z-50 flex flex-col transform transition-transform duration-300 ease-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         {/* Header */}
-        <div className="flex-shrink-0 border-b border-[#2d3a52] px-5 py-4">
+        <div className="flex-shrink-0 border-b border-navy-800 px-5 py-4">
           <div className="flex items-center justify-between mb-4">
             <h2 id="user-detail-drawer-title" className="text-lg font-bold text-white">User Details</h2>
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-[#2d3a52] text-[#94a3b8] hover:text-white transition-colors" aria-label="Close">
+            <button onClick={onClose} className="p-2 rounded-lg hover:bg-navy-800 text-slate-400 hover:text-white transition-colors" aria-label="Close">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -384,13 +385,13 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
               // eslint-disable-next-line @next/next/no-img-element
               <img src={user.avatar_url} alt="" className="w-12 h-12 rounded-full" />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-[#2d3a52] flex items-center justify-center text-sm font-bold text-[#94a3b8]">
+              <div className="w-12 h-12 rounded-full bg-navy-800 flex items-center justify-center text-sm font-bold text-slate-400">
                 {getInitials(user.name)}
               </div>
             )}
             <div className="flex-1 min-w-0">
               <p className="text-white font-semibold truncate">{user.name || 'No name'}</p>
-              <p className="text-[#64748b] text-xs truncate">{user.email}</p>
+              <p className="text-navy-600 text-xs truncate">{user.email}</p>
             </div>
             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusInfo.bg}`}>
               <StatusIcon className="h-3 w-3" />
@@ -412,7 +413,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                     value={editName}
                     onChange={e => handleFieldChange('name', e.target.value)}
                     aria-label="User name"
-                    className="w-full px-3 py-1.5 bg-[#0a1628] border border-[#2d3a52] rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+                    className="w-full px-3 py-1.5 bg-navy-950 border border-navy-800 rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
                   />
                 ) : (
                   <p className="text-sm text-white">{user.name || 'Not set'}</p>
@@ -422,11 +423,11 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                 <p className="text-sm text-white">{user.email}</p>
               </Field>
               <Field label="Created">
-                <p className="text-sm text-[#94a3b8]">{formatDate(user.created_at)}</p>
+                <p className="text-sm text-slate-400">{formatDate(user.created_at)}</p>
               </Field>
               {user.invited_at && (
                 <Field label="Invited">
-                  <p className="text-sm text-[#94a3b8]">{formatDate(user.invited_at)}</p>
+                  <p className="text-sm text-slate-400">{formatDate(user.invited_at)}</p>
                 </Field>
               )}
               {isDG && status === 'pending' && (
@@ -434,10 +435,10 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                   <button
                     onClick={() => performAction('resend_invite', `Resend invite email to ${user.email}?`)}
                     disabled={actionLoading === 'resend_invite'}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#d4af37] hover:bg-[#d4af37]/10 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gold-500 hover:bg-gold-500/10 transition-colors disabled:opacity-50"
                   >
                     {actionLoading === 'resend_invite' ? (
-                      <div className="w-4 h-4 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+                      <Spinner size="sm" />
                     ) : (
                       <Mail className="h-4 w-4" />
                     )}
@@ -446,13 +447,13 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                 </div>
               )}
               <Field label="First Login">
-                <p className="text-sm text-[#94a3b8]">{formatDate(user.first_login_at)}</p>
+                <p className="text-sm text-slate-400">{formatDate(user.first_login_at)}</p>
               </Field>
               <Field label="Last Active">
-                <p className="text-sm text-[#94a3b8]">{formatRelative(user.last_seen_at || user.last_login)}</p>
+                <p className="text-sm text-slate-400">{formatRelative(user.last_seen_at || user.last_login)}</p>
               </Field>
               <Field label="Login Count">
-                <p className="text-sm text-[#94a3b8]">{user.login_count ?? 0}</p>
+                <p className="text-sm text-slate-400">{user.login_count ?? 0}</p>
               </Field>
             </div>
           </Section>
@@ -466,7 +467,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                     value={editRole}
                     onChange={e => handleFieldChange('role', e.target.value)}
                     aria-label="User role"
-                    className="w-full px-3 py-1.5 bg-[#0a1628] border border-[#2d3a52] rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+                    className="w-full px-3 py-1.5 bg-navy-950 border border-navy-800 rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
                   >
                     {ROLE_OPTIONS.map(r => (
                       <option key={r.value} value={r.value}>{r.label}</option>
@@ -484,7 +485,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                     value={editAgency || ''}
                     onChange={e => handleFieldChange('agency', e.target.value || null)}
                     aria-label="User agency"
-                    className="w-full px-3 py-1.5 bg-[#0a1628] border border-[#2d3a52] rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+                    className="w-full px-3 py-1.5 bg-navy-950 border border-navy-800 rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
                   >
                     <option value="">No agency</option>
                     {AGENCY_OPTIONS.map(a => (
@@ -492,13 +493,13 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                     ))}
                   </select>
                 ) : (
-                  <p className="text-sm text-[#94a3b8]">
+                  <p className="text-sm text-slate-400">
                     {MINISTRY_ROLES.includes(editRole) ? 'Ministry (all agencies)' : user.agency?.toUpperCase() || 'None'}
                   </p>
                 )}
               </Field>
               {MINISTRY_ROLES.includes(editRole) && (
-                <p className="text-xs text-[#64748b]">Ministry roles have access to all agencies.</p>
+                <p className="text-xs text-navy-600">Ministry roles have access to all agencies.</p>
               )}
             </div>
           </Section>
@@ -508,7 +509,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
             <Section title="Module Access" id="modules" expanded={expandedSection === 'modules'} onToggle={() => toggleSection('modules')}>
               {modulesLoading ? (
                 <div className="flex items-center justify-center py-6">
-                  <div className="w-5 h-5 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+                  <Spinner size="sm" />
                 </div>
               ) : (
                 <div className="space-y-1">
@@ -524,7 +525,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                         <label
                           key={mod.slug}
                           className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                            hasAccess ? 'bg-[#d4af37]/5' : 'hover:bg-[#2d3a52]/30'
+                            hasAccess ? 'bg-gold-500/5' : 'hover:bg-navy-800/30'
                           } ${isToggling ? 'opacity-50' : ''}`}
                         >
                           <input
@@ -538,19 +539,19 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                               toggleModuleAccess(mod.slug, hasExplicitGrant);
                             }}
                             disabled={isToggling || (isDefaultForRole && !hasExplicitGrant)}
-                            className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer disabled:cursor-not-allowed"
+                            className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer disabled:cursor-not-allowed"
                           />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-white">{mod.name}</p>
                             {isDefaultForRole && (
-                              <p className="text-[10px] text-[#d4af37]">Default for {ROLE_LABELS[user.role] || user.role}</p>
+                              <p className="text-[10px] text-gold-500">Default for {ROLE_LABELS[user.role] || user.role}</p>
                             )}
                             {hasExplicitGrant && !isDefaultForRole && (
                               <p className="text-[10px] text-green-400">Explicitly granted</p>
                             )}
                           </div>
                           {isToggling && (
-                            <div className="w-3.5 h-3.5 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin shrink-0" />
+                            <Spinner size="sm" className="shrink-0" />
                           )}
                         </label>
                       );
@@ -617,7 +618,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                 />
 
                 {/* Permanent Delete */}
-                <div className="mt-4 pt-4 border-t border-[#2d3a52]">
+                <div className="mt-4 pt-4 border-t border-navy-800">
                   <p className="text-xs font-semibold text-red-400 mb-2 flex items-center gap-1.5">
                     <AlertTriangle className="h-3.5 w-3.5" />
                     Danger Zone
@@ -645,7 +646,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                         placeholder={user.email}
                         aria-label="Type email to confirm deletion"
                         aria-required="true"
-                        className="w-full px-3 py-1.5 bg-[#0a1628] border border-red-500/30 rounded text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-red-500/50"
+                        className="w-full px-3 py-1.5 bg-navy-950 border border-red-500/30 rounded text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-red-500/50"
                       />
                       <div className="flex gap-2">
                         <button
@@ -657,7 +658,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                         </button>
                         <button
                           onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmEmail(''); }}
-                          className="px-3 py-1.5 rounded text-xs text-[#94a3b8] hover:text-white transition-colors"
+                          className="px-3 py-1.5 rounded text-xs text-slate-400 hover:text-white transition-colors"
                         >
                           Cancel
                         </button>
@@ -673,22 +674,22 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
           <Section title="Activity Log" id="activity" expanded={expandedSection === 'activity'} onToggle={() => toggleSection('activity')}>
             {loadingAudit ? (
               <div className="flex items-center justify-center py-6">
-                <div className="w-5 h-5 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+                <Spinner size="sm" />
               </div>
             ) : audit.length === 0 ? (
-              <p className="text-xs text-[#64748b] py-4 text-center">No activity recorded</p>
+              <p className="text-xs text-navy-600 py-4 text-center">No activity recorded</p>
             ) : (
               <div className="space-y-0">
                 {audit.map(entry => (
-                  <div key={entry.id} className="flex gap-3 py-2.5 border-b border-[#2d3a52]/50 last:border-0">
+                  <div key={entry.id} className="flex gap-3 py-2.5 border-b border-navy-800/50 last:border-0">
                     <div className="w-1.5 h-1.5 rounded-full bg-[#3d4a62] mt-2 shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs text-[#94a3b8]">
+                      <p className="text-xs text-slate-400">
                         <span className="text-white font-medium">{entry.actor_name}</span>{' '}
                         {AUDIT_LABELS[entry.action] || entry.action}
                       </p>
                       {entry.metadata && Object.keys(entry.metadata).length > 0 && entry.action === 'updated' && (
-                        <div className="mt-1 text-xs text-[#64748b]">
+                        <div className="mt-1 text-xs text-navy-600">
                           {Object.entries(entry.metadata).map(([key, val]) => {
                             const change = val as { from: unknown; to: unknown };
                             return (
@@ -699,7 +700,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                           })}
                         </div>
                       )}
-                      <p className="text-[10px] text-[#4a5568] mt-0.5">{formatRelative(entry.created_at)}</p>
+                      <p className="text-[10px] text-navy-700 mt-0.5">{formatRelative(entry.created_at)}</p>
                     </div>
                   </div>
                 ))}
@@ -710,8 +711,8 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
 
         {/* Save Bar (sticky at bottom when dirty) */}
         {dirty && isDG && (
-          <div className="flex-shrink-0 border-t border-[#2d3a52] bg-[#1a2744] px-5 py-3 flex items-center justify-between">
-            <p className="text-xs text-[#94a3b8]">Unsaved changes</p>
+          <div className="flex-shrink-0 border-t border-navy-800 bg-navy-900 px-5 py-3 flex items-center justify-between">
+            <p className="text-xs text-slate-400">Unsaved changes</p>
             <div className="flex gap-2">
               <button
                 onClick={() => {
@@ -722,14 +723,14 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                     setDirty(false);
                   }
                 }}
-                className="px-3 py-1.5 rounded text-xs text-[#94a3b8] hover:text-white transition-colors"
+                className="px-3 py-1.5 rounded text-xs text-slate-400 hover:text-white transition-colors"
               >
                 Discard
               </button>
               <button
                 onClick={saveChanges}
                 disabled={saving}
-                className="px-4 py-1.5 rounded-lg bg-[#d4af37] text-[#0a1628] text-xs font-semibold hover:bg-[#e5c348] disabled:opacity-50 transition-colors"
+                className="px-4 py-1.5 rounded-lg bg-gold-500 text-navy-950 text-xs font-semibold hover:bg-[#e5c348] disabled:opacity-50 transition-colors"
               >
                 {saving ? 'Saving...' : 'Save Changes'}
               </button>
@@ -751,13 +752,13 @@ function Section({ title, id, expanded, onToggle, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="border-b border-[#2d3a52]">
+    <div className="border-b border-navy-800">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-5 py-3 hover:bg-[#2d3a52]/20 transition-colors"
+        className="w-full flex items-center justify-between px-5 py-3 hover:bg-navy-800/20 transition-colors"
       >
         <span className="text-sm font-semibold text-white">{title}</span>
-        <ChevronDown className={`h-4 w-4 text-[#64748b] transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-4 w-4 text-navy-600 transition-transform ${expanded ? 'rotate-180' : ''}`} />
       </button>
       {expanded && (
         <div className="px-5 pb-4">
@@ -771,7 +772,7 @@ function Section({ title, id, expanded, onToggle, children }: {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs text-[#64748b] mb-1">{label}</label>
+      <label className="block text-xs text-navy-600 mb-1">{label}</label>
       {children}
     </div>
   );
@@ -792,7 +793,7 @@ function ActionButton({ icon: Icon, label, desc, color, loading, onClick }: {
       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm disabled:opacity-50 ${color}`}
     >
       {loading ? (
-        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" role="status" aria-label="Loading" />
+        <Spinner size="sm" className="border-current shrink-0" />
       ) : (
         <Icon className="h-4 w-4 shrink-0" />
       )}

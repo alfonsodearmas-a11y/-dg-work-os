@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
+import { sanitizeSearchInput } from '@/lib/parse-utils';
 
 export async function GET(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
       query = query.eq('document_type', type);
     }
     if (search) {
-      const sanitized = search.replace(/[%_.*(),"\\]/g, '');
+      const sanitized = sanitizeSearchInput(search);
       if (sanitized) {
         query = query.or(`title.ilike.%${sanitized}%,summary.ilike.%${sanitized}%`);
       }

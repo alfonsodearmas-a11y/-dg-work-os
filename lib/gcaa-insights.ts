@@ -7,6 +7,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import crypto from 'crypto';
 import { supabaseAdmin } from './db';
+import { logger } from '@/lib/logger';
+import { parseAIJson } from '@/lib/parse-utils';
 
 // -- Types -------------------------------------------------------------------
 
@@ -74,7 +76,7 @@ export async function assembleGCAAData(month: string): Promise<GCAAMonthlyData[]
     .limit(3);
 
   if (error) {
-    console.error('[gcaa-insights] Failed to fetch monthly data:', error);
+    logger.error({ err: error }, 'gcaa-insights: failed to fetch monthly data');
     return [];
   }
 
@@ -238,14 +240,8 @@ export async function generateGCAAInsights(
 
     const text = response.content[0].type === 'text' ? response.content[0].text : '';
 
-    // Parse JSON from response
-    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('AI did not return valid JSON');
-    }
-
-    const jsonStr = jsonMatch[1] || jsonMatch[0];
-    const parsed = JSON.parse(jsonStr);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parsed = parseAIJson<any>(text);
 
     const processingTime = Date.now() - startTime;
 
@@ -276,13 +272,13 @@ export async function generateGCAAInsights(
       );
 
     if (upsertError) {
-      console.error('[gcaa-insights] Failed to cache insights:', upsertError);
+      logger.error({ err: upsertError }, 'gcaa-insights: failed to cache insights');
     }
 
     console.log(`[gcaa-insights] Insights generated in ${processingTime}ms`);
     return insights;
   } catch (err) {
-    console.error('[gcaa-insights] Error generating insights:', err);
+    logger.error({ err }, 'gcaa-insights: error generating insights');
     return null;
   }
 }

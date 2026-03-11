@@ -1,4 +1,9 @@
 import { Pool, PoolClient, QueryResult } from 'pg';
+import { logger } from '@/lib/logger';
+
+if (!process.env.PG_HOST && process.env.NEXT_PHASE !== 'phase-production-build') {
+  throw new Error('[db-pg] PG_HOST environment variable is required');
+}
 
 const pool = new Pool({
   host: process.env.PG_HOST || '',
@@ -13,7 +18,7 @@ const pool = new Pool({
 });
 
 pool.on('error', (err) => {
-  console.error('[db-pg] Unexpected pool error:', err.message);
+  logger.error({ err }, 'Unexpected pool error');
 });
 
 export async function query(text: string, params?: any[]): Promise<QueryResult> {
@@ -26,7 +31,7 @@ export async function query(text: string, params?: any[]): Promise<QueryResult> 
     }
     return result;
   } catch (error: any) {
-    console.error('[db-pg] Query error:', text.substring(0, 80), error.message);
+    logger.error({ err: error, query: text.substring(0, 80) }, 'Query error');
     throw error;
   }
 }

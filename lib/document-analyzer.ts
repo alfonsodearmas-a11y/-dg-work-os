@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { parseAIJson } from '@/lib/parse-utils';
 
 const anthropic = new Anthropic();
 
@@ -64,29 +65,7 @@ Return ONLY valid JSON, no markdown formatting.`
   const content = response.content[0];
   if (content.type !== 'text') throw new Error('Unexpected response type');
 
-  try {
-    // Try direct parse first
-    return JSON.parse(content.text);
-  } catch {
-    // Try extracting JSON from markdown code blocks
-    const jsonMatch = content.text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-    if (jsonMatch) {
-      try {
-        return JSON.parse(jsonMatch[1].trim());
-      } catch { /* fall through */ }
-    }
-
-    // Try finding JSON object boundaries
-    const firstBrace = content.text.indexOf('{');
-    const lastBrace = content.text.lastIndexOf('}');
-    if (firstBrace !== -1 && lastBrace > firstBrace) {
-      try {
-        return JSON.parse(content.text.slice(firstBrace, lastBrace + 1));
-      } catch { /* fall through */ }
-    }
-
-    throw new Error('Claude returned non-JSON response');
-  }
+  return parseAIJson<DocumentAnalysis>(content.text);
 }
 
 /**

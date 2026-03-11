@@ -6,6 +6,7 @@ import { SlidePanel } from '@/components/layout/SlidePanel';
 import { BudgetSectorDetail } from '@/components/budget/BudgetSectorDetail';
 import { BudgetAskPanel } from '@/components/budget/BudgetAskPanel';
 import { BudgetAIBrief } from '@/components/budget/BudgetAIBrief';
+import { fmtBudgetAmount } from '@/lib/format';
 
 interface TopItem {
   line_item: string;
@@ -168,12 +169,12 @@ export default function BudgetPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 md:gap-3 min-w-0">
-          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-[#d4af37]/20 flex items-center justify-center shrink-0">
-            <DollarSign className="h-4 w-4 md:h-5 md:w-5 text-[#d4af37]" />
+          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gold-500/20 flex items-center justify-center shrink-0">
+            <DollarSign className="h-4 w-4 md:h-5 md:w-5 text-gold-500" />
           </div>
           <div className="min-w-0">
             <h1 className="text-xl md:text-2xl font-bold text-white">Budget Estimates 2026</h1>
-            <p className="text-[#64748b] text-xs md:text-sm truncate">
+            <p className="text-navy-600 text-xs md:text-sm truncate">
               Ministry of Public Utilities & Aviation
             </p>
           </div>
@@ -181,7 +182,7 @@ export default function BudgetPage() {
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setAskOpen(true)}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-[#d4af37]/20 to-[#b8860b]/20 border border-[#d4af37]/30 text-[#d4af37] hover:border-[#d4af37] transition-colors touch-active"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-[#d4af37]/20 to-[#b8860b]/20 border border-gold-500/30 text-gold-500 hover:border-gold-500 transition-colors touch-active"
             aria-label="Ask AI"
           >
             <Sparkles className="h-4 w-4" aria-hidden="true" />
@@ -190,7 +191,7 @@ export default function BudgetPage() {
           <button
             onClick={loadData}
             disabled={isLoading}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] hover:text-white transition-colors disabled:opacity-50 touch-active"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-navy-900 border border-navy-800 hover:border-gold-500 text-slate-400 hover:text-white transition-colors disabled:opacity-50 touch-active"
             aria-label="Refresh"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
@@ -202,7 +203,7 @@ export default function BudgetPage() {
       {/* Search Bar */}
       <div className="relative">
         <div className="relative flex items-center">
-          <Search className="absolute left-3 h-4 w-4 text-[#64748b] pointer-events-none" />
+          <Search className="absolute left-3 h-4 w-4 text-navy-600 pointer-events-none" />
           <input
             ref={inputRef}
             type="text"
@@ -210,15 +211,15 @@ export default function BudgetPage() {
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search by line item code (e.g. 6321), name, agency, or keyword..."
             aria-label="Search budget line items"
-            className="w-full pl-10 pr-10 py-3 rounded-xl bg-[#1a2744] border border-[#2d3a52] focus:border-[#d4af37] text-white text-sm placeholder:text-[#64748b] outline-none transition-colors"
+            className="w-full pl-10 pr-10 py-3 rounded-xl bg-navy-900 border border-navy-800 focus:border-gold-500 text-white text-sm placeholder:text-navy-600 outline-none transition-colors"
           />
           {isSearching && (
-            <Loader2 className="absolute right-10 h-4 w-4 animate-spin text-[#d4af37]" />
+            <Loader2 className="absolute right-10 h-4 w-4 animate-spin text-gold-500" />
           )}
           {searchQuery && (
             <button
               onClick={clearSearch}
-              className="absolute right-3 p-0.5 rounded-md hover:bg-[#2d3a52] text-[#64748b] hover:text-white transition-colors"
+              className="absolute right-3 p-0.5 rounded-md hover:bg-navy-800 text-navy-600 hover:text-white transition-colors"
               aria-label="Clear search"
             >
               <X className="h-4 w-4" />
@@ -232,7 +233,7 @@ export default function BudgetPage() {
               <button
                 key={chip}
                 onClick={() => handleSearchChange(chip)}
-                className="px-2.5 py-1 rounded-lg bg-[#0a1628]/60 border border-[#2d3a52]/50 text-[#94a3b8] text-[11px] font-mono hover:border-[#d4af37]/40 hover:text-[#d4af37] transition-colors"
+                className="px-2.5 py-1 rounded-lg bg-navy-950/60 border border-navy-800/50 text-slate-400 text-[11px] font-mono hover:border-gold-500/40 hover:text-gold-500 transition-colors"
               >
                 {chip}
               </button>
@@ -271,9 +272,9 @@ export default function BudgetPage() {
               <div className="card-premium p-4 md:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[#64748b] text-xs font-semibold uppercase tracking-wider mb-1">Total Ministry Budget 2026</p>
+                    <p className="text-navy-600 text-xs font-semibold uppercase tracking-wider mb-1">Total Ministry Budget 2026</p>
                     <p className="stat-number text-3xl md:text-4xl">{data.grand_total_fmt}</p>
-                    <p className="text-[#64748b] text-xs mt-1">Agency 34 — Programmes 342–345</p>
+                    <p className="text-navy-600 text-xs mt-1">Agency 34 — Programmes 342–345</p>
                   </div>
                   <div className="hidden md:flex items-center gap-3">
                     {data.sectors.map(s => (
@@ -283,7 +284,7 @@ export default function BudgetPage() {
                         className="text-center hover:scale-110 transition-transform cursor-pointer"
                       >
                         <p className="text-lg">{SECTOR_ICONS[s.sector]}</p>
-                        <p className="text-[10px] text-[#64748b] uppercase">{s.sector}</p>
+                        <p className="text-[10px] text-navy-600 uppercase">{s.sector}</p>
                       </button>
                     ))}
                   </div>
@@ -348,8 +349,8 @@ function SearchResultsView({
   if (isSearching && !results) {
     return (
       <div className="flex items-center gap-3 p-8 justify-center" role="status" aria-label="Searching">
-        <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" aria-hidden="true" />
-        <span className="text-[#64748b] text-sm">Searching budget data...</span>
+        <Loader2 className="h-5 w-5 animate-spin text-gold-500" aria-hidden="true" />
+        <span className="text-navy-600 text-sm">Searching budget data...</span>
       </div>
     );
   }
@@ -361,9 +362,9 @@ function SearchResultsView({
   if (total_results === 0) {
     return (
       <div className="card-premium p-8 text-center">
-        <Search className="h-8 w-8 text-[#64748b] mx-auto mb-3" />
-        <p className="text-[#94a3b8] text-sm">No results for &quot;{query}&quot;</p>
-        <p className="text-[#64748b] text-xs mt-1">Try a line item code (6321, 2611300), agency (GPL, GWI), or keyword</p>
+        <Search className="h-8 w-8 text-navy-600 mx-auto mb-3" />
+        <p className="text-slate-400 text-sm">No results for &quot;{query}&quot;</p>
+        <p className="text-navy-600 text-xs mt-1">Try a line item code (6321, 2611300), agency (GPL, GWI), or keyword</p>
       </div>
     );
   }
@@ -372,18 +373,18 @@ function SearchResultsView({
     <div className="space-y-4">
       {/* Results summary */}
       <div className="flex items-center justify-between flex-wrap gap-1">
-        <p className="text-[#64748b] text-xs">
+        <p className="text-navy-600 text-xs">
           {isSearching && <Loader2 className="h-3 w-3 animate-spin inline mr-1" />}
           <span className="text-white font-semibold">{total_results}</span> result{total_results !== 1 ? 's' : ''} for &quot;{query}&quot;
         </p>
         <div className="flex flex-wrap gap-1.5 text-[10px]">
-          {allocations.length > 0 && <span className="bg-[#d4af37]/10 text-[#d4af37] px-2 py-0.5 rounded-full">{allocations.length} allocations</span>}
-          {line_items.length > 0 && <span className="bg-[#06b6d4]/10 text-[#06b6d4] px-2 py-0.5 rounded-full">{line_items.length} line items</span>}
-          {projects.length > 0 && <span className="bg-[#3b82f6]/10 text-[#3b82f6] px-2 py-0.5 rounded-full">{projects.length} projects</span>}
-          {indicators.length > 0 && <span className="bg-[#22c55e]/10 text-[#22c55e] px-2 py-0.5 rounded-full">{indicators.length} KPIs</span>}
-          {documents.length > 0 && <span className="bg-[#a78bfa]/10 text-[#a78bfa] px-2 py-0.5 rounded-full">{documents.length} docs</span>}
-          {loans.length > 0 && <span className="bg-[#f97316]/10 text-[#f97316] px-2 py-0.5 rounded-full">{loans.length} loans</span>}
-          {raw_pages.length > 0 && <span className="bg-[#64748b]/10 text-[#64748b] px-2 py-0.5 rounded-full">{raw_pages.length} pages</span>}
+          {allocations.length > 0 && <span className="bg-gold-500/10 text-gold-500 px-2 py-0.5 rounded-full">{allocations.length} allocations</span>}
+          {line_items.length > 0 && <span className="bg-cyan-500/15 text-cyan-400 px-2 py-0.5 rounded-full">{line_items.length} line items</span>}
+          {projects.length > 0 && <span className="bg-blue-500/15 text-blue-400 px-2 py-0.5 rounded-full">{projects.length} projects</span>}
+          {indicators.length > 0 && <span className="bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full">{indicators.length} KPIs</span>}
+          {documents.length > 0 && <span className="bg-purple-500/15 text-purple-400 px-2 py-0.5 rounded-full">{documents.length} docs</span>}
+          {loans.length > 0 && <span className="bg-orange-500/15 text-orange-400 px-2 py-0.5 rounded-full">{loans.length} loans</span>}
+          {raw_pages.length > 0 && <span className="bg-navy-800 text-navy-600 px-2 py-0.5 rounded-full">{raw_pages.length} pages</span>}
         </div>
       </div>
 
@@ -391,8 +392,8 @@ function SearchResultsView({
       {allocations.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-2 pb-1">
-            <BarChart3 className="h-4 w-4 text-[#d4af37]" />
-            <p className="text-[#d4af37] text-xs font-semibold uppercase tracking-wider">Budget Allocations</p>
+            <BarChart3 className="h-4 w-4 text-gold-500" />
+            <p className="text-gold-500 text-xs font-semibold uppercase tracking-wider">Budget Allocations</p>
           </div>
           {allocations.map((item, i) => (
             <div key={i} className="glass-card p-3 space-y-2">
@@ -401,66 +402,66 @@ function SearchResultsView({
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-white text-sm font-medium">{item.line_item}</p>
                     {item.line_item_code && (
-                      <span className="text-[#d4af37] font-mono text-[10px] bg-[#d4af37]/10 px-1.5 py-0.5 rounded shrink-0">
+                      <span className="text-gold-500 font-mono text-[10px] bg-gold-500/10 px-1.5 py-0.5 rounded shrink-0">
                         {item.line_item_code}
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <span className="text-[#64748b] text-[10px] font-mono">{item.agency_code}</span>
-                    <span className="text-[#64748b] text-[10px]">{item.agency_name}</span>
-                    <span className="text-[#64748b] text-[10px]">·</span>
-                    <span className="text-[#64748b] text-[10px]">{item.expenditure_type}</span>
-                    <span className="text-[#64748b] text-[10px]">·</span>
+                    <span className="text-navy-600 text-[10px] font-mono">{item.agency_code}</span>
+                    <span className="text-navy-600 text-[10px]">{item.agency_name}</span>
+                    <span className="text-navy-600 text-[10px]">·</span>
+                    <span className="text-navy-600 text-[10px]">{item.expenditure_type}</span>
+                    <span className="text-navy-600 text-[10px]">·</span>
                     <button
                       onClick={() => onSectorClick(item.sector)}
-                      className="text-[#64748b] text-[10px] hover:text-[#d4af37] transition-colors underline decoration-dotted"
+                      className="text-navy-600 text-[10px] hover:text-gold-500 transition-colors underline decoration-dotted"
                     >
                       {item.sector}
                     </button>
-                    <span className="text-[#64748b] text-[10px]">·</span>
-                    <span className="text-[#64748b] text-[10px]">{item.source}</span>
+                    <span className="text-navy-600 text-[10px]">·</span>
+                    <span className="text-navy-600 text-[10px]">{item.source}</span>
                   </div>
                 </div>
-                <p className="text-[#d4af37] font-bold text-sm font-mono shrink-0">{item.budget_2026_fmt}</p>
+                <p className="text-gold-500 font-bold text-sm font-mono shrink-0">{item.budget_2026_fmt}</p>
               </div>
 
               {/* 4-year trend */}
-              <div className="grid grid-cols-4 gap-2 text-[10px]">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px]">
                 <div>
-                  <p className="text-[#64748b]">2024 Act</p>
+                  <p className="text-navy-600">2024 Act</p>
                   <p className="text-white font-mono">{item.actual_2024_fmt}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748b]">2025 Bud</p>
+                  <p className="text-navy-600">2025 Bud</p>
                   <p className="text-white font-mono">{item.budget_2025_fmt}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748b]">2025 Rev</p>
+                  <p className="text-navy-600">2025 Rev</p>
                   <p className="text-white font-mono">{item.revised_2025_fmt}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748b]">2026 Bud</p>
-                  <p className="text-[#d4af37] font-mono font-bold">{item.budget_2026_fmt}</p>
+                  <p className="text-navy-600">2026 Bud</p>
+                  <p className="text-gold-500 font-mono font-bold">{item.budget_2026_fmt}</p>
                 </div>
               </div>
 
               {/* Notes */}
               {item.notes && (
-                <p className="text-[#94a3b8] text-[11px] italic">{item.notes}</p>
+                <p className="text-slate-400 text-[11px] italic">{item.notes}</p>
               )}
 
               {/* Actions */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => onAnalyze(item)}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#d4af37]/10 border border-[#d4af37]/20 text-[#d4af37] text-[11px] font-medium hover:bg-[#d4af37]/20 hover:border-[#d4af37]/40 transition-colors"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gold-500/10 border border-gold-500/20 text-gold-500 text-[11px] font-medium hover:bg-gold-500/20 hover:border-gold-500/40 transition-colors"
                 >
                   <Sparkles className="h-3 w-3" />
                   Defence Brief
                 </button>
                 {item.linked_docs.length > 0 && (
-                  <span className="text-[#64748b] text-[10px]">
+                  <span className="text-navy-600 text-[10px]">
                     {item.linked_docs.length} doc{item.linked_docs.length !== 1 ? 's' : ''} linked
                   </span>
                 )}
@@ -474,8 +475,8 @@ function SearchResultsView({
       {line_items.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-2 pb-1">
-            <DollarSign className="h-4 w-4 text-[#06b6d4]" />
-            <p className="text-[#06b6d4] text-xs font-semibold uppercase tracking-wider">Agency 34 Line Items</p>
+            <DollarSign className="h-4 w-4 text-cyan-500" />
+            <p className="text-cyan-500 text-xs font-semibold uppercase tracking-wider">Agency 34 Line Items</p>
           </div>
           {line_items.map((item, i) => (
             <div key={i} className="glass-card p-3 space-y-2">
@@ -484,35 +485,35 @@ function SearchResultsView({
                   <p className="text-white text-sm font-medium">{item.line_item}</p>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     {item.programme && (
-                      <span className="text-[#06b6d4] font-mono text-[10px] bg-[#06b6d4]/10 px-1.5 py-0.5 rounded shrink-0">
+                      <span className="text-cyan-500 font-mono text-[10px] bg-[#06b6d4]/10 px-1.5 py-0.5 rounded shrink-0">
                         {item.programme}
                       </span>
                     )}
                     {item.expenditure_type && (
-                      <span className="text-[#64748b] text-[10px]">{item.expenditure_type}</span>
+                      <span className="text-navy-600 text-[10px]">{item.expenditure_type}</span>
                     )}
-                    <span className="text-[#64748b] text-[10px]">{item.source}</span>
+                    <span className="text-navy-600 text-[10px]">{item.source}</span>
                     {item.agency && (
-                      <span className="text-[#64748b] text-[10px] truncate max-w-[200px]">{item.agency}</span>
+                      <span className="text-navy-600 text-[10px] truncate max-w-[200px]">{item.agency}</span>
                     )}
                   </div>
                 </div>
-                <p className="text-[#d4af37] font-bold text-sm font-mono shrink-0">{item.budget_estimate_fmt}</p>
+                <p className="text-gold-500 font-bold text-sm font-mono shrink-0">{item.budget_estimate_fmt}</p>
               </div>
 
               {/* 3-year trend */}
               <div className="grid grid-cols-3 gap-2 text-[10px]">
                 <div>
-                  <p className="text-[#64748b]">2024 Act</p>
+                  <p className="text-navy-600">2024 Act</p>
                   <p className="text-white font-mono">{item.actual_previous_year_fmt}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748b]">2025 Rev</p>
+                  <p className="text-navy-600">2025 Rev</p>
                   <p className="text-white font-mono">{item.revised_current_year_fmt}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748b]">2026 Est</p>
-                  <p className="text-[#d4af37] font-mono font-bold">{item.budget_estimate_fmt}</p>
+                  <p className="text-navy-600">2026 Est</p>
+                  <p className="text-gold-500 font-mono font-bold">{item.budget_estimate_fmt}</p>
                 </div>
               </div>
             </div>
@@ -524,25 +525,25 @@ function SearchResultsView({
       {projects.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-2 pb-1">
-            <Landmark className="h-4 w-4 text-[#3b82f6]" />
-            <p className="text-[#3b82f6] text-xs font-semibold uppercase tracking-wider">Capital Projects</p>
+            <Landmark className="h-4 w-4 text-blue-500" />
+            <p className="text-blue-500 text-xs font-semibold uppercase tracking-wider">Capital Projects</p>
           </div>
           {projects.map((p, i) => (
             <div key={i} className="glass-card p-3 space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-white font-semibold text-sm">{p.project_title as string}</p>
-                  <p className="text-[#64748b] text-[10px]">{p.agency_code as string} · Ref: {p.ref_number as string} · {p.status as string}</p>
+                  <p className="text-navy-600 text-[10px]">{p.agency_code as string} · Ref: {p.ref_number as string} · {p.status as string}</p>
                 </div>
-                <p className="text-[#d4af37] font-bold text-sm font-mono shrink-0">
-                  {fmtAmountClient(p.budget_2026 as number)}
+                <p className="text-gold-500 font-bold text-sm font-mono shrink-0">
+                  {fmtBudgetAmount(p.budget_2026 as number)}
                 </p>
               </div>
-              <p className="text-[#94a3b8] text-xs">{p.description as string}</p>
+              <p className="text-slate-400 text-xs">{p.description as string}</p>
               <div className="flex flex-wrap gap-3 text-xs">
-                <span className="text-[#64748b]">Total: <span className="text-white font-mono">{fmtAmountClient(p.total_project_cost as number)}</span></span>
-                {!!p.region && <span className="text-[#64748b]"><MapPin className="h-3 w-3 inline" /> {p.region as string}</span>}
-                {!!p.foreign_source && <span className="text-[#64748b]">Foreign: {p.foreign_source as string}</span>}
+                <span className="text-navy-600">Total: <span className="text-white font-mono">{fmtBudgetAmount(p.total_project_cost as number)}</span></span>
+                {!!p.region && <span className="text-navy-600"><MapPin className="h-3 w-3 inline" /> {p.region as string}</span>}
+                {!!p.foreign_source && <span className="text-navy-600">Foreign: {p.foreign_source as string}</span>}
               </div>
             </div>
           ))}
@@ -553,25 +554,25 @@ function SearchResultsView({
       {indicators.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-2 pb-1">
-            <BookOpen className="h-4 w-4 text-[#22c55e]" />
-            <p className="text-[#22c55e] text-xs font-semibold uppercase tracking-wider">Performance Indicators</p>
+            <BookOpen className="h-4 w-4 text-green-500" />
+            <p className="text-green-500 text-xs font-semibold uppercase tracking-wider">Performance Indicators</p>
           </div>
           {indicators.map((ind, i) => (
             <div key={i} className="glass-card p-3">
               <p className="text-white text-sm font-medium">{ind.indicator as string}</p>
-              <p className="text-[#64748b] text-[10px]">{ind.agency_code as string} · {ind.programme as string}</p>
+              <p className="text-navy-600 text-[10px]">{ind.agency_code as string} · {ind.programme as string}</p>
               <div className="grid grid-cols-3 gap-2 mt-2 text-[10px]">
                 <div>
-                  <p className="text-[#64748b]">Actual 2024</p>
+                  <p className="text-navy-600">Actual 2024</p>
                   <p className="text-white font-mono">{(ind.actual_2024 as string) || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748b]">Target 2025</p>
+                  <p className="text-navy-600">Target 2025</p>
                   <p className="text-white font-mono">{(ind.target_2025 as string) || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748b]">Target 2026</p>
-                  <p className="text-[#d4af37] font-mono font-bold">{(ind.target_2026 as string) || '—'}</p>
+                  <p className="text-navy-600">Target 2026</p>
+                  <p className="text-gold-500 font-mono font-bold">{(ind.target_2026 as string) || '—'}</p>
                 </div>
               </div>
             </div>
@@ -583,17 +584,17 @@ function SearchResultsView({
       {documents.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-2 pb-1">
-            <FileText className="h-4 w-4 text-[#a78bfa]" />
-            <p className="text-[#a78bfa] text-xs font-semibold uppercase tracking-wider">Agency Documents</p>
+            <FileText className="h-4 w-4 text-violet-400" />
+            <p className="text-violet-400 text-xs font-semibold uppercase tracking-wider">Agency Documents</p>
           </div>
           {documents.map((doc, i) => (
             <div key={i} className="glass-card p-3">
               <div className="flex items-center gap-2 mb-1">
-                <FileText className="h-3.5 w-3.5 text-[#a78bfa] shrink-0" />
+                <FileText className="h-3.5 w-3.5 text-violet-400 shrink-0" />
                 <p className="text-white text-sm font-medium truncate">{doc.document_name}</p>
-                <span className="text-[#a78bfa] font-mono text-[10px] bg-[#a78bfa]/10 px-1.5 py-0.5 rounded shrink-0">{doc.agency}</span>
+                <span className="text-violet-400 font-mono text-[10px] bg-[#a78bfa]/10 px-1.5 py-0.5 rounded shrink-0">{doc.agency}</span>
               </div>
-              <p className="text-[#94a3b8] text-xs line-clamp-2">{doc.snippet}</p>
+              <p className="text-slate-400 text-xs line-clamp-2">{doc.snippet}</p>
             </div>
           ))}
         </div>
@@ -611,11 +612,11 @@ function SearchResultsView({
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-white text-sm font-medium">{loan.lender as string || loan.loan_ref as string}</p>
-                  <p className="text-[#64748b] text-[10px]">{loan.purpose as string}</p>
+                  <p className="text-navy-600 text-[10px]">{loan.purpose as string}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-[#d4af37] font-bold text-sm font-mono">US${((loan.outstanding_usd as number) || 0).toLocaleString()}</p>
-                  <p className="text-[#64748b] text-[10px]">outstanding</p>
+                  <p className="text-gold-500 font-bold text-sm font-mono">US${((loan.outstanding_usd as number) || 0).toLocaleString()}</p>
+                  <p className="text-navy-600 text-[10px]">outstanding</p>
                 </div>
               </div>
             </div>
@@ -627,18 +628,18 @@ function SearchResultsView({
       {raw_pages.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-2 pb-1">
-            <BookOpen className="h-4 w-4 text-[#64748b]" />
-            <p className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">Raw Budget Pages</p>
+            <BookOpen className="h-4 w-4 text-navy-600" />
+            <p className="text-navy-600 text-xs font-semibold uppercase tracking-wider">Raw Budget Pages</p>
           </div>
           {raw_pages.map((page, i) => (
             <div key={i} className="glass-card p-3">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[#d4af37] font-mono text-[10px] bg-[#d4af37]/10 px-1.5 py-0.5 rounded">
+                <span className="text-gold-500 font-mono text-[10px] bg-gold-500/10 px-1.5 py-0.5 rounded">
                   V{page.volume}p{page.page}
                 </span>
-                <span className="text-[#64748b] text-[10px]">Volume {page.volume}, Page {page.page}</span>
+                <span className="text-navy-600 text-[10px]">Volume {page.volume}, Page {page.page}</span>
               </div>
-              <p className="text-[#94a3b8] text-xs line-clamp-3 whitespace-pre-wrap font-mono">{page.snippet}</p>
+              <p className="text-slate-400 text-xs line-clamp-3 whitespace-pre-wrap font-mono">{page.snippet}</p>
             </div>
           ))}
         </div>
@@ -664,31 +665,31 @@ function SectorCard({ sector, onClick }: { sector: Sector; onClick: () => void }
           <span className="text-xl">{SECTOR_ICONS[sector.sector]}</span>
           <div>
             <h3 className="text-white font-semibold text-sm md:text-base">{sector.label}</h3>
-            <p className="text-[#64748b] text-[10px] uppercase tracking-wider">Programme {sector.programme_number}</p>
+            <p className="text-navy-600 text-[10px] uppercase tracking-wider">Programme {sector.programme_number}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <p className="text-[#d4af37] font-bold text-lg md:text-xl font-mono">{sector.total_fmt}</p>
-          <ChevronRight className="h-4 w-4 text-[#64748b]" />
+          <p className="text-gold-500 font-bold text-lg md:text-xl font-mono">{sector.total_fmt}</p>
+          <ChevronRight className="h-4 w-4 text-navy-600" />
         </div>
       </div>
 
       {/* Current / Capital Split */}
       <div className="flex gap-2 mb-3">
-        <div className="flex-1 bg-[#0a1628]/60 rounded-lg p-2">
-          <p className="text-[10px] text-[#64748b] uppercase">Current</p>
+        <div className="flex-1 bg-navy-950/60 rounded-lg p-2">
+          <p className="text-[10px] text-navy-600 uppercase">Current</p>
           <p className="text-white font-semibold text-sm font-mono">{sector.current_fmt}</p>
-          <p className="text-[#64748b] text-[10px]">{currentPct}%</p>
+          <p className="text-navy-600 text-[10px]">{currentPct}%</p>
         </div>
-        <div className="flex-1 bg-[#0a1628]/60 rounded-lg p-2">
-          <p className="text-[10px] text-[#64748b] uppercase">Capital</p>
+        <div className="flex-1 bg-navy-950/60 rounded-lg p-2">
+          <p className="text-[10px] text-navy-600 uppercase">Capital</p>
           <p className="text-white font-semibold text-sm font-mono">{sector.capital_fmt}</p>
-          <p className="text-[#64748b] text-[10px]">{capitalPct}%</p>
+          <p className="text-navy-600 text-[10px]">{capitalPct}%</p>
         </div>
       </div>
 
       {/* Progress Bar */}
-      <div className="h-1.5 bg-[#0a1628] rounded-full mb-3 overflow-hidden">
+      <div className="h-1.5 bg-navy-950 rounded-full mb-3 overflow-hidden">
         <div className="h-full rounded-full" style={{ width: `${currentPct}%`, backgroundColor: sector.color, opacity: 0.7 }} />
       </div>
 
@@ -700,26 +701,18 @@ function SectorCard({ sector, onClick }: { sector: Sector; onClick: () => void }
             className="w-full flex items-center justify-between py-1 px-2 rounded-lg"
           >
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[10px] text-[#64748b] font-mono shrink-0">{item.agency}</span>
-              <span className="text-[#94a3b8] text-xs truncate">{item.line_item}</span>
+              <span className="text-[10px] text-navy-600 font-mono shrink-0">{item.agency}</span>
+              <span className="text-slate-400 text-xs truncate">{item.line_item}</span>
             </div>
-            <span className="text-[#d4af37] text-xs font-mono shrink-0">{item.budget_2026_fmt}</span>
+            <span className="text-gold-500 text-xs font-mono shrink-0">{item.budget_2026_fmt}</span>
           </div>
         ))}
       </div>
 
       {/* Tap hint */}
-      <p className="text-[#64748b] text-[10px] text-center mt-3">Tap to explore full breakdown →</p>
+      <p className="text-navy-600 text-[10px] text-center mt-3">Tap to explore full breakdown →</p>
     </div>
   );
 }
 
 // Client-side amount formatter
-function fmtAmountClient(val: number): string {
-  if (!val || val === 0) return '—';
-  const sign = val < 0 ? '-' : '';
-  const v = Math.abs(val);
-  if (v >= 1_000_000) return `G$${sign}${(v / 1_000_000).toFixed(2)}B`;
-  if (v >= 1_000) return `G$${sign}${(v / 1_000).toFixed(2)}M`;
-  return `G$${sign}${v.toLocaleString()}K`;
-}

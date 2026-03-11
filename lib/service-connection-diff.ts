@@ -6,6 +6,7 @@ import type { DiffResult, StageHistoryEntry } from './service-connection-types';
 import type { PendingRecord } from './pending-applications-types';
 import { LEGACY_CUTOFF } from './service-connection-types';
 import { classifyTrack } from './service-connection-track';
+import { logger } from '@/lib/logger';
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -56,7 +57,7 @@ export async function processUploadDiff(
     .eq('status', 'open');
 
   if (error) {
-    console.error('[service-connection-diff] Error fetching existing:', error.message);
+    logger.error({ err: error }, 'service-connection-diff: error fetching existing');
     return { disappeared: 0, newOrders: 0, updated: 0, stillOpen: 0, legacyExcluded: 0, completedIds: [] };
   }
 

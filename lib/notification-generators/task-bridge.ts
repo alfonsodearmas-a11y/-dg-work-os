@@ -1,6 +1,7 @@
 import { insertNotification } from '../notifications';
 import type { Notification, GenerateResult } from '../notifications';
 import { query } from '../db-pg';
+import { logger } from '@/lib/logger';
 
 const BRIDGE_TYPES: Record<string, { notifType: string; priority: 'low' | 'medium' | 'high' | 'urgent'; actionRequired: boolean }> = {
   task_overdue: { notifType: 'tm_task_overdue', priority: 'high', actionRequired: true },
@@ -70,7 +71,7 @@ export async function generateTaskBridgeNotifications(userId: string): Promise<G
   } catch (err) {
     // task_notifications table may not exist yet
     if ((err as { code?: string }).code !== '42P01') {
-      console.error('Error generating task bridge notifications:', err);
+      logger.error({ err }, 'Error generating task bridge notifications');
     }
   }
 

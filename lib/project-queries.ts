@@ -1,4 +1,6 @@
 import { supabaseAdmin } from './db';
+import { PROJECT_CONTRACT_CAP } from '@/lib/constants/config';
+import { logger } from '@/lib/logger';
 
 // ── Status computation (uses scraped project_status from oversight.gov.gy) ──
 
@@ -115,8 +117,7 @@ export interface SavedFilter {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-// Cap at $100B GYD — values above this are data-entry errors from Excel upload
-const OUTLIER_CAP = 1e11;
+const OUTLIER_CAP = PROJECT_CONTRACT_CAP;
 
 function safeContractValue(raw: any): number | null {
   if (raw === null || raw === undefined) return null;
@@ -422,7 +423,7 @@ export async function getProjectsList(filters: {
   const { data, error: queryError, count } = await query;
 
   if (queryError) {
-    console.error('getProjectsList query error:', queryError);
+    logger.error({ err: queryError }, 'getProjectsList query error');
     return { projects: [], total: 0 };
   }
 

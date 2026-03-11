@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { supabaseAdmin } from '@/lib/db';
+import { logger } from '@/lib/logger';
 import { ModelTier, CachedResponse } from './types';
 
 // ── Cache TTL by tier ───────────────────────────────────────────────────────
@@ -43,7 +44,7 @@ export async function getCachedResponse(query: string, page: string): Promise<Ca
       created_at: data.created_at,
     };
   } catch (err) {
-    console.error('[ai/cache] Lookup error:', err);
+    logger.error({ err }, 'ai/cache: lookup error');
     return null;
   }
 }
@@ -82,7 +83,7 @@ export async function cacheResponse(
         expires_at: expiresAt,
       }, { onConflict: 'query_hash' });
   } catch (err) {
-    console.error('[ai/cache] Store error:', err);
+    logger.error({ err }, 'ai/cache: store error');
   }
 }
 

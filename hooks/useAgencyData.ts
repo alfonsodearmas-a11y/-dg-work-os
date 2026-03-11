@@ -8,6 +8,7 @@ import type { LucideIcon } from 'lucide-react';
 import type { GridMetric } from '@/components/intel/AgencyCard';
 import { computeGPLHealth, computeGWIHealth, computeCJIAHealth, computeGCAAHealth, type HealthBreakdownItem } from '@/lib/agency-health';
 import { fetchWithOffline } from '@/lib/offline/sync-manager';
+import { GWI_DEFAULT_TOTAL_COLLECTIONS, GWI_DEFAULT_ACTIVE_ACCOUNTS } from '@/lib/constants/config';
 
 // Transform API response to match expected GPL data structure
 const transformGPLData = (apiData: any): GPLData | null => {
@@ -173,7 +174,7 @@ const buildGWIGridMetrics = (report: any, prevReport: any): GridMetric[] | undef
 
   const coll = report.collections_data || {};
 
-  const totalCollections = (coll as any).total_collections || 673700000;
+  const totalCollections = (coll as any).total_collections || GWI_DEFAULT_TOTAL_COLLECTIONS;
   const formattedCollections = totalCollections >= 1e9
     ? `$${(totalCollections / 1e9).toFixed(1)}B`
     : `$${(totalCollections / 1e6).toFixed(1)}M`;
@@ -212,7 +213,7 @@ const buildGWIGridMetrics = (report: any, prevReport: any): GridMetric[] | undef
     },
     {
       label: 'Accounts',
-      value: ((coll as any).active_accounts || 189840).toLocaleString(),
+      value: ((coll as any).active_accounts || GWI_DEFAULT_ACTIVE_ACCOUNTS).toLocaleString(),
     },
     {
       label: 'NRW',

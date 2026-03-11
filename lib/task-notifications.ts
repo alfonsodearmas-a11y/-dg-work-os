@@ -1,5 +1,6 @@
 import { query } from './db-pg';
 import { sendEmail } from './email';
+import { logger } from '@/lib/logger';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -90,7 +91,7 @@ export async function sendTaskEmail(to: string, subject: string, html: string): 
   if (result.success) {
     console.log(`[task-email] Sent "${subject}" to ${to}`);
   } else {
-    console.error(`[task-email] Failed to send "${subject}" to ${to}:`, result.error);
+    logger.error({ err: result.error, to, subject }, 'task-email: failed to send');
   }
   return result.success;
 }

@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { DocumentViewer } from '@/components/documents/DocumentViewer';
+import { Spinner } from '@/components/ui/Spinner';
 
 export default function DocumentPage() {
   const router = useRouter();
@@ -34,8 +35,8 @@ export default function DocumentPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24" role="status" aria-label="Loading">
-        <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" aria-hidden="true"></div>
+      <div className="flex items-center justify-center py-24">
+        <Spinner />
       </div>
     );
   }
@@ -47,7 +48,7 @@ export default function DocumentPage() {
           <AlertTriangle className="h-8 w-8 text-red-400" />
         </div>
         <p className="text-red-400 font-medium mb-4">{error}</p>
-        <Link href="/documents" className="text-[#d4af37] hover:underline">
+        <Link href="/documents" className="text-gold-500 hover:underline">
           Back to Documents
         </Link>
       </div>
@@ -58,7 +59,7 @@ export default function DocumentPage() {
     <div className="space-y-6">
       <Link
         href="/documents"
-        className="inline-flex items-center p-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] transition-colors text-[#94a3b8] hover:text-white"
+        className="inline-flex items-center p-2 rounded-lg bg-navy-900 border border-navy-800 hover:border-gold-500 transition-colors text-slate-400 hover:text-white"
       >
         <ArrowLeft className="h-5 w-5 mr-2" aria-hidden="true" />
         Back to Documents

@@ -1,5 +1,6 @@
 import { query } from './db-pg';
 import { NextRequest } from 'next/server';
+import { logger } from '@/lib/logger';
 
 interface AuditLogParams {
   userId: string;
@@ -40,7 +41,7 @@ export const auditService = {
         ]
       );
     } catch (error: any) {
-      console.error('[audit] Failed to create audit log:', error.message, { action, entityType });
+      logger.error({ err: error, action, entityType }, 'audit: failed to create audit log');
     }
   },
 

@@ -1,4 +1,6 @@
 import * as XLSX from 'xlsx';
+import { parseExcelDate } from '@/lib/parse-utils';
+import { GY_TIMEZONE_OFFSET } from '@/lib/constants/config';
 
 const CONFIG = {
   METADATA_COLUMNS: ['A', 'B', 'C', 'D', 'E', 'F'],
@@ -6,7 +8,7 @@ const CONFIG = {
   HEADER_ROW: 4,
   DATA_START_ROW: 5,
   DATA_END_ROW: 83,
-  TIMEZONE_OFFSET: -4,
+  TIMEZONE_OFFSET: GY_TIMEZONE_OFFSET,
   MAX_EMPTY_PERCENTAGE: 50,
 };
 
@@ -36,26 +38,6 @@ export function getYesterdayGuyana(): string {
   return guyanaTime.toISOString().split('T')[0];
 }
 
-export function parseExcelDate(value: any): string | null {
-  if (!value) return null;
-  if (value instanceof Date) {
-    return isNaN(value.getTime()) ? null : value.toISOString().split('T')[0];
-  }
-  if (typeof value === 'number' && value > 1 && value < 100000) {
-    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
-    const date = new Date(excelEpoch.getTime() + value * 86400000);
-    return date.toISOString().split('T')[0];
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
-    const usMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (usMatch) return `${usMatch[3]}-${usMatch[1].padStart(2, '0')}-${usMatch[2].padStart(2, '0')}`;
-    const parsed = new Date(trimmed);
-    if (!isNaN(parsed.getTime())) return parsed.toISOString().split('T')[0];
-  }
-  return null;
-}
 
 function parseCellValue(cell: any) {
   if (!cell) return { raw: null, numeric: null, type: 'empty', error: null };

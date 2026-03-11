@@ -12,14 +12,8 @@ export function getBudgetDb(): Database.Database {
   return _db;
 }
 
-export function fmtAmount(val: number | null | undefined): string {
-  if (val === null || val === undefined || val === 0) return '—';
-  const sign = val < 0 ? '-' : '';
-  const v = Math.abs(val);
-  if (v >= 1_000_000) return `${sign}G$${(v / 1_000_000).toFixed(2)}B`;
-  if (v >= 1_000) return `${sign}G$${(v / 1_000).toFixed(2)}M`;
-  return `${sign}G$${v.toLocaleString()}K`;
-}
+import { fmtBudgetAmount } from '@/lib/format';
+export const fmtAmount = fmtBudgetAmount;
 
 // ── Document-to-Budget Linkage Map ──
 

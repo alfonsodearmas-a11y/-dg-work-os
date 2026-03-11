@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Zap, Plane, Droplets, Shield, Anchor, Building, Briefcase, BarChart3 } from 'lucide-react';
+import { Spinner } from '@/components/ui/Spinner';
 
 const AGENCY_CONFIG: Record<string, { label: string; name: string; icon: React.ElementType; color: string }> = {
   gpl: { label: 'GPL', name: 'Guyana Power & Light', icon: Zap, color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30' },
@@ -69,12 +70,12 @@ export default function AgencyScorecard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-white">Agency Scorecard</h1>
-        <p className="text-sm text-[#64748b] mt-1">Task execution health across agencies</p>
+        <p className="text-sm text-navy-600 mt-1">Task execution health across agencies</p>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20" role="status" aria-label="Loading">
-          <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+        <div className="flex items-center justify-center py-20">
+          <Spinner />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -88,7 +89,7 @@ export default function AgencyScorecard() {
               <button
                 key={stats.agency}
                 onClick={() => router.push(`/tasks`)}
-                className={`card-premium p-5 text-left hover:ring-1 hover:ring-[#d4af37]/30 transition-all border ${config.color.split(' ').pop()}`}
+                className={`card-premium p-5 text-left hover:ring-1 hover:ring-gold-500/30 transition-all border ${config.color.split(' ').pop()}`}
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -97,24 +98,24 @@ export default function AgencyScorecard() {
                   </div>
                   <div className={`w-2.5 h-2.5 rounded-full ${health.color}`} title={health.label} />
                 </div>
-                <p className="text-xs text-[#64748b] mb-3">{stats.ceo_name || 'No CEO assigned'}</p>
+                <p className="text-xs text-navy-600 mb-3">{stats.ceo_name || 'No CEO assigned'}</p>
 
                 <div className="grid grid-cols-2 gap-3 text-center">
                   <div>
                     <p className="text-lg font-bold text-white">{stats.total_active}</p>
-                    <p className="text-[10px] text-[#64748b]">Active</p>
+                    <p className="text-[10px] text-navy-600">Active</p>
                   </div>
                   <div>
                     <p className={`text-lg font-bold ${stats.overdue > 0 ? 'text-red-400' : 'text-white'}`}>{stats.overdue}</p>
-                    <p className="text-[10px] text-[#64748b]">Overdue</p>
+                    <p className="text-[10px] text-navy-600">Overdue</p>
                   </div>
                   <div>
                     <p className="text-lg font-bold text-purple-400">{stats.awaiting_review}</p>
-                    <p className="text-[10px] text-[#64748b]">Review</p>
+                    <p className="text-[10px] text-navy-600">Review</p>
                   </div>
                   <div>
                     <p className="text-lg font-bold text-green-400">{stats.completed_month}</p>
-                    <p className="text-[10px] text-[#64748b]">Done/mo</p>
+                    <p className="text-[10px] text-navy-600">Done/mo</p>
                   </div>
                 </div>
               </button>

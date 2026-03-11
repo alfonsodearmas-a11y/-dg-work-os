@@ -128,20 +128,7 @@ export const HEALTH_OPTIONS = [
   { value: 'red', label: 'Critical', color: 'bg-red-500' },
 ];
 
-export const STATUS_STYLES: Record<string, { variant: 'success' | 'danger' | 'info' | 'default' | 'warning'; label: string }> = {
-  Commenced: { variant: 'info', label: 'Commenced' },
-  Delayed: { variant: 'danger', label: 'Delayed' },
-  Awarded: { variant: 'warning', label: 'Awarded' },
-  Designed: { variant: 'default', label: 'Designed' },
-  Completed: { variant: 'success', label: 'Completed' },
-  Rollover: { variant: 'warning', label: 'Rollover' },
-  Cancelled: { variant: 'danger', label: 'Cancelled' },
-  Unknown: { variant: 'default', label: 'Unknown' },
-};
-
-export const HEALTH_DOT: Record<string, string> = {
-  green: 'bg-emerald-400', amber: 'bg-amber-400', red: 'bg-red-400',
-};
+export { PROJECT_STATUS_VARIANTS as STATUS_STYLES, HEALTH_DOT } from '@/lib/constants/agencies';
 
 // ── Formatting ─────────────────────────────────────────────────────────────
 

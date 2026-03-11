@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
+import { sanitizeSearchInput, parsePaginationParams } from '@/lib/parse-utils';
 
 const COLUMNS = 'id,agency,customer_reference,first_name,last_name,telephone,region,district,village_ward,street,lot,event_code,event_description,application_date,days_waiting,data_as_of,pipeline_stage,account_type,service_order_type,service_order_number,account_status,cycle,division_code';
 
@@ -19,8 +20,7 @@ export async function GET(request: NextRequest) {
     const stage = searchParams.get('stage');
     const sortBy = searchParams.get('sortBy') || 'days_waiting';
     const order = searchParams.get('order') || 'desc';
-    const page = parseInt(searchParams.get('page') || '1');
-    const pageSize = parseInt(searchParams.get('pageSize') || '50');
+    const { page, pageSize, from: offset, to } = parsePaginationParams(searchParams);
 
     const sortColumn: Record<string, string> = {
       days_waiting: 'days_waiting',
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       query = query.eq('agency', agency.toUpperCase());
     }
     if (region) {
-      const sanitizedRegion = region.replace(/[%_.*(),"\\]/g, '');
+      const sanitizedRegion = sanitizeSearchInput(region);
       if (sanitizedRegion) query = query.ilike('region', `%${sanitizedRegion}%`);
     }
     if (minDays) {
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       query = query.eq('pipeline_stage', stage);
     }
     if (search) {
-      const sanitized = search.replace(/[%_.*(),"\\]/g, '');
+      const sanitized = sanitizeSearchInput(search);
       if (sanitized) {
         query = query.or(
           `first_name.ilike.%${sanitized}%,last_name.ilike.%${sanitized}%,telephone.ilike.%${sanitized}%,customer_reference.ilike.%${sanitized}%,village_ward.ilike.%${sanitized}%`
@@ -61,10 +61,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const offset = (page - 1) * pageSize;
     query = query
       .order(sortCol, { ascending })
-      .range(offset, offset + pageSize - 1);
+      .range(offset, to);
 
     const { data, count, error } = await query;
 

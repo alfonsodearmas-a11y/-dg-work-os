@@ -8,6 +8,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { supabaseAdmin } from './db';
 import { createHash } from 'crypto';
+import { logger } from '@/lib/logger';
 
 const AI_CONFIG = {
   MODEL: 'claude-sonnet-4-5-20250929',
@@ -310,9 +311,9 @@ async function saveForecastToCache(
         { onConflict: 'data_hash' }
       );
 
-    if (error) console.error('[enhanced-forecast] Cache save error:', error.message);
+    if (error) logger.error({ err: error }, 'enhanced-forecast: cache save error');
   } catch (err: any) {
-    console.error('[enhanced-forecast] Cache save error:', err.message);
+    logger.error({ err }, 'enhanced-forecast: cache save error');
   }
 }
 
@@ -375,7 +376,7 @@ export async function getEnhancedForecast(forceRegenerate = false): Promise<{
         parsed = JSON.parse(jsonMatch[0]);
       }
     } catch (parseErr: any) {
-      console.error('[enhanced-forecast] JSON parse error:', parseErr.message);
+      logger.error({ err: parseErr }, 'enhanced-forecast: JSON parse error');
       console.log('[enhanced-forecast] Raw (first 500):', responseText.slice(0, 500));
       return { success: false, error: 'Failed to parse AI response' };
     }
@@ -419,7 +420,7 @@ export async function getEnhancedForecast(forceRegenerate = false): Promise<{
 
     return { success: true, forecast, cached: false };
   } catch (err: any) {
-    console.error('[enhanced-forecast] Error:', err.message);
+    logger.error({ err }, 'enhanced-forecast: error');
     return { success: false, error: err.message };
   }
 }

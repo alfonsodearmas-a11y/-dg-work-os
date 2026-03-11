@@ -6,6 +6,7 @@
  */
 
 import { supabaseAdmin } from './db';
+import { logger } from '@/lib/logger';
 
 // ---------------------------------------------------------------------------
 // Excluded stations (permanently decommissioned)
@@ -976,7 +977,7 @@ async function saveForecastsToDb(
     console.log('[gpl-forecast] Saved all forecasts to database');
 
   } catch (err) {
-    console.error('[gpl-forecast] Failed to save forecasts:', err);
+    logger.error({ err }, 'gpl-forecast: failed to save forecasts');
     throw err;
   }
 }

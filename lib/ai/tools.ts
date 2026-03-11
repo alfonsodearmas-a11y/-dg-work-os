@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/db';
+import { logger } from '@/lib/logger';
 import { AIToolDefinition, AIActionProposal } from './types';
 
 // ── Tool Categories ──────────────────────────────────────────────────────────
@@ -303,7 +304,7 @@ export async function executeAction(
         return { success: false, message: `Unknown action: ${toolName}` };
     }
   } catch (err: any) {
-    console.error(`[ai/tools] Action execution error (${toolName}):`, err);
+    logger.error({ err, toolName }, 'ai/tools: action execution error');
     return { success: false, message: err.message || 'Action failed' };
   }
 }
@@ -330,7 +331,7 @@ export async function executeQueryTool(
         return JSON.stringify({ error: `Unknown query tool: ${toolName}` });
     }
   } catch (err: any) {
-    console.error(`[ai/tools] Query tool error (${toolName}):`, err);
+    logger.error({ err, toolName }, 'ai/tools: query tool error');
     return JSON.stringify({ error: err.message || 'Query failed' });
   }
 }
@@ -663,6 +664,6 @@ async function logAIAction(userId: string, actionType: string, metadata: Record<
       details: { ai_tool: actionType, ...metadata },
     });
   } catch (err) {
-    console.error('[ai/tools] Audit log error:', err);
+    logger.error({ err }, 'ai/tools: audit log error');
   }
 }

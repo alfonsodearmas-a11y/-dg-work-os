@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { GPLAnalysis, GWIAnalysis, PendingApplication } from './pending-applications-types';
+import { parseAIJson } from '@/lib/parse-utils';
 
 const CONFIG = {
   MODEL: 'claude-sonnet-4-5-20250929',
@@ -19,12 +20,7 @@ function getClient(): Anthropic {
 }
 
 function parseJSONResponse(text: string): Record<string, unknown> {
-  let jsonStr = text;
-  const codeBlock = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (codeBlock) jsonStr = codeBlock[1];
-  const objMatch = jsonStr.match(/\{[\s\S]*\}/);
-  if (objMatch) jsonStr = objMatch[0];
-  return JSON.parse(jsonStr);
+  return parseAIJson<Record<string, unknown>>(text);
 }
 
 // ── CSV Data Generation ──────────────────────────────────────────────────────

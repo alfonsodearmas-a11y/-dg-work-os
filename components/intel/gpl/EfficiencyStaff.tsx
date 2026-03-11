@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Info } from 'lucide-react';
+import { Spinner } from '@/components/ui/Spinner';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
@@ -45,8 +46,8 @@ function stageLabel(track: string, stage: string): string {
 function InfoTip({ text }: { text: string }) {
   return (
     <span className="group relative inline-flex ml-1 cursor-help">
-      <Info className="h-3 w-3 text-[#64748b] group-hover:text-[#94a3b8] transition-colors" />
-      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-56 p-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] text-[10px] text-[#94a3b8] leading-tight opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">
+      <Info className="h-3 w-3 text-navy-600 group-hover:text-slate-400 transition-colors" />
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-56 p-2 rounded-lg bg-navy-900 border border-navy-800 text-[10px] text-slate-400 leading-tight opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">
         {text}
       </span>
     </span>
@@ -93,8 +94,8 @@ export function EfficiencyStaff() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20" role="status" aria-label="Loading">
-        <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+      <div className="flex items-center justify-center py-20">
+        <Spinner className="border-amber-400" />
       </div>
     );
   }
@@ -117,27 +118,27 @@ export function EfficiencyStaff() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm" aria-label="Staff performance">
               <thead>
-                <tr className="border-b border-[#2d3a52]">
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Staff</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Simple</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Avg Days</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Estimates</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Avg Days</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Capital Works</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Avg Days</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Total</th>
+                <tr className="border-b border-navy-800">
+                  <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs">Staff</th>
+                  <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Simple</th>
+                  <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs hidden md:table-cell">Avg Days</th>
+                  <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Estimates</th>
+                  <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs hidden md:table-cell">Avg Days</th>
+                  <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Capital Works</th>
+                  <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs hidden md:table-cell">Avg Days</th>
+                  <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {staff.map(s => (
-                  <tr key={s.name} className="border-b border-[#2d3a52]/50">
+                  <tr key={s.name} className="border-b border-navy-800/50">
                     <td className="py-2 text-white text-xs">{s.name}</td>
-                    <td className="py-2 text-right text-[#94a3b8] text-xs">{s.trackA_count || '--'}</td>
-                    <td className="py-2 text-right text-[#94a3b8] text-xs hidden md:table-cell">{s.trackA_avg !== null ? `${s.trackA_avg}d` : '--'}</td>
-                    <td className="py-2 text-right text-[#94a3b8] text-xs">{s.design_count || '--'}</td>
-                    <td className="py-2 text-right text-[#94a3b8] text-xs hidden md:table-cell">{s.design_avg !== null ? `${s.design_avg}d` : '--'}</td>
-                    <td className="py-2 text-right text-[#94a3b8] text-xs">{s.execution_count || '--'}</td>
-                    <td className="py-2 text-right text-[#94a3b8] text-xs hidden md:table-cell">{s.execution_avg !== null ? `${s.execution_avg}d` : '--'}</td>
+                    <td className="py-2 text-right text-slate-400 text-xs">{s.trackA_count || '--'}</td>
+                    <td className="py-2 text-right text-slate-400 text-xs hidden md:table-cell">{s.trackA_avg !== null ? `${s.trackA_avg}d` : '--'}</td>
+                    <td className="py-2 text-right text-slate-400 text-xs">{s.design_count || '--'}</td>
+                    <td className="py-2 text-right text-slate-400 text-xs hidden md:table-cell">{s.design_avg !== null ? `${s.design_avg}d` : '--'}</td>
+                    <td className="py-2 text-right text-slate-400 text-xs">{s.execution_count || '--'}</td>
+                    <td className="py-2 text-right text-slate-400 text-xs hidden md:table-cell">{s.execution_avg !== null ? `${s.execution_avg}d` : '--'}</td>
                     <td className="py-2 text-right text-white text-xs font-medium">{s.total_count}</td>
                   </tr>
                 ))}
@@ -154,21 +155,21 @@ export function EfficiencyStaff() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm" aria-label="Overdue connections">
               <thead>
-                <tr className="border-b border-[#2d3a52]">
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Account</th>
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Customer</th>
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Category</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Days</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Standard</th>
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Staff</th>
+                <tr className="border-b border-navy-800">
+                  <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs">Account</th>
+                  <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs">Customer</th>
+                  <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs">Category</th>
+                  <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Days</th>
+                  <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Standard</th>
+                  <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs hidden md:table-cell">Staff</th>
                 </tr>
               </thead>
               <tbody>
                 {breaches.slice(0, 50).map(r => {
                   const days = r.days_taken_calculated ?? r.days_taken ?? 0;
                   return (
-                    <tr key={r.id} className="border-b border-[#2d3a52]/50">
-                      <td className="py-2 text-[#94a3b8] font-mono text-xs">{r.account_number || '--'}</td>
+                    <tr key={r.id} className="border-b border-navy-800/50">
+                      <td className="py-2 text-slate-400 font-mono text-xs">{r.account_number || '--'}</td>
                       <td className="py-2 text-white text-xs">{r.customer_name || '--'}</td>
                       <td className="py-2">
                         <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
@@ -180,8 +181,8 @@ export function EfficiencyStaff() {
                         </span>
                       </td>
                       <td className="py-2 text-right text-red-400 text-xs font-medium">{days}d</td>
-                      <td className="py-2 text-right text-[#64748b] text-xs">{r.sla_target}d</td>
-                      <td className="py-2 text-[#94a3b8] text-xs hidden md:table-cell">{r.created_by || '--'}</td>
+                      <td className="py-2 text-right text-navy-600 text-xs">{r.sla_target}d</td>
+                      <td className="py-2 text-slate-400 text-xs hidden md:table-cell">{r.created_by || '--'}</td>
                     </tr>
                   );
                 })}
@@ -227,28 +228,28 @@ function EfficiencyCard({ metric }: { metric: GPLMetricsRow }) {
               : (metric.sla_compliance_pct ?? 0) >= 50 ? 'text-amber-400'
               : 'text-red-400'
           }`}>{metric.sla_compliance_pct ?? 0}%</div>
-          <div className="text-[10px] text-[#64748b]">completed within {slaTarget} days</div>
+          <div className="text-[10px] text-navy-600">completed within {slaTarget} days</div>
         </div>
         <div>
-          <div className="text-lg font-bold text-white">{metric.mean_days ?? '--'}<span className="text-xs font-normal text-[#64748b]">d</span></div>
-          <div className="text-[10px] text-[#64748b]">average</div>
+          <div className="text-lg font-bold text-white">{metric.mean_days ?? '--'}<span className="text-xs font-normal text-navy-600">d</span></div>
+          <div className="text-[10px] text-navy-600">average</div>
         </div>
         <div>
-          <div className="text-lg font-bold text-white">{metric.median_days ?? '--'}<span className="text-xs font-normal text-[#64748b]">d</span></div>
-          <div className="flex items-center text-[10px] text-[#64748b]">
+          <div className="text-lg font-bold text-white">{metric.median_days ?? '--'}<span className="text-xs font-normal text-navy-600">d</span></div>
+          <div className="flex items-center text-[10px] text-navy-600">
             typical time
             <InfoTip text="The middle value of all completion times. More reliable than the average when some connections took unusually long." />
           </div>
         </div>
       </div>
       {metric.trimmed_mean_days !== null && metric.trimmed_mean_days !== metric.mean_days && (
-        <div className="flex items-center text-[10px] text-[#64748b] mb-2">
+        <div className="flex items-center text-[10px] text-navy-600 mb-2">
           typical time (excl. delays): {metric.trimmed_mean_days}d
           <InfoTip text="Average completion time after removing statistical outliers that would skew the number." />
         </div>
       )}
       {metric.error_count > 0 && (
-        <div className="text-[10px] text-[#64748b] mb-2">
+        <div className="text-[10px] text-navy-600 mb-2">
           {metric.error_count} records with date entry issues excluded from statistics
         </div>
       )}

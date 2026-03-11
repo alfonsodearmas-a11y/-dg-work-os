@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { logger } from '@/lib/logger';
 
 const FROM = '"DG Work OS — MPUA" <notifications@mpua.gov.gy>';
 
@@ -23,7 +24,7 @@ interface SendEmailParams {
 
 export async function sendEmail({ to, subject, html, text }: SendEmailParams): Promise<{ success: boolean; error?: string }> {
   if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-    console.error('[sendEmail] GMAIL_USER or GMAIL_APP_PASSWORD is not set');
+    logger.error({}, 'sendEmail: GMAIL_USER or GMAIL_APP_PASSWORD is not set');
     return { success: false, error: 'Mailer not configured' };
   }
 
@@ -38,7 +39,7 @@ export async function sendEmail({ to, subject, html, text }: SendEmailParams): P
     });
     return { success: true };
   } catch (err: any) {
-    console.error('[sendEmail] Failed:', err.message);
+    logger.error({ err }, 'sendEmail: failed');
     return { success: false, error: err.message };
   }
 }

@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/db';
+import { logger } from '@/lib/logger';
 import { ModelTier, TokenBudgetStatus } from './types';
 
 // ── Budget Configuration ────────────────────────────────────────────────────
@@ -62,7 +63,7 @@ export async function getTokenBudgetStatus(): Promise<TokenBudgetStatus> {
       warning,
     };
   } catch (err) {
-    console.error('[ai/budget] Error fetching budget:', err);
+    logger.error({ err }, 'ai/budget: error fetching budget');
     // Fail open — allow all tiers
     return {
       used_today: 0,
@@ -100,7 +101,7 @@ export async function logUsage(
       local_answer: localAnswer,
     });
   } catch (err) {
-    console.error('[ai/budget] Log error:', err);
+    logger.error({ err }, 'ai/budget: log error');
   }
 }
 
@@ -191,7 +192,7 @@ export async function getUsageStats(days = 7): Promise<{
       },
     };
   } catch (err) {
-    console.error('[ai/budget] Stats error:', err);
+    logger.error({ err }, 'ai/budget: stats error');
     return {
       daily: [],
       totals: { total_tokens: 0, total_requests: 0, cached_pct: 0, local_pct: 0, by_tier: { haiku: 0, sonnet: 0, opus: 0 } },

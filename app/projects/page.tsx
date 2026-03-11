@@ -7,12 +7,14 @@ import {
   Upload, AlertTriangle, Building2, DollarSign, Clock, CheckCircle,
   ChevronDown, ChevronUp, ChevronRight, RefreshCw, Loader2, Search,
   Filter, Camera, X, CircleDot, SlidersHorizontal, Shield, ShieldAlert,
-  Download, BarChart3, List, GanttChart, Bookmark, BookmarkPlus, Trash2,
+  Download, BarChart3, List, GanttChart, LayoutGrid, Bookmark, BookmarkPlus, Trash2,
   MessageSquare, Sparkles, AlertCircle, ArrowUpDown, Square, CheckSquare,
   Send, Flag, XCircle,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { fmtCurrency as _fmtCurrency, fmtDate } from '@/lib/format';
+import { AGENCY_NAMES_SHORT as AGENCY_NAMES, PROJECT_STATUS_VARIANTS as STATUS_STYLES, HEALTH_DOT } from '@/lib/constants/agencies';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -96,22 +98,12 @@ interface SavedFilter {
   created_at: string;
 }
 
-type ViewMode = 'list' | 'timeline';
+type ViewMode = 'list' | 'board' | 'timeline';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const AGENCY_OPTIONS = ['GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'MOPUA', 'HAS'];
 
-const AGENCY_NAMES: Record<string, string> = {
-  GPL: 'Guyana Power & Light',
-  GWI: 'Guyana Water Inc.',
-  HECI: 'Hinterland Electrification',
-  CJIA: 'CJIA Airport',
-  MARAD: 'Maritime Administration',
-  GCAA: 'Civil Aviation Authority',
-  MOPUA: 'Ministry of Public Works',
-  HAS: 'Harbour & Aviation',
-};
 
 const REGION_OPTIONS = [
   { value: '01', label: 'Region 1' }, { value: '02', label: 'Region 2' },
@@ -121,16 +113,6 @@ const REGION_OPTIONS = [
   { value: '09', label: 'Region 9' }, { value: '10', label: 'Region 10' },
 ];
 
-const STATUS_STYLES: Record<string, { variant: 'success' | 'danger' | 'info' | 'default' | 'warning'; label: string }> = {
-  Commenced: { variant: 'info', label: 'Commenced' },
-  Delayed: { variant: 'danger', label: 'Delayed' },
-  Awarded: { variant: 'warning', label: 'Awarded' },
-  Designed: { variant: 'default', label: 'Designed' },
-  Completed: { variant: 'success', label: 'Completed' },
-  Rollover: { variant: 'warning', label: 'Rollover' },
-  Cancelled: { variant: 'danger', label: 'Cancelled' },
-  Unknown: { variant: 'default', label: 'Unknown' },
-};
 
 const HEALTH_OPTIONS = [
   { value: 'green', label: 'On Track', color: 'bg-emerald-500' },
@@ -142,41 +124,19 @@ const STATUS_DOT: Record<string, string> = {
   Commenced: 'bg-blue-400',
   Delayed: 'bg-red-400',
   Awarded: 'bg-amber-400',
-  Designed: 'bg-[#64748b]',
+  Designed: 'bg-navy-600',
   Completed: 'bg-emerald-400',
   Rollover: 'bg-amber-400',
   Cancelled: 'bg-red-600',
-  Unknown: 'bg-[#64748b]',
+  Unknown: 'bg-navy-600',
 };
 
-const HEALTH_DOT: Record<string, string> = {
-  green: 'bg-emerald-400',
-  amber: 'bg-amber-400',
-  red: 'bg-red-400',
-};
 
 // ── Formatting ─────────────────────────────────────────────────────────────
 
 function fmtCurrency(value: number | string | null | undefined, allowZero = false): string {
-  if (value === null || value === undefined || value === '-') return '-';
-  const num = typeof value === 'string' ? parseFloat(value.replace(/[$,]/g, '')) : Number(value);
-  if (isNaN(num)) return '-';
-  if (num === 0) return allowZero ? '$0' : '-';
-  if (num < 0) return '-';
-  // Cap outlier values — anything above $100B GYD is data corruption
-  if (num > 1e11) return '-';
-  const abs = Math.abs(num);
-  if (abs >= 1e9) return `$${(num / 1e9).toFixed(1)}B`;
-  if (abs >= 1e6) return `$${(num / 1e6).toFixed(1)}M`;
-  if (abs >= 1e3) return `$${(num / 1e3).toFixed(1)}K`;
-  return `$${num.toLocaleString()}`;
-}
-
-function fmtDate(iso: string | null): string {
-  if (!iso) return '-';
-  const d = new Date(iso + 'T00:00:00');
-  if (isNaN(d.getTime())) return '-';
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  if (allowZero && (value === 0 || value === '0')) return '$0';
+  return _fmtCurrency(value);
 }
 
 function fmtRegion(code: string | null): string {
@@ -230,20 +190,20 @@ function MultiSelect({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none flex items-center gap-2 min-w-[130px]"
+        className="bg-navy-950 border border-navy-800 rounded-lg px-3 py-2 text-sm text-white focus:border-gold-500 focus:outline-none flex items-center gap-2 min-w-[130px]"
       >
         <span className="truncate">{selected.length ? `${label} (${selected.length})` : label}</span>
-        <ChevronDown className={`h-3.5 w-3.5 text-[#64748b] shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-3.5 w-3.5 text-navy-600 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute top-full left-0 mt-1 bg-[#1a2744] border border-[#2d3a52] rounded-lg shadow-xl z-50 min-w-[200px] max-h-[300px] overflow-y-auto">
+        <div className="absolute top-full left-0 mt-1 bg-navy-900 border border-navy-800 rounded-lg shadow-xl z-50 min-w-[200px] max-h-[300px] overflow-y-auto">
           {options.map(opt => (
-            <label key={opt.value} className="flex items-center gap-2 px-3 py-2 hover:bg-[#0a1628]/60 cursor-pointer text-sm">
+            <label key={opt.value} className="flex items-center gap-2 px-3 py-2 hover:bg-navy-950/60 cursor-pointer text-sm">
               <input
                 type="checkbox"
                 checked={selected.includes(opt.value)}
                 onChange={() => toggle(opt.value)}
-                className="accent-[#d4af37]"
+                className="accent-gold-500"
               />
               {renderOption ? renderOption(opt) : <span className="text-white">{opt.label}</span>}
             </label>
@@ -258,13 +218,13 @@ function MultiSelect({
 
 function ProgressBar({ pct }: { pct: number }) {
   const safePct = pct ?? 0;
-  const color = safePct >= 100 ? 'bg-emerald-500' : safePct >= 80 ? 'bg-emerald-500' : safePct >= 40 ? 'bg-amber-500' : safePct > 0 ? 'bg-red-500' : 'bg-[#2d3a52]';
+  const color = safePct >= 100 ? 'bg-emerald-500' : safePct >= 80 ? 'bg-emerald-500' : safePct >= 40 ? 'bg-amber-500' : safePct > 0 ? 'bg-red-500' : 'bg-navy-800';
   return (
     <div className="flex items-center gap-2">
-      <div className="w-16 h-1.5 bg-[#2d3a52] rounded-full overflow-hidden">
+      <div className="w-16 h-1.5 bg-navy-800 rounded-full overflow-hidden">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.min(safePct, 100)}%` }} />
       </div>
-      <span className="text-xs text-[#94a3b8] w-8 text-right">{safePct}%</span>
+      <span className="text-xs text-slate-400 w-8 text-right">{safePct}%</span>
     </div>
   );
 }
@@ -277,7 +237,7 @@ function HealthDot({ health }: { health: string }) {
   return (
     <span className="inline-flex items-center gap-1.5" title={labels[health] || health}>
       <span className={`w-2.5 h-2.5 rounded-full ${dot}`} />
-      <span className="text-xs text-[#94a3b8] hidden lg:inline">{labels[health] || health}</span>
+      <span className="text-xs text-slate-400 hidden lg:inline">{labels[health] || health}</span>
     </span>
   );
 }
@@ -329,22 +289,22 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
       <div ref={uploadModalRef} role="dialog" aria-modal="true" aria-labelledby="upload-project-modal-title" className="card-premium p-4 md:p-6 w-full max-w-lg md:mx-4 rounded-t-2xl md:rounded-2xl max-h-[90vh] md:max-h-none overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 id="upload-project-modal-title" className="text-lg font-semibold text-white">Upload Project Listings</h2>
-          <button onClick={onClose} className="text-[#64748b] hover:text-white" aria-label="Close"><X className="h-5 w-5" /></button>
+          <button onClick={onClose} className="text-navy-600 hover:text-white" aria-label="Close"><X className="h-5 w-5" /></button>
         </div>
         <label className="upload-zone p-8 text-center cursor-pointer block">
           <input type="file" accept=".xlsx,.xls" className="hidden" onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} disabled={uploading} aria-label="Upload project Excel file" />
           {uploading ? (
             <div className="flex flex-col items-center" role="status" aria-label="Processing">
-              <Loader2 className="h-10 w-10 text-[#d4af37] animate-spin mb-3" aria-hidden="true" />
+              <Loader2 className="h-10 w-10 text-gold-500 animate-spin mb-3" aria-hidden="true" />
               <p className="text-white font-medium">Processing...</p>
             </div>
           ) : (
             <div className="flex flex-col items-center">
-              <div className="w-14 h-14 rounded-2xl bg-[#d4af37]/20 flex items-center justify-center mb-3">
-                <Upload className="h-7 w-7 text-[#d4af37]" />
+              <div className="w-14 h-14 rounded-2xl bg-gold-500/20 flex items-center justify-center mb-3">
+                <Upload className="h-7 w-7 text-gold-500" />
               </div>
               <p className="text-white font-medium">Drop Excel file or click to browse</p>
-              <p className="text-[#64748b] text-sm mt-1">oversight.gov.gy export (.xlsx)</p>
+              <p className="text-navy-600 text-sm mt-1">oversight.gov.gy export (.xlsx)</p>
             </div>
           )}
         </label>
@@ -360,14 +320,14 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
               <CheckCircle className="h-4 w-4 text-emerald-400 shrink-0" />
               <p className="text-emerald-400 text-sm">{success}</p>
             </div>
-            <div className="p-3 rounded-xl bg-[#0a1628] border border-[#2d3a52] text-sm">
-              <div className="flex justify-between text-[#94a3b8]">
+            <div className="p-3 rounded-xl bg-navy-950 border border-navy-800 text-sm">
+              <div className="flex justify-between text-slate-400">
                 <span>Total Value</span>
-                <span className="text-[#d4af37] font-semibold">{fmtCurrency(preview.total_value)}</span>
+                <span className="text-gold-500 font-semibold">{fmtCurrency(preview.total_value)}</span>
               </div>
               <div className="flex flex-wrap gap-2 mt-2">
                 {Object.entries(preview.agency_counts).sort((a, b) => b[1] - a[1]).map(([ag, ct]) => (
-                  <span key={ag} className="px-2 py-0.5 rounded bg-[#1a2744] text-xs text-[#94a3b8]">{ag}: {ct}</span>
+                  <span key={ag} className="px-2 py-0.5 rounded bg-navy-900 text-xs text-slate-400">{ag}: {ct}</span>
                 ))}
               </div>
             </div>
@@ -426,7 +386,7 @@ function EscalationModal({ project, onClose, onDone }: { project: Project; onClo
           </div>
           <div>
             <h2 id="projects-escalation-modal-title" className="text-lg font-semibold text-white">Escalate Project</h2>
-            <p className="text-[#64748b] text-xs line-clamp-1">{project.project_name}</p>
+            <p className="text-navy-600 text-xs line-clamp-1">{project.project_name}</p>
           </div>
         </div>
         <textarea
@@ -435,7 +395,7 @@ function EscalationModal({ project, onClose, onDone }: { project: Project; onClo
           placeholder="Why does this project need escalation?"
           aria-label="Escalation reason"
           aria-required="true"
-          className="w-full bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-3 text-sm text-white placeholder-[#64748b] focus:border-red-400 focus:outline-none resize-none h-28"
+          className="w-full bg-navy-950 border border-navy-800 rounded-lg px-3 py-3 text-sm text-white placeholder-navy-600 focus:border-red-400 focus:outline-none resize-none h-28"
         />
         <div className="flex items-center justify-end gap-3 mt-4">
           <button onClick={onClose} className="btn-navy px-4 py-2 text-sm">Cancel</button>
@@ -496,7 +456,7 @@ function SaveFilterModal({ filterParams, onClose, onSaved }: { filterParams: Rec
           placeholder="e.g. GPL Delayed Projects"
           aria-label="Filter preset name"
           aria-required="true"
-          className="w-full bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2.5 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none"
+          className="w-full bg-navy-950 border border-navy-800 rounded-lg px-3 py-2.5 text-sm text-white placeholder-navy-600 focus:border-gold-500 focus:outline-none"
           onKeyDown={e => e.key === 'Enter' && handleSave()}
           autoFocus
         />
@@ -609,11 +569,11 @@ function ProjectSlidePanel({
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
-      <div ref={projectSlidePanelRef} role="dialog" aria-modal="true" aria-labelledby="projects-slide-panel-title" className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-xl bg-[#0f1d32] border-l border-[#2d3a52] shadow-2xl overflow-y-auto">
+      <div ref={projectSlidePanelRef} role="dialog" aria-modal="true" aria-labelledby="projects-slide-panel-title" className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-xl bg-[#0f1d32] border-l border-navy-800 shadow-2xl overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-[#0f1d32] border-b border-[#2d3a52] px-5 py-4 flex items-center justify-between">
+        <div className="sticky top-0 z-10 bg-[#0f1d32] border-b border-navy-800 px-5 py-4 flex items-center justify-between">
           <h2 id="projects-slide-panel-title" className="text-white font-semibold text-lg truncate pr-4">Project Detail</h2>
-          <button onClick={onClose} className="text-[#64748b] hover:text-white" aria-label="Close"><X className="h-5 w-5" /></button>
+          <button onClick={onClose} className="text-navy-600 hover:text-white" aria-label="Close"><X className="h-5 w-5" /></button>
         </div>
 
         <div className="p-5 space-y-6">
@@ -634,12 +594,12 @@ function ProjectSlidePanel({
           {/* Project Info */}
           <div>
             <h3 className="text-white font-semibold text-base mb-1">{project.project_name || '-'}</h3>
-            <p className="text-[#64748b] text-xs font-mono">{project.project_id}</p>
+            <p className="text-navy-600 text-xs font-mono">{project.project_id}</p>
             <div className="flex items-center gap-3 mt-3">
               <Badge variant={ss.variant}>{ss.label}</Badge>
               <HealthDot health={project.health} />
               {project.sub_agency && (
-                <span className="text-[#d4af37] text-xs font-medium px-2 py-0.5 rounded bg-[#d4af37]/10">{project.sub_agency}</span>
+                <span className="text-gold-500 text-xs font-medium px-2 py-0.5 rounded bg-gold-500/10">{project.sub_agency}</span>
               )}
             </div>
           </div>
@@ -647,44 +607,44 @@ function ProjectSlidePanel({
           {/* Key Fields */}
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-[#64748b] text-xs">Contract Value</span>
-              <p className="text-[#d4af37] font-semibold">{fmtCurrency(project.contract_value)}</p>
+              <span className="text-navy-600 text-xs">Contract Value</span>
+              <p className="text-gold-500 font-semibold">{fmtCurrency(project.contract_value)}</p>
             </div>
             <div>
-              <span className="text-[#64748b] text-xs">Completion</span>
+              <span className="text-navy-600 text-xs">Completion</span>
               <div className="mt-0.5"><ProgressBar pct={project.completion_pct} /></div>
             </div>
             <div>
-              <span className="text-[#64748b] text-xs">Contractor</span>
+              <span className="text-navy-600 text-xs">Contractor</span>
               <p className="text-white">{project.contractor || '-'}</p>
             </div>
             <div>
-              <span className="text-[#64748b] text-xs">Region</span>
+              <span className="text-navy-600 text-xs">Region</span>
               <p className="text-white">{fmtRegion(project.region)}</p>
             </div>
             <div>
-              <span className="text-[#64748b] text-xs">Start Date</span>
+              <span className="text-navy-600 text-xs">Start Date</span>
               <p className="text-white">{fmtDate(project.start_date)}</p>
               {project.revised_start_date && project.revised_start_date !== project.start_date && (
-                <p className="text-[#d4af37] text-[10px] mt-0.5">Revised: {fmtDate(project.revised_start_date)}</p>
+                <p className="text-gold-500 text-[10px] mt-0.5">Revised: {fmtDate(project.revised_start_date)}</p>
               )}
             </div>
             <div>
-              <span className="text-[#64748b] text-xs">End Date</span>
+              <span className="text-navy-600 text-xs">End Date</span>
               <p className={project.status === 'Delayed' ? 'text-red-400 font-semibold' : 'text-white'}>
                 {fmtDate(project.project_end_date)}
               </p>
             </div>
             <div>
-              <span className="text-[#64748b] text-xs">Agency</span>
+              <span className="text-navy-600 text-xs">Agency</span>
               <p className="text-white">{project.sub_agency || project.executing_agency || '-'}</p>
               {project.executing_agency && project.sub_agency && project.executing_agency !== project.sub_agency && (
-                <p className="text-[#4a5568] text-[10px] mt-0.5">under {project.executing_agency}</p>
+                <p className="text-navy-700 text-[10px] mt-0.5">under {project.executing_agency}</p>
               )}
             </div>
             {project.days_overdue > 0 && (
               <div>
-                <span className="text-[#64748b] text-xs">Days Overdue</span>
+                <span className="text-navy-600 text-xs">Days Overdue</span>
                 <p className="text-red-400 font-semibold">{project.days_overdue} days</p>
               </div>
             )}
@@ -704,13 +664,13 @@ function ProjectSlidePanel({
           <div className="card-premium p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-[#d4af37]" />
+                <Sparkles className="h-4 w-4 text-gold-500" />
                 <h4 className="text-white font-semibold text-sm">AI Summary</h4>
               </div>
               <button
                 onClick={() => generateSummary(!!summary)}
                 disabled={loadingSummary}
-                className="text-[#d4af37] text-xs hover:text-[#e5c04b] flex items-center gap-1"
+                className="text-gold-500 text-xs hover:text-[#e5c04b] flex items-center gap-1"
               >
                 {loadingSummary ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
                 {summary ? 'Regenerate' : 'Generate'}
@@ -719,25 +679,25 @@ function ProjectSlidePanel({
 
             {loadingSummary ? (
               <div className="space-y-3 animate-pulse">
-                {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-4 bg-[#2d3a52] rounded w-full" />)}
+                {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-4 bg-navy-800 rounded w-full" />)}
               </div>
             ) : summary?.summary ? (
               <div className="space-y-3 text-sm">
                 <div>
-                  <span className="text-[#64748b] text-xs uppercase tracking-wider">Status Snapshot</span>
-                  <p className="text-[#94a3b8] mt-0.5">{summary.summary.status_snapshot}</p>
+                  <span className="text-navy-600 text-xs uppercase tracking-wider">Status Snapshot</span>
+                  <p className="text-slate-400 mt-0.5">{summary.summary.status_snapshot}</p>
                 </div>
                 <div>
-                  <span className="text-[#64748b] text-xs uppercase tracking-wider">Timeline</span>
-                  <p className="text-[#94a3b8] mt-0.5">{summary.summary.timeline_assessment}</p>
+                  <span className="text-navy-600 text-xs uppercase tracking-wider">Timeline</span>
+                  <p className="text-slate-400 mt-0.5">{summary.summary.timeline_assessment}</p>
                 </div>
                 <div>
-                  <span className="text-[#64748b] text-xs uppercase tracking-wider">Budget Position</span>
-                  <p className="text-[#94a3b8] mt-0.5">{summary.summary.budget_position}</p>
+                  <span className="text-navy-600 text-xs uppercase tracking-wider">Budget Position</span>
+                  <p className="text-slate-400 mt-0.5">{summary.summary.budget_position}</p>
                 </div>
                 {summary.summary.key_risks?.length > 0 && (
                   <div>
-                    <span className="text-[#64748b] text-xs uppercase tracking-wider">Key Risks</span>
+                    <span className="text-navy-600 text-xs uppercase tracking-wider">Key Risks</span>
                     <ul className="mt-1 space-y-1">
                       {summary.summary.key_risks.map((r, i) => (
                         <li key={i} className="text-red-400/80 text-xs flex items-start gap-1.5">
@@ -749,7 +709,7 @@ function ProjectSlidePanel({
                 )}
                 {summary.summary.recommended_actions?.length > 0 && (
                   <div>
-                    <span className="text-[#64748b] text-xs uppercase tracking-wider">Recommended Actions</span>
+                    <span className="text-navy-600 text-xs uppercase tracking-wider">Recommended Actions</span>
                     <ul className="mt-1 space-y-1">
                       {summary.summary.recommended_actions.map((a, i) => (
                         <li key={i} className="text-emerald-400/80 text-xs flex items-start gap-1.5">
@@ -759,21 +719,21 @@ function ProjectSlidePanel({
                     </ul>
                   </div>
                 )}
-                <p className="text-[#4a5568] text-[10px] mt-2">
+                <p className="text-navy-700 text-[10px] mt-2">
                   Generated {summary.generated_at ? timeAgo(summary.generated_at) : ''}
                 </p>
               </div>
             ) : (
-              <p className="text-[#64748b] text-sm">Click &quot;Generate&quot; to create an AI summary of this project.</p>
+              <p className="text-navy-600 text-sm">Click &quot;Generate&quot; to create an AI summary of this project.</p>
             )}
           </div>
 
           {/* Notes / Activity Log */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <MessageSquare className="h-4 w-4 text-[#d4af37]" />
+              <MessageSquare className="h-4 w-4 text-gold-500" />
               <h4 className="text-white font-semibold text-sm">Activity Log</h4>
-              <span className="text-[#64748b] text-xs">({notes.length})</span>
+              <span className="text-navy-600 text-xs">({notes.length})</span>
             </div>
 
             {/* Add note */}
@@ -784,7 +744,7 @@ function ProjectSlidePanel({
                 placeholder="Add a note..."
                 rows={2}
                 aria-label="Add a note"
-                className="flex-1 bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none resize-none"
+                className="flex-1 bg-navy-950 border border-navy-800 rounded-lg px-3 py-2 text-sm text-white placeholder-navy-600 focus:border-gold-500 focus:outline-none resize-none"
               />
               <button
                 onClick={addNote}
@@ -798,25 +758,25 @@ function ProjectSlidePanel({
             {/* Notes list */}
             {loadingNotes ? (
               <div className="space-y-3 animate-pulse">
-                {[1, 2].map(i => <div key={i} className="h-12 bg-[#2d3a52] rounded" />)}
+                {[1, 2].map(i => <div key={i} className="h-12 bg-navy-800 rounded" />)}
               </div>
             ) : notes.length === 0 ? (
-              <p className="text-[#64748b] text-sm">No notes yet.</p>
+              <p className="text-navy-600 text-sm">No notes yet.</p>
             ) : (
               <div className="space-y-3 max-h-[400px] overflow-y-auto">
                 {notes.map(n => (
-                  <div key={n.id} className={`p-3 rounded-lg text-sm ${n.note_type === 'escalation' ? 'bg-red-500/5 border border-red-500/20' : 'bg-[#0a1628] border border-[#2d3a52]/50'}`}>
+                  <div key={n.id} className={`p-3 rounded-lg text-sm ${n.note_type === 'escalation' ? 'bg-red-500/5 border border-red-500/20' : 'bg-navy-950 border border-navy-800/50'}`}>
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
                         <span className="text-white font-medium text-xs">{n.user_name}</span>
-                        <span className="text-[#4a5568] text-[10px]">{n.user_role}</span>
+                        <span className="text-navy-700 text-[10px]">{n.user_role}</span>
                         {n.note_type === 'escalation' && (
                           <span className="text-red-400 text-[10px] font-medium px-1.5 py-0.5 rounded bg-red-500/10">ESCALATION</span>
                         )}
                       </div>
-                      <span className="text-[#4a5568] text-[10px]">{timeAgo(n.created_at)}</span>
+                      <span className="text-navy-700 text-[10px]">{timeAgo(n.created_at)}</span>
                     </div>
-                    <p className="text-[#94a3b8] text-xs">{n.note_text}</p>
+                    <p className="text-slate-400 text-xs">{n.note_text}</p>
                   </div>
                 ))}
               </div>
@@ -852,7 +812,7 @@ function TimelineView({ projects, groupBy }: { projects: Project[]; groupBy: 'ag
   }).filter(d => !isNaN(d.getTime()));
 
   if (dates.length === 0) {
-    return <div className="card-premium p-8 text-center text-[#64748b]">No date data available for timeline view.</div>;
+    return <div className="card-premium p-8 text-center text-navy-600">No date data available for timeline view.</div>;
   }
 
   const minDate = new Date(Math.min(...dates.map(d => d.getTime()), now.getTime() - 365 * 86400000));
@@ -892,12 +852,12 @@ function TimelineView({ projects, groupBy }: { projects: Project[]; groupBy: 'ag
       <div className="overflow-x-auto">
         <div className="min-w-[800px]">
           {/* Header with months */}
-          <div className="flex items-center border-b border-[#2d3a52] px-4 py-2 relative">
-            <div className="w-64 shrink-0 text-[#64748b] text-xs font-medium uppercase">Project</div>
+          <div className="flex items-center border-b border-navy-800 px-4 py-2 relative">
+            <div className="w-64 shrink-0 text-navy-600 text-xs font-medium uppercase">Project</div>
             <div className="flex-1 relative h-6">
               {/* Month markers — spaced by computed interval */}
               {ticks.map((t, i) => (
-                <span key={i} className="absolute text-[10px] text-[#4a5568] whitespace-nowrap" style={{ left: `${t.pos}%`, transform: 'translateX(-50%)' }}>
+                <span key={i} className="absolute text-[10px] text-navy-700 whitespace-nowrap" style={{ left: `${t.pos}%`, transform: 'translateX(-50%)' }}>
                   {t.date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
                 </span>
               ))}
@@ -907,9 +867,9 @@ function TimelineView({ projects, groupBy }: { projects: Project[]; groupBy: 'ag
           {/* Groups */}
           {groups.map(([groupName, items]) => (
             <div key={groupName}>
-              <div className="px-4 py-2 bg-[#0a1628]/60 border-b border-[#2d3a52]/50">
-                <span className="text-[#d4af37] text-xs font-semibold">{groupName}</span>
-                <span className="text-[#64748b] text-xs ml-2">({items.length})</span>
+              <div className="px-4 py-2 bg-navy-950/60 border-b border-navy-800/50">
+                <span className="text-gold-500 text-xs font-semibold">{groupName}</span>
+                <span className="text-navy-600 text-xs ml-2">({items.length})</span>
               </div>
               {items.slice(0, 20).map(p => {
                 const start = getPosition(p.start_date || p.created_at);
@@ -918,19 +878,19 @@ function TimelineView({ projects, groupBy }: { projects: Project[]; groupBy: 'ag
                 const barWidth = Math.max((end || start + 2) - barLeft, 1);
 
                 return (
-                  <div key={p.id} className="flex items-center px-4 py-1.5 border-b border-[#2d3a52]/20 hover:bg-[#1a2744]/30 group/row">
+                  <div key={p.id} className="flex items-center px-4 py-1.5 border-b border-navy-800/20 hover:bg-navy-900/30 group/row">
                     <div className="w-64 shrink-0 pr-2 relative">
                       <p className="text-white text-xs truncate">{p.project_name || '-'}</p>
                       {/* Tooltip on hover showing full name */}
                       {p.project_name && p.project_name.length > 35 && (
-                        <div className="hidden group-hover/row:block absolute left-0 top-full z-20 mt-1 px-3 py-2 bg-[#1a2744] border border-[#2d3a52] rounded-lg shadow-xl text-white text-xs max-w-sm whitespace-normal">
+                        <div className="hidden group-hover/row:block absolute left-0 top-full z-20 mt-1 px-3 py-2 bg-navy-900 border border-navy-800 rounded-lg shadow-xl text-white text-xs max-w-sm whitespace-normal">
                           {p.project_name}
                         </div>
                       )}
                     </div>
                     <div className="flex-1 relative h-5">
                       {/* Now line */}
-                      <div className="absolute top-0 bottom-0 w-px bg-[#d4af37]/30" style={{ left: `${nowPosition}%` }} />
+                      <div className="absolute top-0 bottom-0 w-px bg-gold-500/30" style={{ left: `${nowPosition}%` }} />
                       {/* Bar */}
                       <div
                         className={`absolute top-1 h-3 rounded-sm ${healthColor[p.health] || healthColor.green} ${p.escalated ? 'ring-1 ring-red-400' : ''}`}
@@ -953,6 +913,129 @@ function TimelineView({ projects, groupBy }: { projects: Project[]; groupBy: 'ag
   );
 }
 
+// ── Board View (Cards grouped by status) ────────────────────────────────────
+
+function BoardView({
+  projects,
+  loading,
+  onSelectProject,
+}: {
+  projects: Project[];
+  loading: boolean;
+  onSelectProject: (p: Project) => void;
+}) {
+  // Group projects by status
+  const statusOrder = ['Commenced', 'Awarded', 'Designed', 'Delayed', 'Rollover', 'Completed', 'Cancelled', 'Unknown'];
+  const groups = useMemo(() => {
+    const g: Record<string, Project[]> = {};
+    for (const p of projects) {
+      const key = p.status || 'Unknown';
+      if (!g[key]) g[key] = [];
+      g[key].push(p);
+    }
+    // Return sorted by statusOrder
+    return statusOrder
+      .filter(s => g[s] && g[s].length > 0)
+      .map(s => [s, g[s]] as [string, Project[]])
+      .concat(
+        Object.entries(g).filter(([s]) => !statusOrder.includes(s))
+      );
+  }, [projects]);
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="card-premium p-4 animate-pulse">
+            <div className="h-4 bg-navy-800 rounded w-20 mb-3" />
+            <div className="h-5 bg-navy-800 rounded w-full mb-2" />
+            <div className="h-3 bg-navy-800 rounded w-2/3 mb-3" />
+            <div className="h-1.5 bg-navy-800 rounded w-full" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (projects.length === 0) {
+    return (
+      <div className="card-premium p-8 text-center text-navy-600">
+        No projects match your filters.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {groups.map(([status, items]) => {
+        const ss = STATUS_STYLES[status] || STATUS_STYLES['Unknown'];
+        const dotColor = STATUS_DOT[status] || STATUS_DOT['Unknown'];
+        return (
+          <div key={status}>
+            {/* Status group header */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className={`w-2.5 h-2.5 rounded-full ${dotColor}`} />
+              <h3 className="text-white text-sm font-semibold">{status}</h3>
+              <span className="text-navy-600 text-xs">({items.length})</span>
+            </div>
+
+            {/* Cards grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {items.map(p => (
+                <div
+                  key={p.id}
+                  onClick={() => onSelectProject(p)}
+                  className={`bg-navy-900 border border-navy-800 rounded-xl p-4 cursor-pointer transition-all duration-200 hover:border-gold-500/40 hover:shadow-[0_0_12px_rgba(212,175,55,0.1)] ${p.escalated ? 'border-red-500/40 bg-red-500/5' : ''}`}
+                >
+                  {/* Escalation badge */}
+                  {p.escalated && (
+                    <div className="flex items-center gap-1 mb-2 text-red-400 text-xs">
+                      <ShieldAlert className="h-3 w-3" /> Escalated
+                    </div>
+                  )}
+
+                  {/* Top row: agency + health */}
+                  <div className="flex items-center justify-between mb-2">
+                    {p.sub_agency ? (
+                      <span className="text-gold-500 text-xs font-medium px-2 py-0.5 rounded bg-gold-500/10 truncate max-w-[60%]">{p.sub_agency}</span>
+                    ) : (
+                      <span />
+                    )}
+                    <HealthDot health={p.health} />
+                  </div>
+
+                  {/* Project name */}
+                  <p className="text-white font-medium text-sm mb-2 line-clamp-2 min-h-[2.5rem]" title={p.project_name || ''}>
+                    {p.project_name || '-'}
+                  </p>
+
+                  {/* Contract value + end date */}
+                  <div className="flex items-center justify-between text-xs mb-3">
+                    <span className="text-gold-500 font-semibold font-mono">{fmtCurrency(p.contract_value)}</span>
+                    <span className={p.status === 'Delayed' ? 'text-red-400 font-semibold' : 'text-slate-400'}>
+                      {fmtDate(p.project_end_date)}
+                    </span>
+                  </div>
+
+                  {/* Contractor */}
+                  {p.contractor && (
+                    <p className="text-navy-600 text-xs truncate mb-2" title={p.contractor}>
+                      {p.contractor}
+                    </p>
+                  )}
+
+                  {/* Progress bar */}
+                  <ProgressBar pct={p.completion_pct} />
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── KPI Card Component ─────────────────────────────────────────────────────
 
 function KpiCard({
@@ -967,11 +1050,11 @@ function KpiCard({
   subtitle?: string;
 }) {
   const colors = {
-    gold: { bg: 'bg-[#d4af37]/20', text: 'text-[#d4af37]' },
+    gold: { bg: 'bg-gold-500/20', text: 'text-gold-500' },
     red: { bg: 'bg-red-500/20', text: 'text-red-400' },
     green: { bg: 'bg-emerald-500/20', text: 'text-emerald-400' },
     blue: { bg: 'bg-blue-500/20', text: 'text-blue-400' },
-    grey: { bg: 'bg-[#4a5568]/20', text: 'text-[#94a3b8]' },
+    grey: { bg: 'bg-navy-700/20', text: 'text-slate-400' },
     amber: { bg: 'bg-amber-500/20', text: 'text-amber-400' },
   };
   const c = colors[color];
@@ -981,16 +1064,16 @@ function KpiCard({
       onClick={onClick}
       className={[
         'card-premium p-3 md:p-5 transition-all duration-200 select-none touch-active min-w-[130px] md:min-w-0',
-        onClick ? 'cursor-pointer hover:brightness-125 hover:border-[#d4af37]/50 hover:shadow-[0_0_12px_rgba(212,175,55,0.15)]' : '',
-        active ? 'border-[#d4af37]/70 shadow-[0_0_16px_rgba(212,175,55,0.2)] brightness-110' : '',
+        onClick ? 'cursor-pointer hover:brightness-125 hover:border-gold-500/50 hover:shadow-[0_0_12px_rgba(212,175,55,0.15)]' : '',
+        active ? 'border-gold-500/70 shadow-[0_0_16px_rgba(212,175,55,0.2)] brightness-110' : '',
       ].join(' ')}
     >
       <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg ${c.bg} flex items-center justify-center mb-2 md:mb-3`}>
         <Icon className={`h-4 w-4 md:h-5 md:w-5 ${c.text}`} />
       </div>
       <p className={`text-lg md:text-2xl font-bold ${c.text} truncate`}>{value}</p>
-      <p className="text-[#64748b] text-xs mt-1">{label}</p>
-      {subtitle && <p className="text-[#4a5568] text-[10px] mt-0.5">{subtitle}</p>}
+      <p className="text-navy-600 text-xs mt-1">{label}</p>
+      {subtitle && <p className="text-navy-700 text-[10px] mt-0.5">{subtitle}</p>}
     </div>
   );
 }
@@ -1011,8 +1094,8 @@ function BulkActionBar({
   const [showHealthMenu, setShowHealthMenu] = useState(false);
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-[#1a2744] border border-[#d4af37]/40 rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3">
-      <span className="text-[#d4af37] font-semibold text-sm">{count} selected</span>
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-navy-900 border border-gold-500/40 rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3">
+      <span className="text-gold-500 font-semibold text-sm">{count} selected</span>
 
       {/* Health */}
       <div className="relative">
@@ -1020,9 +1103,9 @@ function BulkActionBar({
           Health <ChevronDown className="h-3 w-3" />
         </button>
         {showHealthMenu && (
-          <div className="absolute bottom-full left-0 mb-2 bg-[#1a2744] border border-[#2d3a52] rounded-lg shadow-xl min-w-[140px]">
+          <div className="absolute bottom-full left-0 mb-2 bg-navy-900 border border-navy-800 rounded-lg shadow-xl min-w-[140px]">
             {HEALTH_OPTIONS.map(h => (
-              <button key={h.value} onClick={() => { onUpdateHealth(h.value); setShowHealthMenu(false); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-white hover:bg-[#0a1628]/60">
+              <button key={h.value} onClick={() => { onUpdateHealth(h.value); setShowHealthMenu(false); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-white hover:bg-navy-950/60">
                 <span className={`w-2 h-2 rounded-full ${h.color}`} />{h.label}
               </button>
             ))}
@@ -1036,7 +1119,7 @@ function BulkActionBar({
       </button>
 
       {/* Clear */}
-      <button onClick={onClear} className="text-[#64748b] hover:text-white" aria-label="Clear selection">
+      <button onClick={onClear} className="text-navy-600 hover:text-white" aria-label="Clear selection">
         <X className="h-4 w-4" />
       </button>
     </div>
@@ -1069,7 +1152,13 @@ export default function ProjectsPage() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [escalateProject, setEscalateProject] = useState<Project | null>(null);
   const [showSaveFilter, setShowSaveFilter] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('projects-view');
+      if (saved === 'list' || saved === 'board' || saved === 'timeline') return saved;
+    }
+    return 'list';
+  });
   const [timelineGroupBy, setTimelineGroupBy] = useState<'agency' | 'region'>('agency');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [cardFilter, setCardFilter] = useState<'at_risk' | 'delayed' | 'complete' | 'active' | null>(null);
@@ -1202,6 +1291,11 @@ export default function ProjectsPage() {
     Promise.all([fetchSummary(), fetchProjects()]).finally(() => setLoading(false));
   }
 
+  function handleViewModeChange(mode: ViewMode) {
+    setViewMode(mode);
+    try { localStorage.setItem('projects-view', mode); } catch {}
+  }
+
   const hasActiveFilters = agencies.length || statuses.length || regions.length || healths.length || budgetMin || budgetMax || contractor || dateFrom || dateTo || search;
   const activeFilterCount = [agencies.length > 0, statuses.length > 0, regions.length > 0, healths.length > 0, budgetMin || budgetMax, contractor, dateFrom || dateTo, search].filter(Boolean).length;
   const totalPages = Math.ceil(totalCount / limit);
@@ -1304,14 +1398,14 @@ export default function ProjectsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl md:text-3xl font-bold text-white">Project Tracker</h1>
-            <p className="text-[#64748b] mt-1 text-xs md:text-sm">Capital projects from oversight.gov.gy</p>
+            <p className="text-navy-600 mt-1 text-xs md:text-sm">Capital projects from oversight.gov.gy</p>
           </div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="card-premium p-5 animate-pulse">
-              <div className="h-8 bg-[#2d3a52] rounded w-16 mb-2" />
-              <div className="h-4 bg-[#2d3a52] rounded w-24" />
+              <div className="h-8 bg-navy-800 rounded w-16 mb-2" />
+              <div className="h-4 bg-navy-800 rounded w-24" />
             </div>
           ))}
         </div>
@@ -1331,7 +1425,7 @@ export default function ProjectsPage() {
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <h1 className="text-xl md:text-3xl font-bold text-white">Project Tracker</h1>
-          <p className="text-[#64748b] mt-1 text-xs md:text-sm">Capital projects from oversight.gov.gy</p>
+          <p className="text-navy-600 mt-1 text-xs md:text-sm">Capital projects from oversight.gov.gy</p>
         </div>
         <div className="flex items-center gap-2 md:gap-3 shrink-0">
           <button onClick={handleRefresh} className="btn-navy flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2" aria-label="Refresh">
@@ -1408,9 +1502,9 @@ export default function ProjectsPage() {
                 const h = Math.max((count / maxCount) * 100, 8);
                 return (
                   <div key={key} className="flex-1 flex flex-col items-center gap-1">
-                    <span className="text-[#d4af37] text-[10px] font-medium">{count}</span>
-                    <div className="w-full bg-[#d4af37]/30 rounded-t" style={{ height: `${h}%` }} />
-                    <span className="text-[#64748b] text-[9px]">{label}</span>
+                    <span className="text-gold-500 text-[10px] font-medium">{count}</span>
+                    <div className="w-full bg-gold-500/30 rounded-t" style={{ height: `${h}%` }} />
+                    <span className="text-navy-600 text-[9px]">{label}</span>
                   </div>
                 );
               })}
@@ -1422,20 +1516,20 @@ export default function ProjectsPage() {
       <div className="card-premium">
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="w-full px-4 py-3 flex items-center justify-between hover:bg-[#1a2744]/40 transition-colors"
+          className="w-full px-4 py-3 flex items-center justify-between hover:bg-navy-900/40 transition-colors"
         >
           <div className="flex items-center gap-2">
-            <SlidersHorizontal className="h-4 w-4 text-[#d4af37]" />
+            <SlidersHorizontal className="h-4 w-4 text-gold-500" />
             <span className="text-white text-sm font-medium">Filters</span>
             {activeFilterCount > 0 && (
-              <span className="bg-[#d4af37] text-[#0a1628] text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">{activeFilterCount}</span>
+              <span className="bg-gold-500 text-navy-950 text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">{activeFilterCount}</span>
             )}
           </div>
-          <ChevronDown className={`h-4 w-4 text-[#64748b] transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`h-4 w-4 text-navy-600 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
         </button>
 
         {showFilters && (
-          <div className="px-4 pb-4 space-y-3 border-t border-[#2d3a52]">
+          <div className="px-4 pb-4 space-y-3 border-t border-navy-800">
             <div className="pt-3 flex flex-wrap items-end gap-3">
               {/* Agency multi-select */}
               <MultiSelect
@@ -1482,16 +1576,16 @@ export default function ProjectsPage() {
                   value={budgetMin}
                   onChange={e => setBudgetMin(e.target.value)}
                   aria-label="Minimum budget"
-                  className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-2 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none w-24"
+                  className="bg-navy-950 border border-navy-800 rounded-lg px-2 py-2 text-sm text-white placeholder-navy-600 focus:border-gold-500 focus:outline-none w-24"
                 />
-                <span className="text-[#64748b] text-xs">-</span>
+                <span className="text-navy-600 text-xs">-</span>
                 <input
                   type="number"
                   placeholder="Max $"
                   value={budgetMax}
                   onChange={e => setBudgetMax(e.target.value)}
                   aria-label="Maximum budget"
-                  className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-2 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none w-24"
+                  className="bg-navy-950 border border-navy-800 rounded-lg px-2 py-2 text-sm text-white placeholder-navy-600 focus:border-gold-500 focus:outline-none w-24"
                 />
               </div>
 
@@ -1504,7 +1598,7 @@ export default function ProjectsPage() {
                   onChange={e => setContractor(e.target.value)}
                   placeholder="Contractor..."
                   aria-label="Filter by contractor"
-                  className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none w-40"
+                  className="bg-navy-950 border border-navy-800 rounded-lg px-3 py-2 text-sm text-white placeholder-navy-600 focus:border-gold-500 focus:outline-none w-40"
                 />
                 <datalist id="contractor-list">
                   {contractors.slice(0, 50).map(c => <option key={c} value={c} />)}
@@ -1513,14 +1607,14 @@ export default function ProjectsPage() {
 
               {/* Search */}
               <div className="relative flex-1 min-w-[180px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-navy-600" />
                 <input
                   type="text"
                   placeholder="Search projects, contractors, IDs..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   aria-label="Search projects"
-                  className="w-full bg-[#0a1628] border border-[#2d3a52] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none"
+                  className="w-full bg-navy-950 border border-navy-800 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-navy-600 focus:border-gold-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -1531,22 +1625,22 @@ export default function ProjectsPage() {
                 value={dateField}
                 onChange={e => setDateField(e.target.value)}
                 aria-label="Date field"
-                className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none"
+                className="bg-navy-950 border border-navy-800 rounded-lg px-3 py-2 text-sm text-white focus:border-gold-500 focus:outline-none"
               >
                 <option value="project_end_date">End Date</option>
                 <option value="start_date">Start Date</option>
                 <option value="updated_at">Last Updated</option>
               </select>
-              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} aria-label="Date from" className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none" />
-              <span className="text-[#64748b] text-xs">to</span>
-              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} aria-label="Date to" className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none" />
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} aria-label="Date from" className="bg-navy-950 border border-navy-800 rounded-lg px-3 py-2 text-sm text-white focus:border-gold-500 focus:outline-none" />
+              <span className="text-navy-600 text-xs">to</span>
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} aria-label="Date to" className="bg-navy-950 border border-navy-800 rounded-lg px-3 py-2 text-sm text-white focus:border-gold-500 focus:outline-none" />
 
               {/* Sort */}
               <select
                 value={sort}
                 onChange={e => setSort(e.target.value)}
                 aria-label="Sort by"
-                className="bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white focus:border-[#d4af37] focus:outline-none"
+                className="bg-navy-950 border border-navy-800 rounded-lg px-3 py-2 text-sm text-white focus:border-gold-500 focus:outline-none"
               >
                 <option value="value">Sort: Value</option>
                 <option value="completion">Sort: Completion %</option>
@@ -1561,10 +1655,10 @@ export default function ProjectsPage() {
               {/* Filter actions */}
               {hasActiveFilters && (
                 <>
-                  <button onClick={() => setShowSaveFilter(true)} className="text-[#d4af37] text-xs flex items-center gap-1 hover:text-[#e5c04b]">
+                  <button onClick={() => setShowSaveFilter(true)} className="text-gold-500 text-xs flex items-center gap-1 hover:text-[#e5c04b]">
                     <BookmarkPlus className="h-3.5 w-3.5" /> Save Preset
                   </button>
-                  <button onClick={clearFilters} className="text-[#64748b] hover:text-white text-xs flex items-center gap-1">
+                  <button onClick={clearFilters} className="text-navy-600 hover:text-white text-xs flex items-center gap-1">
                     <X className="h-3.5 w-3.5" /> Clear All
                   </button>
                 </>
@@ -1574,13 +1668,13 @@ export default function ProjectsPage() {
             {/* Saved filter presets */}
             {savedFilters.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 pt-1">
-                <Bookmark className="h-3.5 w-3.5 text-[#64748b]" />
+                <Bookmark className="h-3.5 w-3.5 text-navy-600" />
                 {savedFilters.map(sf => (
-                  <div key={sf.id} className="flex items-center gap-1 bg-[#0a1628] border border-[#2d3a52] rounded-lg px-2 py-1">
-                    <button onClick={() => applySavedFilter(sf)} className="text-[#d4af37] text-xs hover:text-[#e5c04b]">
+                  <div key={sf.id} className="flex items-center gap-1 bg-navy-950 border border-navy-800 rounded-lg px-2 py-1">
+                    <button onClick={() => applySavedFilter(sf)} className="text-gold-500 text-xs hover:text-[#e5c04b]">
                       {sf.filter_name}
                     </button>
-                    <button onClick={() => deleteSavedFilter(sf.id)} className="text-[#4a5568] hover:text-red-400">
+                    <button onClick={() => deleteSavedFilter(sf.id)} className="text-navy-700 hover:text-red-400">
                       <X className="h-3 w-3" />
                     </button>
                   </div>
@@ -1595,28 +1689,34 @@ export default function ProjectsPage() {
       <div className="flex items-center justify-between gap-3" ref={tableRef}>
         <div className="flex items-center gap-2">
           {hasActiveFilters && (
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 text-sm">
-              <Filter className="h-3.5 w-3.5 text-[#d4af37]" />
-              <span className="text-[#d4af37]">Showing {summary?.total_projects || totalCount} projects</span>
-              <button onClick={clearFilters} className="ml-1 text-[#d4af37]/60 hover:text-[#d4af37]" aria-label="Clear filters"><X className="h-3.5 w-3.5" /></button>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold-500/10 border border-gold-500/30 text-sm">
+              <Filter className="h-3.5 w-3.5 text-gold-500" />
+              <span className="text-gold-500">Showing {summary?.total_projects || totalCount} projects</span>
+              <button onClick={clearFilters} className="ml-1 text-gold-500/60 hover:text-gold-500" aria-label="Clear filters"><X className="h-3.5 w-3.5" /></button>
             </div>
           )}
           {!hasActiveFilters && summary && (
-            <span className="text-[#64748b] text-sm">{summary.total_projects} projects</span>
+            <span className="text-navy-600 text-sm">{summary.total_projects} projects</span>
           )}
         </div>
 
         {/* View toggle */}
-        <div className="flex items-center gap-1 bg-[#0a1628] border border-[#2d3a52] rounded-lg p-0.5">
+        <div className="flex items-center gap-1 bg-navy-950 border border-navy-800 rounded-lg p-0.5">
           <button
-            onClick={() => setViewMode('list')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'list' ? 'bg-[#d4af37]/20 text-[#d4af37]' : 'text-[#64748b] hover:text-white'}`}
+            onClick={() => handleViewModeChange('list')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'list' ? 'bg-gold-500/20 text-gold-500' : 'text-navy-600 hover:text-white'}`}
           >
-            <List className="h-3.5 w-3.5 inline mr-1" />List
+            <List className="h-3.5 w-3.5 inline mr-1" />Table
           </button>
           <button
-            onClick={() => setViewMode('timeline')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'timeline' ? 'bg-[#d4af37]/20 text-[#d4af37]' : 'text-[#64748b] hover:text-white'}`}
+            onClick={() => handleViewModeChange('board')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'board' ? 'bg-gold-500/20 text-gold-500' : 'text-navy-600 hover:text-white'}`}
+          >
+            <LayoutGrid className="h-3.5 w-3.5 inline mr-1" />Board
+          </button>
+          <button
+            onClick={() => handleViewModeChange('timeline')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'timeline' ? 'bg-gold-500/20 text-gold-500' : 'text-navy-600 hover:text-white'}`}
           >
             <GanttChart className="h-3.5 w-3.5 inline mr-1" />Timeline
           </button>
@@ -1625,7 +1725,7 @@ export default function ProjectsPage() {
               value={timelineGroupBy}
               onChange={e => setTimelineGroupBy(e.target.value as 'agency' | 'region')}
               aria-label="Group timeline by"
-              className="bg-transparent text-xs text-[#94a3b8] ml-2 focus:outline-none"
+              className="bg-transparent text-xs text-slate-400 ml-2 focus:outline-none"
             >
               <option value="agency">By Agency</option>
               <option value="region">By Region</option>
@@ -1634,9 +1734,31 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      {/* Project List / Timeline */}
+      {/* Project List / Board / Timeline */}
       {viewMode === 'timeline' ? (
         <TimelineView projects={projects} groupBy={timelineGroupBy} />
+      ) : viewMode === 'board' ? (
+        <>
+          <BoardView
+            projects={projects}
+            loading={loadingProjects}
+            onSelectProject={setSelectedProject}
+          />
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex flex-wrap items-center justify-between px-2 md:px-4 py-3 gap-2">
+              <span className="text-navy-600 text-xs md:text-sm">
+                {(page - 1) * limit + 1}-{Math.min(page * limit, totalCount)} of {totalCount}
+              </span>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="btn-navy px-3 py-1.5 text-sm disabled:opacity-30 touch-active">Prev</button>
+                <span className="text-slate-400 text-xs md:text-sm">{page}/{totalPages}</span>
+                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="btn-navy px-3 py-1.5 text-sm disabled:opacity-30 touch-active">Next</button>
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         <>
           {isMobile ? (
@@ -1645,14 +1767,14 @@ export default function ProjectsPage() {
               {loadingProjects ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="mobile-card animate-pulse">
-                    <div className="h-5 bg-[#2d3a52] rounded w-20 mb-2" />
-                    <div className="h-4 bg-[#2d3a52] rounded w-full mb-2" />
-                    <div className="h-3 bg-[#2d3a52] rounded w-2/3 mb-2" />
-                    <div className="h-1.5 bg-[#2d3a52] rounded w-full" />
+                    <div className="h-5 bg-navy-800 rounded w-20 mb-2" />
+                    <div className="h-4 bg-navy-800 rounded w-full mb-2" />
+                    <div className="h-3 bg-navy-800 rounded w-2/3 mb-2" />
+                    <div className="h-1.5 bg-navy-800 rounded w-full" />
                   </div>
                 ))
               ) : projects.length === 0 ? (
-                <div className="card-premium p-8 text-center text-[#64748b]">
+                <div className="card-premium p-8 text-center text-navy-600">
                   {summary && summary.total_projects > 0 ? 'No projects match your filters.' : 'No projects yet. Upload an Excel file to get started.'}
                 </div>
               ) : (
@@ -1675,19 +1797,19 @@ export default function ProjectsPage() {
                           <HealthDot health={p.health} />
                         </div>
                         {p.sub_agency && (
-                          <span className="text-[#d4af37] text-xs font-medium px-2 py-0.5 rounded bg-[#d4af37]/10">{p.sub_agency}</span>
+                          <span className="text-gold-500 text-xs font-medium px-2 py-0.5 rounded bg-gold-500/10">{p.sub_agency}</span>
                         )}
                       </div>
                       <p className="text-white font-medium text-sm mb-2">{p.project_name || '-'}</p>
                       <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="text-[#d4af37] font-semibold">{fmtCurrency(p.contract_value)}</span>
-                        <span className={p.status === 'Delayed' ? 'text-red-400 font-semibold' : 'text-[#94a3b8]'}>{fmtDate(p.project_end_date)}</span>
+                        <span className="text-gold-500 font-semibold">{fmtCurrency(p.contract_value)}</span>
+                        <span className={p.status === 'Delayed' ? 'text-red-400 font-semibold' : 'text-slate-400'}>{fmtDate(p.project_end_date)}</span>
                       </div>
                       {p.start_date && (
-                        <div className="text-[10px] text-[#64748b] mb-2">
+                        <div className="text-[10px] text-navy-600 mb-2">
                           Start: {fmtDate(p.start_date)}
                           {p.revised_start_date && p.revised_start_date !== p.start_date && (
-                            <span className="text-[#d4af37] ml-2">Rev: {fmtDate(p.revised_start_date)}</span>
+                            <span className="text-gold-500 ml-2">Rev: {fmtDate(p.revised_start_date)}</span>
                           )}
                         </div>
                       )}
@@ -1703,9 +1825,9 @@ export default function ProjectsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm" aria-label="PSIP projects">
                   <thead>
-                    <tr className="border-b border-[#2d3a52] text-[#64748b] text-xs uppercase">
+                    <tr className="border-b border-navy-800 text-navy-600 text-xs uppercase">
                       <th scope="col" className="px-3 py-3 text-center font-medium w-10">
-                        <button onClick={toggleSelectAll} className="text-[#64748b] hover:text-white" aria-label="Select all">
+                        <button onClick={toggleSelectAll} className="text-navy-600 hover:text-white" aria-label="Select all">
                           {selectedIds.size === projects.length && projects.length > 0 ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
                         </button>
                       </th>
@@ -1721,18 +1843,18 @@ export default function ProjectsPage() {
                       <th scope="col" className="px-3 py-3 text-left font-medium">Completion</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#2d3a52]/50">
+                  <tbody className="divide-y divide-navy-800/50">
                     {loadingProjects ? (
                       Array.from({ length: 8 }).map((_, i) => (
                         <tr key={i} className="animate-pulse">
                           {Array.from({ length: 11 }).map((_, j) => (
-                            <td key={j} className="px-3 py-3"><div className="h-5 bg-[#2d3a52] rounded w-full" /></td>
+                            <td key={j} className="px-3 py-3"><div className="h-5 bg-navy-800 rounded w-full" /></td>
                           ))}
                         </tr>
                       ))
                     ) : projects.length === 0 ? (
                       <tr>
-                        <td colSpan={11} className="px-4 py-12 text-center text-[#64748b]">
+                        <td colSpan={11} className="px-4 py-12 text-center text-navy-600">
                           {summary && summary.total_projects > 0 ? 'No projects match your filters.' : 'No projects yet. Upload an Excel file to get started.'}
                         </td>
                       </tr>
@@ -1745,11 +1867,11 @@ export default function ProjectsPage() {
                         return (
                           <tr
                             key={p.id}
-                            className={`hover:bg-[#1a2744]/40 cursor-pointer transition-colors ${p.escalated ? 'bg-red-500/5 border-l-2 border-l-red-500' : ''} ${isSelected ? 'bg-[#d4af37]/5' : ''}`}
+                            className={`hover:bg-navy-900/40 cursor-pointer transition-colors ${p.escalated ? 'bg-red-500/5 border-l-2 border-l-red-500' : ''} ${isSelected ? 'bg-gold-500/5' : ''}`}
                           >
                             <td className="px-3 py-3 text-center" onClick={e => e.stopPropagation()}>
-                              <button onClick={() => toggleSelect(p.id)} className="text-[#64748b] hover:text-white">
-                                {isSelected ? <CheckSquare className="h-4 w-4 text-[#d4af37]" /> : <Square className="h-4 w-4" />}
+                              <button onClick={() => toggleSelect(p.id)} className="text-navy-600 hover:text-white">
+                                {isSelected ? <CheckSquare className="h-4 w-4 text-gold-500" /> : <Square className="h-4 w-4" />}
                               </button>
                             </td>
                             <td className="px-3 py-3" onClick={() => setSelectedProject(p)}>
@@ -1767,23 +1889,23 @@ export default function ProjectsPage() {
                               </span>
                             </td>
                             <td className="px-3 py-3" onClick={() => setSelectedProject(p)}>
-                              <span className="text-[#d4af37] font-medium text-xs">{p.sub_agency || '-'}</span>
+                              <span className="text-gold-500 font-medium text-xs">{p.sub_agency || '-'}</span>
                             </td>
-                            <td className="px-3 py-3 text-[#94a3b8]" onClick={() => setSelectedProject(p)}>{fmtRegion(p.region)}</td>
+                            <td className="px-3 py-3 text-slate-400" onClick={() => setSelectedProject(p)}>{fmtRegion(p.region)}</td>
                             <td className="px-3 py-3" onClick={() => setSelectedProject(p)}>
-                              <span className="text-[#94a3b8] line-clamp-1 max-w-[180px]" title={p.contractor || ''}>{p.contractor || '-'}</span>
+                              <span className="text-slate-400 line-clamp-1 max-w-[180px]" title={p.contractor || ''}>{p.contractor || '-'}</span>
                             </td>
                             <td className="px-3 py-3 text-right" onClick={() => setSelectedProject(p)}>
-                              <span className="text-[#d4af37] font-mono text-xs">{fmtCurrency(p.contract_value)}</span>
+                              <span className="text-gold-500 font-mono text-xs">{fmtCurrency(p.contract_value)}</span>
                             </td>
                             <td className="px-3 py-3" onClick={() => setSelectedProject(p)}>
-                              <span className="text-[#94a3b8]">{fmtDate(p.start_date)}</span>
+                              <span className="text-slate-400">{fmtDate(p.start_date)}</span>
                               {p.revised_start_date && p.revised_start_date !== p.start_date && (
-                                <span className="block text-[10px] text-[#d4af37]">Rev: {fmtDate(p.revised_start_date)}</span>
+                                <span className="block text-[10px] text-gold-500">Rev: {fmtDate(p.revised_start_date)}</span>
                               )}
                             </td>
                             <td className="px-3 py-3" onClick={() => setSelectedProject(p)}>
-                              <span className={isPastDue ? 'text-red-400 font-semibold' : 'text-[#94a3b8]'}>{fmtDate(p.project_end_date)}</span>
+                              <span className={isPastDue ? 'text-red-400 font-semibold' : 'text-slate-400'}>{fmtDate(p.project_end_date)}</span>
                             </td>
                             <td className="px-3 py-3" onClick={() => setSelectedProject(p)}>
                               <ProgressBar pct={p.completion_pct} />
@@ -1801,12 +1923,12 @@ export default function ProjectsPage() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex flex-wrap items-center justify-between px-2 md:px-4 py-3 gap-2">
-              <span className="text-[#64748b] text-xs md:text-sm">
+              <span className="text-navy-600 text-xs md:text-sm">
                 {(page - 1) * limit + 1}-{Math.min(page * limit, totalCount)} of {totalCount}
               </span>
               <div className="flex items-center gap-2">
                 <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="btn-navy px-3 py-1.5 text-sm disabled:opacity-30 touch-active">Prev</button>
-                <span className="text-[#94a3b8] text-xs md:text-sm">{page}/{totalPages}</span>
+                <span className="text-slate-400 text-xs md:text-sm">{page}/{totalPages}</span>
                 <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="btn-navy px-3 py-1.5 text-sm disabled:opacity-30 touch-active">Next</button>
               </div>
             </div>

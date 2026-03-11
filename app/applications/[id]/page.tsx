@@ -7,6 +7,7 @@ import {
   ArrowLeft, FileText, Upload, Trash2, Clock, CheckCircle, XCircle,
   AlertTriangle, Eye, ChevronDown, Download, X, File,
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/Spinner';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
 
 interface Application {
@@ -57,7 +58,7 @@ const STATUS_STYLES: Record<string, { bg: string; label: string; icon: typeof Cl
 
 const PRIORITY_STYLES: Record<string, string> = {
   low: 'bg-gray-500/20 text-gray-400',
-  normal: 'bg-[#4a5568]/20 text-[#94a3b8]',
+  normal: 'bg-navy-700/20 text-slate-400',
   high: 'bg-orange-500/20 text-orange-400',
   urgent: 'bg-red-500/20 text-red-400',
 };
@@ -232,16 +233,16 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+        <Spinner />
       </div>
     );
   }
 
   if (!app) {
     return (
-      <div className="text-center py-16 text-[#64748b]">
+      <div className="text-center py-16 text-navy-600">
         <p>Application not found</p>
-        <Link href="/applications" className="text-[#d4af37] text-sm mt-2 inline-block hover:underline">
+        <Link href="/applications" className="text-gold-500 text-sm mt-2 inline-block hover:underline">
           Back to applications
         </Link>
       </div>
@@ -258,7 +259,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
       <div className="flex items-center gap-3">
         <Link
           href="/applications"
-          className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors"
+          className="p-2 rounded-lg text-navy-600 hover:text-white hover:bg-navy-900 transition-colors"
           aria-label="Back to applications"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -267,9 +268,9 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
           <h1 className="text-xl font-bold text-white truncate">{app.applicant_name}</h1>
           <div className="flex items-center gap-2 mt-0.5">
             {app.reference_number && (
-              <span className="text-xs font-mono text-[#d4af37]">{app.reference_number}</span>
+              <span className="text-xs font-mono text-gold-500">{app.reference_number}</span>
             )}
-            <span className="text-xs text-[#64748b]">{app.application_type}</span>
+            <span className="text-xs text-navy-600">{app.application_type}</span>
           </div>
         </div>
         <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${statusInfo.bg}`}>
@@ -298,8 +299,8 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
             </div>
             {app.notes && (
               <div>
-                <p className="text-xs text-[#64748b] mb-1">Notes</p>
-                <p className="text-sm text-[#94a3b8] whitespace-pre-wrap">{app.notes}</p>
+                <p className="text-xs text-navy-600 mb-1">Notes</p>
+                <p className="text-sm text-slate-400 whitespace-pre-wrap">{app.notes}</p>
               </div>
             )}
           </div>
@@ -317,8 +318,8 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                       onClick={() => setNewStatus(newStatus === s ? '' : s)}
                       className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
                         newStatus === s
-                          ? 'border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]'
-                          : 'border-[#2d3a52] text-[#94a3b8] hover:text-white hover:border-[#4a5568]'
+                          ? 'border-gold-500 bg-gold-500/10 text-gold-500'
+                          : 'border-navy-800 text-slate-400 hover:text-white hover:border-navy-700'
                       }`}
                     >
                       {si?.label || s}
@@ -333,12 +334,12 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                     onChange={e => setStatusNote(e.target.value)}
                     placeholder="Note required for status change..."
                     rows={2}
-                    className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50 resize-none"
+                    className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50 resize-none"
                   />
                   <button
                     onClick={handleStatusUpdate}
                     disabled={updatingStatus || !statusNote.trim()}
-                    className="px-4 py-2 rounded-lg bg-[#d4af37] text-[#0a1628] text-xs font-semibold hover:bg-[#e5c348] disabled:opacity-50 transition-colors"
+                    className="px-4 py-2 rounded-lg bg-gold-500 text-navy-950 text-xs font-semibold hover:bg-[#e5c348] disabled:opacity-50 transition-colors"
                   >
                     {updatingStatus ? 'Updating...' : `Move to ${STATUS_STYLES[newStatus]?.label || newStatus}`}
                   </button>
@@ -360,20 +361,20 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
               onClick={() => fileInputRef.current?.click()}
               className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
                 dragOver
-                  ? 'border-[#d4af37] bg-[#d4af37]/5'
-                  : 'border-[#2d3a52] hover:border-[#4a5568]'
+                  ? 'border-gold-500 bg-gold-500/5'
+                  : 'border-navy-800 hover:border-navy-700'
               }`}
             >
               {uploading ? (
                 <div className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
-                  <span className="text-sm text-[#94a3b8]">Uploading...</span>
+                  <Spinner size="sm" />
+                  <span className="text-sm text-slate-400">Uploading...</span>
                 </div>
               ) : (
                 <>
-                  <Upload className="h-6 w-6 text-[#64748b] mx-auto mb-2" />
-                  <p className="text-sm text-[#94a3b8]">Drop file here or click to browse</p>
-                  <p className="text-xs text-[#4a5568] mt-1">PDF, DOCX, XLSX — max 10MB</p>
+                  <Upload className="h-6 w-6 text-navy-600 mx-auto mb-2" />
+                  <p className="text-sm text-slate-400">Drop file here or click to browse</p>
+                  <p className="text-xs text-navy-700 mt-1">PDF, DOCX, XLSX — max 10MB</p>
                 </>
               )}
               <input
@@ -387,13 +388,13 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
 
             {/* Document List */}
             {documents.length > 0 && (
-              <div className="divide-y divide-[#2d3a52]/50">
+              <div className="divide-y divide-navy-800/50">
                 {documents.map(doc => (
                   <div key={doc.id} className="flex items-center gap-3 py-3">
-                    <File className="h-5 w-5 text-[#64748b] shrink-0" />
+                    <File className="h-5 w-5 text-navy-600 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-white truncate">{doc.file_name}</p>
-                      <p className="text-xs text-[#64748b]">
+                      <p className="text-xs text-navy-600">
                         {formatFileSize(doc.file_size)} · {doc.uploader_name || 'Unknown'} · {formatDistanceToNow(parseISO(doc.uploaded_at), { addSuffix: true })}
                       </p>
                     </div>
@@ -401,11 +402,11 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                       <button
                         onClick={() => deleteDocument(doc.id)}
                         disabled={deleting === doc.id}
-                        className="p-1.5 rounded text-[#64748b] hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                        className="p-1.5 rounded text-navy-600 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
                         aria-label="Delete document"
                       >
                         {deleting === doc.id ? (
-                          <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                          <Spinner size="sm" className="border-red-400" />
                         ) : (
                           <Trash2 className="h-4 w-4" />
                         )}
@@ -423,28 +424,28 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
           <div className="card-premium p-5">
             <h2 className="text-sm font-semibold text-white mb-4">Activity Timeline</h2>
             {activity.length === 0 ? (
-              <p className="text-xs text-[#64748b] text-center py-4">No activity recorded</p>
+              <p className="text-xs text-navy-600 text-center py-4">No activity recorded</p>
             ) : (
               <div className="space-y-0">
                 {activity.map((entry, i) => (
                   <div key={entry.id} className="relative pl-6 pb-4 last:pb-0">
                     {/* Timeline line */}
                     {i < activity.length - 1 && (
-                      <div className="absolute left-[7px] top-3 bottom-0 w-px bg-[#2d3a52]" />
+                      <div className="absolute left-[7px] top-3 bottom-0 w-px bg-navy-800" />
                     )}
                     {/* Dot */}
                     <div className={`absolute left-0 top-1.5 w-3.5 h-3.5 rounded-full border-2 ${
                       entry.action === 'status_changed'
-                        ? 'border-[#d4af37] bg-[#d4af37]/20'
+                        ? 'border-gold-500 bg-gold-500/20'
                         : entry.action === 'document_uploaded'
                         ? 'border-blue-400 bg-blue-400/20'
                         : entry.action === 'document_deleted'
                         ? 'border-red-400 bg-red-400/20'
-                        : 'border-[#4a5568] bg-[#2d3a52]'
+                        : 'border-navy-700 bg-navy-800'
                     }`} />
 
                     <div>
-                      <p className="text-xs text-[#94a3b8]">
+                      <p className="text-xs text-slate-400">
                         <span className="text-white font-medium">{entry.performer_name || 'System'}</span>{' '}
                         {ACTION_LABELS[entry.action] || entry.action}
                       </p>
@@ -454,7 +455,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                           <span className={`text-[10px] px-1.5 py-0.5 rounded ${STATUS_STYLES[entry.old_value]?.bg || ''}`}>
                             {STATUS_STYLES[entry.old_value]?.label || entry.old_value}
                           </span>
-                          <span className="text-[10px] text-[#64748b]">&rarr;</span>
+                          <span className="text-[10px] text-navy-600">&rarr;</span>
                           <span className={`text-[10px] px-1.5 py-0.5 rounded ${STATUS_STYLES[entry.new_value]?.bg || ''}`}>
                             {STATUS_STYLES[entry.new_value]?.label || entry.new_value}
                           </span>
@@ -462,18 +463,18 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                       )}
 
                       {entry.action === 'document_uploaded' && entry.new_value && (
-                        <p className="text-[10px] text-[#64748b] mt-0.5 truncate">{entry.new_value}</p>
+                        <p className="text-[10px] text-navy-600 mt-0.5 truncate">{entry.new_value}</p>
                       )}
 
                       {entry.action === 'note_added' && entry.new_value && (
-                        <p className="text-[10px] text-[#94a3b8] mt-0.5 italic">&ldquo;{entry.new_value}&rdquo;</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5 italic">&ldquo;{entry.new_value}&rdquo;</p>
                       )}
 
                       {entry.action === 'status_changed' && typeof entry.details?.note === 'string' && (
-                        <p className="text-[10px] text-[#64748b] mt-0.5 italic">&ldquo;{entry.details.note}&rdquo;</p>
+                        <p className="text-[10px] text-navy-600 mt-0.5 italic">&ldquo;{entry.details.note}&rdquo;</p>
                       )}
 
-                      <p className="text-[10px] text-[#4a5568] mt-0.5">
+                      <p className="text-[10px] text-navy-700 mt-0.5">
                         {formatDistanceToNow(parseISO(entry.performed_at), { addSuffix: true })}
                       </p>
                     </div>
@@ -501,7 +502,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
 function InfoField({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
   return (
     <div>
-      <p className="text-xs text-[#64748b] mb-0.5">{label}</p>
+      <p className="text-xs text-navy-600 mb-0.5">{label}</p>
       {children || <p className="text-sm text-white">{value}</p>}
     </div>
   );

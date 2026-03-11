@@ -5,6 +5,7 @@ import {
   Lock, UserPlus, Trash2, Search, ChevronDown,
   Eye, Edit3, Settings, Clock, AlertTriangle,
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/Spinner';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import type { TeamMember, ObjectAccessGrant } from '@/lib/people-types';
 
@@ -17,7 +18,7 @@ const ACCESS_ICONS = {
 const ACCESS_COLORS = {
   view: 'text-blue-400 bg-blue-500/10',
   edit: 'text-amber-400 bg-amber-500/10',
-  manage: 'text-[#d4af37] bg-[#d4af37]/10',
+  manage: 'text-gold-500 bg-gold-500/10',
 };
 
 const OBJECT_TYPES = [
@@ -84,8 +85,8 @@ export function AccessControlPanel({ members, myPermissions, loading }: Props) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16" role="status" aria-label="Loading">
-        <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+      <div className="flex items-center justify-center py-16">
+        <Spinner />
       </div>
     );
   }
@@ -95,13 +96,13 @@ export function AccessControlPanel({ members, myPermissions, loading }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Lock className="h-5 w-5 text-[#d4af37]" />
+          <Lock className="h-5 w-5 text-gold-500" />
           <h2 className="text-lg font-semibold text-white">Access Control</h2>
         </div>
         {canManageAccess && (
           <button
             onClick={() => setShowGrantModal(true)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#d4af37]/20 text-[#d4af37] hover:bg-[#d4af37]/30 transition-colors text-sm font-medium"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gold-500/20 text-gold-500 hover:bg-gold-500/30 transition-colors text-sm font-medium"
           >
             <UserPlus className="h-4 w-4" />
             Grant Access
@@ -117,8 +118,8 @@ export function AccessControlPanel({ members, myPermissions, loading }: Props) {
             onClick={() => handleTypeChange(t.value)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               selectedType === t.value
-                ? 'bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/30'
-                : 'bg-[#1a2744] text-[#64748b] border border-[#2d3a52] hover:text-white'
+                ? 'bg-gold-500/20 text-gold-500 border border-gold-500/30'
+                : 'bg-navy-900 text-navy-600 border border-navy-800 hover:text-white'
             }`}
           >
             {t.label}
@@ -128,31 +129,31 @@ export function AccessControlPanel({ members, myPermissions, loading }: Props) {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-navy-600" />
         <input
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search grants..."
           aria-label="Search access grants"
-          className="w-full pl-9 pr-4 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+          className="w-full pl-9 pr-4 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
         />
       </div>
 
       {/* Grants list */}
       <div className="card-premium overflow-hidden">
         {grantsLoading ? (
-          <div className="flex items-center justify-center py-12" role="status" aria-label="Loading">
-            <div className="w-6 h-6 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+          <div className="flex items-center justify-center py-12">
+            <Spinner />
           </div>
         ) : filteredGrants.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-[#64748b]">
+          <div className="flex flex-col items-center justify-center py-12 text-navy-600">
             <Lock className="h-8 w-8 mb-2 opacity-50" />
             <p className="text-sm">No access grants for {OBJECT_TYPES.find(t => t.value === selectedType)?.label}</p>
             <p className="text-xs mt-1">Grant access to share objects with team members</p>
           </div>
         ) : (
-          <div className="divide-y divide-[#2d3a52]/50">
+          <div className="divide-y divide-navy-800/50">
             {filteredGrants.map(g => {
               const Icon = ACCESS_ICONS[g.access_level as keyof typeof ACCESS_ICONS] || Eye;
               const colorClass = ACCESS_COLORS[g.access_level as keyof typeof ACCESS_COLORS] || ACCESS_COLORS.view;
@@ -176,11 +177,11 @@ export function AccessControlPanel({ members, myPermissions, loading }: Props) {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-[#64748b] truncate">
+                    <p className="text-xs text-navy-600 truncate">
                       {g.user_email}
                       {g.object_id && <> · <span className="font-mono">{g.object_id}</span></>}
                     </p>
-                    <div className="flex items-center gap-3 mt-0.5 text-[10px] text-[#4a5568]">
+                    <div className="flex items-center gap-3 mt-0.5 text-[10px] text-navy-700">
                       {g.reason && <span>{g.reason}</span>}
                       <span className="flex items-center gap-0.5">
                         <Clock className="h-2.5 w-2.5" />
@@ -197,7 +198,7 @@ export function AccessControlPanel({ members, myPermissions, loading }: Props) {
                   {canManageAccess && !isExpired && (
                     <button
                       onClick={() => handleRevoke(g.id)}
-                      className="p-1.5 rounded text-[#64748b] hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+                      className="p-1.5 rounded text-navy-600 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
                       title="Revoke access"
                       aria-label="Revoke access"
                     >
@@ -299,12 +300,12 @@ function GrantAccessModal({
       <div ref={grantModalRef} role="dialog" aria-modal="true" aria-labelledby="grant-access-modal-title" className="card-premium w-full max-w-md p-6 space-y-5">
         <div className="flex items-center justify-between">
           <h3 id="grant-access-modal-title" className="text-lg font-bold text-white">Grant Access</h3>
-          <button onClick={onClose} className="p-1 text-[#64748b] hover:text-white transition-colors" aria-label="Close">
+          <button onClick={onClose} className="p-1 text-navy-600 hover:text-white transition-colors" aria-label="Close">
             <ChevronDown className="h-5 w-5 rotate-[-90deg]" />
           </button>
         </div>
 
-        <p className="text-xs text-[#64748b]">
+        <p className="text-xs text-navy-600">
           Grant a team member access to {objectType} resources.
         </p>
 
@@ -316,14 +317,14 @@ function GrantAccessModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="grant-team-member" className="block text-xs text-[#94a3b8] mb-1.5">Team Member</label>
+            <label htmlFor="grant-team-member" className="block text-xs text-slate-400 mb-1.5">Team Member</label>
             <select
               id="grant-team-member"
               value={targetUserId}
               onChange={e => setTargetUserId(e.target.value)}
               required
               aria-required="true"
-              className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+              className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
             >
               <option value="">Select user...</option>
               {activeMembers.map(m => (
@@ -335,19 +336,19 @@ function GrantAccessModal({
           </div>
 
           <div>
-            <label htmlFor="grant-object-id" className="block text-xs text-[#94a3b8] mb-1.5">Object ID (optional)</label>
+            <label htmlFor="grant-object-id" className="block text-xs text-slate-400 mb-1.5">Object ID (optional)</label>
             <input
               id="grant-object-id"
               type="text"
               value={objectId}
               onChange={e => setObjectId(e.target.value)}
               placeholder="Leave blank for all objects of this type"
-              className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+              className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-[#94a3b8] mb-1.5">Access Level</label>
+            <label className="block text-xs text-slate-400 mb-1.5">Access Level</label>
             <div className="flex gap-2">
               {(['view', 'edit', 'manage'] as const).map(level => {
                 const Icon = ACCESS_ICONS[level];
@@ -359,8 +360,8 @@ function GrantAccessModal({
                     onClick={() => setAccessLevel(level)}
                     className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-medium transition-colors ${
                       isSelected
-                        ? 'border-[#d4af37]/50 bg-[#d4af37]/10 text-[#d4af37]'
-                        : 'border-[#2d3a52] text-[#64748b] hover:text-white'
+                        ? 'border-gold-500/50 bg-gold-500/10 text-gold-500'
+                        : 'border-navy-800 text-navy-600 hover:text-white'
                     }`}
                   >
                     <Icon className="h-3.5 w-3.5" />
@@ -372,21 +373,21 @@ function GrantAccessModal({
           </div>
 
           <div>
-            <label htmlFor="grant-reason" className="block text-xs text-[#94a3b8] mb-1.5">Reason (optional)</label>
+            <label htmlFor="grant-reason" className="block text-xs text-slate-400 mb-1.5">Reason (optional)</label>
             <input
               id="grant-reason"
               type="text"
               value={reason}
               onChange={e => setReason(e.target.value)}
               placeholder="Why is this access needed?"
-              className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+              className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
             />
           </div>
 
           <button
             type="submit"
             disabled={submitting || !targetUserId}
-            className="w-full py-2.5 rounded-lg bg-[#d4af37] text-[#0a1628] font-semibold text-sm hover:bg-[#e5c348] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-2.5 rounded-lg bg-gold-500 text-navy-950 font-semibold text-sm hover:bg-[#e5c348] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {submitting ? 'Granting...' : 'Grant Access'}
           </button>

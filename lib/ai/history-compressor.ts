@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { logger } from '@/lib/logger';
 
 // ── History Compression ─────────────────────────────────────────────────────
 // When conversation exceeds 10 messages, summarize the first N-2 using Haiku
@@ -51,7 +52,7 @@ export async function compressHistory(
       ...toKeep,
     ];
   } catch (err) {
-    console.error('[ai/history] Compression failed, using truncation:', err);
+    logger.error({ err }, 'ai/history: compression failed, using truncation');
     // Fallback: just keep last 6 messages
     return messages.slice(-6);
   }

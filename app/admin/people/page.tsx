@@ -12,6 +12,7 @@ import { PermissionsPanel } from '@/components/admin/PermissionsPanel';
 import { AccessControlPanel } from '@/components/admin/AccessControlPanel';
 import { ActivityLogPanel } from '@/components/admin/ActivityLogPanel';
 import { usePermissions } from '@/hooks/usePeople';
+import { Spinner } from '@/components/ui/Spinner';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 
 interface User {
@@ -46,11 +47,11 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const ROLE_COLORS: Record<string, string> = {
-  dg: 'bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/30',
+  dg: 'bg-gold-500/20 text-gold-500 border border-gold-500/30',
   minister: 'bg-purple-500/20 text-purple-400 border border-purple-500/30',
   ps: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
   agency_admin: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30',
-  officer: 'bg-[#4a5568]/20 text-[#94a3b8] border border-[#4a5568]/30',
+  officer: 'bg-navy-700/20 text-slate-400 border border-navy-700/30',
 };
 
 const STATUS_STYLES: Record<string, string> = {
@@ -327,14 +328,14 @@ export default function PeoplePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">People</h1>
-          <p className="text-sm text-[#64748b] mt-1">
+          <p className="text-sm text-navy-600 mt-1">
             {stats.active} active · {stats.pending} pending · {stats.suspended > 0 ? `${stats.suspended} suspended · ` : ''}{stats.archived} archived
           </p>
         </div>
         {isDG && topTab === 'directory' && (
           <button
             onClick={() => setShowInvite(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#d4af37]/20 text-[#d4af37] hover:bg-[#d4af37]/30 transition-colors text-sm font-medium"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gold-500/20 text-gold-500 hover:bg-gold-500/30 transition-colors text-sm font-medium"
             aria-label="Invite User"
           >
             <UserPlus className="h-4 w-4" aria-hidden="true" />
@@ -344,7 +345,7 @@ export default function PeoplePage() {
       </div>
 
       {/* Top-level tabs */}
-      <div className="flex items-center gap-1 border-b border-[#2d3a52]">
+      <div className="flex items-center gap-1 border-b border-navy-800">
         {([
           { key: 'directory', label: 'Directory', icon: Users },
           { key: 'permissions', label: 'Permissions', icon: Shield },
@@ -355,7 +356,7 @@ export default function PeoplePage() {
             key={t.key}
             onClick={() => setTopTab(t.key)}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              topTab === t.key ? 'border-[#d4af37] text-[#d4af37]' : 'border-transparent text-[#64748b] hover:text-white'
+              topTab === t.key ? 'border-gold-500 text-gold-500' : 'border-transparent text-navy-600 hover:text-white'
             }`}
             aria-label={t.label}
           >
@@ -404,7 +405,7 @@ export default function PeoplePage() {
           <div key={s.label} className="card-premium p-4">
             <div className="flex items-center gap-2 mb-1">
               <s.icon className={`h-4 w-4 ${s.color}`} />
-              <span className="text-xs text-[#64748b]">{s.label}</span>
+              <span className="text-xs text-navy-600">{s.label}</span>
             </div>
             <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
           </div>
@@ -412,11 +413,11 @@ export default function PeoplePage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-[#2d3a52]">
+      <div className="flex items-center gap-1 border-b border-navy-800">
         <button
           onClick={() => { setTab('active'); clearSelection(); }}
           className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            tab === 'active' ? 'border-[#d4af37] text-[#d4af37]' : 'border-transparent text-[#64748b] hover:text-white'
+            tab === 'active' ? 'border-gold-500 text-gold-500' : 'border-transparent text-navy-600 hover:text-white'
           }`}
         >
           Active Users ({activeUsers.length})
@@ -424,7 +425,7 @@ export default function PeoplePage() {
         <button
           onClick={() => { setTab('archived'); clearSelection(); }}
           className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            tab === 'archived' ? 'border-[#d4af37] text-[#d4af37]' : 'border-transparent text-[#64748b] hover:text-white'
+            tab === 'archived' ? 'border-gold-500 text-gold-500' : 'border-transparent text-navy-600 hover:text-white'
           }`}
         >
           Archived ({archivedUsers.length})
@@ -435,14 +436,14 @@ export default function PeoplePage() {
       <div className="flex flex-col sm:flex-row gap-3">
         {/* Search */}
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-navy-600" />
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search by name or email..."
             aria-label="Search users by name or email"
-            className="w-full pl-10 pr-4 py-2.5 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+            className="w-full pl-10 pr-4 py-2.5 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
           />
         </div>
 
@@ -450,13 +451,13 @@ export default function PeoplePage() {
         <button
           onClick={() => setShowFilters(!showFilters)}
           className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm transition-colors ${
-            hasActiveFilters ? 'border-[#d4af37]/50 text-[#d4af37] bg-[#d4af37]/10' : 'border-[#2d3a52] text-[#94a3b8] hover:text-white'
+            hasActiveFilters ? 'border-gold-500/50 text-gold-500 bg-gold-500/10' : 'border-navy-800 text-slate-400 hover:text-white'
           }`}
         >
           <Filter className="h-4 w-4" aria-hidden="true" />
           Filters
           {hasActiveFilters && (
-            <span className="w-5 h-5 rounded-full bg-[#d4af37] text-[#0a1628] text-xs flex items-center justify-center font-bold">
+            <span className="w-5 h-5 rounded-full bg-gold-500 text-navy-950 text-xs flex items-center justify-center font-bold">
               {[filterRole, filterAgency, filterStatus].filter(Boolean).length}
             </span>
           )}
@@ -466,7 +467,7 @@ export default function PeoplePage() {
         <div className="relative">
           <button
             onClick={() => handleSort(sortField)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#2d3a52] text-sm text-[#94a3b8] hover:text-white transition-colors"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-navy-800 text-sm text-slate-400 hover:text-white transition-colors"
             aria-label="Sort"
           >
             <ArrowUpDown className="h-4 w-4" aria-hidden="true" />
@@ -478,12 +479,12 @@ export default function PeoplePage() {
 
       {/* Filter Row */}
       {showFilters && (
-        <div className="flex flex-wrap gap-3 p-3 rounded-lg bg-[#1a2744] border border-[#2d3a52]">
+        <div className="flex flex-wrap gap-3 p-3 rounded-lg bg-navy-900 border border-navy-800">
           <select
             value={filterRole}
             onChange={e => setFilterRole(e.target.value)}
             aria-label="Filter by role"
-            className="px-3 py-1.5 bg-[#0a1628] border border-[#2d3a52] rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+            className="px-3 py-1.5 bg-navy-950 border border-navy-800 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
           >
             <option value="">All Roles</option>
             {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
@@ -492,7 +493,7 @@ export default function PeoplePage() {
             value={filterAgency}
             onChange={e => setFilterAgency(e.target.value)}
             aria-label="Filter by agency"
-            className="px-3 py-1.5 bg-[#0a1628] border border-[#2d3a52] rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+            className="px-3 py-1.5 bg-navy-950 border border-navy-800 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
           >
             <option value="">All Agencies</option>
             {AGENCY_OPTIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
@@ -502,7 +503,7 @@ export default function PeoplePage() {
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
               aria-label="Filter by status"
-              className="px-3 py-1.5 bg-[#0a1628] border border-[#2d3a52] rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+              className="px-3 py-1.5 bg-navy-950 border border-navy-800 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
             >
               <option value="">All Statuses</option>
               {FILTER_STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -511,7 +512,7 @@ export default function PeoplePage() {
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
-              className="px-2.5 py-1.5 text-xs text-[#d4af37] hover:text-white transition-colors"
+              className="px-2.5 py-1.5 text-xs text-gold-500 hover:text-white transition-colors"
             >
               Clear all
             </button>
@@ -536,7 +537,7 @@ export default function PeoplePage() {
 
       {/* Bulk Action Bar */}
       {selectedIds.size > 0 && isDG && (
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-[#1a2744] border border-[#d4af37]/30">
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-navy-900 border border-gold-500/30">
           <span className="text-sm text-white font-medium">{selectedIds.size} selected</span>
           <div className="flex-1" />
           {tab === 'active' && (
@@ -577,7 +578,7 @@ export default function PeoplePage() {
             <Trash2 className="h-3.5 w-3.5" />
             Delete
           </button>
-          <button onClick={clearSelection} className="p-1.5 rounded text-[#64748b] hover:text-white transition-colors" aria-label="Clear selection">
+          <button onClick={clearSelection} className="p-1.5 rounded text-navy-600 hover:text-white transition-colors" aria-label="Clear selection">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -586,14 +587,14 @@ export default function PeoplePage() {
       {/* Table */}
       <div className="card-premium overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-16" role="status" aria-label="Loading">
-            <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+          <div className="flex items-center justify-center py-16">
+            <Spinner />
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm" aria-label="User directory">
               <thead>
-                <tr className="border-b border-[#2d3a52]">
+                <tr className="border-b border-navy-800">
                   {isDG && (
                     <th scope="col" className="w-10 px-3 py-3">
                       <input
@@ -601,7 +602,7 @@ export default function PeoplePage() {
                         checked={sorted.length > 0 && selectedIds.size === sorted.length}
                         onChange={toggleSelectAll}
                         aria-label="Select all users"
-                        className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
+                        className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer"
                       />
                     </th>
                   )}
@@ -623,8 +624,8 @@ export default function PeoplePage() {
                     <tr
                       key={u.id}
                       onClick={() => setDrawerUser(u)}
-                      className={`border-b border-[#2d3a52]/50 cursor-pointer transition-colors ${
-                        isSelected ? 'bg-[#d4af37]/5' : 'hover:bg-[#2d3a52]/10'
+                      className={`border-b border-navy-800/50 cursor-pointer transition-colors ${
+                        isSelected ? 'bg-gold-500/5' : 'hover:bg-navy-800/10'
                       } ${isSuspendedOrArchived ? 'opacity-50' : ''}`}
                     >
                       {isDG && (
@@ -634,7 +635,7 @@ export default function PeoplePage() {
                             checked={isSelected}
                             onChange={() => toggleSelect(u.id)}
                             aria-label={`Select ${u.name || u.email}`}
-                            className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
+                            className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer"
                           />
                         </td>
                       )}
@@ -644,13 +645,13 @@ export default function PeoplePage() {
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={u.avatar_url} alt="" className="w-8 h-8 rounded-full shrink-0" />
                           ) : (
-                            <div className="w-8 h-8 rounded-full bg-[#2d3a52] flex items-center justify-center text-xs font-bold text-[#64748b] shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-navy-800 flex items-center justify-center text-xs font-bold text-navy-600 shrink-0">
                               {getInitial(u)}
                             </div>
                           )}
                           <div className="min-w-0">
                             <p className="text-white font-medium truncate">{u.name || 'No name'}</p>
-                            <p className="text-[#64748b] text-xs truncate">{u.email}</p>
+                            <p className="text-navy-600 text-xs truncate">{u.email}</p>
                           </div>
                           {/* Mobile: inline role badge */}
                           <span className={`sm:hidden text-[10px] px-1.5 py-0.5 rounded shrink-0 ${ROLE_COLORS[u.role] || ROLE_COLORS.officer}`}>
@@ -664,20 +665,20 @@ export default function PeoplePage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
-                        <span className="text-xs text-[#64748b]">{u.agency?.toUpperCase() || '\u2014'}</span>
+                        <span className="text-xs text-navy-600">{u.agency?.toUpperCase() || '\u2014'}</span>
                       </td>
                       <td className="px-4 py-3 hidden sm:table-cell">
                         <span className={`text-xs px-2 py-0.5 rounded ${STATUS_STYLES[status] || STATUS_STYLES.active}`}>
                           {STATUS_LABELS[status] || status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 hidden lg:table-cell text-xs text-[#64748b]">
+                      <td className="px-4 py-3 hidden lg:table-cell text-xs text-navy-600">
                         {formatLastSeen(u)}
                       </td>
                       <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
                         <button
                           onClick={() => setDrawerUser(u)}
-                          className="p-1.5 rounded text-[#64748b] hover:text-white hover:bg-[#2d3a52]/50 transition-colors"
+                          className="p-1.5 rounded text-navy-600 hover:text-white hover:bg-navy-800/50 transition-colors"
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </button>
@@ -687,7 +688,7 @@ export default function PeoplePage() {
                 })}
                 {sorted.length === 0 && (
                   <tr>
-                    <td colSpan={isDG ? 7 : 6} className="px-4 py-12 text-center text-[#64748b]">
+                    <td colSpan={isDG ? 7 : 6} className="px-4 py-12 text-center text-navy-600">
                       {baseList.length === 0
                         ? tab === 'archived' ? 'No archived users.' : 'No users yet.'
                         : 'No users match your filters.'}
@@ -751,7 +752,7 @@ function SortHeader({ label, field, current, dir, onSort, className = '' }: {
       scope="col"
       onClick={() => onSort(field)}
       className={`text-left px-4 py-3 text-xs font-semibold uppercase cursor-pointer select-none transition-colors ${
-        active ? 'text-[#d4af37]' : 'text-[#64748b] hover:text-[#94a3b8]'
+        active ? 'text-gold-500' : 'text-navy-600 hover:text-slate-400'
       } ${className}`}
     >
       <span className="flex items-center gap-1">
@@ -764,7 +765,7 @@ function SortHeader({ label, field, current, dir, onSort, className = '' }: {
 
 function FilterPill({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#d4af37]/10 text-[#d4af37] text-xs font-medium">
+    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold-500/10 text-gold-500 text-xs font-medium">
       {label}
       <button onClick={onRemove} className="hover:text-white transition-colors" aria-label="Remove filter">
         <X className="h-3 w-3" />
@@ -885,18 +886,18 @@ function InviteModal({
       <div ref={inviteModalRef} role="dialog" aria-modal="true" aria-labelledby="people-invite-modal-title" className="card-premium w-full max-w-md p-6 space-y-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 id="people-invite-modal-title" className="text-lg font-bold text-white">Invite User</h2>
-          <button onClick={onClose} className="p-1 rounded text-[#64748b] hover:text-white transition-colors" aria-label="Close">
+          <button onClick={onClose} className="p-1 rounded text-navy-600 hover:text-white transition-colors" aria-label="Close">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <p className="text-xs text-[#64748b]">
+        <p className="text-xs text-navy-600">
           The user will appear as &quot;pending&quot; until they sign in with their Google account.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="invite-name" className="block text-xs text-[#94a3b8] mb-1.5">Full Name</label>
+            <label htmlFor="invite-name" className="block text-xs text-slate-400 mb-1.5">Full Name</label>
             <input
               id="invite-name"
               type="text"
@@ -905,12 +906,12 @@ function InviteModal({
               placeholder="John Smith"
               required
               aria-required="true"
-              className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+              className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
             />
           </div>
 
           <div>
-            <label htmlFor="invite-email" className="block text-xs text-[#94a3b8] mb-1.5">Email (Google account)</label>
+            <label htmlFor="invite-email" className="block text-xs text-slate-400 mb-1.5">Email (Google account)</label>
             <input
               id="invite-email"
               type="email"
@@ -919,17 +920,17 @@ function InviteModal({
               placeholder="john@agency.gov.gy"
               required
               aria-required="true"
-              className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+              className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
             />
           </div>
 
           <div>
-            <label htmlFor="invite-role" className="block text-xs text-[#94a3b8] mb-1.5">Role</label>
+            <label htmlFor="invite-role" className="block text-xs text-slate-400 mb-1.5">Role</label>
             <select
               id="invite-role"
               value={role}
               onChange={e => setRole(e.target.value)}
-              className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+              className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
             >
               {INVITE_ROLE_OPTIONS.map(r => (
                 <option key={r.value} value={r.value}>{r.label}</option>
@@ -938,14 +939,14 @@ function InviteModal({
           </div>
 
           <div>
-            <label htmlFor="invite-agency" className="block text-xs text-[#94a3b8] mb-1.5">Agency</label>
+            <label htmlFor="invite-agency" className="block text-xs text-slate-400 mb-1.5">Agency</label>
             <select
               id="invite-agency"
               value={agency}
               onChange={e => setAgency(e.target.value)}
               required={role === 'agency_admin'}
               aria-required={role === 'agency_admin' ? 'true' : undefined}
-              className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+              className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
             >
               <option value="">
                 {role === 'agency_admin' ? 'Select agency (required)' : 'Select agency (optional)'}
@@ -959,23 +960,23 @@ function InviteModal({
           {/* Module Access */}
           {nonDefaultModules.length > 0 && (
             <div>
-              <label className="block text-xs text-[#94a3b8] mb-1.5">Additional Module Access</label>
-              <p className="text-[10px] text-[#4a5568] mb-2">
+              <label className="block text-xs text-slate-400 mb-1.5">Additional Module Access</label>
+              <p className="text-[10px] text-navy-700 mb-2">
                 This role already has default access to most modules. Grant additional access below:
               </p>
-              <div className="space-y-1 max-h-40 overflow-y-auto rounded-lg border border-[#2d3a52] p-2 bg-[#0a1628]">
+              <div className="space-y-1 max-h-40 overflow-y-auto rounded-lg border border-navy-800 p-2 bg-navy-950">
                 {nonDefaultModules.map(mod => (
                   <label
                     key={mod.slug}
                     className={`flex items-center gap-2.5 px-2 py-1.5 rounded cursor-pointer transition-colors ${
-                      selectedModules.has(mod.slug) ? 'bg-[#d4af37]/10' : 'hover:bg-[#2d3a52]/30'
+                      selectedModules.has(mod.slug) ? 'bg-gold-500/10' : 'hover:bg-navy-800/30'
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={selectedModules.has(mod.slug)}
                       onChange={() => toggleModule(mod.slug)}
-                      className="w-3.5 h-3.5 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
+                      className="w-3.5 h-3.5 rounded border-navy-800 accent-gold-500 cursor-pointer"
                     />
                     <span className="text-xs text-white">{mod.name}</span>
                   </label>
@@ -987,7 +988,7 @@ function InviteModal({
           <button
             type="submit"
             disabled={submitting || !name.trim() || !email.trim()}
-            className="w-full py-2.5 rounded-lg bg-[#d4af37] text-[#0a1628] font-semibold text-sm hover:bg-[#e5c348] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-2.5 rounded-lg bg-gold-500 text-navy-950 font-semibold text-sm hover:bg-[#e5c348] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {submitting ? 'Adding...' : 'Add User'}
           </button>

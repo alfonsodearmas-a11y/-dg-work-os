@@ -2,6 +2,7 @@
 // Orchestrates: parse -> dedup -> metrics -> db upsert -> outlier update
 
 import { supabaseAdmin } from '@/lib/db';
+import { logger } from '@/lib/logger';
 import { parseGPLExcel } from './parser';
 import { computeOutstandingMetrics, computeCompletedMetrics } from './metrics';
 import type {
@@ -142,7 +143,7 @@ async function bulkInsertOutstanding(
         .insert(batch);
 
       if (error) {
-        console.error(`[gpl-upload] Outstanding insert error (batch ${i}):`, error.message);
+        logger.error({ err: error, batch: i }, 'gpl-upload: outstanding insert error');
       }
     }
   }
@@ -187,7 +188,7 @@ async function bulkInsertCompleted(
         .insert(batch);
 
       if (error) {
-        console.error(`[gpl-upload] Completed insert error (batch ${i}):`, error.message);
+        logger.error({ err: error, batch: i }, 'gpl-upload: completed insert error');
       }
     }
   }
@@ -228,7 +229,7 @@ async function insertMetrics(
     .insert(rows);
 
   if (error) {
-    console.error('[gpl-upload] Metrics insert error:', error.message);
+    logger.error({ err: error }, 'gpl-upload: metrics insert error');
   }
 }
 

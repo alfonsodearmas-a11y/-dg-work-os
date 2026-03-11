@@ -1,4 +1,5 @@
 import { supabaseAdmin } from './db';
+import { logger } from '@/lib/logger';
 
 const TABLE = 'integration_tokens';
 const PROVIDER = 'google_calendar';
@@ -29,7 +30,10 @@ export async function getGoogleCalendarToken(userId?: string): Promise<GoogleCal
     .eq('provider', PROVIDER)
     .single();
 
-  if (error || !data) return null;
+  if (error || !data) {
+    if (error) logger.error({ err: error, userId: uid }, 'Failed to get Google Calendar token');
+    return null;
+  }
   return data as GoogleCalendarToken;
 }
 
@@ -60,7 +64,7 @@ export async function upsertGoogleCalendarToken(token: {
     );
 
   if (error) {
-    console.error('[IntegrationTokens] Upsert failed:', error);
+    logger.error({ err: error }, 'IntegrationTokens upsert failed');
     throw new Error('Failed to store Google Calendar token');
   }
 }
@@ -74,7 +78,7 @@ export async function deleteGoogleCalendarToken(userId?: string): Promise<void> 
     .eq('provider', PROVIDER);
 
   if (error) {
-    console.error('[IntegrationTokens] Delete failed:', error);
+    logger.error({ err: error }, 'IntegrationTokens delete failed');
     throw new Error('Failed to delete Google Calendar token');
   }
 }

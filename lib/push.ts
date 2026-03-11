@@ -2,6 +2,7 @@ import webpush from 'web-push';
 import { supabaseAdmin } from './db';
 import type { Notification } from './notifications';
 import { getPreferences } from './notifications';
+import { logger } from '@/lib/logger';
 
 // --- VAPID configuration (lazy init to avoid build-time errors) ---
 
@@ -271,7 +272,7 @@ export async function sendPushForNotification(notification: Notification): Promi
         // Subscription expired or unsubscribed
         await deactivateSubscription(sub.endpoint);
       } else {
-        console.error(`Push send failed for ${sub.endpoint}:`, err);
+        logger.error({ err, endpoint: sub.endpoint }, 'Push send failed');
       }
     }
   }

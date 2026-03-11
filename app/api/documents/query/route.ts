@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
+import { sanitizeSearchInput } from '@/lib/parse-utils';
 
 const anthropic = new Anthropic();
 
@@ -17,8 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Search for relevant documents by title/summary match
-    const searchTerms = question
-      .replace(/[%_.*(),"\\]/g, '')
+    const searchTerms = sanitizeSearchInput(question)
       .split(/\s+/)
       .filter((t: string) => t.length > 2)
       .slice(0, 5);

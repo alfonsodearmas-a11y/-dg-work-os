@@ -6,6 +6,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import { parseAIJson } from '@/lib/parse-utils';
 
 const MODEL = 'claude-sonnet-4-5-20250929';
 const MAX_TOKENS = 4096;
@@ -34,14 +35,7 @@ async function callClaude(systemPrompt: string, userContent: string): Promise<Re
     .map(block => block.text)
     .join('');
 
-  // Extract JSON from response (may be wrapped in ```json blocks)
-  const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('Claude did not return valid JSON');
-  }
-
-  const jsonStr = jsonMatch[1] || jsonMatch[0];
-  return JSON.parse(jsonStr);
+  return parseAIJson<Record<string, unknown>>(text);
 }
 
 /**

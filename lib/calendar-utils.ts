@@ -1,5 +1,6 @@
 import { parseISO, differenceInMinutes, isWithinInterval, isAfter, isBefore, format } from 'date-fns';
 import { CalendarEvent, detectEventCategory, EventCategory } from './calendar-types';
+import { WORKDAY_START_HOUR, WORKDAY_END_HOUR } from '@/lib/constants/config';
 
 // --- Conflict Detection ---
 
@@ -73,12 +74,12 @@ export function calculateDayStats(events: CalendarEvent[]): DayStats {
     categoryMinutes[category] += mins;
   }
 
-  // Calculate free blocks between events (7am-8pm workday)
+  // Calculate free blocks between events
   const workdayStart = new Date();
-  workdayStart.setHours(7, 0, 0, 0);
+  workdayStart.setHours(WORKDAY_START_HOUR, 0, 0, 0);
   const workdayEnd = new Date();
-  workdayEnd.setHours(20, 0, 0, 0);
-  const workdayMinutes = 13 * 60; // 7am-8pm
+  workdayEnd.setHours(WORKDAY_END_HOUR, 0, 0, 0);
+  const workdayMinutes = (WORKDAY_END_HOUR - WORKDAY_START_HOUR) * 60;
 
   const sorted = timedEvents
     .map(e => ({ start: parseISO(e.start_time!), end: parseISO(e.end_time!) }))

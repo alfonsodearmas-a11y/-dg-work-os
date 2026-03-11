@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AlertTriangle, Loader2, Brain, ChevronDown, ChevronLeft, ChevronRight, RefreshCw, Search, X, ArrowUpDown, ClipboardList, Gauge } from 'lucide-react';
+import { Spinner } from '@/components/ui/Spinner';
 import { EfficiencyPanel } from './EfficiencyPanel';
 import {
   BarChart,
@@ -54,7 +55,7 @@ export function GPLAnalysisPanel({ refreshKey = 0 }: { refreshKey?: number }) {
         <button
           onClick={() => setView('pending')}
           className={`flex items-center gap-1.5 px-3 py-2.5 sm:py-1.5 rounded-lg font-medium transition-colors ${
-            view === 'pending' ? 'bg-amber-500/20 text-amber-400' : 'text-[#64748b] hover:text-white hover:bg-[#2d3a52]/50'
+            view === 'pending' ? 'bg-amber-500/20 text-amber-400' : 'text-navy-600 hover:text-white hover:bg-navy-800/50'
           }`}
         >
           <ClipboardList className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
@@ -63,7 +64,7 @@ export function GPLAnalysisPanel({ refreshKey = 0 }: { refreshKey?: number }) {
         <button
           onClick={() => setView('efficiency')}
           className={`flex items-center gap-1.5 px-3 py-2.5 sm:py-1.5 rounded-lg font-medium transition-colors ${
-            view === 'efficiency' ? 'bg-amber-500/20 text-amber-400' : 'text-[#64748b] hover:text-white hover:bg-[#2d3a52]/50'
+            view === 'efficiency' ? 'bg-amber-500/20 text-amber-400' : 'text-navy-600 hover:text-white hover:bg-navy-800/50'
           }`}
         >
           <Gauge className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
@@ -178,11 +179,11 @@ function GPLPendingAnalysis() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center py-20" role="status" aria-label="Loading"><div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" /></div>;
+    return <div className="flex items-center justify-center py-20"><Spinner className="border-amber-400" /></div>;
   }
 
   if (!analysis) {
-    return <div className="card-premium p-8 text-center"><p className="text-[#64748b]">No GPL records found. Upload a GPL pending applications file first.</p></div>;
+    return <div className="card-premium p-8 text-center"><p className="text-navy-600">No GPL records found. Upload a GPL pending applications file first.</p></div>;
   }
 
   const agingData = analysis.agingBuckets.map(b => ({
@@ -207,15 +208,15 @@ function GPLPendingAnalysis() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-white font-medium">{stage.stage}</span>
                   <div className="flex items-center gap-3 text-xs">
-                    <span className="text-[#64748b]">{stage.count} orders</span>
-                    <span className="text-[#64748b]">avg {stage.avgDays}d</span>
-                    <span className="text-[#64748b]">SLA {stage.slaDays}d</span>
+                    <span className="text-navy-600">{stage.count} orders</span>
+                    <span className="text-navy-600">avg {stage.avgDays}d</span>
+                    <span className="text-navy-600">SLA {stage.slaDays}d</span>
                     <span className={stage.compliancePct >= 70 ? 'text-emerald-400' : stage.compliancePct >= 40 ? 'text-amber-400' : 'text-red-400'}>
                       {stage.compliancePct}% compliant
                     </span>
                   </div>
                 </div>
-                <div className="relative h-6 rounded-lg bg-[#0a1628] border border-[#2d3a52] overflow-hidden">
+                <div className="relative h-6 rounded-lg bg-navy-950 border border-navy-800 overflow-hidden">
                   <div className="absolute inset-0 rounded-lg" style={{ backgroundColor: color, opacity: 0.15 }} />
                   <div
                     className="absolute inset-y-0 left-0 rounded-lg"
@@ -265,7 +266,7 @@ function GPLPendingAnalysis() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm" aria-label="GPL account types">
               <thead>
-                <tr className="text-[#64748b] text-xs uppercase tracking-wider border-b border-[#2d3a52]">
+                <tr className="text-navy-600 text-xs uppercase tracking-wider border-b border-navy-800">
                   <th scope="col" className="text-left py-2 pr-4">Type</th>
                   <th scope="col" className="text-right py-2 px-3">Count</th>
                   <th scope="col" className="text-right py-2 pl-3">Avg Wait</th>
@@ -273,10 +274,10 @@ function GPLPendingAnalysis() {
               </thead>
               <tbody>
                 {analysis.accountTypes.slice(0, 10).map(a => (
-                  <tr key={a.type} className="border-b border-[#2d3a52]/50">
+                  <tr key={a.type} className="border-b border-navy-800/50">
                     <td className="py-2.5 pr-4 text-white">{a.type}</td>
-                    <td className="py-2.5 px-3 text-right text-[#94a3b8]">{a.count}</td>
-                    <td className="py-2.5 pl-3 text-right text-[#94a3b8]">{a.avgDays}d</td>
+                    <td className="py-2.5 px-3 text-right text-slate-400">{a.count}</td>
+                    <td className="py-2.5 pl-3 text-right text-slate-400">{a.avgDays}d</td>
                   </tr>
                 ))}
               </tbody>
@@ -293,7 +294,7 @@ function GPLPendingAnalysis() {
             {analysis.redFlags.map((flag, i) => (
               <div key={i} className="flex items-start gap-2 text-sm">
                 <AlertTriangle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
-                <span className="text-[#94a3b8]">{flag}</span>
+                <span className="text-slate-400">{flag}</span>
               </div>
             ))}
           </div>
@@ -307,17 +308,17 @@ function GPLPendingAnalysis() {
         {/* Filters */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
           <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-navy-600" />
             <input
               type="text"
               placeholder="Search name, reference, address..."
               value={searchInput}
               onChange={e => handleSearchChange(e.target.value)}
               aria-label="Search GPL applications"
-              className="w-full pl-10 pr-10 py-3 sm:py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-base sm:text-sm placeholder:text-[#64748b] focus:border-[#d4af37] focus:outline-none"
+              className="w-full pl-10 pr-10 py-3 sm:py-2 rounded-lg bg-navy-950 border border-navy-800 text-white text-base sm:text-sm placeholder:text-navy-600 focus:border-gold-500 focus:outline-none"
             />
             {searchInput && (
-              <button onClick={() => { setSearchInput(''); setSearchQuery(''); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-white p-1">
+              <button onClick={() => { setSearchInput(''); setSearchQuery(''); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-navy-600 hover:text-white p-1">
                 <X className="h-4 w-4" />
               </button>
             )}
@@ -325,11 +326,11 @@ function GPLPendingAnalysis() {
           <div className="relative">
             <select value={stageFilter} onChange={e => setStageFilter(e.target.value)}
               aria-label="Filter by pipeline stage"
-              className="appearance-none w-full pl-3 pr-8 py-3 sm:py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-[#94a3b8] text-base sm:text-sm focus:border-[#d4af37] focus:outline-none cursor-pointer">
+              className="appearance-none w-full pl-3 pr-8 py-3 sm:py-2 rounded-lg bg-navy-950 border border-navy-800 text-slate-400 text-base sm:text-sm focus:border-gold-500 focus:outline-none cursor-pointer">
               <option value="">All Stages</option>
               {stages.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b] pointer-events-none" />
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-navy-600 pointer-events-none" />
           </div>
         </div>
 
@@ -337,7 +338,7 @@ function GPLPendingAnalysis() {
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm" aria-label="GPL pending applications">
             <thead>
-              <tr className="text-[#64748b] text-xs uppercase tracking-wider border-b border-[#2d3a52] bg-[#0a1628]/50">
+              <tr className="text-navy-600 text-xs uppercase tracking-wider border-b border-navy-800 bg-navy-950/50">
                 <SortHeader label="Name" field="last_name" current={sortBy} order={sortOrder} onSort={handleSort} />
                 <th scope="col" className="text-left py-3 px-3">Customer#</th>
                 <th scope="col" className="text-left py-3 px-3">Stage</th>
@@ -349,9 +350,9 @@ function GPLPendingAnalysis() {
             </thead>
             <tbody>
               {loadingRecords ? (
-                <tr><td colSpan={7} className="py-12 text-center"><div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto" role="status" aria-label="Loading" /></td></tr>
+                <tr><td colSpan={7} className="py-12 text-center"><Spinner className="border-amber-400 mx-auto" /></td></tr>
               ) : records.length === 0 ? (
-                <tr><td colSpan={7} className="py-12 text-center text-[#64748b]">No records found</td></tr>
+                <tr><td colSpan={7} className="py-12 text-center text-navy-600">No records found</td></tr>
               ) : records.map(r => (
                 <RecordRow key={r.id} record={r} expanded={expandedId === r.id} onToggle={() => setExpandedId(expandedId === r.id ? null : r.id)} />
               ))}
@@ -362,9 +363,9 @@ function GPLPendingAnalysis() {
         {/* Mobile Cards */}
         <div className="md:hidden space-y-2">
           {loadingRecords ? (
-            <div className="py-12 text-center" role="status" aria-label="Loading"><div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto" aria-hidden="true" /></div>
+            <div className="py-12 text-center"><Spinner className="border-amber-400 mx-auto" /></div>
           ) : records.length === 0 ? (
-            <div className="py-12 text-center text-[#64748b]">No records found</div>
+            <div className="py-12 text-center text-navy-600">No records found</div>
           ) : records.map(r => (
             <MobileCard key={r.id} record={r} expanded={expandedId === r.id} onToggle={() => setExpandedId(expandedId === r.id ? null : r.id)} />
           ))}
@@ -372,15 +373,15 @@ function GPLPendingAnalysis() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#2d3a52]">
-            <span className="text-sm sm:text-xs text-[#64748b]">{totalRecords} records · Page {page} of {totalPages}</span>
+          <div className="flex items-center justify-between mt-4 pt-3 border-t border-navy-800">
+            <span className="text-sm sm:text-xs text-navy-600">{totalRecords} records · Page {page} of {totalPages}</span>
             <div className="flex items-center gap-2">
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                className="p-2.5 sm:p-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] disabled:opacity-30">
+                className="p-2.5 sm:p-1.5 rounded-lg bg-navy-950 border border-navy-800 hover:border-gold-500 text-slate-400 disabled:opacity-30">
                 <ChevronLeft className="h-5 w-5 sm:h-4 sm:w-4" />
               </button>
               <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="p-2.5 sm:p-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] disabled:opacity-30">
+                className="p-2.5 sm:p-1.5 rounded-lg bg-navy-950 border border-navy-800 hover:border-gold-500 text-slate-400 disabled:opacity-30">
                 <ChevronRight className="h-5 w-5 sm:h-4 sm:w-4" />
               </button>
             </div>
@@ -392,13 +393,13 @@ function GPLPendingAnalysis() {
       <div className="card-premium p-4 md:p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Brain className="h-4 w-4 text-[#d4af37]" />
+            <Brain className="h-4 w-4 text-gold-500" />
             <h3 className="text-sm font-semibold text-white">AI Deep Analysis</h3>
           </div>
           <button
             onClick={generateDeepAnalysis}
             disabled={generatingAI}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] hover:text-white disabled:opacity-50 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-navy-900 border border-navy-800 hover:border-gold-500 text-slate-400 hover:text-white disabled:opacity-50 transition-colors"
           >
             {generatingAI ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
             {deepAnalysis ? 'Regenerate' : 'Generate'}
@@ -407,14 +408,14 @@ function GPLPendingAnalysis() {
 
         {generatingAI && (
           <div className="flex items-center justify-center gap-3 py-8">
-            <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" />
-            <span className="text-sm text-[#64748b]">Generating AI analysis (this may take a minute)...</span>
+            <Loader2 className="h-5 w-5 animate-spin text-gold-500" />
+            <span className="text-sm text-navy-600">Generating AI analysis (this may take a minute)...</span>
           </div>
         )}
 
         {!generatingAI && deepAnalysis && (
           <div className="space-y-4">
-            <p className="text-sm text-[#94a3b8] leading-relaxed">{deepAnalysis.executiveSummary}</p>
+            <p className="text-sm text-slate-400 leading-relaxed">{deepAnalysis.executiveSummary}</p>
 
             {deepAnalysis.sections?.map((section, i) => {
               const sev = SEVERITY_CONFIG[section.severity] || SEVERITY_CONFIG.stable;
@@ -423,10 +424,10 @@ function GPLPendingAnalysis() {
 
             {deepAnalysis.recommendations && deepAnalysis.recommendations.length > 0 && (
               <div className="mt-4">
-                <h4 className="text-xs text-[#64748b] uppercase tracking-wider font-semibold mb-2">Recommendations</h4>
+                <h4 className="text-xs text-navy-600 uppercase tracking-wider font-semibold mb-2">Recommendations</h4>
                 <div className="space-y-2">
                   {deepAnalysis.recommendations.map((rec, i) => (
-                    <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-[#0a1628] border border-[#2d3a52]">
+                    <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-navy-950 border border-navy-800">
                       <span className={`text-xs px-2 py-0.5 rounded font-medium shrink-0 ${
                         rec.urgency === 'Immediate' ? 'bg-red-500/20 text-red-400' :
                         rec.urgency === 'Short-term' ? 'bg-amber-500/20 text-amber-400' :
@@ -434,7 +435,7 @@ function GPLPendingAnalysis() {
                       }`}>{rec.urgency}</span>
                       <div>
                         <p className="text-sm text-white">{rec.recommendation}</p>
-                        <p className="text-xs text-[#64748b] mt-0.5">{rec.category}</p>
+                        <p className="text-xs text-navy-600 mt-0.5">{rec.category}</p>
                       </div>
                     </div>
                   ))}
@@ -442,14 +443,14 @@ function GPLPendingAnalysis() {
               </div>
             )}
 
-            <p className="text-xs text-[#64748b]">
+            <p className="text-xs text-navy-600">
               Generated {deepAnalysis.createdAt ? new Date(deepAnalysis.createdAt).toLocaleString() : 'just now'}
             </p>
           </div>
         )}
 
         {!generatingAI && !deepAnalysis && (
-          <p className="text-sm text-[#64748b] py-4">Click Generate to create an AI-powered deep analysis of GPL pending applications.</p>
+          <p className="text-sm text-navy-600 py-4">Click Generate to create an AI-powered deep analysis of GPL pending applications.</p>
         )}
 
         {error && <p className="text-sm text-red-400 mt-2">{error}</p>}
@@ -465,7 +466,7 @@ function SortHeader({ label, field, current, order, onSort }: { label: string; f
     <th scope="col" className="text-left py-3 px-3 cursor-pointer hover:text-white transition-colors select-none whitespace-nowrap" onClick={() => onSort(field)}>
       <span className="inline-flex items-center gap-1">
         {label}
-        <ArrowUpDown className={`h-3 w-3 ${current === field ? 'text-[#d4af37]' : ''}`} />
+        <ArrowUpDown className={`h-3 w-3 ${current === field ? 'text-gold-500' : ''}`} />
       </span>
     </th>
   );
@@ -474,9 +475,9 @@ function SortHeader({ label, field, current, order, onSort }: { label: string; f
 function RecordRow({ record: r, expanded, onToggle }: { record: PendingApplication; expanded: boolean; onToggle: () => void }) {
   return (
     <>
-      <tr onClick={onToggle} className="border-b border-[#2d3a52]/50 hover:bg-[#1a2744]/50 cursor-pointer transition-colors">
+      <tr onClick={onToggle} className="border-b border-navy-800/50 hover:bg-navy-900/50 cursor-pointer transition-colors">
         <td className="py-3 px-3 text-white font-medium">{r.firstName} {r.lastName}</td>
-        <td className="py-3 px-3 text-[#94a3b8] font-mono text-xs">{r.customerReference || '—'}</td>
+        <td className="py-3 px-3 text-slate-400 font-mono text-xs">{r.customerReference || '—'}</td>
         <td className="py-3 px-3">
           {r.pipelineStage && (
             <span className="px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: (STAGE_COLORS[r.pipelineStage] || '#64748b') + '33', color: STAGE_COLORS[r.pipelineStage] || '#94a3b8' }}>
@@ -484,15 +485,15 @@ function RecordRow({ record: r, expanded, onToggle }: { record: PendingApplicati
             </span>
           )}
         </td>
-        <td className="py-3 px-3 text-[#94a3b8]">{r.region || '—'}</td>
+        <td className="py-3 px-3 text-slate-400">{r.region || '—'}</td>
         <td className="py-3 px-3">
           <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border ${getBadgeColor(r.daysWaiting)}`}>{r.daysWaiting}d</span>
         </td>
-        <td className="py-3 px-3 text-[#94a3b8] whitespace-nowrap">{fmtDate(r.applicationDate)}</td>
-        <td className="py-3 px-3 text-[#94a3b8] text-xs">{r.accountType || '—'}</td>
+        <td className="py-3 px-3 text-slate-400 whitespace-nowrap">{fmtDate(r.applicationDate)}</td>
+        <td className="py-3 px-3 text-slate-400 text-xs">{r.accountType || '—'}</td>
       </tr>
       {expanded && (
-        <tr className="bg-[#0a1628]/80">
+        <tr className="bg-navy-950/80">
           <td colSpan={7} className="px-4 py-3">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
               <DetailItem label="Customer#" value={r.customerReference} />
@@ -518,22 +519,22 @@ function RecordRow({ record: r, expanded, onToggle }: { record: PendingApplicati
 
 function MobileCard({ record: r, expanded, onToggle }: { record: PendingApplication; expanded: boolean; onToggle: () => void }) {
   return (
-    <div className="rounded-xl bg-[#0a1628] border border-[#2d3a52] overflow-hidden" onClick={onToggle}>
+    <div className="rounded-xl bg-navy-950 border border-navy-800 overflow-hidden" onClick={onToggle}>
       <div className="p-3 flex items-center justify-between cursor-pointer min-h-[56px]">
         <div className="min-w-0">
           <div className="text-sm text-white font-medium truncate">{r.firstName} {r.lastName}</div>
-          <div className="flex items-center gap-2 mt-1 text-sm sm:text-xs text-[#64748b]">
+          <div className="flex items-center gap-2 mt-1 text-sm sm:text-xs text-navy-600">
             {r.pipelineStage && <span className="px-1.5 py-0.5 rounded text-sm sm:text-xs" style={{ backgroundColor: (STAGE_COLORS[r.pipelineStage] || '#64748b') + '33', color: STAGE_COLORS[r.pipelineStage] || '#94a3b8' }}>{r.pipelineStage}</span>}
             <span>{r.region || '—'}</span>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className={`inline-flex px-2 py-1 rounded-full text-sm sm:text-xs font-semibold border ${getBadgeColor(r.daysWaiting)}`}>{r.daysWaiting}d</span>
-          <ChevronDown className={`h-5 w-5 text-[#64748b] transition-transform ${expanded ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`h-5 w-5 text-navy-600 transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </div>
       </div>
       {expanded && (
-        <div className="px-3 pb-3 border-t border-[#2d3a52]/50 pt-2 space-y-2">
+        <div className="px-3 pb-3 border-t border-navy-800/50 pt-2 space-y-2">
           <DetailItem label="Customer#" value={r.customerReference} />
           <DetailItem label="Account Type" value={r.accountType} />
           <DetailItem label="Account Status" value={r.accountStatus} />
@@ -552,8 +553,8 @@ function DetailItem({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
   return (
     <div className="text-sm sm:text-xs">
-      <span className="text-[#64748b]">{label}: </span>
-      <span className="text-[#94a3b8]">{value}</span>
+      <span className="text-navy-600">{label}: </span>
+      <span className="text-slate-400">{value}</span>
     </div>
   );
 }
@@ -567,15 +568,15 @@ function BriefingSection({ section, sev }: { section: { title: string; severity:
           <span className="text-sm font-semibold text-white">{section.title}</span>
           <div className="flex items-center gap-2">
             <span className={`px-2 py-0.5 rounded text-xs font-medium ${sev.bg} ${sev.text}`}>{section.severity}</span>
-            <ChevronDown className={`w-4 h-4 text-[#64748b] transition-transform ${expanded ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-navy-600 transition-transform ${expanded ? 'rotate-180' : ''}`} />
           </div>
         </div>
-        <p className="text-sm text-[#94a3b8]">{section.summary}</p>
+        <p className="text-sm text-slate-400">{section.summary}</p>
       </button>
       {expanded && (
         <div className="px-4 pb-4">
-          <div className="bg-[#0a1628] rounded-lg p-3 border border-[#2d3a52]">
-            <p className="text-sm text-[#94a3b8] leading-relaxed">{section.detail}</p>
+          <div className="bg-navy-950 rounded-lg p-3 border border-navy-800">
+            <p className="text-sm text-slate-400 leading-relaxed">{section.detail}</p>
           </div>
         </div>
       )}

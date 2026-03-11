@@ -2,6 +2,7 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { insertNotification } from '../notifications';
 import type { Notification, GenerateResult } from '../notifications';
+import { logger } from '@/lib/logger';
 
 interface OversightProject {
   p3Id: string;
@@ -119,7 +120,7 @@ export async function generateOversightNotifications(userId: string): Promise<Ge
   } catch (err) {
     // File may not exist yet or be malformed — skip silently
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
-      console.error('Error generating oversight notifications:', err);
+      logger.error({ err }, 'Error generating oversight notifications');
     }
   }
 

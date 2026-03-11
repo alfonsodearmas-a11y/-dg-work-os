@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { PendingRecord, Snapshot } from './pending-applications-types';
+import { logger } from '@/lib/logger';
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -46,7 +47,7 @@ export async function createSnapshot(agency: 'GPL' | 'GWI', records: PendingReco
     }, { onConflict: 'agency,snapshot_date' });
 
   if (error) {
-    console.error(`[snapshots] Error creating snapshot for ${agency}:`, error.message);
+    logger.error({ err: error, agency }, 'snapshots: error creating snapshot');
   }
 }
 
@@ -64,7 +65,7 @@ export async function getSnapshots(agency?: 'GPL' | 'GWI', limit = 30): Promise<
 
   const { data, error } = await query;
   if (error) {
-    console.error('[snapshots] Error fetching:', error.message);
+    logger.error({ err: error }, 'snapshots: error fetching');
     return [];
   }
 

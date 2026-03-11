@@ -1,6 +1,7 @@
 import { insertNotification } from '../notifications';
 import type { Notification, GenerateResult } from '../notifications';
 import { getDelayedProjects, getProjectsList } from '../project-queries';
+import { logger } from '@/lib/logger';
 
 export async function generateProjectNotifications(userId: string): Promise<GenerateResult> {
   const created: Notification[] = [];
@@ -70,7 +71,7 @@ export async function generateProjectNotifications(userId: string): Promise<Gene
       if (inserted) created.push(inserted);
     }
   } catch (err) {
-    console.error('Error generating project notifications:', err);
+    logger.error({ err }, 'Error generating project notifications');
   }
 
   return { count: created.length, notifications: created };

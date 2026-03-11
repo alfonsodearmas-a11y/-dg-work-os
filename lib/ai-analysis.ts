@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { parseAIJson } from '@/lib/parse-utils';
 
 const CONFIG = {
   MODEL: 'claude-sonnet-4-5-20250929',
@@ -65,17 +66,12 @@ Respond in JSON format:
 
 function parseAnalysisResponse(response: string) {
   try {
-    let jsonStr = response;
-    const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) jsonStr = jsonMatch[1];
-    const objectMatch = jsonStr.match(/\{[\s\S]*\}/);
-    if (objectMatch) jsonStr = objectMatch[0];
-    const parsed = JSON.parse(jsonStr);
+    const parsed = parseAIJson<Record<string, unknown>>(response);
     return {
-      executive_summary: parsed.executive_summary || 'Analysis completed.',
+      executive_summary: (parsed.executive_summary as string) || 'Analysis completed.',
       anomalies: Array.isArray(parsed.anomalies) ? parsed.anomalies : [],
       attention_items: Array.isArray(parsed.attention_items) ? parsed.attention_items : [],
-      agency_summaries: parsed.agency_summaries || {},
+      agency_summaries: (parsed.agency_summaries as Record<string, string>) || {},
     };
   } catch {
     return { executive_summary: response.slice(0, 500), anomalies: [], attention_items: [], agency_summaries: {}, raw_text: response };
@@ -196,12 +192,7 @@ export async function generateGPLBriefing(context: GPLBriefingContext) {
 
     let parsed;
     try {
-      let jsonStr = responseText;
-      const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) jsonStr = jsonMatch[1];
-      const objectMatch = jsonStr.match(/\{[\s\S]*\}/);
-      if (objectMatch) jsonStr = objectMatch[0];
-      parsed = JSON.parse(jsonStr);
+      parsed = parseAIJson<Record<string, any>>(responseText);
     } catch {
       parsed = { executiveBriefing: { headline: responseText.split('\n')[0]?.slice(0, 200) || 'Analysis completed.', sections: [{ title: 'Full Analysis', severity: 'stable', summary: '', detail: responseText.slice(0, 2000) }] }, criticalAlerts: [], stationConcerns: [], recommendations: [] };
     }

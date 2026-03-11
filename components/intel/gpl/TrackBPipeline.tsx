@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ArrowRight, Info } from 'lucide-react';
+import { Spinner } from '@/components/ui/Spinner';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
@@ -28,8 +29,8 @@ const AGEING_COLORS = ['#059669', '#10b981', '#d4af37', '#f97316', '#dc2626', '#
 function InfoTip({ text }: { text: string }) {
   return (
     <span className="group relative inline-flex ml-1 cursor-help">
-      <Info className="h-3 w-3 text-[#64748b] group-hover:text-[#94a3b8] transition-colors" />
-      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-56 p-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] text-[10px] text-[#94a3b8] leading-tight opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">
+      <Info className="h-3 w-3 text-navy-600 group-hover:text-slate-400 transition-colors" />
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-56 p-2 rounded-lg bg-navy-900 border border-navy-800 text-[10px] text-slate-400 leading-tight opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">
         {text}
       </span>
     </span>
@@ -67,8 +68,8 @@ export function TrackBPipeline() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20" role="status" aria-label="Loading">
-        <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+      <div className="flex items-center justify-center py-20">
+        <Spinner className="border-amber-400" />
       </div>
     );
   }
@@ -76,7 +77,7 @@ export function TrackBPipeline() {
   if (!data?.pipeline) {
     return (
       <div className="card-premium p-8 text-center">
-        <p className="text-[#64748b]">No capital works pipeline data available.</p>
+        <p className="text-navy-600">No capital works pipeline data available.</p>
       </div>
     );
   }
@@ -95,63 +96,63 @@ export function TrackBPipeline() {
         <div className="flex flex-col md:flex-row items-stretch gap-3 md:gap-2">
           {/* STEP 1: Estimate & Design */}
           <div className="card-premium p-3 flex-1 min-w-[140px]" style={{ borderColor: '#8b5cf640' }}>
-            <div className="text-[9px] font-medium text-[#64748b] uppercase tracking-wider mb-1">Step 1</div>
+            <div className="text-[9px] font-medium text-navy-600 uppercase tracking-wider mb-1">Step 1</div>
             <div className="text-xs font-semibold text-white mb-1">Estimate & Design</div>
-            <div className="text-[10px] text-[#64748b] mb-3">GPL produces the cost quotation</div>
+            <div className="text-[10px] text-navy-600 mb-3">GPL produces the cost quotation</div>
             <div className="grid grid-cols-2 gap-2 text-center">
               <div>
                 <div className="text-lg font-bold text-white">{pipeline.design.outstanding}</div>
-                <div className="text-[9px] text-[#64748b]">waiting</div>
+                <div className="text-[9px] text-navy-600">waiting</div>
               </div>
               <div>
                 <div className="text-lg font-bold text-emerald-400">{pipeline.design.completed}</div>
-                <div className="text-[9px] text-[#64748b]">completed</div>
+                <div className="text-[9px] text-navy-600">completed</div>
               </div>
             </div>
-            <div className="mt-2 pt-2 border-t border-[#2d3a52] text-[10px] text-[#64748b]">
+            <div className="mt-2 pt-2 border-t border-navy-800 text-[10px] text-navy-600">
               12-day standard
             </div>
           </div>
 
           {/* Arrow + label between Step 1 and 2 */}
           <div className="flex flex-col items-center justify-center gap-1 shrink-0 py-2 px-1">
-            <ArrowRight className="h-5 w-5 text-[#2d3a52] hidden md:block" />
-            <div className="text-[8px] text-[#64748b] text-center max-w-[100px] leading-tight">
+            <ArrowRight className="h-5 w-5 text-navy-800 hidden md:block" />
+            <div className="text-[8px] text-navy-600 text-center max-w-[100px] leading-tight">
               Customer accepts quotation & satisfies Standard Terms and Conditions
             </div>
           </div>
 
           {/* STEP 2: Construction */}
           <div className="card-premium p-3 flex-1 min-w-[140px]" style={{ borderColor: '#f59e0b40' }}>
-            <div className="text-[9px] font-medium text-[#64748b] uppercase tracking-wider mb-1">Step 2</div>
+            <div className="text-[9px] font-medium text-navy-600 uppercase tracking-wider mb-1">Step 2</div>
             <div className="text-xs font-semibold text-white mb-1">Construction</div>
-            <div className="text-[10px] text-[#64748b] mb-3">Network build-out after customer pays</div>
+            <div className="text-[10px] text-navy-600 mb-3">Network build-out after customer pays</div>
             <div className="grid grid-cols-2 gap-2 text-center">
               <div>
                 <div className="text-lg font-bold text-white">{pipeline.execution.outstanding}</div>
-                <div className="text-[9px] text-[#64748b]">waiting</div>
+                <div className="text-[9px] text-navy-600">waiting</div>
               </div>
               <div>
                 <div className="text-lg font-bold text-emerald-400">{pipeline.execution.completed}</div>
-                <div className="text-[9px] text-[#64748b]">completed</div>
+                <div className="text-[9px] text-navy-600">completed</div>
               </div>
             </div>
-            <div className="mt-2 pt-2 border-t border-[#2d3a52] text-[10px] text-[#64748b]">
+            <div className="mt-2 pt-2 border-t border-navy-800 text-[10px] text-navy-600">
               30-day standard starts here
             </div>
           </div>
 
           {/* Arrow */}
           <div className="flex flex-col items-center justify-center gap-1 shrink-0 py-2">
-            <ArrowRight className="h-5 w-5 text-[#2d3a52] hidden md:block" />
+            <ArrowRight className="h-5 w-5 text-navy-800 hidden md:block" />
           </div>
 
           {/* STEP 3: Meter Installation */}
           <div className="card-premium p-3 border border-emerald-500/30 flex-1 min-w-[140px]">
-            <div className="text-[9px] font-medium text-[#64748b] uppercase tracking-wider mb-1">Step 3</div>
+            <div className="text-[9px] font-medium text-navy-600 uppercase tracking-wider mb-1">Step 3</div>
             <div className="text-xs font-semibold text-emerald-400 mb-1">Meter Installation</div>
-            <div className="text-[10px] text-[#64748b]">Final connection — then counted as Simple Connection</div>
-            <div className="text-[10px] text-[#64748b] mt-2">Included in 30 days</div>
+            <div className="text-[10px] text-navy-600">Final connection — then counted as Simple Connection</div>
+            <div className="text-[10px] text-navy-600 mt-2">Included in 30 days</div>
           </div>
         </div>
       </div>
@@ -193,8 +194,8 @@ export function TrackBPipeline() {
               onClick={() => setRecordStage('design')}
               className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
                 recordStage === 'design'
-                  ? 'bg-[#d4af37]/20 text-[#d4af37]'
-                  : 'text-[#64748b] hover:text-white hover:bg-[#2d3a52]/50'
+                  ? 'bg-gold-500/20 text-gold-500'
+                  : 'text-navy-600 hover:text-white hover:bg-navy-800/50'
               }`}
             >
               Estimates
@@ -203,8 +204,8 @@ export function TrackBPipeline() {
               onClick={() => setRecordStage('execution')}
               className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
                 recordStage === 'execution'
-                  ? 'bg-[#d4af37]/20 text-[#d4af37]'
-                  : 'text-[#64748b] hover:text-white hover:bg-[#2d3a52]/50'
+                  ? 'bg-gold-500/20 text-gold-500'
+                  : 'text-navy-600 hover:text-white hover:bg-navy-800/50'
               }`}
             >
               Capital Works
@@ -213,21 +214,21 @@ export function TrackBPipeline() {
         </div>
 
         {recordsLoading ? (
-          <div className="flex items-center justify-center py-8" role="status" aria-label="Loading">
-            <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+          <div className="flex items-center justify-center py-8">
+            <Spinner size="sm" className="border-amber-400" />
           </div>
         ) : records.length === 0 ? (
-          <p className="text-center text-[#64748b] py-4">No waiting applications.</p>
+          <p className="text-center text-navy-600 py-4">No waiting applications.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm" aria-label="Waiting applications">
               <thead>
-                <tr className="border-b border-[#2d3a52]">
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Account</th>
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Customer</th>
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Location</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Days</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Status</th>
+                <tr className="border-b border-navy-800">
+                  <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs">Account</th>
+                  <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs">Customer</th>
+                  <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs hidden md:table-cell">Location</th>
+                  <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Days</th>
+                  <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -236,11 +237,11 @@ export function TrackBPipeline() {
                   const days = r.days_elapsed ?? r.days_elapsed_calculated ?? 0;
                   const status = days <= slaTarget ? 'within' : days <= slaTarget * 2 ? 'overdue' : 'severe';
                   return (
-                    <tr key={r.id} className="border-b border-[#2d3a52]/50">
-                      <td className="py-2 text-[#94a3b8] font-mono text-xs">{r.account_number || '--'}</td>
+                    <tr key={r.id} className="border-b border-navy-800/50">
+                      <td className="py-2 text-slate-400 font-mono text-xs">{r.account_number || '--'}</td>
                       <td className="py-2 text-white text-xs">{r.customer_name || '--'}</td>
-                      <td className="py-2 text-[#94a3b8] text-xs hidden md:table-cell">{r.town_city || '--'}</td>
-                      <td className="py-2 text-right text-xs text-[#94a3b8]">{days}d</td>
+                      <td className="py-2 text-slate-400 text-xs hidden md:table-cell">{r.town_city || '--'}</td>
+                      <td className="py-2 text-right text-xs text-slate-400">{days}d</td>
                       <td className="py-2 text-right">
                         <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
                           status === 'within' ? 'bg-emerald-500/20 text-emerald-400'
@@ -277,10 +278,10 @@ function StageComparisonCard({ title, outMetrics, compMetrics, slaTarget, color 
       <div className="overflow-x-auto">
         <table className="w-full text-xs" aria-label={`${title} stage comparison`}>
           <thead>
-            <tr className="border-b border-[#2d3a52]">
-              <th scope="col" className="text-left py-1.5 text-[#64748b]">Metric</th>
-              <th scope="col" className="text-right py-1.5 text-[#64748b]">Waiting</th>
-              <th scope="col" className="text-right py-1.5 text-[#64748b]">Completed</th>
+            <tr className="border-b border-navy-800">
+              <th scope="col" className="text-left py-1.5 text-navy-600">Metric</th>
+              <th scope="col" className="text-right py-1.5 text-navy-600">Waiting</th>
+              <th scope="col" className="text-right py-1.5 text-navy-600">Completed</th>
             </tr>
           </thead>
           <tbody>
@@ -301,8 +302,8 @@ function MetricRow({ label, out, comp, suffix = '' }: {
   label: string; out: number | null | undefined; comp: number | null | undefined; suffix?: string;
 }) {
   return (
-    <tr className="border-b border-[#2d3a52]/30">
-      <td className="py-1.5 text-[#94a3b8]">{label}</td>
+    <tr className="border-b border-navy-800/30">
+      <td className="py-1.5 text-slate-400">{label}</td>
       <td className="py-1.5 text-right text-white">{out != null ? `${out}${suffix}` : '--'}</td>
       <td className="py-1.5 text-right text-white">{comp != null ? `${comp}${suffix}` : '--'}</td>
     </tr>

@@ -7,6 +7,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import crypto from 'crypto';
 import { supabaseAdmin } from './db';
+import { logger } from '@/lib/logger';
+import { parseAIJson } from '@/lib/parse-utils';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -74,7 +76,7 @@ export async function assembleCJIAData(month: string): Promise<CJIAMonthlyData[]
     .limit(3);
 
   if (error) {
-    console.error('[cjia-insights] Failed to fetch monthly data:', error);
+    logger.error({ err: error }, 'cjia-insights: failed to fetch monthly data');
     return [];
   }
 
@@ -240,14 +242,8 @@ export async function generateCJIAInsights(
 
     const text = response.content[0].type === 'text' ? response.content[0].text : '';
 
-    // Parse JSON from response
-    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('AI did not return valid JSON');
-    }
-
-    const jsonStr = jsonMatch[1] || jsonMatch[0];
-    const parsed = JSON.parse(jsonStr);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parsed = parseAIJson<any>(text);
 
     const processingTime = Date.now() - startTime;
 
@@ -278,13 +274,13 @@ export async function generateCJIAInsights(
       );
 
     if (upsertError) {
-      console.error('[cjia-insights] Failed to cache insights:', upsertError);
+      logger.error({ err: upsertError }, 'cjia-insights: failed to cache insights');
     }
 
     console.log(`[cjia-insights] Insights generated in ${processingTime}ms`);
     return insights;
   } catch (err) {
-    console.error('[cjia-insights] Error generating insights:', err);
+    logger.error({ err }, 'cjia-insights: error generating insights');
     return null;
   }
 }

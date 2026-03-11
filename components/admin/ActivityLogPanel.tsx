@@ -5,6 +5,7 @@ import {
   Activity, Search, ChevronDown, Clock,
   CheckCircle, XCircle, AlertTriangle, Filter,
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/Spinner';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 
 interface LogEntry {
@@ -74,7 +75,7 @@ export function ActivityLogPanel({ hasPermission }: Props) {
 
   if (!hasPermission) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-[#64748b]">
+      <div className="flex flex-col items-center justify-center py-16 text-navy-600">
         <Activity className="h-8 w-8 mb-2 opacity-50" />
         <p className="text-sm">You don&apos;t have permission to view activity logs</p>
         <p className="text-xs mt-1">Requires audit.read permission</p>
@@ -101,16 +102,16 @@ export function ActivityLogPanel({ hasPermission }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Activity className="h-5 w-5 text-[#d4af37]" />
+          <Activity className="h-5 w-5 text-gold-500" />
           <h2 className="text-lg font-semibold text-white">Activity Log</h2>
-          <span className="text-xs text-[#64748b]">({filteredLogs.length})</span>
+          <span className="text-xs text-navy-600">({filteredLogs.length})</span>
         </div>
         <button
           onClick={() => setShowFilters(!showFilters)}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-colors ${
             filterAction || filterResult
-              ? 'border-[#d4af37]/50 text-[#d4af37] bg-[#d4af37]/10'
-              : 'border-[#2d3a52] text-[#64748b] hover:text-white'
+              ? 'border-gold-500/50 text-gold-500 bg-gold-500/10'
+              : 'border-navy-800 text-navy-600 hover:text-white'
           }`}
         >
           <Filter className="h-3.5 w-3.5" />
@@ -120,24 +121,24 @@ export function ActivityLogPanel({ hasPermission }: Props) {
 
       {/* Search + Filters */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-navy-600" />
         <input
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search activity..."
           aria-label="Search activity log"
-          className="w-full pl-9 pr-4 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+          className="w-full pl-9 pr-4 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
         />
       </div>
 
       {showFilters && (
-        <div className="flex flex-wrap gap-3 p-3 rounded-lg bg-[#1a2744] border border-[#2d3a52]">
+        <div className="flex flex-wrap gap-3 p-3 rounded-lg bg-navy-900 border border-navy-800">
           <select
             value={filterAction}
             onChange={e => { setFilterAction(e.target.value); setOffset(0); }}
             aria-label="Filter by action"
-            className="px-3 py-1.5 bg-[#0a1628] border border-[#2d3a52] rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+            className="px-3 py-1.5 bg-navy-950 border border-navy-800 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
           >
             <option value="">All Actions</option>
             {Object.entries(ACTION_LABELS).map(([value, label]) => (
@@ -148,7 +149,7 @@ export function ActivityLogPanel({ hasPermission }: Props) {
             value={filterResult}
             onChange={e => setFilterResult(e.target.value)}
             aria-label="Filter by result"
-            className="px-3 py-1.5 bg-[#0a1628] border border-[#2d3a52] rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+            className="px-3 py-1.5 bg-navy-950 border border-navy-800 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
           >
             <option value="">All Results</option>
             <option value="success">Success</option>
@@ -158,7 +159,7 @@ export function ActivityLogPanel({ hasPermission }: Props) {
           {(filterAction || filterResult) && (
             <button
               onClick={() => { setFilterAction(''); setFilterResult(''); }}
-              className="px-2.5 py-1.5 text-xs text-[#d4af37] hover:text-white transition-colors"
+              className="px-2.5 py-1.5 text-xs text-gold-500 hover:text-white transition-colors"
             >
               Clear
             </button>
@@ -169,16 +170,16 @@ export function ActivityLogPanel({ hasPermission }: Props) {
       {/* Log entries */}
       <div className="card-premium overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-12" role="status" aria-label="Loading">
-            <div className="w-6 h-6 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+          <div className="flex items-center justify-center py-12">
+            <Spinner />
           </div>
         ) : filteredLogs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-[#64748b]">
+          <div className="flex flex-col items-center justify-center py-12 text-navy-600">
             <Activity className="h-8 w-8 mb-2 opacity-50" />
             <p className="text-sm">No activity logged yet</p>
           </div>
         ) : (
-          <div className="divide-y divide-[#2d3a52]/50">
+          <div className="divide-y divide-navy-800/50">
             {filteredLogs.map(log => {
               const style = RESULT_STYLES[log.result] || RESULT_STYLES.success;
               const ResultIcon = style.icon;
@@ -191,11 +192,11 @@ export function ActivityLogPanel({ hasPermission }: Props) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm text-white font-medium">{log.user_name}</span>
-                      <span className="text-xs text-[#94a3b8]">
+                      <span className="text-xs text-slate-400">
                         {ACTION_LABELS[log.action] || log.action}
                       </span>
                       {log.object_name && (
-                        <span className="text-xs text-[#64748b] font-mono">{log.object_name}</span>
+                        <span className="text-xs text-navy-600 font-mono">{log.object_name}</span>
                       )}
                     </div>
 
@@ -211,7 +212,7 @@ export function ActivityLogPanel({ hasPermission }: Props) {
                       </div>
                     )}
 
-                    <div className="flex items-center gap-1 mt-1 text-[10px] text-[#4a5568]">
+                    <div className="flex items-center gap-1 mt-1 text-[10px] text-navy-700">
                       <Clock className="h-2.5 w-2.5" />
                       {formatDistanceToNow(parseISO(log.created_at), { addSuffix: true })}
                       {log.object_type && (
@@ -232,16 +233,16 @@ export function ActivityLogPanel({ hasPermission }: Props) {
           <button
             disabled={offset === 0}
             onClick={() => setOffset(Math.max(0, offset - limit))}
-            className="px-3 py-1.5 rounded border border-[#2d3a52] text-xs text-[#64748b] hover:text-white disabled:opacity-30 transition-colors"
+            className="px-3 py-1.5 rounded border border-navy-800 text-xs text-navy-600 hover:text-white disabled:opacity-30 transition-colors"
           >
             Previous
           </button>
-          <span className="text-xs text-[#64748b]">
+          <span className="text-xs text-navy-600">
             Showing {offset + 1}–{offset + filteredLogs.length}
           </span>
           <button
             onClick={() => setOffset(offset + limit)}
-            className="px-3 py-1.5 rounded border border-[#2d3a52] text-xs text-[#64748b] hover:text-white transition-colors"
+            className="px-3 py-1.5 rounded border border-navy-800 text-xs text-navy-600 hover:text-white transition-colors"
           >
             Next
           </button>
@@ -255,8 +256,8 @@ function ChangeEntry({ field, value }: { field: string; value: unknown }) {
   if (typeof value === 'object' && value !== null && 'from' in value && 'to' in value) {
     const v = value as { from: unknown; to: unknown };
     return (
-      <p className="text-[10px] text-[#64748b]">
-        <span className="font-mono text-[#94a3b8]">{field}</span>:{' '}
+      <p className="text-[10px] text-navy-600">
+        <span className="font-mono text-slate-400">{field}</span>:{' '}
         <span className="text-red-400/70 line-through">{String(v.from || '—')}</span>
         {' → '}
         <span className="text-green-400">{String(v.to || '—')}</span>
@@ -264,8 +265,8 @@ function ChangeEntry({ field, value }: { field: string; value: unknown }) {
     );
   }
   return (
-    <p className="text-[10px] text-[#64748b]">
-      <span className="font-mono text-[#94a3b8]">{field}</span>: {String(value)}
+    <p className="text-[10px] text-navy-600">
+      <span className="font-mono text-slate-400">{field}</span>: {String(value)}
     </p>
   );
 }

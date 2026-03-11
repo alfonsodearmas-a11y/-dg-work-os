@@ -1,4 +1,5 @@
 import { supabaseAdmin } from './db';
+import { logger } from '@/lib/logger';
 import { fetchTodayEvents, fetchWeekEvents, fetchTomorrowEvents, CalendarEvent, classifyCalendarError } from './google-calendar';
 import { calculateDayStats } from './calendar-utils';
 import { isToday, isPast, isWithinInterval, addDays } from 'date-fns';
@@ -80,6 +81,7 @@ export async function generateBriefing(userId: string, role: Role): Promise<Brie
 
   if (tasksResult.status === 'rejected') {
     const msg = tasksResult.reason?.message || 'Tasks database unavailable';
+    logger.error({ err: tasksResult.reason, userId }, 'Failed to fetch tasks for briefing');
     _errors.tasks = { type: 'unknown', message: msg };
   }
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, CheckCircle, AlertTriangle, AlertCircle, Info } from 'lucide-react';
+import { Spinner } from '@/components/ui/Spinner';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -176,8 +177,8 @@ export function DataQuality() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20" role="status" aria-label="Loading">
-        <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+      <div className="flex items-center justify-center py-20">
+        <Spinner className="border-amber-400" />
       </div>
     );
   }
@@ -200,26 +201,26 @@ export function DataQuality() {
       <div className="card-premium p-4 md:p-6">
         <h3 className="text-sm font-semibold text-white mb-4">Upload Summary</h3>
         {!latest ? (
-          <p className="text-[#64748b] text-sm py-4">No uploads yet.</p>
+          <p className="text-navy-600 text-sm py-4">No uploads yet.</p>
         ) : (
           <div className="flex flex-col md:flex-row md:items-center gap-6">
             {/* Stats */}
             <div className="flex-1 space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-[#64748b]">Latest Upload</span>
+                <span className="text-navy-600">Latest Upload</span>
                 <span className="text-white">{fmtDate(latest.snapshot_date)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#64748b]">Records Parsed</span>
+                <span className="text-navy-600">Records Parsed</span>
                 <span className="text-white">{total.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#64748b]">Included in Statistics</span>
+                <span className="text-navy-600">Included in Statistics</span>
                 <span className="text-white">{included.toLocaleString()}</span>
               </div>
               {errorCount > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-[#64748b]">Records Excluded</span>
+                  <span className="text-navy-600">Records Excluded</span>
                   <span className="text-red-400">{errorCount}</span>
                 </div>
               )}
@@ -242,7 +243,7 @@ export function DataQuality() {
                   <span className={`text-lg font-bold ${qualityColor}`}>{qualityPct.toFixed(1)}%</span>
                 </div>
               </div>
-              <span className="text-[10px] text-[#64748b] uppercase tracking-wider">Data Quality</span>
+              <span className="text-[10px] text-navy-600 uppercase tracking-wider">Data Quality</span>
             </div>
           </div>
         )}
@@ -255,11 +256,11 @@ export function DataQuality() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm" aria-label="Data quality issue summary">
               <thead>
-                <tr className="border-b border-[#2d3a52]">
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Issue</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs w-16">Count</th>
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Impact</th>
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden lg:table-cell">Action</th>
+                <tr className="border-b border-navy-800">
+                  <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs">Issue</th>
+                  <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs w-16">Count</th>
+                  <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs hidden md:table-cell">Impact</th>
+                  <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs hidden lg:table-cell">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -309,31 +310,31 @@ export function DataQuality() {
       <div className="card-premium p-4 md:p-6">
         <h3 className="text-sm font-semibold text-white mb-4">
           Chronic Delays Watchlist
-          <span className="text-[#64748b] font-normal ml-2">({outliers.length} unresolved)</span>
+          <span className="text-navy-600 font-normal ml-2">({outliers.length} unresolved)</span>
         </h3>
         {outliers.length === 0 ? (
-          <p className="text-[#64748b] text-sm py-4">No chronic delays at this time.</p>
+          <p className="text-navy-600 text-sm py-4">No chronic delays at this time.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm" aria-label="Chronic delays watchlist">
               <thead>
-                <tr className="border-b border-[#2d3a52]">
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Account</th>
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Customer</th>
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">Location</th>
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Category</th>
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">First Seen</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Age</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Snapshots</th>
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden lg:table-cell">Created</th>
+                <tr className="border-b border-navy-800">
+                  <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs">Account</th>
+                  <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs">Customer</th>
+                  <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs hidden md:table-cell">Location</th>
+                  <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs">Category</th>
+                  <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs hidden md:table-cell">First Seen</th>
+                  <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Age</th>
+                  <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Snapshots</th>
+                  <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs hidden lg:table-cell">Created</th>
                 </tr>
               </thead>
               <tbody>
                 {outliers.map(o => (
-                  <tr key={o.id} className="border-b border-[#2d3a52]/50">
-                    <td className="py-2 text-[#94a3b8] font-mono text-xs">{o.account_number}</td>
+                  <tr key={o.id} className="border-b border-navy-800/50">
+                    <td className="py-2 text-slate-400 font-mono text-xs">{o.account_number}</td>
                     <td className="py-2 text-white text-xs">{o.customer_name || '--'}</td>
-                    <td className="py-2 text-[#94a3b8] text-xs hidden md:table-cell">{o.town_city || '--'}</td>
+                    <td className="py-2 text-slate-400 text-xs hidden md:table-cell">{o.town_city || '--'}</td>
                     <td className="py-2">
                       <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
                         o.stage === 'design' ? 'bg-purple-500/20 text-purple-400'
@@ -343,10 +344,10 @@ export function DataQuality() {
                         {stageLabel(o.track, o.stage)}
                       </span>
                     </td>
-                    <td className="py-2 text-[#94a3b8] text-xs hidden md:table-cell">{fmtDateShort(o.first_seen_date)}</td>
+                    <td className="py-2 text-slate-400 text-xs hidden md:table-cell">{fmtDateShort(o.first_seen_date)}</td>
                     <td className="py-2 text-right text-red-400 text-xs font-medium">{o.latest_days_elapsed}d</td>
-                    <td className="py-2 text-right text-[#64748b] text-xs">{o.consecutive_snapshots}</td>
-                    <td className="py-2 text-[#94a3b8] text-xs hidden lg:table-cell">
+                    <td className="py-2 text-right text-navy-600 text-xs">{o.consecutive_snapshots}</td>
+                    <td className="py-2 text-slate-400 text-xs hidden lg:table-cell">
                       {o.date_created ? fmtDateShort(o.date_created.split('T')[0]) : '--'}
                     </td>
                   </tr>
@@ -373,18 +374,18 @@ function IssueSummaryRow({ bucket }: { bucket: IssueBucket }) {
     : 'text-blue-400';
   const countColor = bucket.severity === 'error' ? 'text-red-400'
     : bucket.severity === 'warning' ? 'text-amber-400'
-    : 'text-[#94a3b8]';
+    : 'text-slate-400';
 
   return (
     <>
-      <tr className="border-b border-[#2d3a52]/50">
+      <tr className="border-b border-navy-800/50">
         <td className="py-2.5">
           <div className="flex items-center gap-2">
             <Icon className={`h-3.5 w-3.5 ${iconColor} shrink-0`} />
             <span className="text-white text-xs">{bucket.label}</span>
             <button
               onClick={() => setExpanded(!expanded)}
-              className="text-[10px] text-[#64748b] hover:text-white transition-colors flex items-center gap-0.5"
+              className="text-[10px] text-navy-600 hover:text-white transition-colors flex items-center gap-0.5"
             >
               {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
               <span>{expanded ? 'Hide' : 'Details'}</span>
@@ -392,8 +393,8 @@ function IssueSummaryRow({ bucket }: { bucket: IssueBucket }) {
           </div>
         </td>
         <td className={`py-2.5 text-right font-medium text-xs ${countColor}`}>{bucket.count}</td>
-        <td className="py-2.5 text-[#94a3b8] text-xs hidden md:table-cell">{bucket.impact}</td>
-        <td className="py-2.5 text-[#94a3b8] text-xs hidden lg:table-cell">{bucket.action}</td>
+        <td className="py-2.5 text-slate-400 text-xs hidden md:table-cell">{bucket.impact}</td>
+        <td className="py-2.5 text-slate-400 text-xs hidden lg:table-cell">{bucket.action}</td>
       </tr>
       {expanded && (
         <tr>
@@ -401,7 +402,7 @@ function IssueSummaryRow({ bucket }: { bucket: IssueBucket }) {
             <div className="bg-[#0f1d32] rounded-lg mx-2 mb-2 p-3">
               <div className="space-y-1 max-h-40 overflow-y-auto">
                 {bucket.warnings.map((w, i) => (
-                  <div key={i} className="text-[11px] text-[#94a3b8] font-mono">
+                  <div key={i} className="text-[11px] text-slate-400 font-mono">
                     {extractDetailLine(w)}
                   </div>
                 ))}

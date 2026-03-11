@@ -6,6 +6,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { supabaseAdmin } from './db';
+import { logger } from '@/lib/logger';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -413,7 +414,7 @@ export async function generateStrategicBriefing(forecastData: ForecastData): Pro
         processing_time_ms: processingTime,
       });
     if (insertError) {
-      console.error('[gpl-forecast-ai] Failed to save briefing to DB:', insertError);
+      logger.error({ err: insertError }, 'gpl-forecast-ai: failed to save briefing to DB');
     }
 
     console.log(`[gpl-forecast-ai] Strategic briefing generated in ${processingTime}ms`);
@@ -430,7 +431,7 @@ export async function generateStrategicBriefing(forecastData: ForecastData): Pro
     };
 
   } catch (err: any) {
-    console.error('[gpl-forecast-ai] Error:', err);
+    logger.error({ err }, 'gpl-forecast-ai: error');
     return {
       success: false,
       error: err.message,
@@ -449,7 +450,7 @@ export async function getLatestBriefing(): Promise<AiAnalysisRow | null> {
     .limit(1);
 
   if (error) {
-    console.error('[gpl-forecast-ai] Failed to get latest briefing:', error);
+    logger.error({ err: error }, 'gpl-forecast-ai: failed to get latest briefing');
     return null;
   }
 

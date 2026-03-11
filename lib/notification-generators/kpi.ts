@@ -1,6 +1,7 @@
 import { insertNotification } from '../notifications';
 import type { Notification, GenerateResult } from '../notifications';
 import { query } from '../db-pg';
+import { logger } from '@/lib/logger';
 
 export async function generateKpiNotifications(userId: string): Promise<GenerateResult> {
   const created: Notification[] = [];
@@ -90,7 +91,7 @@ export async function generateKpiNotifications(userId: string): Promise<Generate
       }
     }
   } catch (err) {
-    console.error('Error generating KPI notifications:', err);
+    logger.error({ err }, 'Error generating KPI notifications');
   }
 
   return { count: created.length, notifications: created };

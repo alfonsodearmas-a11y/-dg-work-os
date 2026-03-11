@@ -1,5 +1,6 @@
 import { supabaseAdmin } from './db';
 import { fetchWeekEvents } from './google-calendar';
+import { logger } from '@/lib/logger';
 
 // --- Types ---
 
@@ -173,7 +174,7 @@ export async function insertNotification(n: InsertNotificationInput): Promise<No
   };
   const { data, error } = await supabaseAdmin.from('notifications').insert(row).select().single();
   if (error) {
-    console.error('Failed to insert notification:', error);
+    logger.error({ err: error }, 'Failed to insert notification');
     return null;
   }
   return data as Notification;
@@ -259,7 +260,7 @@ export async function generateMeetingNotifications(userId: string): Promise<{ co
       }
     }
   } catch (err) {
-    console.error('Error generating meeting notifications:', err);
+    logger.error({ err }, 'Error generating meeting notifications');
   }
 
   return { count: created.length, notifications: created };
@@ -359,7 +360,7 @@ export async function generateTaskNotifications(userId: string): Promise<{ count
       }
     }
   } catch (err) {
-    console.error('Error generating task notifications:', err);
+    logger.error({ err }, 'Error generating task notifications');
   }
 
   return { count: created.length, notifications: created };
@@ -398,7 +399,7 @@ export async function generateMinutesReadyNotifications(userId: string): Promise
       if (inserted) created.push(inserted);
     }
   } catch (err) {
-    console.error('Error generating minutes notifications:', err);
+    logger.error({ err }, 'Error generating minutes notifications');
   }
 
   return { count: created.length, notifications: created };

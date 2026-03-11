@@ -1,5 +1,6 @@
 import { query } from './db-pg';
 import { insertNotification } from './notifications';
+import { logger } from '@/lib/logger';
 
 /**
  * Store mention records and create notifications for mentioned users.
@@ -69,7 +70,7 @@ export async function notifyMentionedUsers(
         source_module: 'tasks',
       });
     } catch (err) {
-      console.error('[mention-notifications] Failed to create notification:', (err as Error).message);
+      logger.error({ err: err as Error }, 'mention-notifications: failed to create notification');
     }
   }
 }

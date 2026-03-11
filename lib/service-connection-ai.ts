@@ -3,6 +3,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import type { EfficiencyMetrics, ServiceConnection, AIInsight } from './service-connection-types';
+import { parseAIJson } from '@/lib/parse-utils';
 
 const MODEL = 'claude-sonnet-4-5-20250929';
 const MAX_TOKENS = 8192;
@@ -106,22 +107,11 @@ Include 4-5 sections and 3-5 recommendations. Be specific and cite actual number
 }
 
 function parseJSONResponse(text: string): AIInsight | null {
-  // Try raw JSON first
   try {
-    return JSON.parse(text);
+    return parseAIJson<AIInsight>(text);
   } catch {
-    // noop
+    return null;
   }
-  // Try extracting from markdown code block
-  const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (match) {
-    try {
-      return JSON.parse(match[1].trim());
-    } catch {
-      // noop
-    }
-  }
-  return null;
 }
 
 /** Generate AI analysis of service connection efficiency */

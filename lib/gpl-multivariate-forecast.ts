@@ -6,6 +6,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { supabaseAdmin } from './db';
+import { logger } from '@/lib/logger';
 
 const AI_CONFIG = {
   MODEL: 'claude-sonnet-4-5-20250929',
@@ -280,7 +281,7 @@ export async function assembleHistoricalData(): Promise<HistoricalData> {
       }
     };
   } catch (err) {
-    console.error('[gpl-multivariate] Data assembly error:', err);
+    logger.error({ err }, 'gpl-multivariate: data assembly error');
     throw err;
   }
 }
@@ -450,7 +451,7 @@ export async function generateForecast(): Promise<GenerateForecastResponse> {
         throw new Error('No JSON found in response');
       }
     } catch (parseErr) {
-      console.error('[gpl-multivariate] Failed to parse AI response:', parseErr);
+      logger.error({ err: parseErr }, 'gpl-multivariate: failed to parse AI response');
       console.log('[gpl-multivariate] Raw response:', responseText.slice(0, 500));
       return { success: true, forecast: generateFallbackForecast(historicalData) };
     }
@@ -473,7 +474,7 @@ export async function generateForecast(): Promise<GenerateForecastResponse> {
     return { success: true, forecast };
 
   } catch (err: any) {
-    console.error('[gpl-multivariate] Generation error:', err);
+    logger.error({ err }, 'gpl-multivariate: generation error');
 
     // Attempt fallback
     try {
@@ -668,13 +669,13 @@ async function saveForecastToDb(forecast: ForecastResult): Promise<void> {
       });
 
     if (error) {
-      console.error('[gpl-multivariate] Failed to save:', error);
+      logger.error({ err: error }, 'gpl-multivariate: failed to save');
       // Non-fatal, continue
     } else {
       console.log('[gpl-multivariate] Saved to database');
     }
   } catch (err) {
-    console.error('[gpl-multivariate] Failed to save:', err);
+    logger.error({ err }, 'gpl-multivariate: failed to save');
     // Non-fatal, continue
   }
 }
@@ -691,7 +692,7 @@ export async function getLatestForecast(): Promise<ForecastResult | null> {
       .limit(1);
 
     if (error) {
-      console.error('[gpl-multivariate] Failed to get latest:', error);
+      logger.error({ err: error }, 'gpl-multivariate: failed to get latest');
       return null;
     }
 
@@ -717,7 +718,7 @@ export async function getLatestForecast(): Promise<ForecastResult | null> {
       }
     };
   } catch (err) {
-    console.error('[gpl-multivariate] Failed to get latest:', err);
+    logger.error({ err }, 'gpl-multivariate: failed to get latest');
     return null;
   }
 }

@@ -3,24 +3,25 @@
 import { useState } from 'react';
 import { format, addMonths } from 'date-fns';
 import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { fmtCurrency } from '@/lib/format';
 
 const AGENCY_COLORS: Record<string, string> = {
-  'GPL': 'bg-yellow-100 text-yellow-800',
-  'GWI': 'bg-blue-100 text-blue-800',
-  'HECI': 'bg-green-100 text-green-800',
-  'CJIA': 'bg-purple-100 text-purple-800',
-  'MARAD': 'bg-cyan-100 text-cyan-800',
-  'GCAA': 'bg-orange-100 text-orange-800',
-  'MOPUA': 'bg-pink-100 text-pink-800',
-  'HAS': 'bg-indigo-100 text-indigo-800',
+  'GPL': 'bg-yellow-500/15 text-yellow-400',
+  'GWI': 'bg-blue-500/15 text-blue-400',
+  'HECI': 'bg-green-500/15 text-green-400',
+  'CJIA': 'bg-purple-500/15 text-purple-400',
+  'MARAD': 'bg-cyan-500/15 text-cyan-400',
+  'GCAA': 'bg-orange-500/15 text-orange-400',
+  'MOPUA': 'bg-pink-500/15 text-pink-400',
+  'HAS': 'bg-indigo-500/15 text-indigo-400',
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  'COMMENCED': 'bg-blue-100 text-blue-800',
-  'DELAYED': 'bg-red-100 text-red-800',
-  'COMPLETED': 'bg-green-100 text-green-800',
-  'CANCELLED': 'bg-gray-100 text-gray-800',
-  'ROLLOVER': 'bg-yellow-100 text-yellow-800',
+  'COMMENCED': 'bg-blue-500/15 text-blue-400',
+  'DELAYED': 'bg-red-500/15 text-red-400',
+  'COMPLETED': 'bg-green-500/15 text-green-400',
+  'CANCELLED': 'bg-gray-500/15 text-gray-400',
+  'ROLLOVER': 'bg-yellow-500/15 text-yellow-400',
 };
 
 interface Project {
@@ -46,14 +47,6 @@ interface ProjectListProps {
   projects: Project[];
 }
 
-function formatCurrency(value: number | null): string {
-  if (!value) return '-';
-  const abs = Math.abs(value);
-  if (abs >= 1e12) return `$${(value / 1e12).toFixed(1)}T`;
-  if (abs >= 1e9) return `$${(value / 1e9).toFixed(1)}B`;
-  if (abs >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
-  return `$${value.toLocaleString()}`;
-}
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr || dateStr === '1970-01-01') return '-';
@@ -165,7 +158,7 @@ export function ProjectList({ projects }: ProjectListProps) {
               </div>
             </div>
             <div className="col-span-2 text-right font-medium">
-              {formatCurrency(project.contract_value)}
+              {fmtCurrency(project.contract_value)}
             </div>
             <div className="col-span-2 flex items-center justify-between">
               <span className="text-sm text-gray-600">
@@ -202,11 +195,11 @@ export function ProjectList({ projects }: ProjectListProps) {
               </div>
               <div>
                 <p className="text-gray-500">Allocated Balance</p>
-                <p className="font-medium">{formatCurrency(project.allocated_balance)}</p>
+                <p className="font-medium">{fmtCurrency(project.allocated_balance)}</p>
               </div>
               <div>
                 <p className="text-gray-500">Total Expenditure</p>
-                <p className="font-medium">{formatCurrency(project.total_expenditure)}</p>
+                <p className="font-medium">{fmtCurrency(project.total_expenditure)}</p>
               </div>
               <div className="col-span-2">
                 <p className="text-gray-500">Remarks</p>

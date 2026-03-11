@@ -1,4 +1,5 @@
 import { google, calendar_v3 } from 'googleapis';
+import { logger } from '@/lib/logger';
 
 // Re-export types for backward compatibility with server-side consumers
 export type {
@@ -144,7 +145,7 @@ async function forceTokenRefresh(userId?: string): Promise<void> {
     const cache = userCaches.get(uid);
     if (cache) cache.tokenExpiryMs = credentials.expiry_date ?? null;
   } catch (err) {
-    console.error('[Calendar] Token refresh failed:', err);
+    logger.error({ err }, 'Calendar: token refresh failed');
     throw err;
   }
 }
@@ -205,18 +206,17 @@ export async function testCalendarConnection(userId?: string): Promise<CalendarC
     , userId);
     return { ok: true, authStatus: 'connected' };
   } catch (err: unknown) {
-    const error = err as { code?: number; message?: string; response?: { status?: number } };
-    const status = error.code || error.response?.status;
+    const message = err instanceof Error ? err.message : 'Unknown';
+    const status = (err as { code?: number })?.code || (err as { response?: { status?: number } })?.response?.status;
 
     if (status === 401 || status === 403) {
-      const msg = error.message || '';
-      if (msg.includes('invalid_grant') || msg.includes('Token has been expired') || msg.includes('Token has been revoked')) {
+      if (message.includes('invalid_grant') || message.includes('Token has been expired') || message.includes('Token has been revoked')) {
         return { ok: false, error: 'token_expired', message: 'Google Calendar refresh token has expired. Please re-authorize.', authStatus: 'reauth_required' };
       }
-      return { ok: false, error: 'invalid_credentials', message: `Google Calendar auth failed (${status}): ${msg}`, authStatus: 'reauth_required' };
+      return { ok: false, error: 'invalid_credentials', message: `Google Calendar auth failed (${status}): ${message}`, authStatus: 'reauth_required' };
     }
 
-    return { ok: false, error: 'network_error', message: `Google Calendar connection error: ${error.message || 'Unknown'}`, authStatus: 'connected' };
+    return { ok: false, error: 'network_error', message: `Google Calendar connection error: ${message}`, authStatus: 'connected' };
   }
 }
 

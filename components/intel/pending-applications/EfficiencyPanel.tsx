@@ -5,6 +5,7 @@ import {
   Gauge, Clock, CheckCircle2, TrendingUp, Loader2, Sparkles,
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Search, Filter, RefreshCw,
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/Spinner';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   Cell, Legend, ComposedChart,
@@ -50,8 +51,8 @@ export function EfficiencyPanel({ refreshKey = 0 }: { refreshKey?: number }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20" role="status" aria-label="Loading">
-        <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+      <div className="flex items-center justify-center py-20">
+        <Spinner className="border-amber-400" />
       </div>
     );
   }
@@ -60,7 +61,7 @@ export function EfficiencyPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   if (!metrics || (metrics.totalOpen === 0 && metrics.totalCompleted === 0)) {
     return (
       <div className="card-premium p-8 text-center">
-        <p className="text-[#64748b]">No service connection lifecycle data available yet. Upload GPL pending applications to start tracking completions.</p>
+        <p className="text-navy-600">No service connection lifecycle data available yet. Upload GPL pending applications to start tracking completions.</p>
       </div>
     );
   }
@@ -75,8 +76,8 @@ export function EfficiencyPanel({ refreshKey = 0 }: { refreshKey?: number }) {
             onClick={() => setSubTab(t)}
             className={`px-3 py-2.5 sm:py-1.5 rounded-lg font-medium text-sm sm:text-xs whitespace-nowrap transition-colors ${
               subTab === t
-                ? 'bg-[#d4af37]/20 text-[#d4af37]'
-                : 'text-[#64748b] hover:text-white hover:bg-[#2d3a52]/50'
+                ? 'bg-gold-500/20 text-gold-500'
+                : 'text-navy-600 hover:text-white hover:bg-navy-800/50'
             }`}
           >
             {t === 'overview' ? 'Overview' : t === 'stages' ? 'Stage Analysis' : t === 'trends' ? 'Monthly Trends' : 'All Orders'}
@@ -157,9 +158,9 @@ function OverviewSection({ metrics }: { metrics: EfficiencyMetrics }) {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex items-center gap-4 mt-3 text-xs text-[#64748b]">
+          <div className="flex items-center gap-4 mt-3 text-xs text-navy-600">
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-600" /> ≤ SLA</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#d4af37]" /> 1-2x SLA</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gold-500" /> 1-2x SLA</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-600" /> &gt;2x SLA</span>
           </div>
         </div>
@@ -169,21 +170,21 @@ function OverviewSection({ metrics }: { metrics: EfficiencyMetrics }) {
       <div className="card-premium p-4 md:p-6">
         <button onClick={() => { setAiOpen(!aiOpen); if (!aiOpen && !aiInsight && !aiLoading) loadAI(); }} className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-[#d4af37]" />
+            <Sparkles className="h-4 w-4 text-gold-500" />
             <span className="text-sm font-semibold text-white">AI Efficiency Analysis</span>
           </div>
-          {aiOpen ? <ChevronUp className="h-4 w-4 text-[#64748b]" /> : <ChevronDown className="h-4 w-4 text-[#64748b]" />}
+          {aiOpen ? <ChevronUp className="h-4 w-4 text-navy-600" /> : <ChevronDown className="h-4 w-4 text-navy-600" />}
         </button>
         {aiOpen && (
           <div className="mt-4 space-y-4">
             {aiLoading ? (
               <div className="flex items-center gap-2 py-8 justify-center">
-                <Loader2 className="h-5 w-5 text-[#d4af37] animate-spin" />
-                <span className="text-sm text-[#64748b]">Generating analysis...</span>
+                <Loader2 className="h-5 w-5 text-gold-500 animate-spin" />
+                <span className="text-sm text-navy-600">Generating analysis...</span>
               </div>
             ) : aiInsight ? (
               <>
-                <p className="text-sm text-[#94a3b8] leading-relaxed">{aiInsight.executiveSummary}</p>
+                <p className="text-sm text-slate-400 leading-relaxed">{aiInsight.executiveSummary}</p>
                 <div className="space-y-3">
                   {aiInsight.sections.map((section, i) => (
                     <div key={i} className={`rounded-lg border p-3 ${SEVERITY_COLORS[section.severity] || ''}`}>
@@ -193,8 +194,8 @@ function OverviewSection({ metrics }: { metrics: EfficiencyMetrics }) {
                         }`}>{section.severity}</span>
                         <span className="text-sm font-medium text-white">{section.title}</span>
                       </div>
-                      <p className="text-sm sm:text-xs text-[#94a3b8] mb-1">{section.summary}</p>
-                      <p className="text-sm sm:text-xs text-[#64748b] leading-relaxed">{section.detail}</p>
+                      <p className="text-sm sm:text-xs text-slate-400 mb-1">{section.summary}</p>
+                      <p className="text-sm sm:text-xs text-navy-600 leading-relaxed">{section.detail}</p>
                     </div>
                   ))}
                 </div>
@@ -207,16 +208,16 @@ function OverviewSection({ metrics }: { metrics: EfficiencyMetrics }) {
                           <span className={`shrink-0 px-1.5 py-0.5 rounded font-medium ${
                             rec.urgency === 'Immediate' ? 'bg-red-500/20 text-red-400' : rec.urgency === 'Short-term' ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'
                           }`}>{rec.urgency}</span>
-                          <span className="text-[#94a3b8]">{rec.recommendation}</span>
+                          <span className="text-slate-400">{rec.recommendation}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-                <button onClick={() => loadAI(true)} className="text-xs text-[#d4af37] hover:text-[#f0d060]">Regenerate</button>
+                <button onClick={() => loadAI(true)} className="text-xs text-gold-500 hover:text-[#f0d060]">Regenerate</button>
               </>
             ) : (
-              <p className="text-sm text-[#64748b]">No analysis available.</p>
+              <p className="text-sm text-navy-600">No analysis available.</p>
             )}
           </div>
         )}
@@ -265,9 +266,9 @@ function StageSection({ metrics }: { metrics: EfficiencyMetrics }) {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold text-white">Stage Breakdown</h3>
           <div className="flex items-center gap-1 text-xs">
-            <span className="text-[#64748b] hidden sm:inline">Sort:</span>
+            <span className="text-navy-600 hidden sm:inline">Sort:</span>
             {(['count', 'avgDays', 'slaPct'] as const).map(s => (
-              <button key={s} onClick={() => setSortBy(s)} className={`px-2.5 py-1.5 sm:px-2 sm:py-1 rounded ${sortBy === s ? 'bg-[#d4af37]/20 text-[#d4af37]' : 'text-[#64748b] hover:text-white'}`}>
+              <button key={s} onClick={() => setSortBy(s)} className={`px-2.5 py-1.5 sm:px-2 sm:py-1 rounded ${sortBy === s ? 'bg-gold-500/20 text-gold-500' : 'text-navy-600 hover:text-white'}`}>
                 {s === 'count' ? 'Volume' : s === 'avgDays' ? 'Duration' : 'SLA'}
               </button>
             ))}
@@ -276,25 +277,25 @@ function StageSection({ metrics }: { metrics: EfficiencyMetrics }) {
         <div className="overflow-x-auto">
           <table className="w-full text-sm" aria-label="Pipeline stage breakdown">
             <thead>
-              <tr className="border-b border-[#2d3a52]">
-                <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Stage</th>
-                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Orders</th>
-                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Avg</th>
-                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Median</th>
-                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Max</th>
-                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">SLA</th>
-                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Compliance</th>
+              <tr className="border-b border-navy-800">
+                <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs">Stage</th>
+                <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Orders</th>
+                <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Avg</th>
+                <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Median</th>
+                <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Max</th>
+                <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">SLA</th>
+                <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Compliance</th>
               </tr>
             </thead>
             <tbody>
               {stages.map(s => (
-                <tr key={s.stage} className="border-b border-[#2d3a52]/50 hover:bg-[#1a2744]/50">
+                <tr key={s.stage} className="border-b border-navy-800/50 hover:bg-navy-900/50">
                   <td className="py-2.5 font-medium text-white">{s.stage}</td>
-                  <td className="py-2.5 text-right text-[#94a3b8]">{s.count}</td>
+                  <td className="py-2.5 text-right text-slate-400">{s.count}</td>
                   <td className="py-2.5 text-right"><span className={s.avgDays <= s.slaTarget ? 'text-emerald-400' : s.avgDays <= s.slaTarget * 2 ? 'text-amber-400' : 'text-red-400'}>{s.avgDays}d</span></td>
-                  <td className="py-2.5 text-right text-[#94a3b8]">{s.medianDays}d</td>
-                  <td className="py-2.5 text-right text-[#94a3b8]">{s.maxDays}d</td>
-                  <td className="py-2.5 text-right text-[#64748b]">{s.slaTarget}d</td>
+                  <td className="py-2.5 text-right text-slate-400">{s.medianDays}d</td>
+                  <td className="py-2.5 text-right text-slate-400">{s.maxDays}d</td>
+                  <td className="py-2.5 text-right text-navy-600">{s.slaTarget}d</td>
                   <td className="py-2.5 text-right">
                     <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${s.slaPct >= 70 ? 'bg-emerald-500/20 text-emerald-400' : s.slaPct >= 50 ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}`}>{s.slaPct}%</span>
                   </td>
@@ -312,20 +313,20 @@ function StageSection({ metrics }: { metrics: EfficiencyMetrics }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm" aria-label="Regional distribution">
               <thead>
-                <tr className="border-b border-[#2d3a52]">
-                  <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Region</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Open</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Completed</th>
-                  <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Avg Days</th>
+                <tr className="border-b border-navy-800">
+                  <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs">Region</th>
+                  <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Open</th>
+                  <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Completed</th>
+                  <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Avg Days</th>
                 </tr>
               </thead>
               <tbody>
                 {metrics.regions.slice(0, 15).map(r => (
-                  <tr key={r.region} className="border-b border-[#2d3a52]/50">
+                  <tr key={r.region} className="border-b border-navy-800/50">
                     <td className="py-2 text-white">{r.region}</td>
-                    <td className="py-2 text-right text-[#94a3b8]">{r.openCount}</td>
-                    <td className="py-2 text-right text-[#94a3b8]">{r.completedCount}</td>
-                    <td className="py-2 text-right text-[#94a3b8]">{r.avgDays}d</td>
+                    <td className="py-2 text-right text-slate-400">{r.openCount}</td>
+                    <td className="py-2 text-right text-slate-400">{r.completedCount}</td>
+                    <td className="py-2 text-right text-slate-400">{r.avgDays}d</td>
                   </tr>
                 ))}
               </tbody>
@@ -354,8 +355,8 @@ function TrendsSection() {
     load();
   }, []);
 
-  if (loading) return <div className="flex items-center justify-center py-20" role="status" aria-label="Loading"><div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" /></div>;
-  if (data.length === 0) return <div className="card-premium p-8 text-center"><p className="text-[#64748b]">No monthly trend data yet. Data will appear after multiple uploads.</p></div>;
+  if (loading) return <div className="flex items-center justify-center py-20"><Spinner className="border-amber-400" /></div>;
+  if (data.length === 0) return <div className="card-premium p-8 text-center"><p className="text-navy-600">No monthly trend data yet. Data will appear after multiple uploads.</p></div>;
 
   const chartData = data.map(m => ({ ...m, label: fmtMonth(m.month) }));
 
@@ -399,24 +400,24 @@ function TrendsSection() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm" aria-label="Monthly service connection summary">
             <thead>
-              <tr className="border-b border-[#2d3a52]">
-                <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Month</th>
-                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Opened</th>
-                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Completed</th>
-                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Net</th>
-                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Queue</th>
-                <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Avg Days</th>
+              <tr className="border-b border-navy-800">
+                <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs">Month</th>
+                <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Opened</th>
+                <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Completed</th>
+                <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Net</th>
+                <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Queue</th>
+                <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Avg Days</th>
               </tr>
             </thead>
             <tbody>
               {[...data].reverse().map(m => (
-                <tr key={m.month} className="border-b border-[#2d3a52]/50">
+                <tr key={m.month} className="border-b border-navy-800/50">
                   <td className="py-2 text-white">{fmtMonth(m.month)}</td>
                   <td className="py-2 text-right text-blue-400">{m.opened}</td>
                   <td className="py-2 text-right text-emerald-400">{m.completed}</td>
-                  <td className={`py-2 text-right ${m.netChange > 0 ? 'text-red-400' : m.netChange < 0 ? 'text-emerald-400' : 'text-[#64748b]'}`}>{m.netChange > 0 ? '+' : ''}{m.netChange}</td>
-                  <td className="py-2 text-right text-[#94a3b8]">{m.queueDepth}</td>
-                  <td className="py-2 text-right text-[#94a3b8]">{m.avgDaysToComplete !== null ? `${m.avgDaysToComplete}d` : '—'}</td>
+                  <td className={`py-2 text-right ${m.netChange > 0 ? 'text-red-400' : m.netChange < 0 ? 'text-emerald-400' : 'text-navy-600'}`}>{m.netChange > 0 ? '+' : ''}{m.netChange}</td>
+                  <td className="py-2 text-right text-slate-400">{m.queueDepth}</td>
+                  <td className="py-2 text-right text-slate-400">{m.avgDaysToComplete !== null ? `${m.avgDaysToComplete}d` : '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -464,32 +465,32 @@ function OrdersSection() {
       <div className="card-premium p-3 md:p-4">
         <div className="flex items-center gap-2">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-navy-600" />
             <input type="text" placeholder="Search name, customer ref, SO#..." value={searchInput}
               onChange={e => setSearchInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { setSearch(searchInput); setPage(1); } }}
               aria-label="Search service connection orders"
-              className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none" />
+              className="w-full pl-10 pr-4 py-2 rounded-lg bg-navy-950 border border-navy-800 text-white text-sm placeholder-navy-600 focus:border-gold-500 focus:outline-none" />
           </div>
           <button onClick={() => { setSearch(searchInput); setPage(1); }} className="btn-navy px-4 py-2 text-sm">Search</button>
-          <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-lg border ${showFilters ? 'border-[#d4af37] text-[#d4af37]' : 'border-[#2d3a52] text-[#64748b]'}`}>
+          <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-lg border ${showFilters ? 'border-gold-500 text-gold-500' : 'border-navy-800 text-navy-600'}`} aria-label="Toggle filters">
             <Filter className="h-4 w-4" />
           </button>
         </div>
         {showFilters && (
-          <div className="flex items-center gap-3 mt-3 pt-3 border-t border-[#2d3a52]">
+          <div className="flex items-center gap-3 mt-3 pt-3 border-t border-navy-800">
             <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}
               aria-label="Filter by status"
-              className="px-3 py-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:border-[#d4af37] focus:outline-none">
+              className="px-3 py-1.5 rounded-lg bg-navy-950 border border-navy-800 text-white text-sm focus:border-gold-500 focus:outline-none">
               <option value="">All Status</option><option value="open">Open</option><option value="completed">Completed</option><option value="legacy_excluded">Legacy</option>
             </select>
             <select value={track} onChange={e => { setTrack(e.target.value); setPage(1); }}
               aria-label="Filter by track"
-              className="px-3 py-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:border-[#d4af37] focus:outline-none"
+              className="px-3 py-1.5 rounded-lg bg-navy-950 border border-navy-800 text-white text-sm focus:border-gold-500 focus:outline-none"
               title={track === 'A' ? TRACK_TOOLTIPS['Track A'] : track === 'B' ? TRACK_TOOLTIPS['Track B'] : track === 'Design' ? TRACK_TOOLTIPS['Design'] : 'Filter by connection track (A = meter only, B = capital works, Design = estimation phase)'}>
               <option value="">All Tracks</option><option value="A">Track A — Meter Only</option><option value="B">Track B — Capital Works</option><option value="Design">Design — Estimates</option><option value="unknown">Unknown</option>
             </select>
             {(status || track || search) && (
-              <button onClick={() => { setStatus(''); setTrack(''); setSearch(''); setSearchInput(''); setPage(1); }} className="text-xs text-[#d4af37] hover:text-[#f0d060]">Clear</button>
+              <button onClick={() => { setStatus(''); setTrack(''); setSearch(''); setSearchInput(''); setPage(1); }} className="text-xs text-gold-500 hover:text-[#f0d060]">Clear</button>
             )}
           </div>
         )}
@@ -497,22 +498,22 @@ function OrdersSection() {
 
       <div className="card-premium p-4 md:p-6">
         {loading ? (
-          <div className="flex items-center justify-center py-12" role="status" aria-label="Loading"><div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" /></div>
+          <div className="flex items-center justify-center py-12"><Spinner className="border-amber-400" /></div>
         ) : orders.length === 0 ? (
-          <p className="text-center text-[#64748b] py-8">No orders found.</p>
+          <p className="text-center text-navy-600 py-8">No orders found.</p>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm" aria-label="Service connection orders">
                 <thead>
-                  <tr className="border-b border-[#2d3a52]">
-                    <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs w-8" />
-                    <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Customer</th>
-                    <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell">SO #</th>
-                    <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs">Stage</th>
-                    <th scope="col" className="text-left py-2 text-[#64748b] font-medium text-xs hidden md:table-cell cursor-help" title="Track A = meter installation only (≤3d). Track B = capital works required (≤30d). Design = estimation phase (≤12d).">Track</th>
-                    <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Days</th>
-                    <th scope="col" className="text-right py-2 text-[#64748b] font-medium text-xs">Status</th>
+                  <tr className="border-b border-navy-800">
+                    <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs w-8" />
+                    <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs">Customer</th>
+                    <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs hidden md:table-cell">SO #</th>
+                    <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs">Stage</th>
+                    <th scope="col" className="text-left py-2 text-navy-600 font-medium text-xs hidden md:table-cell cursor-help" title="Track A = meter installation only (≤3d). Track B = capital works required (≤30d). Design = estimation phase (≤12d).">Track</th>
+                    <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Days</th>
+                    <th scope="col" className="text-right py-2 text-navy-600 font-medium text-xs">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -529,11 +530,11 @@ function OrdersSection() {
               </table>
             </div>
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#2d3a52]">
-                <span className="text-sm sm:text-xs text-[#64748b]">{total} orders · Page {page} of {totalPages}</span>
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-navy-800">
+                <span className="text-sm sm:text-xs text-navy-600">{total} orders · Page {page} of {totalPages}</span>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-2.5 sm:p-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] disabled:opacity-30"><ChevronLeft className="h-5 w-5 sm:h-4 sm:w-4" /></button>
-                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-2.5 sm:p-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] disabled:opacity-30"><ChevronRight className="h-5 w-5 sm:h-4 sm:w-4" /></button>
+                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-2.5 sm:p-1.5 rounded-lg bg-navy-950 border border-navy-800 hover:border-gold-500 text-slate-400 disabled:opacity-30" aria-label="Previous page"><ChevronLeft className="h-5 w-5 sm:h-4 sm:w-4" /></button>
+                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-2.5 sm:p-1.5 rounded-lg bg-navy-950 border border-navy-800 hover:border-gold-500 text-slate-400 disabled:opacity-30" aria-label="Next page"><ChevronRight className="h-5 w-5 sm:h-4 sm:w-4" /></button>
                 </div>
               </div>
             )}
@@ -549,45 +550,45 @@ function OrderRowInner({ order, name, days, expanded, onToggle }: {
 }) {
   return (
     <>
-      <tr className="border-b border-[#2d3a52]/50 hover:bg-[#1a2744]/50 cursor-pointer" onClick={onToggle}>
-        <td className="py-3 sm:py-2.5">{expanded ? <ChevronUp className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-[#64748b]" /> : <ChevronDown className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-[#64748b]" />}</td>
-        <td className="py-3 sm:py-2.5"><div className="text-white text-sm sm:text-xs font-medium">{name}</div><div className="text-xs text-[#64748b]">{order.customer_reference}</div></td>
-        <td className="py-3 sm:py-2.5 text-[#94a3b8] text-sm sm:text-xs hidden md:table-cell">{order.service_order_number || '—'}</td>
-        <td className="py-3 sm:py-2.5 text-[#94a3b8] text-sm sm:text-xs">{order.current_stage || '—'}</td>
+      <tr className="border-b border-navy-800/50 hover:bg-navy-900/50 cursor-pointer" onClick={onToggle}>
+        <td className="py-3 sm:py-2.5">{expanded ? <ChevronUp className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-navy-600" /> : <ChevronDown className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-navy-600" />}</td>
+        <td className="py-3 sm:py-2.5"><div className="text-white text-sm sm:text-xs font-medium">{name}</div><div className="text-xs text-navy-600">{order.customer_reference}</div></td>
+        <td className="py-3 sm:py-2.5 text-slate-400 text-sm sm:text-xs hidden md:table-cell">{order.service_order_number || '—'}</td>
+        <td className="py-3 sm:py-2.5 text-slate-400 text-sm sm:text-xs">{order.current_stage || '—'}</td>
         <td className="py-3 sm:py-2.5 text-sm sm:text-xs hidden md:table-cell">
           <span
-            className={`cursor-help ${order.track === 'A' ? 'text-emerald-400' : order.track === 'B' ? 'text-amber-400' : order.track === 'Design' ? 'text-purple-400' : 'text-[#64748b]'}`}
+            className={`cursor-help ${order.track === 'A' ? 'text-emerald-400' : order.track === 'B' ? 'text-amber-400' : order.track === 'Design' ? 'text-purple-400' : 'text-navy-600'}`}
             title={order.track === 'A' ? TRACK_TOOLTIPS['Track A'] : order.track === 'B' ? TRACK_TOOLTIPS['Track B'] : order.track === 'Design' ? TRACK_TOOLTIPS['Design'] : undefined}
           >
             {order.track === 'A' ? 'Track A' : order.track === 'B' ? 'Track B' : order.track === 'Design' ? 'Design' : '—'}
           </span>
         </td>
-        <td className="py-3 sm:py-2.5 text-right text-sm sm:text-xs text-[#94a3b8]">{days !== null ? `${days}d` : '—'}</td>
+        <td className="py-3 sm:py-2.5 text-right text-sm sm:text-xs text-slate-400">{days !== null ? `${days}d` : '—'}</td>
         <td className="py-3 sm:py-2.5 text-right"><span className={`px-1.5 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[order.status] || ''}`}>{order.status}</span></td>
       </tr>
       {expanded && (
         <tr>
           <td colSpan={7} className="py-3 px-4 bg-[#0f1d35]">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm sm:text-xs mb-3">
-              <div><span className="text-[#64748b]">Application Date:</span> <span className="text-white">{order.application_date || '—'}</span></div>
-              <div><span className="text-[#64748b]">Account Type:</span> <span className="text-white">{order.account_type || '—'}</span></div>
-              <div><span className="text-[#64748b]">SO Type:</span> <span className="text-white">{order.service_order_type || '—'}</span></div>
-              <div><span className="text-[#64748b]">First Seen:</span> <span className="text-white">{order.first_seen_date || '—'}</span></div>
-              <div><span className="text-[#64748b]">Last Seen:</span> <span className="text-white">{order.last_seen_date || '—'}</span></div>
-              {order.disappeared_date && <div><span className="text-[#64748b]">Completed:</span> <span className="text-emerald-400">{order.disappeared_date}</span></div>}
-              {order.linked_so_number && <div><span className="text-[#64748b]">Linked SO:</span> <span className="text-amber-400">{order.linked_so_number}</span></div>}
-              <div><span className="text-[#64748b]">Region:</span> <span className="text-white">{order.region || '—'}</span></div>
+              <div><span className="text-navy-600">Application Date:</span> <span className="text-white">{order.application_date || '—'}</span></div>
+              <div><span className="text-navy-600">Account Type:</span> <span className="text-white">{order.account_type || '—'}</span></div>
+              <div><span className="text-navy-600">SO Type:</span> <span className="text-white">{order.service_order_type || '—'}</span></div>
+              <div><span className="text-navy-600">First Seen:</span> <span className="text-white">{order.first_seen_date || '—'}</span></div>
+              <div><span className="text-navy-600">Last Seen:</span> <span className="text-white">{order.last_seen_date || '—'}</span></div>
+              {order.disappeared_date && <div><span className="text-navy-600">Completed:</span> <span className="text-emerald-400">{order.disappeared_date}</span></div>}
+              {order.linked_so_number && <div><span className="text-navy-600">Linked SO:</span> <span className="text-amber-400">{order.linked_so_number}</span></div>}
+              <div><span className="text-navy-600">Region:</span> <span className="text-white">{order.region || '—'}</span></div>
             </div>
             {order.stage_history && (order.stage_history as StageHistoryEntry[]).length > 0 && (
               <div>
-                <span className="text-[#64748b] text-sm sm:text-xs font-medium">Stage History</span>
+                <span className="text-navy-600 text-sm sm:text-xs font-medium">Stage History</span>
                 <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:gap-1">
                   {(order.stage_history as StageHistoryEntry[]).map((entry, i) => (
                     <div key={i} className="flex items-center gap-1">
-                      {i > 0 && <span className="text-[#2d3a52]">→</span>}
-                      <span className="px-2 py-1 rounded bg-[#1a2744] border border-[#2d3a52] text-xs">
+                      {i > 0 && <span className="text-navy-800">→</span>}
+                      <span className="px-2 py-1 rounded bg-navy-900 border border-navy-800 text-xs">
                         <span className="text-white">{entry.stage}</span>
-                        {entry.days !== null && <span className="text-[#64748b] ml-1">({entry.days}d)</span>}
+                        {entry.days !== null && <span className="text-navy-600 ml-1">({entry.days}d)</span>}
                       </span>
                     </div>
                   ))}
@@ -606,9 +607,9 @@ function OrderRowInner({ order, name, days, expanded, onToggle }: {
 function KPICard({ icon: Icon, label, value, sub, color }: { icon: React.ElementType; label: string; value: string; sub: string; color: string }) {
   return (
     <div className="card-premium p-4">
-      <div className="flex items-center gap-2 mb-2"><Icon className={`h-4 w-4 ${color}`} /><span className="text-sm sm:text-xs text-[#64748b]">{label}</span></div>
+      <div className="flex items-center gap-2 mb-2"><Icon className={`h-4 w-4 ${color}`} /><span className="text-sm sm:text-xs text-navy-600">{label}</span></div>
       <div className="text-2xl font-bold text-white">{value}</div>
-      <div className="text-sm sm:text-xs text-[#64748b] mt-1">{sub}</div>
+      <div className="text-sm sm:text-xs text-navy-600 mt-1">{sub}</div>
     </div>
   );
 }
@@ -627,17 +628,17 @@ function TrackCard({ title, subtitle, track, color, tooltip }: { title: string; 
         <div>
           <h4 className="text-sm font-semibold text-white flex items-center gap-1.5">
             {title}
-            {tooltip && <span className="inline-flex items-center justify-center w-4 h-4 sm:w-3.5 sm:h-3.5 rounded-full border border-[#64748b]/50 text-xs sm:text-[9px] text-[#64748b] font-normal cursor-help">?</span>}
+            {tooltip && <span className="inline-flex items-center justify-center w-4 h-4 sm:w-3.5 sm:h-3.5 rounded-full border border-navy-600/50 text-xs sm:text-[9px] text-navy-600 font-normal cursor-help">?</span>}
           </h4>
-          <p className="text-xs text-[#64748b]">{subtitle}</p>
+          <p className="text-xs text-navy-600">{subtitle}</p>
         </div>
       </div>
       <div className="grid grid-cols-3 gap-3">
-        <div><div className="text-lg font-bold text-white">{track.completedCount}</div><div className="text-xs text-[#64748b]">completed</div></div>
-        <div><div className="text-lg font-bold text-white">{track.avgDays}<span className="text-xs font-normal text-[#64748b]">d</span></div><div className="text-xs text-[#64748b]">avg (≤{track.slaTarget}d)</div></div>
-        <div><div className={`text-lg font-bold ${track.slaPct >= 70 ? 'text-emerald-400' : track.slaPct >= 50 ? 'text-amber-400' : 'text-red-400'}`}>{track.slaPct}%</div><div className="text-xs text-[#64748b]">SLA</div></div>
+        <div><div className="text-lg font-bold text-white">{track.completedCount}</div><div className="text-xs text-navy-600">completed</div></div>
+        <div><div className="text-lg font-bold text-white">{track.avgDays}<span className="text-xs font-normal text-navy-600">d</span></div><div className="text-xs text-navy-600">avg (≤{track.slaTarget}d)</div></div>
+        <div><div className={`text-lg font-bold ${track.slaPct >= 70 ? 'text-emerald-400' : track.slaPct >= 50 ? 'text-amber-400' : 'text-red-400'}`}>{track.slaPct}%</div><div className="text-xs text-navy-600">SLA</div></div>
       </div>
-      <div className="mt-3 pt-2 border-t border-[#2d3a52]"><span className="text-sm sm:text-xs text-[#64748b]">{track.openCount} currently open</span></div>
+      <div className="mt-3 pt-2 border-t border-navy-800"><span className="text-sm sm:text-xs text-navy-600">{track.openCount} currently open</span></div>
     </div>
   );
 }
