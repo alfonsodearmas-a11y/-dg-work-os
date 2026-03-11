@@ -21,9 +21,9 @@ const QUERY_TOOLS: AIToolDefinition[] = [
     input_schema: {
       type: 'object',
       properties: {
-        status: { type: 'string', enum: ['not_started', 'in_progress', 'blocked', 'completed'], description: 'Filter by status (optional)' },
+        status: { type: 'string', enum: ['new', 'active', 'blocked', 'done'], description: 'Filter by status (optional)' },
         agency: { type: 'string', description: 'Filter by agency: GPL, GWI, CJIA, GCAA, MARAD, HECI, General (optional)' },
-        priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'], description: 'Filter by priority (optional)' },
+        priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'], description: 'Filter by priority (optional)' },
         search: { type: 'string', description: 'Search term to match against task titles (optional)' },
         assignee_name: { type: 'string', description: 'Filter by assignee name (partial match, optional)' },
         overdue_only: { type: 'boolean', description: 'If true, only return tasks past their due date (optional)' },
@@ -104,19 +104,19 @@ const ACTION_TOOLS: AIToolDefinition[] = [
         assignee_name: { type: 'string', description: 'Name of the person to assign to (optional)' },
         due_date: { type: 'string', description: 'Due date in YYYY-MM-DD format (optional)' },
         agency: { type: 'string', description: 'Agency: GPL, GWI, CJIA, GCAA, MARAD, HECI, or General (optional)' },
-        priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'], description: 'Priority level (optional, defaults to medium)' },
+        priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'], description: 'Priority level (optional, defaults to medium)' },
       },
       required: ['title'],
     },
   },
   {
     name: 'update_task_status',
-    description: 'Update the status of an existing task. Use when user asks to mark a task as done, in progress, blocked, etc.',
+    description: 'Update the status of an existing task. Use when user asks to mark a task as done, active, blocked, etc.',
     input_schema: {
       type: 'object',
       properties: {
         task_title: { type: 'string', description: 'Title or partial title of the task to find' },
-        status: { type: 'string', enum: ['not_started', 'in_progress', 'blocked', 'completed'], description: 'New status' },
+        status: { type: 'string', enum: ['new', 'active', 'blocked', 'done'], description: 'New status' },
       },
       required: ['task_title', 'status'],
     },
@@ -158,7 +158,7 @@ const ACTION_TOOLS: AIToolDefinition[] = [
         title: { type: 'string', description: 'Flag title / issue description' },
         reason: { type: 'string', description: 'Why this needs attention' },
         agency: { type: 'string', description: 'Related agency (optional)' },
-        priority: { type: 'string', enum: ['high', 'urgent'], description: 'Priority level' },
+        priority: { type: 'string', enum: ['high', 'critical'], description: 'Priority level' },
       },
       required: ['title', 'reason'],
     },
@@ -350,7 +350,7 @@ async function queryTasks(input: Record<string, unknown>): Promise<string> {
   if (input.search) query = query.ilike('title', `%${input.search}%`);
 
   if (input.overdue_only) {
-    query = query.lt('due_date', new Date().toISOString().slice(0, 10)).neq('status', 'completed');
+    query = query.lt('due_date', new Date().toISOString().slice(0, 10)).neq('status', 'done');
   }
 
   query = query.order('due_date', { ascending: true, nullsFirst: false }).limit(limit);
@@ -527,7 +527,7 @@ async function executeCreateTask(input: Record<string, unknown>, userId: string)
     .insert({
       title: input.title,
       description: input.description || null,
-      status: 'not_started',
+      status: 'new',
       priority: input.priority || 'medium',
       due_date: input.due_date || null,
       agency: input.agency || null,
@@ -608,8 +608,8 @@ async function executeCreateFlag(input: Record<string, unknown>, userId: string)
     .insert({
       title: `[FLAG] ${input.title}`,
       description: String(input.reason || ''),
-      status: 'not_started',
-      priority: input.priority || 'urgent',
+      status: 'new',
+      priority: input.priority || 'critical',
       agency: input.agency || null,
       created_by: userId,
     })

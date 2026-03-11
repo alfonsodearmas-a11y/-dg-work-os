@@ -21,8 +21,8 @@ async function handleCron(request: NextRequest) {
   try {
     // Find overdue tasks
     const result = await query(
-      `UPDATE tasks SET status = 'delayed'
-       WHERE status NOT IN ('done', 'delayed')
+      `UPDATE tasks SET status = 'blocked'
+       WHERE status NOT IN ('done', 'blocked')
          AND due_date < CURRENT_DATE
        RETURNING *`
     );
@@ -32,7 +32,7 @@ async function handleCron(request: NextRequest) {
       // Create activity
       await query(
         `INSERT INTO task_activities (task_id, action, from_value, to_value)
-         VALUES ($1, 'status_changed', $2, 'delayed')`,
+         VALUES ($1, 'status_changed', $2, 'blocked')`,
         [task.id, task.status]
       );
 

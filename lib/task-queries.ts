@@ -1,13 +1,10 @@
 import { query, transaction } from './db-pg';
 import type { PoolClient } from 'pg';
-import { validateTransition, type TaskStatus } from './task-transitions';
+import { validateTransition } from './task-transitions';
+import type { TaskStatus, TaskPriority } from './task-types';
 
 export { validateTransition };
-export type { TaskStatus };
-
-// ── Types ──────────────────────────────────────────────────────────────────
-
-export type TaskPriority = 'high' | 'medium' | 'low';
+export type { TaskStatus, TaskPriority };
 export type TaskAction =
   | 'created' | 'status_changed' | 'priority_changed' | 'reassigned'
   | 'commented' | 'due_date_changed' | 'extension_requested'
@@ -449,8 +446,8 @@ export async function getTaskStats(filters?: { agency?: string; assignee_id?: st
     `SELECT
        COUNT(*) FILTER (WHERE status != 'done') AS total_active,
        COUNT(*) FILTER (WHERE status = 'new') AS status_new,
-       COUNT(*) FILTER (WHERE status = 'in_progress') AS in_progress,
-       COUNT(*) FILTER (WHERE status = 'delayed') AS delayed,
+       COUNT(*) FILTER (WHERE status = 'active') AS active,
+       COUNT(*) FILTER (WHERE status = 'blocked') AS blocked,
        COUNT(*) FILTER (WHERE status = 'done') AS done,
        COUNT(*) AS total
      FROM tasks ${where}`,
