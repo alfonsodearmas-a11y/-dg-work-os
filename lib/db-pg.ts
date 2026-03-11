@@ -21,7 +21,7 @@ pool.on('error', (err) => {
   logger.error({ err }, 'Unexpected pool error');
 });
 
-export async function query(text: string, params?: any[]): Promise<QueryResult> {
+export async function query(text: string, params?: unknown[]): Promise<QueryResult> {
   const start = Date.now();
   try {
     const result = await pool.query(text, params);
@@ -30,7 +30,7 @@ export async function query(text: string, params?: any[]): Promise<QueryResult> 
       console.log(`[db-pg] ${text.substring(0, 80)}... (${duration}ms, ${result.rowCount} rows)`);
     }
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error, query: text.substring(0, 80) }, 'Query error');
     throw error;
   }

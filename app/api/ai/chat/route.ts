@@ -12,7 +12,7 @@ import { getTokenBudgetStatus, logUsage } from '@/lib/ai/token-budget';
 import { compressHistory } from '@/lib/ai/history-compressor';
 import { tryLocalAnswer } from '@/lib/ai/local-answers';
 import { getAnthropicTools, buildActionProposal, isQueryTool, executeQueryTool } from '@/lib/ai/tools';
-import { ModelTier, MODEL_IDS, MAX_TOKENS, TIER_LABELS, MetricSnapshot, ChatStreamEvent } from '@/lib/ai/types';
+import { ModelTier, MODEL_IDS, MAX_TOKENS, TIER_LABELS, MetricSnapshot, ChatStreamEvent, ToolUseBlock } from '@/lib/ai/types';
 import { requireRole } from '@/lib/auth-helpers';
 import { parseBody } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
@@ -300,8 +300,8 @@ export async function POST(request: NextRequest) {
             });
 
             let accumulated = '';
-            let toolUseBlocks: Array<{ id: string; name: string; input: string }> = [];
-            let pendingToolUse: { id: string; name: string; input: string } | null = null;
+            let toolUseBlocks: ToolUseBlock[] = [];
+            let pendingToolUse: ToolUseBlock | null = null;
 
             for await (const event of stream) {
               if (event.type === 'content_block_start') {

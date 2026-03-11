@@ -5,6 +5,8 @@ import { logger } from '@/lib/logger';
 import { computeGPLAnalysis, computeGWIAnalysis } from '@/lib/pending-applications-analysis';
 import type { PendingApplication } from '@/lib/pending-applications-types';
 
+const PENDING_APP_COLUMNS = 'id, agency, customer_reference, first_name, last_name, telephone, region, district, village_ward, street, lot, event_code, event_description, application_date, days_waiting, data_as_of, pipeline_stage, account_type, service_order_type, service_order_number, account_status, cycle, division_code';
+
 function mapRow(row: Record<string, unknown>): PendingApplication {
   return {
     id: String(row.id || ''),
@@ -45,7 +47,7 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabaseAdmin
       .from('pending_applications')
-      .select('*')
+      .select(PENDING_APP_COLUMNS)
       .eq('agency', agency);
 
     if (error) {

@@ -67,6 +67,10 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'No tasks provided' }, { status: 400 });
   }
 
+  if (taskIds.length > 100) {
+    return apiError('LIMIT_EXCEEDED', 'Maximum 100 tasks per bulk operation', 400);
+  }
+
   const { error } = await supabaseAdmin
     .from('tasks')
     .delete()

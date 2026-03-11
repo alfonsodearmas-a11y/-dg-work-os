@@ -230,6 +230,12 @@ function enrichProject(row: any): Project {
   };
 }
 
+// ── Column constants ──────────────────────────────────────────────────────
+
+const PROJECT_ALL_COLUMNS = 'id, project_id, executing_agency, sub_agency, project_name, short_name, region, tender_board_type, contract_value, contractor, project_end_date, completion_pct, has_images, health, escalated, escalation_reason, assigned_to, start_date, revised_start_date, balance_remaining, remarks, project_status, extension_reason, extension_date, project_extended, total_distributed, total_expended, created_at, updated_at';
+
+const PORTFOLIO_SUMMARY_COLUMNS = 'sub_agency, contract_value, completion_pct, project_end_date, health, escalated, region, project_status, start_date, updated_at';
+
 // ── Queries ────────────────────────────────────────────────────────────────
 
 export async function getPortfolioSummary(filters?: {
@@ -244,7 +250,7 @@ export async function getPortfolioSummary(filters?: {
 }): Promise<PortfolioSummary> {
   let query = supabaseAdmin
     .from('projects')
-    .select('sub_agency, contract_value, completion_pct, project_end_date, health, escalated, region, project_status, start_date, updated_at');
+    .select(PORTFOLIO_SUMMARY_COLUMNS);
 
   if (filters?.agencies?.length) query = query.in('sub_agency', filters.agencies);
   if (filters?.regions?.length) query = query.in('region', filters.regions);
@@ -349,14 +355,14 @@ export async function getProjectsList(filters: {
   escalatedOnly?: boolean;
   page?: number;
   limit?: number;
-}): Promise<{ projects: Project[]; total: number }> {
+}): Promise<{ projects: Project[]; total: number; truncated?: boolean }> {
   // Determine if we need client-side filtering (status/health are computed fields)
   const statusFilters = filters.statuses?.length ? filters.statuses : (filters.status ? [filters.status] : []);
   const needsClientFilter = statusFilters.length > 0 || (filters.healths?.length ?? 0) > 0;
 
   // When status/health filters are active, we must fetch ALL matching rows first,
   // apply computed filters, THEN paginate — otherwise pagination skips matching rows.
-  let query = supabaseAdmin.from('projects').select('*', { count: 'exact' });
+  let query = supabaseAdmin.from('projects').select(PROJECT_ALL_COLUMNS, { count: 'exact' });
 
   // Multi-select agency filter (new) or single agency (backward compat)
   if (filters.agencies?.length) query = query.in('sub_agency', filters.agencies);
@@ -410,41 +416,55 @@ export async function getProjectsList(filters: {
   const page = filters.page || 1;
   const limit = filters.limit || 50;
 
-  // When client-side filtering is needed, fetch all rows (up to a high limit)
+  // When client-side filtering is needed, paginate through all rows in pages
   // to avoid Supabase's default 1000-row cap silently truncating results.
   // When no client-side filtering, use normal DB-level pagination.
   if (needsClientFilter) {
-    query = query.range(0, 4999);
+    // Fetch in pages of 1000 to avoid Supabase row limits
+    const MAX_PAGES = 10; // Up to 10,000 rows max
+    let allRows: any[] = [];
+    let truncated = false;
+
+    for (let p = 0; p < MAX_PAGES; p++) {
+      const rangeStart = p * 1000;
+      const rangeEnd = rangeStart + 999;
+      const { data: pageData } = await query.range(rangeStart, rangeEnd);
+      if (!pageData || pageData.length === 0) break;
+      allRows = allRows.concat(pageData);
+      if (pageData.length < 1000) break;
+      if (p === MAX_PAGES - 1) truncated = true;
+    }
+
+    let projects = allRows.map(enrichProject);
+
+    // Apply computed-field filters (status and health are derived, not stored reliably)
+    if (statusFilters.length) {
+      projects = projects.filter(p => statusFilters.includes(p.status));
+    }
+    if (filters.healths?.length) {
+      projects = projects.filter(p => filters.healths!.includes(p.health));
+    }
+
+    // Paginate the filtered results
+    const total = projects.length;
+    const fromIdx = (page - 1) * limit;
+    projects = projects.slice(fromIdx, fromIdx + limit);
+
+    return { projects, total, truncated };
   } else {
     const from = (page - 1) * limit;
     query = query.range(from, from + limit - 1);
+
+    const { data, error: queryError, count } = await query;
+
+    if (queryError) {
+      logger.error({ err: queryError }, 'getProjectsList query error');
+      return { projects: [], total: 0 };
+    }
+
+    const projects = (data || []).map(enrichProject);
+    return { projects, total: count || 0 };
   }
-
-  const { data, error: queryError, count } = await query;
-
-  if (queryError) {
-    logger.error({ err: queryError }, 'getProjectsList query error');
-    return { projects: [], total: 0 };
-  }
-
-  let projects = (data || []).map(enrichProject);
-
-  // Apply computed-field filters (status and health are derived, not stored reliably)
-  if (statusFilters.length) {
-    projects = projects.filter(p => statusFilters.includes(p.status));
-  }
-  if (filters.healths?.length) {
-    projects = projects.filter(p => filters.healths!.includes(p.health));
-  }
-
-  // When client-side filtering was used, paginate the filtered results
-  const total = needsClientFilter ? projects.length : (count || 0);
-  if (needsClientFilter) {
-    const from = (page - 1) * limit;
-    projects = projects.slice(from, from + limit);
-  }
-
-  return { projects, total };
 }
 
 export async function getProjectById(projectId: string): Promise<Project | null> {
@@ -453,7 +473,7 @@ export async function getProjectById(projectId: string): Promise<Project | null>
 
   const { data } = await supabaseAdmin
     .from('projects')
-    .select('*')
+    .select(PROJECT_ALL_COLUMNS)
     .eq(col, projectId)
     .single();
 
@@ -463,7 +483,7 @@ export async function getProjectById(projectId: string): Promise<Project | null>
 export async function getDelayedProjects(): Promise<Project[]> {
   const { data } = await supabaseAdmin
     .from('projects')
-    .select('*')
+    .select(PROJECT_ALL_COLUMNS)
     .gt('completion_pct', 0)
     .lt('completion_pct', 100);
 
@@ -478,7 +498,7 @@ export async function getDelayedProjects(): Promise<Project[]> {
 export async function getProjectNotes(projectId: string): Promise<ProjectNote[]> {
   const { data } = await supabaseAdmin
     .from('project_notes')
-    .select('*, users!project_notes_user_id_fkey(name, role)')
+    .select('id, project_id, user_id, note_text, note_type, created_at, users!project_notes_user_id_fkey(name, role)')
     .eq('project_id', projectId)
     .order('created_at', { ascending: false });
 
@@ -503,7 +523,7 @@ export async function addProjectNote(
   const { data, error } = await supabaseAdmin
     .from('project_notes')
     .insert({ project_id: projectId, user_id: userId, note_text: noteText, note_type: noteType })
-    .select('*, users!project_notes_user_id_fkey(name, role)')
+    .select('id, project_id, user_id, note_text, note_type, created_at, users!project_notes_user_id_fkey(name, role)')
     .single();
 
   if (error) throw error;
@@ -515,8 +535,8 @@ export async function addProjectNote(
     note_text: data.note_text,
     note_type: data.note_type,
     created_at: data.created_at,
-    user_name: data.users?.name || 'Unknown',
-    user_role: data.users?.role || 'officer',
+    user_name: ((Array.isArray(data.users) ? data.users[0] : data.users) as { name: string; role: string } | null)?.name || 'Unknown',
+    user_role: ((Array.isArray(data.users) ? data.users[0] : data.users) as { name: string; role: string } | null)?.role || 'officer',
   };
 }
 
@@ -525,7 +545,7 @@ export async function addProjectNote(
 export async function getProjectSummary(projectId: string): Promise<ProjectSummary | null> {
   const { data } = await supabaseAdmin
     .from('project_summaries')
-    .select('*')
+    .select('id, project_id, summary, generated_at')
     .eq('project_id', projectId)
     .single();
 
@@ -592,7 +612,7 @@ export async function bulkUpdateProjects(
 export async function getSavedFilters(userId: string): Promise<SavedFilter[]> {
   const { data } = await supabaseAdmin
     .from('saved_filters')
-    .select('*')
+    .select('id, user_id, filter_name, filter_params, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -607,7 +627,7 @@ export async function saveFilter(
   const { data, error } = await supabaseAdmin
     .from('saved_filters')
     .insert({ user_id: userId, filter_name: filterName, filter_params: filterParams })
-    .select()
+    .select('id, user_id, filter_name, filter_params, created_at')
     .single();
 
   if (error) throw error;
@@ -645,7 +665,9 @@ export async function recalculateAllHealth(): Promise<{ updated: number; total: 
   if (!data) return { updated: 0, total: 0, breakdown: {} };
 
   const breakdown: Record<string, number> = { green: 0, amber: 0, red: 0 };
-  const updates: { id: string; health: string }[] = [];
+
+  // Group updates by target health value for batch processing
+  const updatesByHealth: Record<string, string[]> = { green: [], amber: [], red: [] };
 
   for (const row of data) {
     const pct = Number(row.completion_pct) || 0;
@@ -653,22 +675,27 @@ export async function recalculateAllHealth(): Promise<{ updated: number; total: 
     breakdown[newHealth] = (breakdown[newHealth] || 0) + 1;
 
     if (newHealth !== (row.health || 'green')) {
-      updates.push({ id: row.id, health: newHealth });
+      updatesByHealth[newHealth].push(row.id);
     }
   }
 
-  // Batch update in chunks of 50
-  for (let i = 0; i < updates.length; i += 50) {
-    const chunk = updates.slice(i, i + 50);
-    for (const u of chunk) {
+  // Batch update: one UPDATE per health value instead of one per project
+  let totalUpdated = 0;
+  for (const [health, ids] of Object.entries(updatesByHealth)) {
+    if (ids.length === 0) continue;
+
+    // Process in chunks of 200 IDs per batch (Supabase IN clause limit)
+    for (let i = 0; i < ids.length; i += 200) {
+      const chunk = ids.slice(i, i + 200);
       await supabaseAdmin
         .from('projects')
-        .update({ health: u.health })
-        .eq('id', u.id);
+        .update({ health })
+        .in('id', chunk);
     }
+    totalUpdated += ids.length;
   }
 
-  return { updated: updates.length, total: data.length, breakdown };
+  return { updated: totalUpdated, total: data.length, breakdown };
 }
 
 // ── Distinct statuses (for filter dropdowns) ──────────────────────────────
@@ -689,7 +716,7 @@ export async function getDistinctStatuses(): Promise<string[]> {
 export async function getProjectFunding(projectId: string): Promise<FundingDistribution[]> {
   const { data } = await supabaseAdmin
     .from('funding_distributions')
-    .select('*')
+    .select('id, project_id, date_distributed, payment_type, amount_distributed, amount_expended, distributed_balance, funding_remarks, contract_ref, created_at')
     .eq('project_id', projectId)
     .order('date_distributed', { ascending: true });
 

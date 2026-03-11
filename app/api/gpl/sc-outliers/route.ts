@@ -10,7 +10,7 @@ export async function GET() {
   try {
     const { data: outliers, error } = await supabaseAdmin
       .from('gpl_chronic_outliers')
-      .select('*')
+      .select('id, customer_reference, service_order_number, first_name, last_name, region, track, current_stage, application_date, latest_days_elapsed, snapshot_count, resolved, notes, created_at, updated_at')
       .eq('resolved', false)
       .order('latest_days_elapsed', { ascending: false });
 

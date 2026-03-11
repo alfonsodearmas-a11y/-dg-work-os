@@ -6,6 +6,9 @@ import { logger } from '@/lib/logger';
 // UUID v4 format validation
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const DOC_DETAIL_COLUMNS = 'id, filename, original_filename, file_path, title, summary, document_type, agency, tags, file_size, mime_type, processing_status, key_entities, analysis, uploaded_at, created_at';
+const DOC_QUERY_COLUMNS = 'id, document_id, question, answer, created_at';
+
 function validateId(id: string): NextResponse | null {
   if (!UUID_REGEX.test(id)) {
     return NextResponse.json({ error: 'Invalid document ID format' }, { status: 400 });
@@ -27,7 +30,7 @@ export async function GET(
   try {
     const { data: doc, error } = await supabaseAdmin
       .from('documents')
-      .select('*')
+      .select(DOC_DETAIL_COLUMNS)
       .eq('id', id)
       .single();
 
@@ -41,7 +44,7 @@ export async function GET(
     // Get Q&A history
     const { data: queries } = await supabaseAdmin
       .from('document_queries')
-      .select('*')
+      .select(DOC_QUERY_COLUMNS)
       .eq('document_id', id)
       .order('created_at', { ascending: false });
 
@@ -122,7 +125,7 @@ export async function PATCH(
       .from('documents')
       .update(updates)
       .eq('id', id)
-      .select()
+      .select(DOC_DETAIL_COLUMNS)
       .single();
 
     if (error) throw error;

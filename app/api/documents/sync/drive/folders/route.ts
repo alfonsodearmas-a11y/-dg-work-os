@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger';
 export async function GET(request: NextRequest) {
   const authResult = await requireRole(['dg', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
-
+  // TODO: migrate to requireRole() — remove redundant auth() call; requireRole() above already authenticates
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const authResult = await requireRole(['dg', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
-
+  // TODO: migrate to requireRole() — remove redundant auth() call; requireRole() above already authenticates
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });

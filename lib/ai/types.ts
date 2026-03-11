@@ -269,3 +269,10 @@ export interface ChatActionResultEvent {
   success: boolean;
   message: string;
 }
+
+/** A collected tool_use block from the Anthropic streaming API */
+export interface ToolUseBlock {
+  id: string;
+  name: string;
+  input: string;
+}

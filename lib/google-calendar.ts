@@ -340,10 +340,15 @@ export async function fetchTomorrowEvents(userId?: string): Promise<CalendarEven
   return response.data.items?.map(transformEvent) || [];
 }
 
-export async function fetchWeekEvents(userId?: string): Promise<CalendarEvent[]> {
+/**
+ * Fetch events for the next week (default) or a custom number of hours ahead.
+ * @param userId - Optional user ID for per-user calendar access
+ * @param opts - Optional: { hoursAhead } to limit the time window (default: 168 = 7 days)
+ */
+export async function fetchWeekEvents(userId?: string, opts?: { hoursAhead?: number }): Promise<CalendarEvent[]> {
   const now = new Date();
-  const endOfWeek = new Date();
-  endOfWeek.setDate(now.getDate() + 7);
+  const hoursAhead = opts?.hoursAhead ?? 168; // 7 days default
+  const endTime = new Date(now.getTime() + hoursAhead * 60 * 60 * 1000);
 
   const cal = await getCalendar(userId);
   const calId = await getCalendarId(userId);
@@ -352,7 +357,7 @@ export async function fetchWeekEvents(userId?: string): Promise<CalendarEvent[]>
     cal.events.list({
       calendarId: calId,
       timeMin: now.toISOString(),
-      timeMax: endOfWeek.toISOString(),
+      timeMax: endTime.toISOString(),
       singleEvents: true,
       orderBy: 'startTime'
     })

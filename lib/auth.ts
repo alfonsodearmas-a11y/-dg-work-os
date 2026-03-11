@@ -7,9 +7,10 @@ import { supabaseAdmin } from './db';
 // CANONICAL PATTERN: Use `requireRole()` from `lib/auth-helpers.ts` for
 // all new API routes. It validates the NextAuth session and checks role.
 //
-// LEGACY SHIMS: authenticateAny(), authenticateFromCookie(), authorizeRoles(),
-// isDG(), isCEO(), canAccessTask() exist at the bottom of this file for
-// backward compatibility with old admin/tm routes. Do NOT use them in new code.
+// LEGACY SHIMS (being phased out): authenticateAny(), authenticateFromCookie(),
+// authorizeRoles(), isDG(), isCEO(), canAccessTask() exist at the bottom of
+// this file for backward compatibility with old admin/tm routes.
+// Do NOT use them in new code — they will be removed once all routes migrate.
 //
 // New routes should always use:
 //   import { requireRole } from '@/lib/auth-helpers';
@@ -179,6 +180,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Role changes made by an admin take effect on the next token refresh,
       // but in practice users may need to sign out and sign back in for
       // changes to take effect immediately.
+      // TODO: Add role-version check against DB to invalidate cached JWT when role changes
       if (token.userId && !account) {
         const { data: user } = await supabaseAdmin
           .from('users')

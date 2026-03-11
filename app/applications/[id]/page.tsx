@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, use } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, FileText, Upload, Trash2, Clock, CheckCircle, XCircle,
@@ -74,8 +75,9 @@ const ACTION_LABELS: Record<string, string> = {
 
 const MINISTRY_ROLES = ['dg', 'minister', 'ps'];
 
-export default function ApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function ApplicationDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
   const { data: session } = useSession();
   const [app, setApp] = useState<Application | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);

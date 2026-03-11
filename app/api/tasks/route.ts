@@ -19,6 +19,8 @@ const createTaskSchema = z.object({
 
 export const dynamic = 'force-dynamic';
 
+const TASK_COLUMNS = 'id, title, description, status, priority, due_date, agency, role, owner_user_id, assigned_by_user_id, source_meeting_id, created_at, updated_at';
+
 export async function GET(request: NextRequest) {
   const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (result instanceof NextResponse) return result;
@@ -28,10 +30,13 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status');
   const agency = searchParams.get('agency');
   const overdue = searchParams.get('overdue');
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const limit = Math.min(200, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
 
   let query = supabaseAdmin
     .from('tasks')
-    .select('*, owner:users!owner_user_id(id, name)')
+    .select(`${TASK_COLUMNS}, owner:users!owner_user_id(id, name)`, { count: 'exact' })
+    .order('status', { ascending: true })
     .order('due_date', { ascending: true, nullsFirst: false });
 
   // Scope by role
@@ -48,7 +53,10 @@ export async function GET(request: NextRequest) {
     query = query.lt('due_date', today).neq('status', 'done');
   }
 
-  const { data, error } = await query;
+  const from = (page - 1) * limit;
+  query = query.range(from, from + limit - 1);
+
+  const { data, error, count } = await query;
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -63,7 +71,8 @@ export async function GET(request: NextRequest) {
   };
 
   for (const t of data || []) {
-    const owner = t.owner as { id: string; name: string } | null;
+    const ownerRaw = t.owner as unknown;
+    const owner = (Array.isArray(ownerRaw) ? ownerRaw[0] : ownerRaw) as { id: string; name: string } | null;
     const task: TaskRow = { ...t, owner_name: owner?.name || null, owner: undefined };
     const col = grouped[task.status];
     if (col) col.push(task);
@@ -73,6 +82,9 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     tasks: grouped,
     lastSync: new Date().toISOString(),
+    total: count || 0,
+    page,
+    limit,
   });
 }
 
@@ -103,14 +115,15 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       assigned_by_user_id: data.assignee_id && canAssignTasks(session.user.role) ? session.user.id : null,
       source_meeting_id: data.source_meeting_id || null,
     })
-    .select('*, owner:users!owner_user_id(id, name)')
+    .select(`${TASK_COLUMNS}, owner:users!owner_user_id(id, name)`)
     .single();
 
   if (error) {
     return apiError('DB_ERROR', error.message, 500);
   }
 
-  const owner = task.owner as { id: string; name: string } | null;
+  const ownerRaw = task.owner as unknown;
+  const owner = (Array.isArray(ownerRaw) ? ownerRaw[0] : ownerRaw) as { id: string; name: string } | null;
   const flatTask = { ...task, owner_name: owner?.name || null, owner: undefined };
 
   await supabaseAdmin.from('task_activity').insert({

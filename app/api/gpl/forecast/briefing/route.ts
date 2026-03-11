@@ -10,7 +10,7 @@ export async function GET() {
   try {
     const { data, error } = await supabaseAdmin
       .from('gpl_forecast_ai_analysis')
-      .select('*')
+      .select('id, executive_briefing, demand_outlook, capacity_risk, infrastructure_reliability, customer_revenue_impact, essequibo_assessment, recommendations, generated_at')
       .order('generated_at', { ascending: false })
       .limit(1)
       .maybeSingle();

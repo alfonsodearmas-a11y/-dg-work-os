@@ -3,6 +3,8 @@ import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 
+const REPORT_COLUMNS = 'id, report_month, report_type, financial_data, collections_data, customer_service_data, procurement_data, ai_insights, created_at, updated_at';
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ month: string }> }
@@ -18,7 +20,7 @@ export async function GET(
 
     const { data, error } = await supabaseAdmin
       .from('gwi_monthly_reports')
-      .select('*')
+      .select(REPORT_COLUMNS)
       .eq('report_month', normalizedMonth)
       .single();
 

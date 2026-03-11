@@ -38,7 +38,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   // 3. Get ALL subscriptions (active and inactive)
   const { data: allSubs, error: subError } = await supabaseAdmin
     .from('push_subscriptions')
-    .select('*')
+    .select('id, user_id, endpoint, keys_p256dh, keys_auth, platform, active, created_at, last_used_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 

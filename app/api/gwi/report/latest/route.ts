@@ -3,6 +3,8 @@ import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 
+const REPORT_COLUMNS = 'id, report_month, report_type, financial_data, collections_data, customer_service_data, procurement_data, ai_insights, created_at, updated_at';
+
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
@@ -10,7 +12,7 @@ export async function GET() {
   try {
     const { data, error } = await supabaseAdmin
       .from('gwi_monthly_reports')
-      .select('*')
+      .select(REPORT_COLUMNS)
       .order('report_month', { ascending: false })
       .limit(2);
 

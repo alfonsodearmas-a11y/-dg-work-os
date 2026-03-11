@@ -8,7 +8,7 @@ export async function GET() {
   try {
     const { data, error } = await supabaseAdmin
       .from('gpl_multivariate_forecasts')
-      .select('*')
+      .select('id, generated_at, data_period, methodology_summary, conservative_json, aggressive_json, demand_drivers_json, executive_summary, model_used, processing_time_ms, input_tokens, output_tokens, is_fallback')
       .order('generated_at', { ascending: false })
       .limit(1)
       .maybeSingle();

@@ -4,6 +4,8 @@ import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 import { sanitizeSearchInput } from '@/lib/parse-utils';
 
+const DOC_LIST_COLUMNS = 'id, filename, original_filename, title, summary, document_type, agency, tags, file_size, mime_type, processing_status, uploaded_at, created_at';
+
 export async function GET(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
@@ -16,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabaseAdmin
       .from('documents')
-      .select('*')
+      .select(DOC_LIST_COLUMNS)
       .in('processing_status', ['completed', 'processing', 'failed']);
 
     if (agency) {

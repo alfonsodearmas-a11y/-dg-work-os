@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     const { data: projects } = await supabaseAdmin
       .from('projects')
-      .select('*')
+      .select('project_id, project_name, sub_agency, region, contractor, contract_value, completion_pct, project_end_date, project_status, health')
       .in('id', project_ids);
 
     if (!projects?.length) {

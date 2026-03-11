@@ -3,6 +3,9 @@ import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
+
+const COMMENT_COLUMNS = 'id, task_id, user_id, body, parent_id, created_at';
 
 const createCommentSchema = z.object({
   body: z.string().min(1),
@@ -18,36 +21,28 @@ export async function GET(
 
   const { id } = await params;
 
+  // Use a Supabase JOIN to fetch comments with user info in a single query (no N+1)
   const { data: comments, error } = await supabaseAdmin
     .from('task_comments')
-    .select('*')
+    .select(`${COMMENT_COLUMNS}, users:user_id(name, role)`)
     .eq('task_id', id)
     .order('created_at', { ascending: true });
 
   if (error) {
-    console.error('[task-comments] GET error:', error.message);
+    logger.error({ err: error }, '[task-comments] GET error');
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 
-  // Batch-fetch user names for all comment authors
-  const userIds = [...new Set((comments || []).map((c) => c.user_id))];
-  const userMap = new Map<string, { name: string; role: string }>();
-
-  if (userIds.length > 0) {
-    const { data: users } = await supabaseAdmin
-      .from('users')
-      .select('id, name, role')
-      .in('id', userIds);
-
-    for (const u of users || []) {
-      userMap.set(u.id, { name: u.name, role: u.role });
-    }
-  }
-
   const enriched = (comments || []).map((c) => {
-    const user = userMap.get(c.user_id);
+    const usersRaw = c.users as unknown;
+    const user = (Array.isArray(usersRaw) ? usersRaw[0] : usersRaw) as { name: string; role: string } | null;
     return {
-      ...c,
+      id: c.id,
+      task_id: c.task_id,
+      user_id: c.user_id,
+      body: c.body,
+      parent_id: c.parent_id,
+      created_at: c.created_at,
       user_name: user?.name || 'Unknown',
       user_role: user?.role || '',
     };
@@ -69,7 +64,7 @@ export const POST = withErrorHandler(async (
   const { data, error: validationError } = await parseBody(request, createCommentSchema);
   if (validationError) return validationError;
 
-  console.log('[task-comments] INSERT attempt:', { task_id: id, user_id: session.user.id, bodyLen: data.body.length });
+  logger.info({ task_id: id, user_id: session.user.id, bodyLen: data.body.length }, '[task-comments] INSERT attempt');
 
   const { data: comment, error } = await supabaseAdmin
     .from('task_comments')
@@ -79,25 +74,27 @@ export const POST = withErrorHandler(async (
       body: data.body,
       parent_id: data.parent_id || null,
     })
-    .select('*')
+    .select(COMMENT_COLUMNS)
     .single();
 
   if (error) {
-    console.error('[task-comments] INSERT error:', JSON.stringify(error));
+    logger.error({ err: error }, '[task-comments] INSERT error');
     return apiError('DB_ERROR', error.message, 500);
   }
 
-  console.log('[task-comments] INSERT OK:', comment.id);
+  logger.info({ commentId: comment.id }, '[task-comments] INSERT OK');
 
   // Log activity (fire-and-forget)
-  supabaseAdmin.from('task_activity').insert({
-    task_id: id,
-    user_id: session.user.id,
-    action: 'commented',
-    new_value: data.body.substring(0, 200),
-  }).then(({ error: actErr }) => {
-    if (actErr) console.warn('[task-comments] Activity log failed:', actErr.message);
-  });
+  Promise.resolve(
+    supabaseAdmin.from('task_activity').insert({
+      task_id: id,
+      user_id: session.user.id,
+      action: 'commented',
+      new_value: data.body.substring(0, 200),
+    }).then(({ error: actErr }) => {
+      if (actErr) logger.warn({ err: actErr }, '[task-comments] Activity log failed');
+    })
+  ).catch((err: unknown) => logger.error({ err }, 'Failed to create notification'));
 
   const flatComment = {
     ...comment,

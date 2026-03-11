@@ -8,6 +8,8 @@ import type { PendingApplication } from '@/lib/pending-applications-types';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 
+const PENDING_APP_COLUMNS = 'id, agency, customer_reference, first_name, last_name, telephone, region, district, village_ward, street, lot, event_code, event_description, application_date, days_waiting, data_as_of, pipeline_stage, account_type, service_order_type, service_order_number, account_status, cycle, division_code';
+
 function mapRow(row: Record<string, unknown>): PendingApplication {
   return {
     id: String(row.id || ''),
@@ -49,7 +51,7 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabaseAdmin
       .from('pending_application_analyses')
-      .select('*')
+      .select('id, agency, analysis_type, analysis_date, result, status, created_at')
       .eq('agency', agency)
       .eq('analysis_type', 'deep')
       .eq('status', 'completed')
@@ -95,7 +97,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   const { data: rows, error: fetchError } = await supabaseAdmin
     .from('pending_applications')
-    .select('*')
+    .select(PENDING_APP_COLUMNS)
     .eq('agency', agency);
 
   if (fetchError) {
@@ -129,7 +131,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       },
       status: 'completed',
     })
-    .select('id,analysis_date,created_at')
+    .select('id, analysis_date, created_at')
     .single();
 
   if (saveError) {

@@ -4,6 +4,8 @@ import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
 
+const SUBTASK_COLUMNS = 'id, task_id, title, done, position, created_by, created_at';
+
 const createSubtaskSchema = z.object({
   title: z.string().min(1),
 });
@@ -25,7 +27,7 @@ export async function GET(
 
   const { data, error } = await supabaseAdmin
     .from('subtasks')
-    .select('*')
+    .select(SUBTASK_COLUMNS)
     .eq('task_id', id)
     .order('position', { ascending: true });
 
@@ -65,7 +67,7 @@ export const POST = withErrorHandler(async (
       position: nextPosition,
       created_by: session.user.id,
     })
-    .select()
+    .select(SUBTASK_COLUMNS)
     .single();
 
   if (error) {
@@ -94,7 +96,7 @@ export const PATCH = withErrorHandler(async (
     .from('subtasks')
     .update(updates)
     .eq('id', data.subtaskId)
-    .select()
+    .select(SUBTASK_COLUMNS)
     .single();
 
   if (error) {

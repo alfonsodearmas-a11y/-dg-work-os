@@ -3,6 +3,8 @@ import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 
+const METRIC_COLUMNS = 'id, snapshot_id, track, stage, category, count, avg_days, median_days, sla_target_days, within_sla_count, within_sla_pct, oldest_days, oldest_ref';
+
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
@@ -23,7 +25,7 @@ export async function GET() {
     // Get Track B metrics for this snapshot
     const { data: metrics } = await supabaseAdmin
       .from('gpl_snapshot_metrics')
-      .select('*')
+      .select(METRIC_COLUMNS)
       .eq('snapshot_id', snapshot.id)
       .eq('track', 'B');
 

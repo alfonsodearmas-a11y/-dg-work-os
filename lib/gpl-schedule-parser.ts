@@ -1,5 +1,10 @@
 import * as XLSX from 'xlsx';
 
+type ExcelCellValue = string | number | boolean | Date | null | undefined;
+type ExcelRow = ExcelCellValue[] & { _filledStation?: string | null };
+type ExcelSheetData = ExcelRow[];
+interface ParseWarning { type: string; message: string; [key: string]: unknown; }
+
 const CONFIG = {
   DATE_HEADER_ROW: 4,
   UNIT_START_ROW: 5,
@@ -47,7 +52,7 @@ export function getYesterdayGuyana(): string {
   return guyanaTime.toISOString().split('T')[0];
 }
 
-function parseExcelDate(value: any): string | null {
+function parseExcelDate(value: ExcelCellValue): string | null {
   if (!value) return null;
   if (value instanceof Date) {
     return isNaN(value.getTime()) ? null : value.toISOString().split('T')[0];
@@ -64,14 +69,14 @@ function parseExcelDate(value: any): string | null {
   return null;
 }
 
-function normalizeEngine(engine: any): string | null {
+function normalizeEngine(engine: ExcelCellValue): string | null {
   if (!engine) return null;
-  const normalized = engine.toString().trim();
+  const normalized = String(engine).trim();
   if (normalized.toLowerCase().includes('wart')) return 'Wartsila';
   return normalized;
 }
 
-export function parsePeakDemandFormat(value: any): { onBars: number | null; suppressed: number | null } {
+export function parsePeakDemandFormat(value: ExcelCellValue): { onBars: number | null; suppressed: number | null } {
   if (!value || value === '-') return { onBars: null, suppressed: null };
   const str = String(value).trim();
   const match = str.match(/^([\d.]+)\s*\(([\d.]+)\)$/);
@@ -101,7 +106,7 @@ interface DateColumnResult {
   scannedColumns?: number;
 }
 
-function findYesterdayColumn(sheetData: any[][]): DateColumnResult {
+function findYesterdayColumn(sheetData: ExcelSheetData): DateColumnResult {
   const yesterday = getYesterdayGuyana();
   const dateRow = sheetData[CONFIG.DATE_HEADER_ROW - 1];
   if (!dateRow) return { error: 'Date header row (row 4) not found' };
@@ -133,7 +138,7 @@ function findYesterdayColumn(sheetData: any[][]): DateColumnResult {
   return { error: 'No date columns found in row 4' };
 }
 
-function forwardFillStations(sheetData: any[][]) {
+function forwardFillStations(sheetData: ExcelSheetData) {
   let currentStation: string | null = null;
   for (let rowIdx = CONFIG.UNIT_START_ROW - 1; rowIdx <= CONFIG.UNIT_END_ROW - 1; rowIdx++) {
     const row = sheetData[rowIdx];
@@ -142,7 +147,7 @@ function forwardFillStations(sheetData: any[][]) {
     if (stationCell && String(stationCell).trim()) {
       currentStation = String(stationCell).trim();
     }
-    (row as any)._filledStation = currentStation;
+    row._filledStation = currentStation;
   }
 }
 
@@ -170,7 +175,7 @@ export interface StationAggregate {
   stationUtilizationPct: number | null;
 }
 
-function parseUnits(sheetData: any[][], dataColIdx: number): ScheduleUnit[] {
+function parseUnits(sheetData: ExcelSheetData, dataColIdx: number): ScheduleUnit[] {
   const units: ScheduleUnit[] = [];
   forwardFillStations(sheetData);
 
@@ -178,21 +183,21 @@ function parseUnits(sheetData: any[][], dataColIdx: number): ScheduleUnit[] {
     const row = sheetData[rowIdx];
     if (!row) continue;
 
-    const station = (row as any)._filledStation || row[CONFIG.COLS.STATION];
+    const station = row._filledStation || row[CONFIG.COLS.STATION];
     if (!station) continue;
 
     const engine = normalizeEngine(row[CONFIG.COLS.ENGINE]);
     const unitNumber = row[CONFIG.COLS.UNIT_NUMBER];
-    const installedMVA = parseFloat(row[CONFIG.COLS.MVA]) || null;
-    const installedMW = parseFloat(row[CONFIG.COLS.MW_INSTALLED]) || null;
-    const deratedMW = parseFloat(row[CONFIG.COLS.MW_DERATED]) || null;
+    const installedMVA = parseFloat(String(row[CONFIG.COLS.MVA])) || null;
+    const installedMW = parseFloat(String(row[CONFIG.COLS.MW_INSTALLED])) || null;
+    const deratedMW = parseFloat(String(row[CONFIG.COLS.MW_DERATED])) || null;
 
     const availableRaw = row[dataColIdx];
     let availableMW: number | null = null;
     let status: 'online' | 'offline' | 'no_data' = 'no_data';
 
     if (availableRaw !== null && availableRaw !== undefined && availableRaw !== '') {
-      availableMW = parseFloat(availableRaw);
+      availableMW = parseFloat(String(availableRaw));
       if (!isNaN(availableMW)) {
         status = availableMW > 0 ? 'online' : 'offline';
       } else {
@@ -251,13 +256,13 @@ function aggregateStations(units: ScheduleUnit[]): StationAggregate[] {
   return Object.values(stations);
 }
 
-function parseSummary(sheetData: any[][], dataColIdx: number) {
+function parseSummary(sheetData: ExcelSheetData, dataColIdx: number) {
   const getValue = (rowNum: number): number | null => {
     const row = sheetData[rowNum - 1];
     if (!row) return null;
     const val = row[dataColIdx];
     if (val === null || val === undefined || val === '' || val === '-') return null;
-    const num = parseFloat(val);
+    const num = parseFloat(String(val));
     return isNaN(num) ? null : num;
   };
 
@@ -298,7 +303,7 @@ function parseSummary(sheetData: any[][], dataColIdx: number) {
 
 export function parseScheduleSheet(buffer: Buffer) {
   const startTime = Date.now();
-  const warnings: any[] = [];
+  const warnings: ParseWarning[] = [];
 
   try {
     const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true, cellNF: true, dense: false });
@@ -307,7 +312,7 @@ export function parseScheduleSheet(buffer: Buffer) {
       return { success: false, error: 'Schedule sheet not found', availableSheets: workbook.SheetNames };
     }
 
-    const sheetData = XLSX.utils.sheet_to_json(scheduleSheet, { header: 1, defval: null, raw: true }) as any[][];
+    const sheetData = XLSX.utils.sheet_to_json(scheduleSheet, { header: 1, defval: null, raw: true }) as ExcelSheetData;
 
     const dateResult = findYesterdayColumn(sheetData);
     if (dateResult.error) return { success: false, error: dateResult.error };
@@ -366,8 +371,8 @@ export function parseScheduleSheet(buffer: Buffer) {
       },
       warnings: warnings.length > 0 ? warnings : undefined,
     };
-  } catch (error: any) {
-    return { success: false, error: `Failed to parse Schedule sheet: ${error.message}` };
+  } catch (error: unknown) {
+    return { success: false, error: `Failed to parse Schedule sheet: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
 

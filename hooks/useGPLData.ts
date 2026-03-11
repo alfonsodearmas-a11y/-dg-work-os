@@ -5,31 +5,73 @@ import type { GPLData } from '@/data/mockData';
 import { fetchWithOffline } from '@/lib/offline/sync-manager';
 import { API_PATHS } from '@/lib/constants/api-paths';
 
+interface GPLApiStation {
+  station?: string;
+  total_units?: string | number;
+  units_online?: string | number;
+  total_derated_capacity_mw?: string | number;
+  total_available_mw?: string | number;
+}
+
+interface GPLApiSummary {
+  report_date?: string;
+  hampshire_solar_mwp?: string | number;
+  solar_hampshire_mwp?: string | number;
+  prospect_solar_mwp?: string | number;
+  solar_prospect_mwp?: string | number;
+  trafalgar_solar_mwp?: string | number;
+  solar_trafalgar_mwp?: string | number;
+  total_renewable_mwp?: string | number;
+  average_for?: string | number;
+  expected_peak_demand_mw?: string | number;
+  evening_peak_on_bars_mw?: string | number;
+  evening_peak_suppressed_mw?: string | number;
+  day_peak_on_bars_mw?: string | number;
+  day_peak_suppressed_mw?: string | number;
+}
+
+interface GPLApiAnalysis {
+  analysis_data?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+interface GPLApiPayload {
+  upload?: { id: string };
+  summary?: GPLApiSummary;
+  stations?: GPLApiStation[];
+  analysis?: GPLApiAnalysis | null;
+}
+
+interface GPLApiResponse {
+  success?: boolean;
+  data?: GPLApiPayload;
+}
+
 // Transform API response to match expected GPL data structure
-const transformGPLData = (apiData: any): GPLData | null => {
+const transformGPLData = (apiData: { summary: GPLApiSummary; stations: GPLApiStation[]; analysis?: GPLApiAnalysis | null }): GPLData | null => {
   if (!apiData?.stations || !apiData?.summary) {
     return null;
   }
 
   const { summary, stations, analysis } = apiData;
 
-  const powerStations = stations.map((station: any) => {
-    const stationName = station.station || 'Unknown';
+  const powerStations = stations.map((station: GPLApiStation) => {
+    const stationName = String(station.station || 'Unknown');
     return {
       code: stationName.toUpperCase().replace(/\s+/g, '_'),
       name: stationName,
       type: 'fossil' as const,
-      units: parseInt(station.total_units) || 0,
-      onlineUnits: parseInt(station.units_online) || 0,
-      derated: parseFloat(station.total_derated_capacity_mw) || 0,
-      available: parseFloat(station.total_available_mw) || 0,
+      units: parseInt(String(station.total_units)) || 0,
+      onlineUnits: parseInt(String(station.units_online)) || 0,
+      derated: parseFloat(String(station.total_derated_capacity_mw)) || 0,
+      available: parseFloat(String(station.total_available_mw)) || 0,
     };
   });
 
   const solarStations = [
-    { name: 'Hampshire Solar', capacity: parseFloat(summary.hampshire_solar_mwp ?? summary.solar_hampshire_mwp) || 0 },
-    { name: 'Prospect Solar', capacity: parseFloat(summary.prospect_solar_mwp ?? summary.solar_prospect_mwp) || 0 },
-    { name: 'Trafalgar Solar', capacity: parseFloat(summary.trafalgar_solar_mwp ?? summary.solar_trafalgar_mwp) || 0 },
+    { name: 'Hampshire Solar', capacity: parseFloat(String(summary.hampshire_solar_mwp ?? summary.solar_hampshire_mwp)) || 0 },
+    { name: 'Prospect Solar', capacity: parseFloat(String(summary.prospect_solar_mwp ?? summary.solar_prospect_mwp)) || 0 },
+    { name: 'Trafalgar Solar', capacity: parseFloat(String(summary.trafalgar_solar_mwp ?? summary.solar_trafalgar_mwp)) || 0 },
   ].filter(s => s.capacity > 0);
 
   return {
@@ -38,16 +80,16 @@ const transformGPLData = (apiData: any): GPLData | null => {
     peakDemandDate: summary.report_date || '',
     powerStations,
     solarStations,
-    totalRenewableCapacity: parseFloat(summary.total_renewable_mwp) || 0,
-    forcedOutageRate: parseFloat(summary.average_for) * 100 || 7.5,
-    expectedPeakDemand: parseFloat(summary.expected_peak_demand_mw) || 200,
+    totalRenewableCapacity: parseFloat(String(summary.total_renewable_mwp)) || 0,
+    forcedOutageRate: parseFloat(String(summary.average_for)) * 100 || 7.5,
+    expectedPeakDemand: parseFloat(String(summary.expected_peak_demand_mw)) || 200,
     actualEveningPeak: {
-      onBars: parseFloat(summary.evening_peak_on_bars_mw) || 0,
-      suppressed: parseFloat(summary.evening_peak_suppressed_mw) || 0,
+      onBars: parseFloat(String(summary.evening_peak_on_bars_mw)) || 0,
+      suppressed: parseFloat(String(summary.evening_peak_suppressed_mw)) || 0,
     },
     actualDayPeak: {
-      onBars: parseFloat(summary.day_peak_on_bars_mw) || 0,
-      suppressed: parseFloat(summary.day_peak_suppressed_mw) || 0,
+      onBars: parseFloat(String(summary.day_peak_on_bars_mw)) || 0,
+      suppressed: parseFloat(String(summary.day_peak_suppressed_mw)) || 0,
     },
     generationAvailAtSuppressed: null,
     approximateSuppressedPeak: null,
@@ -119,22 +161,22 @@ export const useGPLData = () => {
     try {
       const url = date ? API_PATHS.GPL_DAILY(date) : API_PATHS.GPL_LATEST;
       const cacheKey = date ? `gpl-daily-${date}` : 'gpl-latest';
-      const result = await fetchWithOffline<any>(url, 'agency-data', cacheKey);
+      const result = await fetchWithOffline<GPLApiResponse>(url, 'agency-data', cacheKey);
       const json = result.data;
 
       // Unwrap: API returns { success, data: { upload, summary, stations, analysis? } }
       const payload = json?.data;
-      if (!payload) return null;
+      if (!payload?.summary || !payload?.stations) return null;
 
       const { upload, summary, stations } = payload;
 
       // Use analysis from payload if included, otherwise fetch separately
-      let analysis = payload.analysis || null;
+      let analysis: GPLApiAnalysis | null = payload.analysis || null;
       if (!analysis && upload?.id && navigator.onLine) {
         try {
           const analysisResponse = await fetch(API_PATHS.GPL_ANALYSIS(upload.id));
           if (analysisResponse.ok) {
-            const analysisJson = await analysisResponse.json();
+            const analysisJson = await analysisResponse.json() as { data?: { analysis?: GPLApiAnalysis }; analysis?: GPLApiAnalysis };
             analysis = analysisJson?.data?.analysis || analysisJson?.analysis || null;
           }
         } catch (err) {

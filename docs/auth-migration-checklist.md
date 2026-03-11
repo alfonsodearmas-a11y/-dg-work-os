@@ -28,6 +28,11 @@ Each file should be migrated to use `requireRole()` from `@/lib/auth-helpers` in
 - [ ] `app/api/gpl/forecast/refresh/route.ts` — Refresh forecasts (POST). Calls `auth()` but falls back to `'system'` if no session — no auth gate.
 - [ ] `app/api/gpl/forecast/multivariate/route.ts` — Multivariate forecast (POST). Calls `auth()` but falls back to `'system'` if no session — no auth gate.
 
+## API: Documents Sync (`app/api/documents/sync/`)
+
+- [ ] `app/api/documents/sync/drive/route.ts` — Drive sync POST/GET. Uses `requireRole()` but also calls redundant `auth()` for session.
+- [ ] `app/api/documents/sync/drive/folders/route.ts` — Drive folders GET/POST. Uses `requireRole()` but also calls redundant `auth()` for session.
+
 ## API: Integrations (`app/api/integrations/`)
 
 - [ ] `app/api/integrations/google/callback/route.ts` — Google OAuth callback (GET). Calls `auth()` for user ID during token exchange.

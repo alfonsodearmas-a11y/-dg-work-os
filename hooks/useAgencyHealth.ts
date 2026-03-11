@@ -1,33 +1,41 @@
 'use client';
 
-import type { GPLData, CJIAData, GCAAData } from '@/data/mockData';
+import type { GPLData, CJIAData, GWIData, GCAAData } from '@/data/mockData';
 import type { GridMetric } from '@/components/intel/AgencyCard';
 import { computeGPLSummary } from './useGPLData';
 
+type AgencyData = GPLData | CJIAData | GWIData | GCAAData;
+
 // ── Status helpers ───────────────────────────────────────────────────────────
 
-export const getAgencyStatus = (id: string, data: any) => {
+export const getAgencyStatus = (id: string, data: AgencyData) => {
   switch (id) {
-    case 'cjia':
-      return data.safetyIncidents === 0 && data.onTimePercent >= 85
+    case 'cjia': {
+      const cjia = data as CJIAData;
+      return cjia.safetyIncidents === 0 && cjia.onTimePercent >= 85
         ? { type: 'good' as const, text: 'Operational' }
         : { type: 'warning' as const, text: 'Attention' };
-    case 'gwi':
-      if (data.nrwPercent > 55) return { type: 'critical' as const, text: 'Critical' };
-      if (data.activeDisruptions > 2) return { type: 'warning' as const, text: 'Disruptions' };
+    }
+    case 'gwi': {
+      const gwi = data as GWIData;
+      if (gwi.nrwPercent > 55) return { type: 'critical' as const, text: 'Critical' };
+      if (gwi.activeDisruptions > 2) return { type: 'warning' as const, text: 'Disruptions' };
       return { type: 'good' as const, text: 'Operational' };
+    }
     case 'gpl': {
-      const summary = computeGPLSummary(data);
+      const summary = computeGPLSummary(data as GPLData);
       if (!summary) return { type: 'good' as const, text: 'Unknown' };
       if (summary.reserve < 0) return { type: 'critical' as const, text: 'Deficit' };
       if (summary.criticalCount > 2) return { type: 'warning' as const, text: 'Degraded' };
       if (summary.reserve < 20) return { type: 'warning' as const, text: 'Tight Margin' };
       return { type: 'good' as const, text: 'Operational' };
     }
-    case 'gcaa':
-      return data.complianceRate >= 90
+    case 'gcaa': {
+      const gcaa = data as GCAAData;
+      return gcaa.complianceRate >= 90
         ? { type: 'good' as const, text: 'Compliant' }
         : { type: 'warning' as const, text: 'Review' };
+    }
     default:
       return { type: 'good' as const, text: 'Unknown' };
   }
@@ -35,22 +43,26 @@ export const getAgencyStatus = (id: string, data: any) => {
 
 // ── Metrics helpers ──────────────────────────────────────────────────────────
 
-export const getAgencyMetrics = (id: string, data: any) => {
+export const getAgencyMetrics = (id: string, data: AgencyData) => {
   switch (id) {
-    case 'cjia':
+    case 'cjia': {
+      const cjia = data as CJIAData;
       return [
-        { label: 'Passengers MTD', value: data.mtdTotal?.toLocaleString(), highlight: true },
-        { label: 'YoY Growth', value: `+${data.mtdYoyChange}%`, status: 'good' as const },
-        { label: '2025 Passengers', value: data.annual2025Total?.toLocaleString() },
+        { label: 'Passengers MTD', value: cjia.mtdTotal?.toLocaleString(), highlight: true },
+        { label: 'YoY Growth', value: `+${cjia.mtdYoyChange}%`, status: 'good' as const },
+        { label: '2025 Passengers', value: cjia.annual2025Total?.toLocaleString() },
       ];
-    case 'gwi':
+    }
+    case 'gwi': {
+      const gwi = data as GWIData;
       return [
-        { label: 'NRW', value: `${data.nrwPercent}%`, highlight: true, status: (data.nrwPercent > 50 ? 'critical' : 'good') as 'critical' | 'good' },
-        { label: 'Disruptions', value: data.activeDisruptions, status: (data.activeDisruptions > 2 ? 'warning' : 'good') as 'warning' | 'good' },
-        { label: 'Response Time', value: `${data.avgResponseTime} hrs` },
+        { label: 'NRW', value: `${gwi.nrwPercent}%`, highlight: true, status: (gwi.nrwPercent > 50 ? 'critical' : 'good') as 'critical' | 'good' },
+        { label: 'Disruptions', value: gwi.activeDisruptions, status: (gwi.activeDisruptions > 2 ? 'warning' : 'good') as 'warning' | 'good' },
+        { label: 'Response Time', value: `${gwi.avgResponseTime} hrs` },
       ];
+    }
     case 'gpl': {
-      const summary = computeGPLSummary(data);
+      const summary = computeGPLSummary(data as GPLData);
       if (!summary) {
         return [
           { label: 'System Load', value: 'No data', highlight: true },
@@ -72,12 +84,14 @@ export const getAgencyMetrics = (id: string, data: any) => {
         },
       ];
     }
-    case 'gcaa':
+    case 'gcaa': {
+      const gcaa = data as GCAAData;
       return [
-        { label: 'Aircraft', value: data.activeRegistrations, highlight: true },
-        { label: 'Inspections', value: `${data.inspectionsMTD}/${data.inspectionsTarget}` },
-        { label: 'Compliance', value: `${data.complianceRate}%` },
+        { label: 'Aircraft', value: gcaa.activeRegistrations, highlight: true },
+        { label: 'Inspections', value: `${gcaa.inspectionsMTD}/${gcaa.inspectionsTarget}` },
+        { label: 'Compliance', value: `${gcaa.complianceRate}%` },
       ];
+    }
     default:
       return [];
   }
@@ -85,10 +99,10 @@ export const getAgencyMetrics = (id: string, data: any) => {
 
 // ── Trend helpers ────────────────────────────────────────────────────────────
 
-export const getAgencyTrend = (id: string, data: any): number | null => {
+export const getAgencyTrend = (id: string, data: AgencyData): number | null => {
   switch (id) {
-    case 'cjia': return data.mtdYoyChange;
-    case 'gwi': return data.responseTimeTrend;
+    case 'cjia': return (data as CJIAData).mtdYoyChange;
+    case 'gwi': return (data as GWIData).responseTimeTrend;
     case 'gpl': return null;
     case 'gcaa': return null;
     default: return null;
@@ -97,10 +111,10 @@ export const getAgencyTrend = (id: string, data: any): number | null => {
 
 // ── Warning badge helpers ────────────────────────────────────────────────────
 
-export const getAgencyWarningBadge = (id: string, data: any) => {
+export const getAgencyWarningBadge = (id: string, data: AgencyData) => {
   switch (id) {
     case 'gpl': {
-      const summary = computeGPLSummary(data);
+      const summary = computeGPLSummary(data as GPLData);
       if (!summary) return null;
       if (summary.stationsBelowCapacity > 0) {
         return {
@@ -112,11 +126,12 @@ export const getAgencyWarningBadge = (id: string, data: any) => {
       return null;
     }
     case 'gwi': {
-      if (data.activeDisruptions > 0) {
+      const gwi = data as GWIData;
+      if (gwi.activeDisruptions > 0) {
         return {
-          count: data.activeDisruptions,
-          text: `${data.activeDisruptions} active disruption${data.activeDisruptions > 1 ? 's' : ''}`,
-          severity: (data.activeDisruptions > 2 ? 'warning' : 'info') as 'warning' | 'info',
+          count: gwi.activeDisruptions,
+          text: `${gwi.activeDisruptions} active disruption${gwi.activeDisruptions > 1 ? 's' : ''}`,
+          severity: (gwi.activeDisruptions > 2 ? 'warning' : 'info') as 'warning' | 'info',
         };
       }
       return null;

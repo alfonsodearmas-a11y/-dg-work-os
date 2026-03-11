@@ -3,6 +3,13 @@ import { parseAIJson } from '@/lib/parse-utils';
 
 const anthropic = new Anthropic();
 
+const rateLimiter = { count: 0, resetAt: 0 };
+function checkRateLimit(maxPerMinute = 10) {
+  const now = Date.now();
+  if (now > rateLimiter.resetAt) { rateLimiter.count = 0; rateLimiter.resetAt = now + 60000; }
+  if (++rateLimiter.count > maxPerMinute) throw new Error('Rate limit exceeded');
+}
+
 export interface DocumentAnalysis {
   title: string;
   summary: string;
@@ -21,6 +28,8 @@ export async function analyzeDocument(
   text: string,
   filename: string
 ): Promise<DocumentAnalysis> {
+  checkRateLimit();
+
   const response = await anthropic.messages.create({
     model: 'claude-opus-4-20250514',
     max_tokens: 4000,

@@ -3,6 +3,8 @@ import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/db';
 import { canAccessModule } from '@/lib/modules/access';
 
+const APP_COLUMNS = 'id, agency, applicant_name, application_type, reference_number, priority, status, notes, created_by, updated_by, submitted_at, created_at, updated_at';
+
 // GET /api/applications/[id] — single application with documents and activity
 export async function GET(
   _req: NextRequest,
@@ -21,7 +23,7 @@ export async function GET(
 
   const { data: app, error } = await supabaseAdmin
     .from('customer_applications')
-    .select('*')
+    .select(APP_COLUMNS)
     .eq('id', id)
     .single();
 
@@ -86,10 +88,10 @@ export async function PATCH(
     return NextResponse.json({ error: "You don't have access to this module." }, { status: 403 });
   }
 
-  // Fetch current application
+  // Fetch current application (only fields needed for auth check + status transition)
   const { data: app } = await supabaseAdmin
     .from('customer_applications')
-    .select('*')
+    .select('id, agency, status')
     .eq('id', id)
     .single();
 
@@ -158,7 +160,7 @@ export async function PATCH(
     .from('customer_applications')
     .update(updates)
     .eq('id', id)
-    .select()
+    .select(APP_COLUMNS)
     .single();
 
   if (error) {

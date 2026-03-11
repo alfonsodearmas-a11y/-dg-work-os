@@ -7,8 +7,8 @@ interface AuditLogParams {
   action: string;
   entityType: string;
   entityId?: string;
-  oldValues?: Record<string, any>;
-  newValues?: Record<string, any>;
+  oldValues?: Record<string, unknown>;
+  newValues?: Record<string, unknown>;
   request?: NextRequest;
 }
 
@@ -40,7 +40,7 @@ export const auditService = {
           request?.headers.get('user-agent') || null,
         ]
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error({ err: error, action, entityType }, 'audit: failed to create audit log');
     }
   },
@@ -52,7 +52,7 @@ export const auditService = {
       LEFT JOIN users u ON al.user_id = u.id
       WHERE 1=1
     `;
-    const params: any[] = [];
+    const params: unknown[] = [];
     let paramIndex = 1;
 
     if (userId) {

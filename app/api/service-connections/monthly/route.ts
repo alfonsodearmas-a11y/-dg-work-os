@@ -3,6 +3,8 @@ import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 
+const MONTHLY_STATS_COLUMNS = 'id, report_month, opened_count, completed_count, queue_depth, avg_days_to_complete, pct_within_sla, track_a_completed, track_a_avg_days, track_a_sla_pct, track_b_completed, track_b_avg_days, track_b_sla_pct, design_completed, design_avg_days, design_sla_pct, created_at';
+
 export async function GET() {
   try {
     const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -10,7 +12,7 @@ export async function GET() {
 
     const { data, error } = await supabaseAdmin
       .from('service_connection_monthly_stats')
-      .select('*')
+      .select(MONTHLY_STATS_COLUMNS)
       .order('report_month', { ascending: false })
       .limit(24);
 

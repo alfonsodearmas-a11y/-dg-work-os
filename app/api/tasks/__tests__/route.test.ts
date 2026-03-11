@@ -56,18 +56,14 @@ describe('GET /api/tasks', () => {
       }),
     });
 
-    // Need to mock the chained query properly
-    const chainMock = {
-      select: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      lt: vi.fn().mockReturnThis(),
-      neq: vi.fn().mockReturnThis(),
-    };
-    // Final await returns { data, error }
-    (chainMock.order as any).mockResolvedValue({ data: mockData, error: null });
-    (chainMock.eq as any).mockReturnValue(chainMock);
-    mockFrom.mockReturnValue(chainMock);
+    // Proxy-based chain mock: any method call returns the proxy, await resolves to data
+    const result = { data: mockData, error: null, count: mockData.length };
+    const createChain = (): unknown =>
+      new Proxy(
+        { then: (resolve: (v: unknown) => void) => resolve(result) },
+        { get: (target, prop) => (prop === 'then' ? target.then : () => createChain()) }
+      );
+    mockFrom.mockReturnValue(createChain());
 
     const req = makeRequest('http://localhost:3000/api/tasks');
     const res = await GET(req);

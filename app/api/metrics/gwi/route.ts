@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireRole } from '@/lib/auth-helpers';
+import { requireUploadRole } from '@/lib/auth-helpers';
 import { transaction } from '@/lib/db-pg';
 import { auditService } from '@/lib/audit';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
@@ -19,7 +19,7 @@ const gwiMetricsSchema = z.object({
 });
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const authResult = await requireRole(['dg', 'agency_admin', 'officer']);
+  const authResult = await requireUploadRole('gwi');
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 

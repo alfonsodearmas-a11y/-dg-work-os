@@ -2,7 +2,7 @@ import * as pdfParse from 'pdf-parse';
 import * as mammoth from 'mammoth';
 
 // Handle both CJS and ESM default exports
-const pdf = typeof pdfParse === 'function' ? pdfParse : (pdfParse as any).default || pdfParse;
+const pdf = (typeof pdfParse === 'function' ? pdfParse : (pdfParse as Record<string, unknown>).default || pdfParse) as (buffer: Buffer) => Promise<{ text: string }>;
 import * as XLSX from 'xlsx';
 
 export async function extractText(

@@ -5,6 +5,11 @@ import { requireRole } from '@/lib/auth-helpers';
 import { withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 
+function safeJsonParse<T>(raw: string | null, fallback: T): T {
+  if (!raw) return fallback;
+  try { return JSON.parse(raw); } catch { return fallback; }
+}
+
 const EXCLUDED_STATIONS = ['onverwagt'];
 
 export async function GET(
@@ -30,7 +35,7 @@ export async function GET(
     if (analysisRows && analysisRows.length > 0) {
       const row = analysisRows[0];
       const analysisData = typeof row.analysis_data === 'string'
-        ? JSON.parse(row.analysis_data)
+        ? safeJsonParse(row.analysis_data, null)
         : row.analysis_data;
 
       return NextResponse.json({
@@ -63,7 +68,7 @@ export async function GET(
     }
 
     const rawData = typeof upload.raw_data === 'string'
-      ? JSON.parse(upload.raw_data)
+      ? safeJsonParse(upload.raw_data, null)
       : upload.raw_data;
 
     if (!rawData) {
@@ -187,7 +192,7 @@ export const POST = withErrorHandler(async (
   }
 
   const rawData = typeof upload.raw_data === 'string'
-    ? JSON.parse(upload.raw_data)
+    ? safeJsonParse(upload.raw_data, null)
     : upload.raw_data;
 
   if (!rawData) {

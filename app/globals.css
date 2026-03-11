@@ -623,7 +623,7 @@ html, body {
     min-height: 44px;
   }
 
-  /* Fix iOS input zoom */
+  /* Prevents iOS Safari viewport zoom on input focus — font-size < 16px triggers zoom */
   input, select, textarea {
     font-size: 16px !important;
   }
@@ -1537,6 +1537,7 @@ button, a, [role="button"], .clickable, input, select, textarea {
   display: none;
 }
 
+/* !important overrides base .login-btn at equal specificity when toggled via JS */
 .login-btn-success {
   background: linear-gradient(135deg, #059669, #10b981, #34d399) !important;
   opacity: 1 !important;
@@ -1611,6 +1612,7 @@ button, a, [role="button"], .clickable, input, select, textarea {
 }
 
 /* ── Success card ── */
+/* !important overrides base .login-card transforms at equal specificity during success animation */
 .login-success-card {
   transform: scale(1.03) translateY(-5%) !important;
   filter: brightness(1.15);

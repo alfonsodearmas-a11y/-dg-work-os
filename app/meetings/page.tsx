@@ -14,8 +14,6 @@ import {
   AlertCircle,
   ArrowLeft,
   Download,
-  FileText,
-  MessageSquare,
   ListChecks,
   Loader2,
   RefreshCw,
@@ -27,53 +25,24 @@ import {
   Pencil,
   Check,
   X,
-  StickyNote,
   CalendarPlus,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { NewMeetingModal } from '@/components/meetings/NewMeetingModal';
 import { CreateEventModal } from '@/components/calendar/CreateEventModal';
-import { formatDuration, formatTimestamp, STATUS_CONFIG, type MeetingStatus } from '@/lib/meetings-utils';
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface MeetingAction {
-  id: string;
-  meeting_id: string;
-  task: string;
-  owner: string | null;
-  due_date: string | null;
-  done: boolean;
-  confidence: 'AUTO_CREATE' | 'NEEDS_REVIEW';
-  review_reason: string | null;
-  task_id: string | null;
-  skipped: boolean;
-  created_at: string;
-}
-
-interface TranscriptSegment {
-  start: number;
-  end: number;
-  text: string;
-}
-
-interface Meeting {
-  id: string;
-  title: string;
-  date: string;
-  duration_secs: number | null;
-  status: string;
-  audio_path: string | null;
-  attendees: string[];
-  transcript_raw: { segments?: TranscriptSegment[] } | null;
-  transcript_text: string | null;
-  summary: string | null;
-  decisions: string[];
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-  meeting_actions: MeetingAction[];
-}
+import {
+  formatDuration,
+  formatTimestamp,
+  STATUS_CONFIG,
+  MEETING_TABS,
+  countAnalyzedMeetings,
+  countOpenActions,
+  filterMeetings,
+  type MeetingStatus,
+  type MeetingTabKey,
+  type MeetingAction,
+  type Meeting,
+} from '@/lib/meetings-utils';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -89,17 +58,6 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-// ── Tabs ──────────────────────────────────────────────────────────────────────
-
-const TABS = [
-  { key: 'analysis',   label: 'Analysis',   icon: FileText },
-  { key: 'transcript', label: 'Transcript', icon: MessageSquare },
-  { key: 'actions',    label: 'Actions',    icon: ListChecks },
-  { key: 'notes',      label: 'Notes',      icon: StickyNote },
-] as const;
-
-type TabKey = typeof TABS[number]['key'];
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function MeetingsPage() {
@@ -113,7 +71,7 @@ export default function MeetingsPage() {
   const [detailError, setDetailError] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<TabKey>('analysis');
+  const [activeTab, setActiveTab] = useState<MeetingTabKey>('analysis');
 
   // Processing state
   const [processing, setProcessing] = useState(false);
@@ -791,21 +749,10 @@ export default function MeetingsPage() {
 
   // ── Derived ───────────────────────────────────────────────────────────────
 
-  const filtered = useMemo(() => {
-    if (!searchQuery.trim()) return meetings;
-    const q = searchQuery.toLowerCase();
-    return meetings.filter(m =>
-      m.title.toLowerCase().includes(q) ||
-      m.attendees.some(a => a.toLowerCase().includes(q))
-    );
-  }, [meetings, searchQuery]);
-
+  const filtered = useMemo(() => filterMeetings(meetings, searchQuery), [meetings, searchQuery]);
   const totalMeetings = meetings.length;
-  const analyzedCount = meetings.filter(m => m.status === 'ANALYZED').length;
-  const openActions = meetings.reduce(
-    (sum, m) => sum + (m.meeting_actions?.filter(a => !a.done).length || 0),
-    0
-  );
+  const analyzedCount = countAnalyzedMeetings(meetings);
+  const openActions = countOpenActions(meetings);
 
   // ── Render Helpers ────────────────────────────────────────────────────────
 
@@ -1788,7 +1735,7 @@ export default function MeetingsPage() {
               {/* Tabs */}
               <div className="px-4 md:px-6 pt-3 border-b border-navy-800">
                 <div className="flex gap-1 overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
-                  {TABS.map((tab) => {
+                  {MEETING_TABS.map((tab) => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.key;
                     const actionCount =

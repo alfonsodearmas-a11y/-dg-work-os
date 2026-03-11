@@ -21,7 +21,7 @@ async function handleCron(request: NextRequest) {
 
   const { data: templates, error: fetchError } = await supabaseAdmin
     .from('task_templates')
-    .select('*')
+    .select('id, name, description, priority, agency_slug, recurrence_rule, recurrence_assignee_id, next_occurrence, due_offset_days')
     .eq('recurrence_enabled', true)
     .lte('next_occurrence', today)
     .not('recurrence_rule', 'is', null)

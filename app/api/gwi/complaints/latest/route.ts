@@ -11,7 +11,7 @@ export async function GET() {
     // First check weekly reports
     const { data: weeklyData } = await supabaseAdmin
       .from('gwi_weekly_reports')
-      .select('*')
+      .select('complaints_data, report_week')
       .order('report_week', { ascending: false })
       .limit(1)
       .single();

@@ -59,7 +59,7 @@ export async function getNotifications(
 
   let query = supabaseAdmin
     .from('notifications')
-    .select('*')
+    .select('id, user_id, type, title, body, icon, priority, reference_type, reference_id, reference_url, scheduled_for, delivered_at, read_at, dismissed_at, push_sent, created_at, category, source_module, action_required, action_type, expires_at, metadata, updated_at')
     .eq('user_id', userId)
     .is('dismissed_at', null)
     .lte('scheduled_for', new Date().toISOString())
@@ -84,7 +84,7 @@ export async function getNotifications(
 export async function getUnreadCount(userId: string): Promise<number> {
   const { count, error } = await supabaseAdmin
     .from('notifications')
-    .select('*', { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
     .eq('user_id', userId)
     .is('read_at', null)
     .is('dismissed_at', null)
@@ -141,7 +141,7 @@ export async function markDelivered(notificationId: string): Promise<void> {
 async function exists(type: string, referenceId: string, scheduledFor: string): Promise<boolean> {
   const { count, error } = await supabaseAdmin
     .from('notifications')
-    .select('*', { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
     .eq('type', type)
     .eq('reference_id', referenceId)
     .eq('scheduled_for', scheduledFor);
@@ -186,7 +186,8 @@ export async function generateMeetingNotifications(userId: string): Promise<{ co
   const created: Notification[] = [];
 
   try {
-    const events = await fetchWeekEvents();
+    // Only fetch events for the next 25 hours instead of the full week
+    const events = await fetchWeekEvents(undefined, { hoursAhead: 25 });
     const now = new Date();
     const cutoff = new Date(now.getTime() + 25 * 60 * 60 * 1000); // next 25 hours
 
@@ -467,7 +468,7 @@ export async function generateAll(userId: string): Promise<{
 export async function getPreferences(userId: string): Promise<NotificationPrefs> {
   const { data, error } = await supabaseAdmin
     .from('notification_preferences')
-    .select('*')
+    .select('meeting_reminder_24h, meeting_reminder_1h, meeting_reminder_15m, task_due_reminders, task_overdue_alerts, meeting_minutes_ready, projects_enabled, kpi_enabled, oversight_enabled, do_not_disturb, quiet_hours_start, quiet_hours_end')
     .eq('user_id', userId)
     .single();
 

@@ -10,7 +10,7 @@ export async function GET() {
 
     const { data } = await supabaseAdmin
       .from('project_uploads')
-      .select('*')
+      .select('id, filename, uploaded_at, uploaded_by, record_count, status, summary')
       .order('uploaded_at', { ascending: false })
       .limit(10);
 
