@@ -21,19 +21,19 @@ const COL_GAP = 3; // px between side-by-side columns
 const MAX_COLUMNS = 4;
 
 const CATEGORY_STYLES: Record<EventCategory, { bg: string; border: string; extra?: string }> = {
-  ministry: { bg: 'bg-[#4a5568]/20', border: 'border-l-[#4a5568]' },
-  board: { bg: 'bg-[#d4af37]/15', border: 'border-l-[#d4af37]' },
+  ministry: { bg: 'bg-navy-700/20', border: 'border-l-[#4a5568]' },
+  board: { bg: 'bg-gold-500/15', border: 'border-l-gold-500' },
   external: { bg: 'bg-teal-500/15', border: 'border-l-teal-500' },
-  personal: { bg: 'bg-[#64748b]/15', border: 'border-l-[#64748b]' },
-  blocked: { bg: 'bg-[#2d3a52]/30', border: 'border-l-[#64748b]', extra: 'border-dashed event-block-striped' },
+  personal: { bg: 'bg-navy-600/15', border: 'border-l-navy-600' },
+  blocked: { bg: 'bg-navy-800/30', border: 'border-l-navy-600', extra: 'border-dashed event-block-striped' },
 };
 
 const CATEGORY_LABELS: Record<EventCategory, { label: string; color: string }> = {
-  ministry: { label: 'Ministry', color: 'bg-[#4a5568]' },
-  board: { label: 'Board', color: 'bg-[#d4af37]' },
+  ministry: { label: 'Ministry', color: 'bg-navy-700' },
+  board: { label: 'Board', color: 'bg-gold-500' },
   external: { label: 'External', color: 'bg-teal-500' },
-  personal: { label: 'Personal', color: 'bg-[#64748b]' },
-  blocked: { label: 'Blocked', color: 'bg-[#2d3a52]' },
+  personal: { label: 'Personal', color: 'bg-navy-600' },
+  blocked: { label: 'Blocked', color: 'bg-navy-800' },
 };
 
 function getInitials(name: string): string {
@@ -66,7 +66,7 @@ function stripHtml(html: string): string {
 function StatusDot({ status }: { status?: string }) {
   if (status === 'confirmed') return <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" title="Confirmed" />;
   if (status === 'tentative') return <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" title="Tentative" />;
-  return <span className="w-2 h-2 rounded-full bg-[#64748b] inline-block" title="Needs action" />;
+  return <span className="w-2 h-2 rounded-full bg-navy-600 inline-block" title="Needs action" />;
 }
 
 // ── Collision Layout Engine ────────────────────────────────────────────────
@@ -262,8 +262,8 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
     if (sorted.length === 0) {
       return (
         <div className="text-center py-12">
-          <Clock className="h-12 w-12 text-[#4a5568] mx-auto mb-3" />
-          <p className="text-[#64748b]">{emptyLabel} &mdash; your schedule is clear</p>
+          <Clock className="h-12 w-12 text-navy-700 mx-auto mb-3" />
+          <p className="text-navy-600">{emptyLabel} &mdash; your schedule is clear</p>
         </div>
       );
     }
@@ -286,7 +286,7 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
               <button
                 onClick={() => handleEventClick(event)}
                 className={`w-full text-left p-3 rounded-xl border-l-4 ${styles.bg} ${styles.border} ${styles.extra || ''} ${
-                  happening ? 'ring-2 ring-[#d4af37]/50 animate-pulse-gold' : ''
+                  happening ? 'ring-2 ring-gold-500/50 animate-pulse-gold' : ''
                 } transition-all hover:brightness-110 relative`}
               >
                 {hasConflict && (
@@ -295,19 +295,19 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-white truncate">{event.title}</p>
-                    <p className="text-xs text-[#94a3b8] mt-1">
+                    <p className="text-xs text-slate-400 mt-1">
                       {format(parseISO(event.start_time!), 'h:mm a')} &ndash; {format(parseISO(event.end_time!), 'h:mm a')}
-                      <span className="text-[#64748b] ml-2">{formatDuration(duration)}</span>
+                      <span className="text-navy-600 ml-2">{formatDuration(duration)}</span>
                     </p>
                   </div>
                   <StatusDot status={event.status} />
                 </div>
-                <div className="flex items-center gap-3 mt-2 text-xs text-[#64748b]">
+                <div className="flex items-center gap-3 mt-2 text-xs text-navy-600">
                   {event.location && (
                     <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{event.location}</span>
                   )}
                   {videoLink && (
-                    <span className="flex items-center gap-1 text-[#d4af37]"><Video className="h-3 w-3" />Video</span>
+                    <span className="flex items-center gap-1 text-gold-500"><Video className="h-3 w-3" />Video</span>
                   )}
                   {event.attendees && event.attendees.length > 0 && (
                     <span className="flex items-center gap-1"><Users className="h-3 w-3" />{event.attendees.length}</span>
@@ -331,8 +331,8 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
   if (timedEvents.length === 0) {
     return (
       <div className="text-center py-12">
-        <Clock className="h-12 w-12 text-[#4a5568] mx-auto mb-3" />
-        <p className="text-[#64748b]">No events today &mdash; your schedule is clear</p>
+        <Clock className="h-12 w-12 text-navy-700 mx-auto mb-3" />
+        <p className="text-navy-600">No events today &mdash; your schedule is clear</p>
       </div>
     );
   }
@@ -347,10 +347,10 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
             return (
               <div key={hour} className="absolute left-0 right-0" style={{ top }}>
                 <div className="flex items-start">
-                  <span className="w-14 text-xs font-mono text-[#64748b] flex-shrink-0 -mt-2">
+                  <span className="w-14 text-xs font-mono text-navy-600 flex-shrink-0 -mt-2">
                     {format(new Date(2000, 0, 1, hour), 'h a')}
                   </span>
-                  <div className="flex-1 border-t border-[#2d3a52]/50" />
+                  <div className="flex-1 border-t border-navy-800/50" />
                 </div>
               </div>
             );
@@ -401,7 +401,7 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
                     }
                   }}
                   className={`absolute rounded-lg border-l-4 ${styles.bg} ${styles.border} ${styles.extra || ''} ${
-                    happening ? 'ring-2 ring-[#d4af37]/50 animate-pulse-gold' : ''
+                    happening ? 'ring-2 ring-gold-500/50 animate-pulse-gold' : ''
                   } text-left transition-all duration-200 ${
                     isExpanded
                       ? 'z-30 brightness-125 ring-1 ring-white/20 shadow-lg shadow-black/40'
@@ -427,7 +427,7 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
                     </p>
 
                     {/* Time — narrow shows start only */}
-                    <p className="text-[10px] text-[#94a3b8] shrink-0">
+                    <p className="text-[10px] text-slate-400 shrink-0">
                       {isNarrow
                         ? format(start, 'h:mm a')
                         : `${format(start, 'h:mm a')} \u2013 ${format(end, 'h:mm a')}`
@@ -436,12 +436,12 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
 
                     {/* Medium (2-col) or full width: duration + extras */}
                     {!isNarrow && duration >= 45 && (
-                      <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[#64748b] flex-wrap">
+                      <div className="flex items-center gap-2 mt-0.5 text-[10px] text-navy-600 flex-wrap">
                         <span>{formatDuration(duration)}</span>
                         {event.location && !isMedium && (
                           <span className="flex items-center gap-0.5"><MapPin className="h-2.5 w-2.5" />{event.location}</span>
                         )}
-                        {videoLink && (isExpanded || !isMedium) && <Video className="h-2.5 w-2.5 text-[#d4af37]" />}
+                        {videoLink && (isExpanded || !isMedium) && <Video className="h-2.5 w-2.5 text-gold-500" />}
                         {event.attendees && event.attendees.length > 0 && (
                           <span className="flex items-center gap-0.5"><Users className="h-2.5 w-2.5" />{event.attendees.length}</span>
                         )}
@@ -452,7 +452,7 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
                     {(!isMultiCol || isExpanded) && duration >= 60 && (
                       <div className="mt-1 flex-1 min-h-0">
                         {event.description && (
-                          <p className="text-[10px] text-[#64748b] line-clamp-2">
+                          <p className="text-[10px] text-navy-600 line-clamp-2">
                             {stripHtml(event.description).slice(0, 80)}
                           </p>
                         )}
@@ -470,7 +470,7 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
                                 </div>
                               ))}
                               {event.attendees.length > 3 && (
-                                <div className="w-5 h-5 rounded-full bg-[#2d3a52] flex items-center justify-center text-[8px] font-bold text-[#94a3b8] ring-1 ring-[#0a1628]">
+                                <div className="w-5 h-5 rounded-full bg-navy-800 flex items-center justify-center text-[8px] font-bold text-slate-400 ring-1 ring-[#0a1628]">
                                   +{event.attendees.length - 3}
                                 </div>
                               )}
@@ -493,8 +493,8 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
               style={{ top: nowTop }}
             >
               <div className="flex items-center">
-                <div className="w-3 h-3 rounded-full bg-[#d4af37] -ml-1.5 flex-shrink-0" />
-                <div className="flex-1 h-0.5 bg-[#d4af37]" />
+                <div className="w-3 h-3 rounded-full bg-gold-500 -ml-1.5 flex-shrink-0" />
+                <div className="flex-1 h-0.5 bg-gold-500" />
               </div>
             </div>
           )}
@@ -507,11 +507,11 @@ export function TimelineView({ events, onEventClick, selectedDate }: TimelineVie
 
 function CategoryLegend() {
   return (
-    <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-[#2d3a52]/50">
+    <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-navy-800/50">
       {(Object.entries(CATEGORY_LABELS) as [EventCategory, { label: string; color: string }][]).map(([, { label, color }]) => (
         <div key={label} className="flex items-center gap-1.5">
           <div className={`w-2.5 h-2.5 rounded-sm ${color}`} />
-          <span className="text-xs text-[#64748b]">{label}</span>
+          <span className="text-xs text-navy-600">{label}</span>
         </div>
       ))}
     </div>

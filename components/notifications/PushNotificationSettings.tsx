@@ -199,24 +199,24 @@ export function PushNotificationSettings() {
   let statusColor: string;
 
   if (permissionState === 'granted' && activeCount > 0) {
-    statusIcon = <CheckCircle className="h-4 w-4 text-[#059669]" />;
+    statusIcon = <CheckCircle className="h-4 w-4 text-emerald-600" />;
     statusText = 'Enabled';
-    statusColor = 'text-[#059669]';
+    statusColor = 'text-emerald-600';
   } else if (permissionState === 'denied') {
-    statusIcon = <XCircle className="h-4 w-4 text-[#dc2626]" />;
+    statusIcon = <XCircle className="h-4 w-4 text-red-600" />;
     statusText = 'Blocked';
-    statusColor = 'text-[#dc2626]';
+    statusColor = 'text-red-600';
   } else {
-    statusIcon = <AlertCircle className="h-4 w-4 text-[#d4af37]" />;
+    statusIcon = <AlertCircle className="h-4 w-4 text-gold-500" />;
     statusText = 'Not set up';
-    statusColor = 'text-[#d4af37]';
+    statusColor = 'text-gold-500';
   }
 
   return (
     <div className="card-premium p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <Send className="h-5 w-5 text-[#d4af37]" />
+          <Send className="h-5 w-5 text-gold-500" />
           <h2 className="text-lg font-semibold text-white">Push Notifications</h2>
         </div>
         <div className={`flex items-center gap-1.5 ${statusColor}`}>
@@ -227,11 +227,11 @@ export function PushNotificationSettings() {
 
       {/* Blocked state instructions */}
       {permissionState === 'denied' && (
-        <div className="mb-4 p-3 rounded-lg bg-[#dc2626]/10 border border-[#dc2626]/20">
-          <p className="text-xs text-[#dc2626]/80 leading-relaxed">
+        <div className="mb-4 p-3 rounded-lg bg-red-600/10 border border-[#dc2626]/20">
+          <p className="text-xs text-red-600/80 leading-relaxed">
             Push notifications are blocked. To re-enable:
           </p>
-          <ul className="text-xs text-[#dc2626]/60 mt-1 space-y-0.5 list-disc ml-4">
+          <ul className="text-xs text-red-600/60 mt-1 space-y-0.5 list-disc ml-4">
             <li>Click the lock icon in the address bar</li>
             <li>Find &quot;Notifications&quot; and change to &quot;Allow&quot;</li>
             <li>Refresh the page</li>
@@ -241,8 +241,8 @@ export function PushNotificationSettings() {
 
       {/* iOS browser instructions */}
       {isIOSBrowser() && (
-        <div className="mb-4 p-3 rounded-lg bg-[#d4af37]/10 border border-[#d4af37]/20">
-          <p className="text-xs text-[#d4af37]/80 leading-relaxed">
+        <div className="mb-4 p-3 rounded-lg bg-gold-500/10 border border-gold-500/20">
+          <p className="text-xs text-gold-500/80 leading-relaxed">
             Push notifications on iOS require the app to be added to your Home Screen.
             Tap the share button, then &quot;Add to Home Screen&quot;.
           </p>
@@ -253,7 +253,7 @@ export function PushNotificationSettings() {
       {permissionState !== 'denied' && !isIOSBrowser() && (permissionState !== 'granted' || activeCount === 0) && (
         <button
           onClick={handleEnable}
-          className="w-full mb-4 px-4 py-2.5 text-sm font-semibold rounded-lg bg-[#d4af37] text-[#0a1628] hover:bg-[#f4d03f] transition-colors"
+          className="w-full mb-4 px-4 py-2.5 text-sm font-semibold rounded-lg bg-gold-500 text-navy-950 hover:bg-gold-400 transition-colors"
         >
           {permissionState === 'granted' ? 'Re-register This Device' : 'Enable Push Notifications'}
         </button>
@@ -271,8 +271,8 @@ export function PushNotificationSettings() {
                   key={sub.id}
                   className={`flex items-center justify-between p-3 rounded-lg border ${
                     sub.active
-                      ? 'bg-white/5 border-[#2d3a52]/50'
-                      : 'bg-white/[0.02] border-[#2d3a52]/20 opacity-50'
+                      ? 'bg-white/5 border-navy-800/50'
+                      : 'bg-white/[0.02] border-navy-800/20 opacity-50'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -283,12 +283,12 @@ export function PushNotificationSettings() {
                           {platformLabel(sub.platform)}
                         </p>
                         {isCurrent && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-[#d4af37]/15 text-[#d4af37] font-medium uppercase">
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-gold-500/15 text-gold-500 font-medium uppercase">
                             This device
                           </span>
                         )}
                         {!sub.active && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-[#dc2626]/15 text-[#dc2626] font-medium uppercase">
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-red-600/15 text-red-600 font-medium uppercase">
                             Inactive
                           </span>
                         )}
@@ -304,7 +304,7 @@ export function PushNotificationSettings() {
                     title={isCurrent ? 'Disable push on this device' : 'Remove device'}
                     aria-label={isCurrent ? 'Disable push on this device' : 'Remove device'}
                   >
-                    <Trash2 className="h-3.5 w-3.5 text-white/30 hover:text-[#dc2626]" />
+                    <Trash2 className="h-3.5 w-3.5 text-white/30 hover:text-red-600" />
                   </button>
                 </div>
               );
@@ -319,7 +319,7 @@ export function PushNotificationSettings() {
           <button
             onClick={handleTestPush}
             disabled={testSending}
-            className="px-4 py-2 text-xs font-medium rounded-lg border border-[#2d3a52] text-white/60 hover:text-white hover:border-[#d4af37]/40 transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-xs font-medium rounded-lg border border-navy-800 text-white/60 hover:text-white hover:border-gold-500/40 transition-colors disabled:opacity-50"
           >
             {testSending ? 'Sending...' : 'Send test notification'}
           </button>

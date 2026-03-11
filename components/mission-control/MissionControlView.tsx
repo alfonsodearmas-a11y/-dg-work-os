@@ -81,7 +81,7 @@ export function MissionControlView({ data, briefing, userName }: Props) {
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">Mission Control</h1>
-              <p className="text-[#64748b] text-xs md:text-sm mt-0.5">
+              <p className="text-navy-600 text-xs md:text-sm mt-0.5">
                 {data.agencies.length} agencies &middot; last synced {lastSynced}
               </p>
             </div>
@@ -89,7 +89,7 @@ export function MissionControlView({ data, briefing, userName }: Props) {
               <RefreshButton />
               <Link
                 href="/tasks"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#d4af37] hover:bg-[#b8860b] transition-colors text-sm font-semibold text-[#0a1628]"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gold-500 hover:bg-gold-600 transition-colors text-sm font-semibold text-navy-950"
               >
                 <Plus size={14} />
                 <span className="hidden sm:inline">New Task</span>
@@ -98,15 +98,15 @@ export function MissionControlView({ data, briefing, userName }: Props) {
           </div>
 
           {/* Tabs */}
-          <div className="mt-4 flex gap-1 border-b border-[#2d3a52]/50">
+          <div className="mt-4 flex gap-1 border-b border-navy-800/50">
             {(['overview', 'analytics', 'alerts'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
                   activeTab === tab
-                    ? 'text-[#d4af37] border-[#d4af37]'
-                    : 'text-[#64748b] border-transparent hover:text-white'
+                    ? 'text-gold-500 border-gold-500'
+                    : 'text-navy-600 border-transparent hover:text-white'
                 }`}
               >
                 {tab}
@@ -194,25 +194,25 @@ export function MissionControlView({ data, briefing, userName }: Props) {
 
         {activeTab === 'analytics' && (
           <div className="card-premium p-8 text-center">
-            <p className="text-[#64748b] text-sm">Analytics view coming soon.</p>
+            <p className="text-navy-600 text-sm">Analytics view coming soon.</p>
           </div>
         )}
 
         {activeTab === 'alerts' && (
           <div className="card-premium p-8 text-center">
-            <p className="text-[#64748b] text-sm">Alerts view coming soon.</p>
+            <p className="text-navy-600 text-sm">Alerts view coming soon.</p>
           </div>
         )}
 
         {/* AI Briefing — inline */}
         {briefing && (
-          <div className="rounded-xl border border-[#d4af37]/30 bg-gradient-to-br from-[#1a2744] to-[#0f1d35] p-4">
+          <div className="rounded-xl border border-gold-500/30 bg-gradient-to-br from-[#1a2744] to-[#0f1d35] p-4">
             <div className="flex items-center gap-2 mb-2">
-              <Sparkles size={14} className="text-[#d4af37]" />
-              <span className="text-xs font-semibold text-[#d4af37]">Claude Briefing</span>
-              <span className="text-xs text-[#64748b] ml-auto">{briefingTime}</span>
+              <Sparkles size={14} className="text-gold-500" />
+              <span className="text-xs font-semibold text-gold-500">Claude Briefing</span>
+              <span className="text-xs text-navy-600 ml-auto">{briefingTime}</span>
             </div>
-            <p className="text-sm text-[#94a3b8] italic leading-relaxed">{briefing}</p>
+            <p className="text-sm text-slate-400 italic leading-relaxed">{briefing}</p>
           </div>
         )}
     </div>
@@ -237,11 +237,11 @@ function StatCard({ label, value, suffix, icon, accent }: {
         >
           {icon}
         </div>
-        <span className="text-xs uppercase tracking-wider text-[#64748b] font-semibold">{label}</span>
+        <span className="text-xs uppercase tracking-wider text-navy-600 font-semibold">{label}</span>
       </div>
       <div className="flex items-baseline gap-1">
         <span className="text-2xl font-bold text-white">{value}</span>
-        {suffix && <span className="text-xs text-[#64748b]">{suffix}</span>}
+        {suffix && <span className="text-xs text-navy-600">{suffix}</span>}
       </div>
     </div>
   );
@@ -269,9 +269,9 @@ function LiveAgencyCard({ name, fullName, color, score, kpi, pendingCount }: {
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm font-bold text-white">{name}</p>
-            <p className="text-xs text-[#64748b] leading-tight">{fullName}</p>
+            <p className="text-xs text-navy-600 leading-tight">{fullName}</p>
           </div>
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#059669]/15 text-[#059669]">
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#059669]/15 text-emerald-600">
             Live
           </span>
         </div>
@@ -282,12 +282,12 @@ function LiveAgencyCard({ name, fullName, color, score, kpi, pendingCount }: {
             <span className="text-3xl font-bold" style={{ color: scoreColor(displayScore) }}>
               {displayScore}
             </span>
-            <span className="text-xs text-[#64748b] ml-1">/100</span>
+            <span className="text-xs text-navy-600 ml-1">/100</span>
           </div>
         )}
 
         {/* Score bar */}
-        <div className="w-full h-1.5 rounded-full bg-[#2d3a52]" role="progressbar" aria-valuenow={displayScore} aria-valuemin={0} aria-valuemax={100} aria-label={`Health score: ${displayScore}%`}>
+        <div className="w-full h-1.5 rounded-full bg-navy-800" role="progressbar" aria-valuenow={displayScore} aria-valuemin={0} aria-valuemax={100} aria-label={`Health score: ${displayScore}%`}>
           <div
             className="h-full rounded-full transition-all duration-[1400ms] ease-out"
             style={{
@@ -301,12 +301,12 @@ function LiveAgencyCard({ name, fullName, color, score, kpi, pendingCount }: {
         {kpiEntries.length > 0 && (
           <div className="space-y-1">
             {kpiLabel && (
-              <p className="text-xs text-[#64748b] font-medium uppercase tracking-wider">{kpiLabel}</p>
+              <p className="text-xs text-navy-600 font-medium uppercase tracking-wider">{kpiLabel}</p>
             )}
             <div className="flex gap-3">
               {kpiEntries.map(([key, val]) => (
                 <div key={key} className="text-xs">
-                  <span className="text-[#64748b]">{key}: </span>
+                  <span className="text-navy-600">{key}: </span>
                   <span className="text-white font-medium">{String(val)}</span>
                 </div>
               ))}
@@ -317,8 +317,8 @@ function LiveAgencyCard({ name, fullName, color, score, kpi, pendingCount }: {
         {/* Pending applications (GPL) */}
         {pendingCount !== undefined && pendingCount > 0 && (
           <div className="text-xs">
-            <span className="text-[#64748b]">Pending applications: </span>
-            <span className="text-[#d4af37] font-semibold">{pendingCount.toLocaleString()}</span>
+            <span className="text-navy-600">Pending applications: </span>
+            <span className="text-gold-500 font-semibold">{pendingCount.toLocaleString()}</span>
           </div>
         )}
       </div>
@@ -340,20 +340,20 @@ function BuildingAgencyCard({ name, fullName, color }: {
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm font-bold text-white">{name}</p>
-            <p className="text-xs text-[#64748b] leading-tight">{fullName}</p>
+            <p className="text-xs text-navy-600 leading-tight">{fullName}</p>
           </div>
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#2d3a52] text-[#64748b]">
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-navy-800 text-navy-600">
             Building
           </span>
         </div>
 
         <div>
-          <span className="text-3xl font-bold text-[#2d3a52]">&mdash;</span>
+          <span className="text-3xl font-bold text-navy-800">&mdash;</span>
         </div>
 
-        <div className="w-full h-1.5 rounded-full bg-[#2d3a52]" />
+        <div className="w-full h-1.5 rounded-full bg-navy-800" />
 
-        <p className="text-xs text-[#64748b] italic">Intel panel in development</p>
+        <p className="text-xs text-navy-600 italic">Intel panel in development</p>
       </div>
     </div>
   );

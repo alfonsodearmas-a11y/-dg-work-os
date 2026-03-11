@@ -8,6 +8,7 @@ import {
   AlertTriangle, Eye, ChevronDown, Download, X, File,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
 
 interface Application {
@@ -255,6 +256,14 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Applications', href: '/applications' },
+          { label: app.applicant_name || app.reference_number || 'Application' },
+        ]}
+      />
+
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link

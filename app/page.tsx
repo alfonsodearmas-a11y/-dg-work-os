@@ -6,7 +6,7 @@ import { MissionControlView } from '@/components/mission-control/MissionControlV
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const session = await auth();
+  const session = await auth(); // TODO: migrate to requireRole()
   if (!session?.user?.id) redirect('/login');
 
   const data = await getMissionControlData(session.user.id);

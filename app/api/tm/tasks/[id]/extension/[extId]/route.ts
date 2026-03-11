@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { authenticateAny, AuthError, authorizeRoles } from '@/lib/auth';
+import { requireRole } from '@/lib/auth-helpers';
 import { decideExtension } from '@/lib/task-queries';
 import { createTaskNotification } from '@/lib/task-notifications';
 import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
@@ -11,15 +11,17 @@ const decideExtensionSchema = z.object({
 });
 
 export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown) => {
+  const authResult = await requireRole(['dg', 'agency_admin']);
+  if (authResult instanceof NextResponse) return authResult;
+  const { session } = authResult;
+
   try {
-    const user = await authenticateAny(request);
-    authorizeRoles(user, 'director', 'admin');
     const { id, extId } = await (ctx as { params: Promise<{ id: string; extId: string }> }).params;
 
     const { data, error: validationError } = await parseBody(request, decideExtensionSchema);
     if (validationError) return validationError;
 
-    const result = await decideExtension(extId, user.id, data.approved, data.note);
+    const result = await decideExtension(extId, session.user.id, data.approved, data.note);
 
     await createTaskNotification(
       result.requested_by,
@@ -31,7 +33,6 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
 
     return NextResponse.json({ success: true, data: result });
   } catch (error: any) {
-    if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
     return apiError('INTERNAL_ERROR', error.message, 500);
   }
 });

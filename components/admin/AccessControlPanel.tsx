@@ -71,7 +71,7 @@ export function AccessControlPanel({ members, myPermissions, loading }: Props) {
   };
 
   // Initialize: fetch grants for default type
-  useState(() => { fetchGrants(selectedType); });
+  useEffect(() => { fetchGrants(selectedType); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredGrants = useMemo(() => {
     if (!search) return grants;

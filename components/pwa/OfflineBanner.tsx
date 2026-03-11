@@ -37,7 +37,7 @@ export function OfflineBanner() {
         className={`flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium ${
           synced
             ? 'bg-emerald-500/15 text-emerald-400 border-b border-emerald-500/30'
-            : 'bg-amber-500/15 text-[#d4af37] border-b border-amber-500/30'
+            : 'bg-amber-500/15 text-gold-500 border-b border-amber-500/30'
         }`}
       >
         {synced ? (

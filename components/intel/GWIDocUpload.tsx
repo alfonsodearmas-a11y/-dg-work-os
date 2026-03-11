@@ -185,17 +185,17 @@ export function GWIDocUpload({ reportPeriod, onClose, onSaved }: GWIDocUploadPro
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-4">
-      <div ref={gwiModalRef} role="dialog" aria-modal="true" aria-labelledby="gwi-doc-upload-title" className="bg-[#0a1628] rounded-t-2xl md:rounded-2xl border border-[#2d3a52] w-full md:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <div ref={gwiModalRef} role="dialog" aria-modal="true" aria-labelledby="gwi-doc-upload-title" className="bg-navy-950 rounded-t-2xl md:rounded-2xl border border-navy-800 w-full md:max-w-3xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-[#2d3a52]">
+        <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-navy-800">
           <div>
             <h2 id="gwi-doc-upload-title" className="text-lg md:text-[22px] font-bold text-white">Upload GWI Reports</h2>
-            <p className="text-[#64748b] text-sm mt-0.5">
+            <p className="text-navy-600 text-sm mt-0.5">
               Upload .docx reports for {new Date(`${reportPeriod}-01`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-[#2d3a52] rounded-lg transition-colors" aria-label="Close">
-            <X className="w-5 h-5 text-[#94a3b8]" />
+          <button onClick={onClose} className="p-2 hover:bg-navy-800 rounded-lg transition-colors" aria-label="Close">
+            <X className="w-5 h-5 text-slate-400" />
           </button>
         </div>
 
@@ -218,10 +218,10 @@ export function GWIDocUpload({ reportPeriod, onClose, onSaved }: GWIDocUploadPro
         </div>
 
         {/* Footer */}
-        <div className="px-4 md:px-6 py-4 border-t border-[#2d3a52] flex justify-end">
+        <div className="px-4 md:px-6 py-4 border-t border-navy-800 flex justify-end">
           <button
             onClick={onClose}
-            className="w-full md:w-auto px-6 py-2.5 bg-[#2d3a52] hover:bg-[#3d4a62] text-white rounded-lg text-[15px] font-medium transition-colors"
+            className="w-full md:w-auto px-6 py-2.5 bg-navy-800 hover:bg-[#3d4a62] text-white rounded-lg text-[15px] font-medium transition-colors"
           >
             Done
           </button>
@@ -251,9 +251,9 @@ function DropZone({ zone, state, onDrop, onParse, onConfirm, onReset }: DropZone
   });
 
   return (
-    <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] overflow-hidden">
+    <div className="bg-navy-900 rounded-xl border border-navy-800 overflow-hidden">
       {/* Zone Header */}
-      <div className="px-4 py-3 border-b border-[#2d3a52] flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-navy-800 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <FileText className="w-4 h-4 text-cyan-400" />
           <span className="text-[15px] font-semibold text-white">{zone.label}</span>
@@ -275,17 +275,17 @@ function DropZone({ zone, state, onDrop, onParse, onConfirm, onReset }: DropZone
             <div
               {...getRootProps()}
               className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
-                isDragActive ? 'border-cyan-400 bg-cyan-400/10' : 'border-[#2d3a52] hover:border-[#4d5a72]'
+                isDragActive ? 'border-cyan-400 bg-cyan-400/10' : 'border-navy-800 hover:border-[#4d5a72]'
               }`}
             >
               <input {...getInputProps()} aria-label="Select document file to upload" />
-              <Upload className={`w-6 h-6 mx-auto mb-2 ${isDragActive ? 'text-cyan-400' : 'text-[#64748b]'}`} />
+              <Upload className={`w-6 h-6 mx-auto mb-2 ${isDragActive ? 'text-cyan-400' : 'text-navy-600'}`} />
               {state.file ? (
                 <p className="text-white text-sm">{state.file.name}</p>
               ) : (
-                <p className="text-[#94a3b8] text-sm">{zone.description}</p>
+                <p className="text-slate-400 text-sm">{zone.description}</p>
               )}
-              <p className="text-[#64748b] text-xs mt-1">Drop .docx file or click to browse</p>
+              <p className="text-navy-600 text-xs mt-1">Drop .docx file or click to browse</p>
             </div>
             {state.file && (
               <button
@@ -301,7 +301,7 @@ function DropZone({ zone, state, onDrop, onParse, onConfirm, onReset }: DropZone
 
         {/* Stage: uploading */}
         {state.stage === 'uploading' && (
-          <div className="flex items-center justify-center gap-3 py-6 text-[#94a3b8]">
+          <div className="flex items-center justify-center gap-3 py-6 text-slate-400">
             <Loader2 className="w-5 h-5 animate-spin" />
             <span className="text-[15px]">Extracting data with Claude Sonnet...</span>
           </div>
@@ -310,16 +310,16 @@ function DropZone({ zone, state, onDrop, onParse, onConfirm, onReset }: DropZone
         {/* Stage: preview */}
         {state.stage === 'preview' && state.preview && (
           <div className="space-y-3">
-            <div className="bg-[#0a1628] rounded-lg p-3 border border-[#2d3a52] max-h-40 overflow-y-auto">
-              <p className="text-xs text-[#64748b] mb-1">Extracted Data Preview</p>
-              <pre className="text-xs text-[#94a3b8] whitespace-pre-wrap">
+            <div className="bg-navy-950 rounded-lg p-3 border border-navy-800 max-h-40 overflow-y-auto">
+              <p className="text-xs text-navy-600 mb-1">Extracted Data Preview</p>
+              <pre className="text-xs text-slate-400 whitespace-pre-wrap">
                 {JSON.stringify((state.preview as Record<string, unknown>).extracted, null, 2)?.slice(0, 1000)}
               </pre>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={onReset}
-                className="flex-1 py-2.5 bg-[#2d3a52] hover:bg-[#3d4a62] text-white rounded-lg text-sm font-medium transition-colors"
+                className="flex-1 py-2.5 bg-navy-800 hover:bg-[#3d4a62] text-white rounded-lg text-sm font-medium transition-colors"
               >
                 Cancel
               </button>
@@ -336,7 +336,7 @@ function DropZone({ zone, state, onDrop, onParse, onConfirm, onReset }: DropZone
 
         {/* Stage: saving */}
         {state.stage === 'saving' && (
-          <div className="flex items-center justify-center gap-3 py-6 text-[#94a3b8]">
+          <div className="flex items-center justify-center gap-3 py-6 text-slate-400">
             <Loader2 className="w-5 h-5 animate-spin" />
             <span className="text-[15px]">Saving data & generating AI insights...</span>
           </div>
@@ -351,7 +351,7 @@ function DropZone({ zone, state, onDrop, onParse, onConfirm, onReset }: DropZone
             </div>
             <button
               onClick={onReset}
-              className="px-3 py-1.5 text-sm text-[#94a3b8] hover:text-white flex items-center gap-1 transition-colors"
+              className="px-3 py-1.5 text-sm text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               Upload New

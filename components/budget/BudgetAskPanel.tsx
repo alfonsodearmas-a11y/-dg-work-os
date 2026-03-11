@@ -99,19 +99,19 @@ export function BudgetAskPanel({ isOpen, onClose }: { isOpen: boolean; onClose: 
     <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { abortRef.current?.abort(); onClose(); }} aria-hidden="true" />
 
-      <div ref={budgetAskRef} role="dialog" aria-modal="true" aria-labelledby="budget-ask-panel-title" className="relative w-full md:max-w-2xl md:max-h-[80vh] bg-gradient-to-b from-[#1a2744] to-[#0a1628] border border-[#2d3a52] rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col max-h-[85vh] animate-slide-up md:animate-fade-in">
+      <div ref={budgetAskRef} role="dialog" aria-modal="true" aria-labelledby="budget-ask-panel-title" className="relative w-full md:max-w-2xl md:max-h-[80vh] bg-gradient-to-b from-[#1a2744] to-[#0a1628] border border-navy-800 rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col max-h-[85vh] animate-slide-up md:animate-fade-in">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#2d3a52] shrink-0">
+        <div className="flex items-center justify-between p-4 border-b border-navy-800 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#d4af37]/20 flex items-center justify-center">
-              <Sparkles className="h-4 w-4 text-[#d4af37]" />
+            <div className="w-8 h-8 rounded-lg bg-gold-500/20 flex items-center justify-center">
+              <Sparkles className="h-4 w-4 text-gold-500" />
             </div>
             <div>
               <h3 id="budget-ask-panel-title" className="text-white font-semibold text-sm">Ask About the Budget</h3>
-              <p className="text-[#64748b] text-[10px]">Powered by Claude Opus 4.6</p>
+              <p className="text-navy-600 text-[10px]">Powered by Claude Opus 4.6</p>
             </div>
           </div>
-          <button onClick={() => { abortRef.current?.abort(); onClose(); }} aria-label="Close" className="p-1.5 rounded-lg hover:bg-[#2d3a52] text-[#64748b] hover:text-white transition-colors">
+          <button onClick={() => { abortRef.current?.abort(); onClose(); }} aria-label="Close" className="p-1.5 rounded-lg hover:bg-navy-800 text-navy-600 hover:text-white transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -121,16 +121,16 @@ export function BudgetAskPanel({ isOpen, onClose }: { isOpen: boolean; onClose: 
           {content ? (
             <>
               <div className="ai-brief-content" dangerouslySetInnerHTML={{ __html: simpleMarkdown(content) }} />
-              {isStreaming && <span className="inline-block w-2 h-4 bg-[#d4af37] animate-pulse ml-0.5" />}
+              {isStreaming && <span className="inline-block w-2 h-4 bg-gold-500 animate-pulse ml-0.5" />}
             </>
           ) : isStreaming ? (
-            <div className="flex items-center gap-3 text-[#64748b]">
-              <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" />
+            <div className="flex items-center gap-3 text-navy-600">
+              <Loader2 className="h-5 w-5 animate-spin text-gold-500" />
               <span className="text-sm">Thinking...</span>
             </div>
           ) : (
             <div className="text-center py-8 space-y-3">
-              <p className="text-[#64748b] text-sm">Ask any question about the 2026 Budget Estimates</p>
+              <p className="text-navy-600 text-sm">Ask any question about the 2026 Budget Estimates</p>
               <div className="flex flex-wrap justify-center gap-2">
                 {[
                   'What is GPL\'s total capital expenditure?',
@@ -140,7 +140,7 @@ export function BudgetAskPanel({ isOpen, onClose }: { isOpen: boolean; onClose: 
                   <button
                     key={i}
                     onClick={() => { setQuestion(q); }}
-                    className="px-3 py-1.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-[#94a3b8] text-xs hover:border-[#d4af37] hover:text-white transition-colors"
+                    className="px-3 py-1.5 rounded-lg bg-navy-950 border border-navy-800 text-slate-400 text-xs hover:border-gold-500 hover:text-white transition-colors"
                   >
                     {q}
                   </button>
@@ -151,7 +151,7 @@ export function BudgetAskPanel({ isOpen, onClose }: { isOpen: boolean; onClose: 
         </div>
 
         {/* Input */}
-        <form onSubmit={handleSubmit} className="p-3 border-t border-[#2d3a52] shrink-0">
+        <form onSubmit={handleSubmit} className="p-3 border-t border-navy-800 shrink-0">
           <div className="flex gap-2">
             <input
               ref={inputRef}
@@ -166,7 +166,7 @@ export function BudgetAskPanel({ isOpen, onClose }: { isOpen: boolean; onClose: 
             <button
               type="submit"
               disabled={isStreaming || !question.trim()}
-              className="px-3 py-2 rounded-lg bg-[#d4af37] text-[#0a1628] font-semibold disabled:opacity-40 hover:bg-[#f4d03f] transition-colors"
+              className="px-3 py-2 rounded-lg bg-gold-500 text-navy-950 font-semibold disabled:opacity-40 hover:bg-gold-400 transition-colors"
               aria-label="Send"
             >
               <Send className="h-4 w-4" />
@@ -180,13 +180,13 @@ export function BudgetAskPanel({ isOpen, onClose }: { isOpen: boolean; onClose: 
 
 function simpleMarkdown(text: string): string {
   return text
-    .replace(/^## (.+)/gm, '<h3 class="text-[#d4af37] font-semibold text-base mt-4 mb-2">$1</h3>')
+    .replace(/^## (.+)/gm, '<h3 class="text-gold-500 font-semibold text-base mt-4 mb-2">$1</h3>')
     .replace(/^### (.+)/gm, '<h4 class="text-white font-semibold text-sm mt-3 mb-1">$1</h4>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/G\$[\d,.]+[BMK]/g, '<span class="text-[#d4af37] font-mono font-semibold">$&</span>')
+    .replace(/G\$[\d,.]+[BMK]/g, '<span class="text-gold-500 font-mono font-semibold">$&</span>')
     .replace(/V\dp\d+/g, '<span class="text-blue-400 text-xs">$&</span>')
-    .replace(/^[-•]\s+(.+)/gm, '<li class="text-[#94a3b8] text-sm ml-4">$1</li>')
+    .replace(/^[-•]\s+(.+)/gm, '<li class="text-slate-400 text-sm ml-4">$1</li>')
     .replace(/((?:<li[^>]*>.*<\/li>\n?)+)/g, '<ul class="space-y-1 my-2">$1</ul>')
     .replace(/\n/g, '<br/>');
 }

@@ -33,6 +33,7 @@ import {
 import { Badge } from '@/components/ui/Badge';
 import { NewMeetingModal } from '@/components/meetings/NewMeetingModal';
 import { CreateEventModal } from '@/components/calendar/CreateEventModal';
+import { formatDuration, formatTimestamp, STATUS_CONFIG, type MeetingStatus } from '@/lib/meetings-utils';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -75,36 +76,6 @@ interface Meeting {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatDuration(secs: number): string {
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
-
-function formatTimestamp(secs: number): string {
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const s = Math.floor(secs % 60);
-  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
-
-type MeetingStatus = 'UPLOADED' | 'TRANSCRIBING' | 'TRANSCRIBED' | 'ANALYZING' | 'ANALYZED' | 'ERROR';
-
-const STATUS_CONFIG: Record<MeetingStatus, {
-  variant: 'default' | 'success' | 'warning' | 'danger' | 'gold';
-  label: string;
-  pulse?: boolean;
-}> = {
-  UPLOADED:     { variant: 'default', label: 'Uploaded' },
-  TRANSCRIBING: { variant: 'gold',    label: 'Transcribing', pulse: true },
-  TRANSCRIBED:  { variant: 'warning', label: 'Transcribed' },
-  ANALYZING:    { variant: 'gold',    label: 'Analyzing',    pulse: true },
-  ANALYZED:     { variant: 'success', label: 'Analyzed' },
-  ERROR:        { variant: 'danger',  label: 'Error' },
-};
 
 function StatusBadge({ status }: { status: string }) {
   const config = STATUS_CONFIG[status as MeetingStatus] || STATUS_CONFIG.UPLOADED;
@@ -196,6 +167,14 @@ export default function MeetingsPage() {
   const [savingNotes, setSavingNotes] = useState(false);
   const [notesPreview, setNotesPreview] = useState(false);
   const notesTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Warn before leaving with unsaved transcript edits or unsaved notes
+  useEffect(() => {
+    if (!editingTranscript && notesSaved) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [editingTranscript, notesSaved]);
 
   // Polling ref
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -358,6 +337,7 @@ export default function MeetingsPage() {
 
   async function handleDeleteMeeting() {
     if (!selectedId) return;
+    if (!window.confirm('Delete this meeting? This cannot be undone.')) return;
     setDeleting(true);
     try {
       const res = await fetch(`/api/meetings/${selectedId}`, { method: 'DELETE' });
@@ -568,6 +548,7 @@ export default function MeetingsPage() {
 
   async function handleDeleteAction(actionId: string) {
     if (!selectedId) return;
+    if (!window.confirm('Delete this action item?')) return;
     try {
       const res = await fetch(`/api/meetings/${selectedId}/actions/${actionId}`, {
         method: 'DELETE',
@@ -838,7 +819,7 @@ export default function MeetingsPage() {
         <div className="space-y-4">
           {/* Summary */}
           <div className="glass-card p-4 rounded-xl">
-            <h3 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider mb-2">
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
               Summary
             </h3>
             <p className="text-[#c8d1df] text-sm leading-relaxed">
@@ -849,7 +830,7 @@ export default function MeetingsPage() {
           {/* Decisions */}
           {selectedMeeting.decisions?.length > 0 && (
             <div className="glass-card p-4 rounded-xl">
-              <h3 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider mb-2">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
                 Key Decisions
               </h3>
               <ul className="space-y-2">
@@ -866,19 +847,19 @@ export default function MeetingsPage() {
           {/* Quick Actions Summary */}
           {selectedMeeting.meeting_actions?.length > 0 && (
             <div className="glass-card p-4 rounded-xl">
-              <h3 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider mb-2">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
                 Action Items
               </h3>
               <div className="flex items-center gap-3 text-sm">
                 <span className="text-emerald-400 font-medium">
                   {selectedMeeting.meeting_actions.filter(a => a.done).length}
                 </span>
-                <span className="text-[#64748b]">done</span>
-                <span className="text-[#2d3a52]">·</span>
+                <span className="text-navy-600">done</span>
+                <span className="text-navy-800">·</span>
                 <span className="text-amber-400 font-medium">
                   {selectedMeeting.meeting_actions.filter(a => !a.done).length}
                 </span>
-                <span className="text-[#64748b]">open</span>
+                <span className="text-navy-600">open</span>
               </div>
             </div>
           )}
@@ -900,11 +881,11 @@ export default function MeetingsPage() {
     if (status === 'TRANSCRIBED') {
       return (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-[#d4af37]/20 flex items-center justify-center mb-4">
-            <Sparkles className="h-7 w-7 text-[#d4af37]" />
+          <div className="w-14 h-14 rounded-2xl bg-gold-500/20 flex items-center justify-center mb-4">
+            <Sparkles className="h-7 w-7 text-gold-500" />
           </div>
           <h3 className="text-white font-medium mb-1">Transcript Ready</h3>
-          <p className="text-[#64748b] text-sm mb-6 max-w-xs">
+          <p className="text-navy-600 text-sm mb-6 max-w-xs">
             Audio has been transcribed. Run AI analysis to generate a summary, key decisions, and action items.
           </p>
           <button
@@ -927,11 +908,11 @@ export default function MeetingsPage() {
     if (status === 'UPLOADED') {
       return (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-[#2d3a52]/60 flex items-center justify-center mb-4">
-            <Mic className="h-7 w-7 text-[#64748b]" />
+          <div className="w-14 h-14 rounded-2xl bg-navy-800/60 flex items-center justify-center mb-4">
+            <Mic className="h-7 w-7 text-navy-600" />
           </div>
           <h3 className="text-white font-medium mb-1">Audio Uploaded</h3>
-          <p className="text-[#64748b] text-sm mb-6 max-w-xs">
+          <p className="text-navy-600 text-sm mb-6 max-w-xs">
             Start transcription to convert audio to text using OpenAI Whisper.
           </p>
           <button
@@ -955,9 +936,9 @@ export default function MeetingsPage() {
       const label = status === 'TRANSCRIBING' ? 'Transcribing audio...' : 'Analyzing transcript...';
       return (
         <div className="flex flex-col items-center justify-center py-12 text-center" role="status" aria-label="Processing">
-          <Loader2 className="h-10 w-10 text-[#d4af37] animate-spin mb-4" aria-hidden="true" />
+          <Loader2 className="h-10 w-10 text-gold-500 animate-spin mb-4" aria-hidden="true" />
           <h3 className="text-white font-medium mb-1">{label}</h3>
-          <p className="text-[#64748b] text-sm">This may take a minute. Auto-refreshing...</p>
+          <p className="text-navy-600 text-sm">This may take a minute. Auto-refreshing...</p>
         </div>
       );
     }
@@ -970,7 +951,7 @@ export default function MeetingsPage() {
             <XCircle className="h-7 w-7 text-red-400" />
           </div>
           <h3 className="text-white font-medium mb-1">Processing Failed</h3>
-          <p className="text-[#64748b] text-sm mb-6 max-w-xs">
+          <p className="text-navy-600 text-sm mb-6 max-w-xs">
             Something went wrong. You can retry the last step.
           </p>
           <button
@@ -991,7 +972,7 @@ export default function MeetingsPage() {
 
     // Fallback
     return (
-      <p className="text-[#64748b] text-sm">
+      <p className="text-navy-600 text-sm">
         Analysis will appear here once the meeting is processed.
       </p>
     );
@@ -1002,7 +983,7 @@ export default function MeetingsPage() {
 
     if (!selectedMeeting.transcript_text) {
       return (
-        <p className="text-[#64748b] text-sm">
+        <p className="text-navy-600 text-sm">
           Transcript will appear here after transcription.
         </p>
       );
@@ -1013,7 +994,7 @@ export default function MeetingsPage() {
       return (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-[#64748b]">Edit transcript text</p>
+            <p className="text-xs text-navy-600">Edit transcript text</p>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setEditingTranscript(false)}
@@ -1069,8 +1050,8 @@ export default function MeetingsPage() {
             return (
               <div className="space-y-0.5">
                 {segments.map((seg, i) => (
-                  <div key={i} className="flex gap-3 py-1.5 group hover:bg-[#1a2744]/30 rounded-lg px-2 -mx-2">
-                    <span className="text-[10px] font-mono text-[#64748b] w-12 shrink-0 pt-0.5 text-right">
+                  <div key={i} className="flex gap-3 py-1.5 group hover:bg-navy-900/30 rounded-lg px-2 -mx-2">
+                    <span className="text-[10px] font-mono text-navy-600 w-12 shrink-0 pt-0.5 text-right">
                       {formatTimestamp(seg.start)}
                     </span>
                     <p className="text-sm text-[#c8d1df] leading-relaxed">{seg.text.trim()}</p>
@@ -1111,7 +1092,7 @@ export default function MeetingsPage() {
       }
       if (a.skipped) {
         return (
-          <span className="px-2 py-0.5 rounded-full bg-[#2d3a52]/60 text-[#64748b] text-[10px] font-medium">
+          <span className="px-2 py-0.5 rounded-full bg-navy-800/60 text-navy-600 text-[10px] font-medium">
             Skipped
           </span>
         );
@@ -1207,7 +1188,7 @@ export default function MeetingsPage() {
         )}
 
         {actions.length === 0 && !showAddAction && (
-          <p className="text-[#64748b] text-sm">
+          <p className="text-navy-600 text-sm">
             No action items yet. Click &quot;Add action item&quot; to create one.
           </p>
         )}
@@ -1216,7 +1197,7 @@ export default function MeetingsPage() {
         {actions.filter(a => !a.done && !a.skipped).map((a) => (
           <div
             key={a.id}
-            className="flex items-start gap-3 p-3 rounded-xl border bg-[#1a2744]/50 border-[#2d3a52]/50"
+            className="flex items-start gap-3 p-3 rounded-xl border bg-navy-900/50 border-navy-800/50"
           >
             {editingActionId === a.id ? (
               /* Edit mode */
@@ -1265,7 +1246,7 @@ export default function MeetingsPage() {
               <>
                 <button
                   onClick={() => handleToggleAction(a.id)}
-                  className="w-5 h-5 rounded-full border-2 border-[#64748b] hover:border-[#d4af37] mt-0.5 shrink-0 transition-colors"
+                  className="w-5 h-5 rounded-full border-2 border-navy-600 hover:border-gold-500 mt-0.5 shrink-0 transition-colors"
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -1274,7 +1255,7 @@ export default function MeetingsPage() {
                   </div>
                   <div className="flex flex-wrap items-center gap-2 mt-1.5">
                     {a.owner && (
-                      <span className="px-2 py-0.5 rounded-full bg-[#2d3a52]/60 text-[#94a3b8] text-[10px]">
+                      <span className="px-2 py-0.5 rounded-full bg-navy-800/60 text-slate-400 text-[10px]">
                         {a.owner}
                       </span>
                     )}
@@ -1283,7 +1264,7 @@ export default function MeetingsPage() {
                         className={`flex items-center gap-1 text-[11px] ${
                           isPast(new Date(a.due_date)) && !isToday(new Date(a.due_date))
                             ? 'text-red-400'
-                            : 'text-[#64748b]'
+                            : 'text-navy-600'
                         }`}
                       >
                         <Clock className="h-3 w-3" />
@@ -1295,14 +1276,14 @@ export default function MeetingsPage() {
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => startEditAction(a)}
-                    className="p-1 rounded text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
+                    className="p-1 rounded text-navy-600 hover:text-white hover:bg-navy-800 transition-colors"
                     title="Edit"
                   >
                     <Pencil className="h-3 w-3" />
                   </button>
                   <button
                     onClick={() => handleDeleteAction(a.id)}
-                    className="p-1 rounded text-[#64748b] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    className="p-1 rounded text-navy-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                     title="Delete"
                   >
                     <Trash2 className="h-3 w-3" />
@@ -1329,26 +1310,26 @@ export default function MeetingsPage() {
           if (skippedItems.length === 0) return null;
           return (
             <>
-              <div className="border-t border-[#2d3a52] pt-3 mt-3">
-                <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider mb-2">
+              <div className="border-t border-navy-800 pt-3 mt-3">
+                <p className="text-[10px] font-semibold text-navy-600 uppercase tracking-wider mb-2">
                   Skipped
                 </p>
               </div>
               {skippedItems.map((a) => (
                 <div
                   key={a.id}
-                  className="flex items-start gap-3 p-3 rounded-xl border bg-[#1a2744]/20 border-[#2d3a52]/30 opacity-60"
+                  className="flex items-start gap-3 p-3 rounded-xl border bg-navy-900/20 border-navy-800/30 opacity-60"
                 >
-                  <div className="w-5 h-5 rounded-full border-2 border-[#2d3a52] mt-0.5 shrink-0" />
+                  <div className="w-5 h-5 rounded-full border-2 border-navy-800 mt-0.5 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-[#64748b]">{a.task}</p>
+                    <p className="text-sm text-navy-600">{a.task}</p>
                     <div className="flex flex-wrap items-center gap-2 mt-1">
                       {actionStatusBadge(a)}
                     </div>
                   </div>
                   <button
                     onClick={() => handleDeleteAction(a.id)}
-                    className="p-1 rounded text-[#64748b] hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+                    className="p-1 rounded text-navy-600 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
                     title="Delete"
                   >
                     <Trash2 className="h-3 w-3" />
@@ -1367,8 +1348,8 @@ export default function MeetingsPage() {
           return (
             <>
               {openItems.length > 0 && (
-                <div className="border-t border-[#2d3a52] pt-3 mt-3">
-                  <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider mb-2">
+                <div className="border-t border-navy-800 pt-3 mt-3">
+                  <p className="text-[10px] font-semibold text-navy-600 uppercase tracking-wider mb-2">
                     Completed
                   </p>
                 </div>
@@ -1382,21 +1363,21 @@ export default function MeetingsPage() {
                     onClick={() => handleToggleAction(a.id)}
                     className="w-5 h-5 rounded-full border-2 border-emerald-400 bg-emerald-400 flex items-center justify-center mt-0.5 shrink-0"
                   >
-                    <CheckCircle2 className="h-3 w-3 text-[#0a1628]" />
+                    <CheckCircle2 className="h-3 w-3 text-navy-950" />
                   </button>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-medium text-[#64748b] line-through">{a.task}</p>
+                      <p className="text-sm font-medium text-navy-600 line-through">{a.task}</p>
                       {actionStatusBadge(a)}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 mt-1">
                       {a.owner && (
-                        <span className="px-2 py-0.5 rounded-full bg-[#2d3a52]/40 text-[#64748b] text-[10px]">
+                        <span className="px-2 py-0.5 rounded-full bg-navy-800/40 text-navy-600 text-[10px]">
                           {a.owner}
                         </span>
                       )}
                       {a.due_date && (
-                        <span className="flex items-center gap-1 text-[11px] text-[#64748b]">
+                        <span className="flex items-center gap-1 text-[11px] text-navy-600">
                           <Clock className="h-3 w-3" />
                           {format(new Date(a.due_date), 'MMM d')}
                         </span>
@@ -1406,7 +1387,7 @@ export default function MeetingsPage() {
                   <div className="flex items-center gap-1 shrink-0">
                     <button
                       onClick={() => handleDeleteAction(a.id)}
-                      className="p-1 rounded text-[#64748b] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      className="p-1 rounded text-navy-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                       title="Delete"
                     >
                       <Trash2 className="h-3 w-3" />
@@ -1432,7 +1413,7 @@ export default function MeetingsPage() {
             <button
               onClick={() => setNotesPreview(false)}
               className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                !notesPreview ? 'bg-[#d4af37]/20 text-[#d4af37]' : 'text-[#64748b] hover:text-white'
+                !notesPreview ? 'bg-gold-500/20 text-gold-500' : 'text-navy-600 hover:text-white'
               }`}
             >
               Write
@@ -1440,24 +1421,24 @@ export default function MeetingsPage() {
             <button
               onClick={() => setNotesPreview(true)}
               className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                notesPreview ? 'bg-[#d4af37]/20 text-[#d4af37]' : 'text-[#64748b] hover:text-white'
+                notesPreview ? 'bg-gold-500/20 text-gold-500' : 'text-navy-600 hover:text-white'
               }`}
             >
               Preview
             </button>
           </div>
-          <span className={`text-[10px] transition-opacity ${notesSaved ? 'text-emerald-400' : savingNotes ? 'text-[#d4af37]' : 'text-[#64748b]'}`}>
+          <span className={`text-[10px] transition-opacity ${notesSaved ? 'text-emerald-400' : savingNotes ? 'text-gold-500' : 'text-navy-600'}`}>
             {savingNotes ? 'Saving...' : notesSaved ? 'Saved' : 'Unsaved changes'}
           </span>
         </div>
 
         {/* Editor / Preview */}
         {notesPreview ? (
-          <div className="flex-1 glass-card p-4 rounded-xl overflow-y-auto prose prose-invert prose-sm max-w-none prose-headings:text-white prose-p:text-[#c8d1df] prose-strong:text-white prose-a:text-[#d4af37]">
+          <div className="flex-1 glass-card p-4 rounded-xl overflow-y-auto prose prose-invert prose-sm max-w-none prose-headings:text-white prose-p:text-[#c8d1df] prose-strong:text-white prose-a:text-gold-500">
             {notesText ? (
               <ReactMarkdown>{notesText}</ReactMarkdown>
             ) : (
-              <p className="text-[#64748b] italic">No notes yet. Switch to Write to add notes.</p>
+              <p className="text-navy-600 italic">No notes yet. Switch to Write to add notes.</p>
             )}
           </div>
         ) : (
@@ -1482,17 +1463,17 @@ export default function MeetingsPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors touch-active"
+            className="p-2 rounded-lg text-navy-600 hover:text-white hover:bg-navy-900 transition-colors touch-active"
             aria-label="Back"
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
-            <BookOpen className="h-4 w-4 md:h-5 md:w-5 text-[#d4af37]" />
+          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gold-500/20 flex items-center justify-center">
+            <BookOpen className="h-4 w-4 md:h-5 md:w-5 text-gold-500" />
           </div>
           <div>
             <h1 className="text-lg md:text-xl font-bold text-white">Meetings</h1>
-            <p className="text-xs md:text-sm text-[#64748b]">Record, transcribe &amp; analyze</p>
+            <p className="text-xs md:text-sm text-navy-600">Record, transcribe &amp; analyze</p>
           </div>
         </div>
         <button
@@ -1509,14 +1490,14 @@ export default function MeetingsPage() {
       <div className="grid grid-cols-3 gap-3 md:gap-4">
         <div className="card-premium p-3 md:p-5">
           <div className="flex items-center justify-between mb-2 md:mb-3">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
-              <BookOpen className="h-4 w-4 md:h-5 md:w-5 text-[#d4af37]" />
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gold-500/20 flex items-center justify-center">
+              <BookOpen className="h-4 w-4 md:h-5 md:w-5 text-gold-500" />
             </div>
           </div>
-          <p className="text-lg md:text-[2rem] font-semibold text-[#d4af37] leading-none">
+          <p className="text-lg md:text-[2rem] font-semibold text-gold-500 leading-none">
             {totalMeetings}
           </p>
-          <p className="text-[#64748b] text-[10px] md:text-xs mt-1">Total Meetings</p>
+          <p className="text-navy-600 text-[10px] md:text-xs mt-1">Total Meetings</p>
         </div>
 
         <div className="card-premium p-3 md:p-5">
@@ -1528,7 +1509,7 @@ export default function MeetingsPage() {
           <p className="text-lg md:text-[2rem] font-semibold text-emerald-400 leading-none">
             {analyzedCount}
           </p>
-          <p className="text-[#64748b] text-[10px] md:text-xs mt-1">Analyzed</p>
+          <p className="text-navy-600 text-[10px] md:text-xs mt-1">Analyzed</p>
         </div>
 
         <div className="card-premium p-3 md:p-5">
@@ -1540,7 +1521,7 @@ export default function MeetingsPage() {
           <p className="text-lg md:text-[2rem] font-semibold text-amber-400 leading-none">
             {openActions}
           </p>
-          <p className="text-[#64748b] text-[10px] md:text-xs mt-1">Open Actions</p>
+          <p className="text-navy-600 text-[10px] md:text-xs mt-1">Open Actions</p>
         </div>
       </div>
 
@@ -1554,7 +1535,7 @@ export default function MeetingsPage() {
         >
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b] pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-navy-600 pointer-events-none" />
             <input
               type="text"
               placeholder="Search meetings..."
@@ -1571,22 +1552,22 @@ export default function MeetingsPage() {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="card-premium p-3 animate-pulse">
-                  <div className="h-4 bg-[#2d3a52] rounded w-3/4 mb-2" />
-                  <div className="h-3 bg-[#2d3a52] rounded w-1/2" />
+                  <div className="h-4 bg-navy-800 rounded w-3/4 mb-2" />
+                  <div className="h-3 bg-navy-800 rounded w-1/2" />
                 </div>
               ))
             ) : error ? (
               <div className="text-center py-8">
                 <AlertCircle className="h-8 w-8 text-red-400 mx-auto mb-2" />
-                <p className="text-[#94a3b8] text-sm">{error}</p>
+                <p className="text-slate-400 text-sm">{error}</p>
                 <button onClick={fetchMeetings} className="btn-navy text-xs mt-3 px-3 py-1.5">
                   Retry
                 </button>
               </div>
             ) : filtered.length === 0 ? (
               <div className="text-center py-8">
-                <BookOpen className="h-8 w-8 text-[#64748b] mx-auto mb-2" />
-                <p className="text-[#94a3b8] text-sm">
+                <BookOpen className="h-8 w-8 text-navy-600 mx-auto mb-2" />
+                <p className="text-slate-400 text-sm">
                   {searchQuery ? 'No meetings match your search' : 'No meetings yet'}
                 </p>
               </div>
@@ -1600,15 +1581,15 @@ export default function MeetingsPage() {
                     onClick={() => handleSelect(m.id)}
                     className={`w-full text-left p-3 rounded-xl border transition-all ${
                       isSelected
-                        ? 'bg-[#d4af37]/10 border-[#d4af37]/30'
-                        : 'bg-[#1a2744]/50 border-transparent hover:bg-[#1a2744] hover:border-[#2d3a52]'
+                        ? 'bg-gold-500/10 border-gold-500/30'
+                        : 'bg-navy-900/50 border-transparent hover:bg-navy-900 hover:border-navy-800'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2 mb-1.5">
                       <h3 className="text-sm font-medium text-white truncate">{m.title}</h3>
                       <StatusBadge status={m.status} />
                     </div>
-                    <div className="flex items-center gap-3 text-[11px] text-[#64748b]">
+                    <div className="flex items-center gap-3 text-[11px] text-navy-600">
                       <span>{format(new Date(m.date), 'MMM d, yyyy')}</span>
                       {m.duration_secs != null && m.duration_secs > 0 && (
                         <span className="flex items-center gap-1">
@@ -1639,19 +1620,19 @@ export default function MeetingsPage() {
           {!selectedId ? (
             <div className="card-premium flex-1 flex items-center justify-center">
               <div className="text-center">
-                <BookOpen className="h-12 w-12 text-[#2d3a52] mx-auto mb-3" />
-                <p className="text-[#64748b] text-sm">Select a meeting to view details</p>
+                <BookOpen className="h-12 w-12 text-navy-800 mx-auto mb-3" />
+                <p className="text-navy-600 text-sm">Select a meeting to view details</p>
               </div>
             </div>
           ) : detailLoading ? (
             <div className="card-premium flex-1 flex items-center justify-center" role="status" aria-label="Loading">
-              <Loader2 className="h-8 w-8 text-[#d4af37] animate-spin" aria-hidden="true" />
+              <Loader2 className="h-8 w-8 text-gold-500 animate-spin" aria-hidden="true" />
             </div>
           ) : detailError && !selectedMeeting ? (
             <div className="card-premium flex-1 flex items-center justify-center">
               <div className="text-center">
                 <AlertCircle className="h-8 w-8 text-red-400 mx-auto mb-2" />
-                <p className="text-[#94a3b8] text-sm">{detailError}</p>
+                <p className="text-slate-400 text-sm">{detailError}</p>
                 <button
                   onClick={() => fetchDetail(selectedId)}
                   className="btn-navy text-xs mt-3 px-3 py-1.5"
@@ -1663,11 +1644,11 @@ export default function MeetingsPage() {
           ) : selectedMeeting ? (
             <div className="card-premium flex-1 flex flex-col overflow-hidden">
               {/* Detail Header */}
-              <div className="px-4 md:px-6 py-4 border-b border-[#2d3a52]">
+              <div className="px-4 md:px-6 py-4 border-b border-navy-800">
                 {/* Mobile back */}
                 <button
                   onClick={handleBack}
-                  className="md:hidden flex items-center gap-1 text-[#64748b] text-xs mb-2 hover:text-white transition-colors"
+                  className="md:hidden flex items-center gap-1 text-navy-600 text-xs mb-2 hover:text-white transition-colors"
                 >
                   <ArrowLeft className="h-3 w-3" /> Back to list
                 </button>
@@ -1720,7 +1701,7 @@ export default function MeetingsPage() {
                         <StatusBadge status={selectedMeeting.status} />
                         <button
                           onClick={startEditHeader}
-                          className="p-1.5 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
+                          className="p-1.5 rounded-lg text-navy-600 hover:text-white hover:bg-navy-800 transition-colors"
                           title="Edit title & attendees"
                           aria-label="Edit title and attendees"
                         >
@@ -1728,7 +1709,7 @@ export default function MeetingsPage() {
                         </button>
                         <button
                           onClick={() => setShowDeleteConfirm(true)}
-                          className="p-1.5 rounded-lg text-[#64748b] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          className="p-1.5 rounded-lg text-navy-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                           title="Delete meeting"
                           aria-label="Delete meeting"
                         >
@@ -1736,7 +1717,7 @@ export default function MeetingsPage() {
                         </button>
                         <button
                           onClick={() => setShowCalendarModal(true)}
-                          className="p-1.5 rounded-lg text-[#64748b] hover:text-[#d4af37] hover:bg-[#d4af37]/10 transition-colors"
+                          className="p-1.5 rounded-lg text-navy-600 hover:text-gold-500 hover:bg-gold-500/10 transition-colors"
                           title="Add to Google Calendar"
                           aria-label="Add to Google Calendar"
                         >
@@ -1775,7 +1756,7 @@ export default function MeetingsPage() {
                     )}
 
                     {/* Meta row */}
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#64748b]">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-navy-600">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3.5 w-3.5" />
                         {format(new Date(selectedMeeting.date), 'MMM d, yyyy · h:mm a')}
@@ -1791,7 +1772,7 @@ export default function MeetingsPage() {
                             {selectedMeeting.attendees.map((a, i) => (
                               <span
                                 key={i}
-                                className="px-2 py-0.5 rounded-full bg-[#2d3a52]/60 text-[#94a3b8] text-[10px]"
+                                className="px-2 py-0.5 rounded-full bg-navy-800/60 text-slate-400 text-[10px]"
                               >
                                 {a}
                               </span>
@@ -1805,8 +1786,8 @@ export default function MeetingsPage() {
               </div>
 
               {/* Tabs */}
-              <div className="px-4 md:px-6 pt-3 border-b border-[#2d3a52]">
-                <div className="flex gap-1">
+              <div className="px-4 md:px-6 pt-3 border-b border-navy-800">
+                <div className="flex gap-1 overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
                   {TABS.map((tab) => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.key;
@@ -1818,10 +1799,11 @@ export default function MeetingsPage() {
                       <button
                         key={tab.key}
                         onClick={() => setActiveTab(tab.key)}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-sm font-medium transition-colors border-b-2 ${
+                        title={tab.label}
+                        className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-sm font-medium transition-colors border-b-2 ${
                           isActive
-                            ? 'text-[#d4af37] border-[#d4af37] bg-[#d4af37]/5'
-                            : 'text-[#64748b] border-transparent hover:text-white'
+                            ? 'text-gold-500 border-gold-500 bg-gold-500/5'
+                            : 'text-navy-600 border-transparent hover:text-white'
                         }`}
                       >
                         <Icon className="h-3.5 w-3.5" />
@@ -1830,8 +1812,8 @@ export default function MeetingsPage() {
                           <span
                             className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
                               isActive
-                                ? 'bg-[#d4af37]/20 text-[#d4af37]'
-                                : 'bg-[#2d3a52] text-[#64748b]'
+                                ? 'bg-gold-500/20 text-gold-500'
+                                : 'bg-navy-800 text-navy-600'
                             }`}
                           >
                             {actionCount}
@@ -1873,18 +1855,18 @@ export default function MeetingsPage() {
       {/* Review Modal */}
       {showReviewModal && reviewItems.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" aria-hidden="true">
-          <div ref={reviewModalRef} role="dialog" aria-modal="true" aria-labelledby="review-action-items-modal-title" className="w-full max-w-lg rounded-2xl border border-[#2d3a52] bg-[#0f1d32] shadow-2xl">
+          <div ref={reviewModalRef} role="dialog" aria-modal="true" aria-labelledby="review-action-items-modal-title" className="w-full max-w-lg rounded-2xl border border-navy-800 bg-[#0f1d32] shadow-2xl">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-[#2d3a52]">
+            <div className="flex items-center justify-between p-4 border-b border-navy-800">
               <div>
                 <h2 id="review-action-items-modal-title" className="text-white font-bold text-lg">Review Action Items</h2>
-                <p className="text-[#64748b] text-xs mt-0.5">
+                <p className="text-navy-600 text-xs mt-0.5">
                   Reviewing {reviewIndex + 1} of {reviewItems.length}
                 </p>
               </div>
               <button
                 onClick={() => setShowReviewModal(false)}
-                className="p-1.5 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
+                className="p-1.5 rounded-lg text-navy-600 hover:text-white hover:bg-navy-800 transition-colors"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
@@ -1892,9 +1874,9 @@ export default function MeetingsPage() {
             </div>
 
             {/* Progress bar */}
-            <div className="h-1 bg-[#1a2744]">
+            <div className="h-1 bg-navy-900">
               <div
-                className="h-full bg-[#d4af37] transition-all duration-300"
+                className="h-full bg-gold-500 transition-all duration-300"
                 style={{ width: `${((reviewIndex + 1) / reviewItems.length) * 100}%` }}
               />
             </div>
@@ -1911,7 +1893,7 @@ export default function MeetingsPage() {
 
               {/* Task text */}
               <div>
-                <label htmlFor="review-task" className="text-[#64748b] text-xs font-medium uppercase tracking-wider mb-1.5 block">
+                <label htmlFor="review-task" className="text-navy-600 text-xs font-medium uppercase tracking-wider mb-1.5 block">
                   Task
                 </label>
                 <textarea
@@ -1925,7 +1907,7 @@ export default function MeetingsPage() {
 
               {/* Owner */}
               <div>
-                <label htmlFor="review-owner" className="text-[#64748b] text-xs font-medium uppercase tracking-wider mb-1.5 block">
+                <label htmlFor="review-owner" className="text-navy-600 text-xs font-medium uppercase tracking-wider mb-1.5 block">
                   Owner
                 </label>
                 <input
@@ -1948,7 +1930,7 @@ export default function MeetingsPage() {
 
               {/* Due date */}
               <div>
-                <label htmlFor="review-due" className="text-[#64748b] text-xs font-medium uppercase tracking-wider mb-1.5 block">
+                <label htmlFor="review-due" className="text-navy-600 text-xs font-medium uppercase tracking-wider mb-1.5 block">
                   Due Date
                 </label>
                 <input
@@ -1962,7 +1944,7 @@ export default function MeetingsPage() {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between p-4 border-t border-[#2d3a52]">
+            <div className="flex items-center justify-between p-4 border-t border-navy-800">
               <button
                 onClick={handleReviewSkip}
                 className="btn-navy px-4 py-2 text-sm"

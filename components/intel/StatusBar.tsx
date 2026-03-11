@@ -52,7 +52,7 @@ export function StatusBar({ agencies }: StatusBarProps) {
                 ? 'Attention Required'
                 : 'All Systems Operational'}
             </h2>
-            <p className="text-[#94a3b8] text-sm">
+            <p className="text-slate-400 text-sm">
               {healthyCount}/{agencies.length} agencies operating normally
               {criticalCount > 0 && ` \u2022 ${criticalCount} critical`}
               {warningCount > 0 && ` \u2022 ${warningCount} warning${warningCount > 1 ? 's' : ''}`}
@@ -65,7 +65,7 @@ export function StatusBar({ agencies }: StatusBarProps) {
           {agencies.map(agency => (
             <div
               key={agency.id}
-              className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 rounded-lg bg-[#1a2744]/80"
+              className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 rounded-lg bg-navy-900/80"
               title={`${agency.title}: ${agency.status?.text || 'Unknown'}`}
             >
               <div
@@ -76,7 +76,7 @@ export function StatusBar({ agencies }: StatusBarProps) {
                     ? 'bg-amber-500 animate-pulse'
                     : agency.status?.type === 'critical'
                     ? 'bg-red-500 animate-pulse'
-                    : 'bg-[#64748b]'
+                    : 'bg-navy-600'
                 }`}
               />
               <span className="text-white text-sm font-medium">{agency.title}</span>

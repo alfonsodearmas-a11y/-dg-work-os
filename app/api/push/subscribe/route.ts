@@ -25,7 +25,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   const { data, error } = await parseBody(request, subscribeSchema);
   if (error) return error;
 
-  const session = await auth();
+  const session = await auth(); // TODO: migrate to requireRole()
   const userId = session?.user?.id || data!.user_id;
 
   if (!userId) {
@@ -41,7 +41,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 // List subscriptions for a user — requires auth
 export async function GET() {
   try {
-    const session = await auth();
+    const session = await auth(); // TODO: migrate to requireRole()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

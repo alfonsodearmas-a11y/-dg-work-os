@@ -24,7 +24,7 @@ export function InsightCard({ card }: { card: InsightCardData }) {
   const hasDetail = card.detail && card.detail.length > 0;
 
   return (
-    <div className={`bg-[#1a2744] rounded-xl border ${sev.border} overflow-hidden`}>
+    <div className={`bg-navy-900 rounded-xl border ${sev.border} overflow-hidden`}>
       <button
         type="button"
         onClick={() => hasDetail && setExpanded(!expanded)}
@@ -40,7 +40,7 @@ export function InsightCard({ card }: { card: InsightCardData }) {
               {sev.label}
             </span>
             {hasDetail && (
-              <ChevronDown className={`w-4 h-4 text-[#64748b] transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 text-navy-600 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
             )}
           </div>
         </div>
@@ -50,8 +50,8 @@ export function InsightCard({ card }: { card: InsightCardData }) {
         <div className={`collapse-grid ${expanded ? 'open' : ''}`}>
           <div>
             <div className="px-4 pb-4 pt-0">
-              <div className="bg-[#0a1628] rounded-lg p-4 border border-[#2d3a52]">
-                <p className="text-[15px] text-[#94a3b8] leading-relaxed whitespace-pre-line">{card.detail}</p>
+              <div className="bg-navy-950 rounded-lg p-4 border border-navy-800">
+                <p className="text-[15px] text-slate-400 leading-relaxed whitespace-pre-line">{card.detail}</p>
               </div>
             </div>
           </div>

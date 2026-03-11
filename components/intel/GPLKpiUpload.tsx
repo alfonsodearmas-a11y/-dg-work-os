@@ -150,14 +150,14 @@ export function GPLKpiUpload({ onSuccess, onCancel }: GPLKpiUploadProps) {
   };
 
   return (
-    <div className="bg-[#1a2744] rounded-xl p-6 border border-[#2d3a52]">
+    <div className="bg-navy-900 rounded-xl p-6 border border-navy-800">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-white flex items-center gap-2">
           <BarChart3 className="w-5 h-5 text-emerald-400" />
           Upload Monthly KPI CSV
         </h3>
         {onCancel && (
-          <button onClick={onCancel} className="text-[#94a3b8] hover:text-white" aria-label="Close">
+          <button onClick={onCancel} className="text-slate-400 hover:text-white" aria-label="Close">
             <X className="w-5 h-5" />
           </button>
         )}
@@ -191,14 +191,14 @@ export function GPLKpiUpload({ onSuccess, onCancel }: GPLKpiUploadProps) {
             className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
               dragOver
                 ? 'border-emerald-400 bg-emerald-400/10'
-                : 'border-[#2d3a52] hover:border-[#4a5568]'
+                : 'border-navy-800 hover:border-navy-700'
             }`}
           >
-            <Upload className={`w-12 h-12 mx-auto mb-4 ${dragOver ? 'text-emerald-400' : 'text-[#64748b]'}`} />
+            <Upload className={`w-12 h-12 mx-auto mb-4 ${dragOver ? 'text-emerald-400' : 'text-navy-600'}`} />
             <p className="text-white mb-2">
               {file ? file.name : 'Drag and drop your KPI CSV file here'}
             </p>
-            <p className="text-[#64748b] text-sm mb-4">or</p>
+            <p className="text-navy-600 text-sm mb-4">or</p>
             <label className="inline-block px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg cursor-pointer transition-colors">
               Browse Files
               <input
@@ -210,7 +210,7 @@ export function GPLKpiUpload({ onSuccess, onCancel }: GPLKpiUploadProps) {
               />
             </label>
             {file && (
-              <p className="mt-4 text-sm text-[#94a3b8]">
+              <p className="mt-4 text-sm text-slate-400">
                 Selected: {file.name} ({(file.size / 1024).toFixed(1)} KB)
               </p>
             )}
@@ -221,7 +221,7 @@ export function GPLKpiUpload({ onSuccess, onCancel }: GPLKpiUploadProps) {
             <button
               onClick={parseFile}
               disabled={loading}
-              className="mt-4 w-full py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-[#4a5568] text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
+              className="mt-4 w-full py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-navy-700 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
             >
               {loading ? (
                 <>
@@ -241,7 +241,7 @@ export function GPLKpiUpload({ onSuccess, onCancel }: GPLKpiUploadProps) {
         /* Preview */
         <div className="space-y-4">
           {/* Summary */}
-          <div className="bg-[#0a1628]/50 rounded-lg p-4">
+          <div className="bg-navy-950/50 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-white font-medium">Preview</h4>
               <span className="text-xs text-emerald-400 bg-emerald-500/20 px-2 py-1 rounded">
@@ -251,27 +251,27 @@ export function GPLKpiUpload({ onSuccess, onCancel }: GPLKpiUploadProps) {
 
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-[#64748b]">Date Range</p>
+                <p className="text-navy-600">Date Range</p>
                 <p className="text-white flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-[#94a3b8]" />
+                  <Calendar className="w-4 h-4 text-slate-400" />
                   {preview.dateRange?.start} to {preview.dateRange?.end}
                 </p>
               </div>
               <div>
-                <p className="text-[#64748b]">Months</p>
+                <p className="text-navy-600">Months</p>
                 <p className="text-white">{preview.monthsCount} months</p>
               </div>
             </div>
           </div>
 
           {/* KPIs Found */}
-          <div className="bg-[#0a1628]/50 rounded-lg p-4">
+          <div className="bg-navy-950/50 rounded-lg p-4">
             <h4 className="text-white font-medium mb-3">KPIs Found ({preview.kpisFound?.length})</h4>
             <div className="flex flex-wrap gap-2">
               {preview.kpisFound?.map((kpi: string, i: number) => (
                 <span
                   key={i}
-                  className="text-xs px-2 py-1 rounded bg-[#2d3a52] text-white"
+                  className="text-xs px-2 py-1 rounded bg-navy-800 text-white"
                 >
                   {kpi}
                 </span>
@@ -280,14 +280,14 @@ export function GPLKpiUpload({ onSuccess, onCancel }: GPLKpiUploadProps) {
           </div>
 
           {/* Latest Month Snapshot */}
-          <div className="bg-[#0a1628]/50 rounded-lg p-4">
+          <div className="bg-navy-950/50 rounded-lg p-4">
             <h4 className="text-white font-medium mb-3">
               Latest Month: {preview.latestMonth}
             </h4>
             <div className="grid grid-cols-2 gap-3">
               {Object.entries(preview.latestSnapshot || {}).map(([kpi, value]) => (
-                <div key={kpi} className="bg-[#1a2744] rounded-lg p-3">
-                  <p className="text-[#94a3b8] text-xs truncate" title={kpi}>{kpi}</p>
+                <div key={kpi} className="bg-navy-900 rounded-lg p-3">
+                  <p className="text-slate-400 text-xs truncate" title={kpi}>{kpi}</p>
                   <p className="text-white font-semibold">
                     {formatValue(kpi, value)}
                   </p>
@@ -300,14 +300,14 @@ export function GPLKpiUpload({ onSuccess, onCancel }: GPLKpiUploadProps) {
           <div className="flex gap-3">
             <button
               onClick={resetForm}
-              className="flex-1 py-3 bg-[#2d3a52] hover:bg-[#4a5568] text-white font-medium rounded-lg transition-colors"
+              className="flex-1 py-3 bg-navy-800 hover:bg-navy-700 text-white font-medium rounded-lg transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={confirmUpload}
               disabled={submitting}
-              className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-[#4a5568] text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
+              className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-navy-700 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
             >
               {submitting ? (
                 <>

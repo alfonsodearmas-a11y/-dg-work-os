@@ -45,10 +45,10 @@ export function HealthScoreGauge({ score, size, label = 'Health Score', compact 
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className={`${compact ? 'text-lg' : 'text-3xl'} font-bold ${textColor}`}>{clamped.toFixed(1)}</span>
-          <span className={`text-[#64748b] ${compact ? 'text-[9px]' : 'text-xs'}`}>/10</span>
+          <span className={`text-navy-600 ${compact ? 'text-[9px]' : 'text-xs'}`}>/10</span>
         </div>
       </div>
-      {!compact && <span className="text-[#94a3b8] text-xs font-medium">{label}</span>}
+      {!compact && <span className="text-slate-400 text-xs font-medium">{label}</span>}
     </div>
   );
 }

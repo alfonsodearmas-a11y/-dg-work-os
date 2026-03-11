@@ -3,6 +3,16 @@ import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 
+// UUID v4 format validation
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function validateId(id: string): NextResponse | null {
+  if (!UUID_REGEX.test(id)) {
+    return NextResponse.json({ error: 'Invalid document ID format' }, { status: 400 });
+  }
+  return null;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -11,6 +21,8 @@ export async function GET(
   if (authResult instanceof NextResponse) return authResult;
 
   const { id } = await params;
+  const idError = validateId(id);
+  if (idError) return idError;
 
   try {
     const { data: doc, error } = await supabaseAdmin
@@ -46,11 +58,95 @@ export async function GET(
   }
 }
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+  if (authResult instanceof NextResponse) return authResult;
+
+  const { id } = await params;
+  const idError = validateId(id);
+  if (idError) return idError;
+
+  try {
+    const body = await request.json();
+    const updates: Record<string, unknown> = {};
+
+    // Only allow specific fields to be updated
+    if (body.doc_type !== undefined) {
+      const validTypes = ['report', 'memo', 'letter', 'policy', 'budget', 'contract', 'meeting_notes', 'invoice', 'other'];
+      if (!validTypes.includes(body.doc_type)) {
+        return NextResponse.json({ error: 'Invalid document type' }, { status: 400 });
+      }
+      updates.document_type = body.doc_type;
+    }
+
+    if (body.tags !== undefined) {
+      if (!Array.isArray(body.tags)) {
+        return NextResponse.json({ error: 'Tags must be an array' }, { status: 400 });
+      }
+      // Validate each tag is a non-empty string with reasonable length
+      const MAX_TAG_LENGTH = 100;
+      const MAX_TAGS = 50;
+      if (body.tags.length > MAX_TAGS) {
+        return NextResponse.json({ error: `Too many tags (max ${MAX_TAGS})` }, { status: 400 });
+      }
+      for (const tag of body.tags) {
+        if (typeof tag !== 'string' || tag.trim().length === 0 || tag.length > MAX_TAG_LENGTH) {
+          return NextResponse.json(
+            { error: `Each tag must be a non-empty string (max ${MAX_TAG_LENGTH} characters)` },
+            { status: 400 }
+          );
+        }
+      }
+      updates.tags = body.tags.map((t: string) => t.trim());
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+    }
+
+    // Verify the document exists before updating
+    const { data: existing } = await supabaseAdmin
+      .from('documents')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('documents')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json(data);
+  } catch (error) {
+    logger.error({ err: error, documentId: id }, 'Failed to update document');
+    return NextResponse.json(
+      { error: 'Failed to update document' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireRole(['dg', 'minister', 'ps']);
+  if (authResult instanceof NextResponse) return authResult;
+
   const { id } = await params;
+  const idError = validateId(id);
+  if (idError) return idError;
 
   try {
     // Get document to find storage path
@@ -60,7 +156,11 @@ export async function DELETE(
       .eq('id', id)
       .single();
 
-    if (doc?.file_path) {
+    if (!doc) {
+      return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+    }
+
+    if (doc.file_path) {
       // Delete from storage
       await supabaseAdmin.storage
         .from('documents')

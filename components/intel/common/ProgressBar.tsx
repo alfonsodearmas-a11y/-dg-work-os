@@ -50,7 +50,7 @@ export function ProgressBar({
     <div className="w-full">
       {(label || showValue) && (
         <div className="flex justify-between items-center mb-1">
-          {label && <span className="text-[#94a3b8] text-sm">{label}</span>}
+          {label && <span className="text-slate-400 text-sm">{label}</span>}
           {showValue && (
             <span className="text-white text-sm font-medium">
               {value.toLocaleString()}{max !== 100 && ` / ${max.toLocaleString()}`}
@@ -58,7 +58,7 @@ export function ProgressBar({
           )}
         </div>
       )}
-      <div className={`w-full bg-[#2d3a52] rounded-full ${heights[size]} overflow-hidden`} role="progressbar" aria-valuenow={Math.round(percentage)} aria-valuemin={0} aria-valuemax={100} aria-label={label || `Progress: ${Math.round(percentage)}%`}>
+      <div className={`w-full bg-navy-800 rounded-full ${heights[size]} overflow-hidden`} role="progressbar" aria-valuenow={Math.round(percentage)} aria-valuemin={0} aria-valuemax={100} aria-label={label || `Progress: ${Math.round(percentage)}%`}>
         <div
           className={`${heights[size]} rounded-full transition-all duration-500 ${getColor()}`}
           style={{ width: `${percentage}%` }}
@@ -66,7 +66,7 @@ export function ProgressBar({
       </div>
       {target && (
         <div className="flex justify-end mt-1">
-          <span className="text-[#64748b] text-xs">Target: {target}</span>
+          <span className="text-navy-600 text-xs">Target: {target}</span>
         </div>
       )}
     </div>

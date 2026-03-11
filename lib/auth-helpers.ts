@@ -44,3 +44,21 @@ export function canUploadData(
 export function canAssignTasks(userRole: Role): boolean {
   return ['dg', 'minister', 'ps', 'agency_admin'].includes(userRole);
 }
+
+const UPLOAD_ROLES: Role[] = ['dg', 'agency_admin', 'officer'];
+
+/**
+ * Combined auth check for upload routes: verifies role + agency upload permission.
+ * Returns `{ session }` on success, or a NextResponse error on failure.
+ */
+export async function requireUploadRole(agency: string) {
+  const result = await requireRole(UPLOAD_ROLES);
+  if (result instanceof NextResponse) return result;
+  const { session } = result;
+
+  if (!canUploadData(session.user.role, session.user.agency, agency)) {
+    return NextResponse.json({ error: `Cannot upload ${agency} data` }, { status: 403 });
+  }
+
+  return { session };
+}

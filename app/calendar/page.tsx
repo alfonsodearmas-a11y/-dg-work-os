@@ -12,18 +12,18 @@ export default function CalendarPage() {
       <div className="flex items-center flex-wrap gap-3 md:gap-4">
         <Link
           href="/"
-          className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors touch-active"
+          className="p-2 rounded-lg text-navy-600 hover:text-white hover:bg-navy-900 transition-colors touch-active"
           aria-label="Back"
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
-            <Calendar className="h-4 w-4 md:h-5 md:w-5 text-[#d4af37]" />
+          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gold-500/20 flex items-center justify-center">
+            <Calendar className="h-4 w-4 md:h-5 md:w-5 text-gold-500" />
           </div>
           <div>
             <h1 className="text-lg md:text-xl font-bold text-white">Calendar</h1>
-            <p className="text-xs md:text-sm text-[#64748b]">Synced with Google Calendar</p>
+            <p className="text-xs md:text-sm text-navy-600">Synced with Google Calendar</p>
           </div>
         </div>
       </div>

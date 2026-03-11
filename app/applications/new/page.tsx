@@ -89,20 +89,20 @@ export default function NewApplicationPage() {
       <div className="flex items-center gap-3">
         <Link
           href="/applications"
-          className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors"
+          className="p-2 rounded-lg text-navy-600 hover:text-white hover:bg-navy-900 transition-colors"
           aria-label="Back"
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-white">New Application</h1>
-          <p className="text-sm text-[#64748b] mt-0.5">Submit a new customer service application</p>
+          <p className="text-sm text-navy-600 mt-0.5">Submit a new customer service application</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="card-premium p-6 space-y-5">
         <div>
-          <label htmlFor="app-name" className="block text-xs text-[#94a3b8] mb-1.5">Applicant Name *</label>
+          <label htmlFor="app-name" className="block text-xs text-slate-400 mb-1.5">Applicant Name *</label>
           <input
             id="app-name"
             type="text"
@@ -110,18 +110,18 @@ export default function NewApplicationPage() {
             onChange={e => updateField('applicant_name', e.target.value)}
             placeholder="Full name of applicant"
             required
-            className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+            className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
           />
         </div>
 
         <div>
-          <label htmlFor="app-type" className="block text-xs text-[#94a3b8] mb-1.5">Application Type *</label>
+          <label htmlFor="app-type" className="block text-xs text-slate-400 mb-1.5">Application Type *</label>
           <select
             id="app-type"
             value={form.application_type}
             onChange={e => updateField('application_type', e.target.value)}
             required
-            className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+            className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
           >
             <option value="">Select type</option>
             {TYPE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
@@ -129,24 +129,24 @@ export default function NewApplicationPage() {
         </div>
 
         <div>
-          <label htmlFor="app-ref" className="block text-xs text-[#94a3b8] mb-1.5">Reference Number</label>
+          <label htmlFor="app-ref" className="block text-xs text-slate-400 mb-1.5">Reference Number</label>
           <input
             id="app-ref"
             type="text"
             value={form.reference_number}
             onChange={e => updateField('reference_number', e.target.value)}
             placeholder="e.g. GPL-2026-0001"
-            className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+            className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
           />
         </div>
 
         <div>
-          <label htmlFor="app-priority" className="block text-xs text-[#94a3b8] mb-1.5">Priority</label>
+          <label htmlFor="app-priority" className="block text-xs text-slate-400 mb-1.5">Priority</label>
           <select
             id="app-priority"
             value={form.priority}
             onChange={e => updateField('priority', e.target.value)}
-            className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+            className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
           >
             {PRIORITY_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
@@ -154,12 +154,12 @@ export default function NewApplicationPage() {
 
         {isDG && (
           <div>
-            <label htmlFor="app-agency" className="block text-xs text-[#94a3b8] mb-1.5">Agency</label>
+            <label htmlFor="app-agency" className="block text-xs text-slate-400 mb-1.5">Agency</label>
             <select
               id="app-agency"
               value={form.agency}
               onChange={e => updateField('agency', e.target.value)}
-              className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50"
+              className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
             >
               <option value="">Select agency</option>
               {AGENCY_OPTIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
@@ -168,21 +168,21 @@ export default function NewApplicationPage() {
         )}
 
         <div>
-          <label htmlFor="app-notes" className="block text-xs text-[#94a3b8] mb-1.5">Notes</label>
+          <label htmlFor="app-notes" className="block text-xs text-slate-400 mb-1.5">Notes</label>
           <textarea
             id="app-notes"
             value={form.notes}
             onChange={e => updateField('notes', e.target.value)}
             placeholder="Additional details about the application..."
             rows={4}
-            className="w-full px-3 py-2 bg-[#0a1628] border border-[#2d3a52] rounded-lg text-sm text-white placeholder:text-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50 resize-none"
+            className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50 resize-none"
           />
         </div>
 
         <button
           type="submit"
           disabled={submitting || !form.applicant_name.trim() || !form.application_type}
-          className="w-full py-2.5 rounded-lg bg-[#d4af37] text-[#0a1628] font-semibold text-sm hover:bg-[#e5c348] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full py-2.5 rounded-lg bg-gold-500 text-navy-950 font-semibold text-sm hover:bg-[#e5c348] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {submitting ? 'Creating...' : 'Create Application'}
         </button>

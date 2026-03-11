@@ -68,12 +68,12 @@ export function CreateEventModal({
     return (
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
         <div className="fixed inset-0 bg-black/80" style={{ zIndex: -1 }} onClick={handleClose} aria-hidden="true" />
-        <div ref={successRef} role="dialog" aria-modal="true" aria-labelledby="create-event-success-title" className="relative w-full max-w-sm bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border border-[#2d3a52] rounded-2xl shadow-2xl p-6 text-center animate-fade-in">
+        <div ref={successRef} role="dialog" aria-modal="true" aria-labelledby="create-event-success-title" className="relative w-full max-w-sm bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border border-navy-800 rounded-2xl shadow-2xl p-6 text-center animate-fade-in">
           <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 className="h-7 w-7 text-emerald-400" />
           </div>
           <h3 id="create-event-success-title" className="text-white font-semibold text-lg mb-1">Event Created</h3>
-          <p className="text-[#64748b] text-sm mb-4">
+          <p className="text-navy-600 text-sm mb-4">
             &quot;{createdEvent.title}&quot; has been added to your Google Calendar.
           </p>
           <div className="flex flex-col gap-2">
@@ -82,7 +82,7 @@ export function CreateEventModal({
                 href={createdEvent.html_link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#d4af37] text-[#0a1628] font-medium hover:bg-[#c9a432] transition-colors text-sm"
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gold-500 text-navy-950 font-medium hover:bg-[#c9a432] transition-colors text-sm"
               >
                 <ExternalLink className="h-4 w-4" />
                 Open in Google Calendar
@@ -90,7 +90,7 @@ export function CreateEventModal({
             )}
             <button
               onClick={handleClose}
-              className="px-4 py-2 rounded-lg text-[#94a3b8] hover:text-white hover:bg-[#2d3a52] transition-colors text-sm"
+              className="px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-navy-800 transition-colors text-sm"
             >
               Done
             </button>

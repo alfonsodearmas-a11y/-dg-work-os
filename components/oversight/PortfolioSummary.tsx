@@ -9,17 +9,17 @@ function PortfolioKpiCard({ icon: Icon, label, value, color, subtitle }: {
   icon: React.ComponentType<{ className?: string }>; label: string; value: string; color: 'gold' | 'red' | 'green' | 'blue' | 'grey' | 'amber'; subtitle?: string;
 }) {
   const colors = {
-    gold: { bg: 'bg-[#d4af37]/20', text: 'text-[#d4af37]' }, red: { bg: 'bg-red-500/20', text: 'text-red-400' },
+    gold: { bg: 'bg-gold-500/20', text: 'text-gold-500' }, red: { bg: 'bg-red-500/20', text: 'text-red-400' },
     green: { bg: 'bg-emerald-500/20', text: 'text-emerald-400' }, blue: { bg: 'bg-blue-500/20', text: 'text-blue-400' },
-    grey: { bg: 'bg-[#4a5568]/20', text: 'text-[#94a3b8]' }, amber: { bg: 'bg-amber-500/20', text: 'text-amber-400' },
+    grey: { bg: 'bg-navy-700/20', text: 'text-slate-400' }, amber: { bg: 'bg-amber-500/20', text: 'text-amber-400' },
   };
   const c = colors[color];
   return (
     <div className="card-premium p-3 md:p-5 min-w-[130px] md:min-w-0">
       <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg ${c.bg} flex items-center justify-center mb-2 md:mb-3`}><Icon className={`h-4 w-4 md:h-5 md:w-5 ${c.text}`} /></div>
       <p className={`text-lg md:text-2xl font-bold ${c.text} truncate`}>{value}</p>
-      <p className="text-[#64748b] text-xs mt-1">{label}</p>
-      {subtitle && <p className="text-[#4a5568] text-[10px] mt-0.5">{subtitle}</p>}
+      <p className="text-navy-600 text-xs mt-1">{label}</p>
+      {subtitle && <p className="text-navy-700 text-[10px] mt-0.5">{subtitle}</p>}
     </div>
   );
 }
@@ -54,7 +54,7 @@ export function PortfolioSummarySection({ summary }: { summary: PortfolioSummary
               .map(({ label, count, key }) => {
                 const maxCount = Math.max(...Object.values(summary.regions));
                 const h = Math.max((count / maxCount) * 100, 8);
-                return (<div key={key} className="flex-1 flex flex-col items-center gap-1"><span className="text-[#d4af37] text-[10px] font-medium">{count}</span><div className="w-full bg-[#d4af37]/30 rounded-t" style={{ height: `${h}%` }} /><span className="text-[#64748b] text-[9px]">{label}</span></div>);
+                return (<div key={key} className="flex-1 flex flex-col items-center gap-1"><span className="text-gold-500 text-[10px] font-medium">{count}</span><div className="w-full bg-gold-500/30 rounded-t" style={{ height: `${h}%` }} /><span className="text-navy-600 text-[9px]">{label}</span></div>);
               })}
           </div>
         </div>

@@ -13,11 +13,11 @@ interface UpcomingThisWeekProps {
 }
 
 const CATEGORY_DOT_COLORS: Record<EventCategory, string> = {
-  ministry: 'bg-[#4a5568]',
-  board: 'bg-[#d4af37]',
+  ministry: 'bg-navy-700',
+  board: 'bg-gold-500',
   external: 'bg-teal-500',
-  personal: 'bg-[#64748b]',
-  blocked: 'bg-[#2d3a52]',
+  personal: 'bg-navy-600',
+  blocked: 'bg-navy-800',
 };
 
 interface DayGroup {
@@ -61,8 +61,8 @@ export function UpcomingThisWeek({ weekEvents, onEventClick, selectedDay }: Upco
     <div className="overflow-y-auto max-h-[500px]">
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <Calendar className="h-4 w-4 text-[#94a3b8]" />
-        <span className="text-sm font-medium text-[#94a3b8] uppercase tracking-wider">
+        <Calendar className="h-4 w-4 text-slate-400" />
+        <span className="text-sm font-medium text-slate-400 uppercase tracking-wider">
           Upcoming This Week
         </span>
       </div>
@@ -80,7 +80,7 @@ export function UpcomingThisWeek({ weekEvents, onEventClick, selectedDay }: Upco
               {/* Day header */}
               <h3
                 className={`text-sm font-bold mb-2 ${
-                  dayIsToday ? 'text-[#d4af37]' : 'text-white'
+                  dayIsToday ? 'text-gold-500' : 'text-white'
                 }`}
               >
                 {dayLabel}
@@ -88,7 +88,7 @@ export function UpcomingThisWeek({ weekEvents, onEventClick, selectedDay }: Upco
 
               {/* Events */}
               {group.events.length === 0 ? (
-                <p className="text-[#64748b] italic text-xs pl-2">No events</p>
+                <p className="text-navy-600 italic text-xs pl-2">No events</p>
               ) : (
                 <div className="space-y-1">
                   {group.events.map((event) => {
@@ -106,10 +106,10 @@ export function UpcomingThisWeek({ weekEvents, onEventClick, selectedDay }: Upco
                       <button
                         key={event.google_id}
                         onClick={() => onEventClick(event)}
-                        className="w-full flex items-center gap-2 px-2 py-2 min-h-[44px] rounded-lg hover:bg-[#1a2744] transition-colors cursor-pointer text-left"
+                        className="w-full flex items-center gap-2 px-2 py-2 min-h-[44px] rounded-lg hover:bg-navy-900 transition-colors cursor-pointer text-left"
                       >
                         {/* Time */}
-                        <span className="w-16 flex-shrink-0 text-xs font-bold text-[#94a3b8]">
+                        <span className="w-16 flex-shrink-0 text-xs font-bold text-slate-400">
                           {timeLabel}
                         </span>
 
@@ -122,7 +122,7 @@ export function UpcomingThisWeek({ weekEvents, onEventClick, selectedDay }: Upco
                         <span className="flex-1 min-w-0 flex items-center gap-1.5">
                           <span className="text-sm text-white truncate">{event.title}</span>
                           {durationLabel && (
-                            <span className="text-xs text-[#64748b] flex-shrink-0">
+                            <span className="text-xs text-navy-600 flex-shrink-0">
                               ({durationLabel})
                             </span>
                           )}
@@ -130,7 +130,7 @@ export function UpcomingThisWeek({ weekEvents, onEventClick, selectedDay }: Upco
 
                         {/* Video icon */}
                         {videoLink && (
-                          <Video className="h-3 w-3 text-[#d4af37] flex-shrink-0" />
+                          <Video className="h-3 w-3 text-gold-500 flex-shrink-0" />
                         )}
                       </button>
                     );

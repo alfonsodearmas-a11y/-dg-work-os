@@ -47,11 +47,11 @@ export function AlertCard({ alert, onDismiss, onAction }: AlertCardProps) {
             <span className={`text-xs font-semibold px-2 py-0.5 rounded ${styles.badge}`}>
               {alert.agency?.toUpperCase() || 'SYSTEM'}
             </span>
-            <span className="text-[#64748b] text-xs">{alert.time || 'Just now'}</span>
+            <span className="text-navy-600 text-xs">{alert.time || 'Just now'}</span>
           </div>
           <p className="text-white font-medium">{alert.message}</p>
           {alert.detail && (
-            <p className="text-[#94a3b8] text-sm mt-1">{alert.detail}</p>
+            <p className="text-slate-400 text-sm mt-1">{alert.detail}</p>
           )}
         </div>
 
@@ -59,7 +59,7 @@ export function AlertCard({ alert, onDismiss, onAction }: AlertCardProps) {
           {onAction && (
             <button
               onClick={() => onAction(alert)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#2d3a52] hover:bg-[#d4af37]/20 text-white text-sm transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-navy-800 hover:bg-gold-500/20 text-white text-sm transition-colors"
             >
               View <ChevronRight size={14} />
             </button>
@@ -67,7 +67,7 @@ export function AlertCard({ alert, onDismiss, onAction }: AlertCardProps) {
           {onDismiss && (
             <button
               onClick={() => onDismiss(alert)}
-              className="p-1.5 rounded-lg hover:bg-[#2d3a52] text-[#94a3b8] hover:text-white transition-colors"
+              className="p-1.5 rounded-lg hover:bg-navy-800 text-slate-400 hover:text-white transition-colors"
             >
               <X size={16} />
             </button>

@@ -6,6 +6,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
+import { CHART_THEME } from '@/lib/constants/chart-theme';
 import type { GPLMetricsRow, GPLSnapshotRow, AgeingBucket } from '@/lib/gpl/types';
 
 interface StaffEntry {
@@ -257,9 +258,9 @@ function EfficiencyCard({ metric }: { metric: GPLMetricsRow }) {
         <div className="h-24 mt-2">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ left: 0, right: 5 }}>
-              <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 8 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#64748b', fontSize: 9 }} axisLine={false} tickLine={false} width={20} />
-              <Tooltip contentStyle={{ background: '#1a2744', border: '1px solid #2d3a52', borderRadius: 8, color: '#fff', fontSize: 11 }} />
+              <XAxis dataKey="name" tick={{ fill: CHART_THEME.colors.slate400, fontSize: 8 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: CHART_THEME.colors.navy600, fontSize: 9 }} axisLine={false} tickLine={false} width={20} />
+              <Tooltip contentStyle={CHART_THEME.tooltipSmall} />
               <Bar dataKey="count" radius={[3, 3, 0, 0]} barSize={16}>
                 {data.map((_, i) => (
                   <Cell key={i} fill={HIST_COLORS[i] || '#64748b'} />
@@ -302,9 +303,9 @@ function SLATrendLine({ snapshots, metrics }: { snapshots: GPLSnapshotRow[]; met
       <div className="h-40">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-            <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 9 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} width={30} domain={[0, 100]} />
-            <Tooltip contentStyle={{ background: '#1a2744', border: '1px solid #2d3a52', borderRadius: 8, color: '#fff', fontSize: 11 }} />
+            <XAxis dataKey="date" tick={{ fill: CHART_THEME.colors.navy600, fontSize: 9 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: CHART_THEME.colors.navy600, fontSize: 10 }} axisLine={false} tickLine={false} width={30} domain={[0, 100]} />
+            <Tooltip contentStyle={CHART_THEME.tooltipSmall} />
             <Line type="monotone" dataKey="simple" name="Simple" stroke="#10b981" strokeWidth={2} dot={false} />
             <Line type="monotone" dataKey="estimates" name="Estimates" stroke="#8b5cf6" strokeWidth={2} dot={false} />
             <Line type="monotone" dataKey="capitalWorks" name="Capital Works" stroke="#f59e0b" strokeWidth={2} dot={false} />
@@ -339,9 +340,9 @@ function MedianTrendLine({ snapshots, metrics }: { snapshots: GPLSnapshotRow[]; 
       <div className="h-40">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-            <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 9 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} width={30} />
-            <Tooltip contentStyle={{ background: '#1a2744', border: '1px solid #2d3a52', borderRadius: 8, color: '#fff', fontSize: 11 }} />
+            <XAxis dataKey="date" tick={{ fill: CHART_THEME.colors.navy600, fontSize: 9 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: CHART_THEME.colors.navy600, fontSize: 10 }} axisLine={false} tickLine={false} width={30} />
+            <Tooltip contentStyle={CHART_THEME.tooltipSmall} />
             <Line type="monotone" dataKey="simple" name="Simple" stroke="#10b981" strokeWidth={2} dot={false} />
             <Line type="monotone" dataKey="estimates" name="Estimates" stroke="#8b5cf6" strokeWidth={2} dot={false} />
             <Line type="monotone" dataKey="capitalWorks" name="Capital Works" stroke="#f59e0b" strokeWidth={2} dot={false} />

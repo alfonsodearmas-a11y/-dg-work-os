@@ -3,6 +3,18 @@ import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 import { supabaseAdmin } from './db';
 
+// ── Auth Migration Guide ──────────────────────────────────────────────
+// CANONICAL PATTERN: Use `requireRole()` from `lib/auth-helpers.ts` for
+// all new API routes. It validates the NextAuth session and checks role.
+//
+// LEGACY SHIMS: authenticateAny(), authenticateFromCookie(), authorizeRoles(),
+// isDG(), isCEO(), canAccessTask() exist at the bottom of this file for
+// backward compatibility with old admin/tm routes. Do NOT use them in new code.
+//
+// New routes should always use:
+//   import { requireRole } from '@/lib/auth-helpers';
+// ──────────────────────────────────────────────────────────────────────
+
 export type Role = 'dg' | 'minister' | 'ps' | 'agency_admin' | 'officer';
 
 declare module 'next-auth' {
@@ -162,7 +174,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
 
-      // Refresh role/agency on every token refresh (catches admin changes)
+      // Refresh role/agency on every token refresh (catches admin changes).
+      // NOTE: NextAuth's JWT is cached client-side until it expires (~30 days).
+      // Role changes made by an admin take effect on the next token refresh,
+      // but in practice users may need to sign out and sign back in for
+      // changes to take effect immediately.
       if (token.userId && !account) {
         const { data: user } = await supabaseAdmin
           .from('users')

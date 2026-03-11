@@ -31,7 +31,7 @@ const PRIORITY_COLORS: Record<string, string> = {
   critical: 'bg-red-500',
   high: 'bg-red-400',
   medium: 'bg-amber-500',
-  low: 'bg-[#64748b]',
+  low: 'bg-navy-600',
 };
 
 const STATUS_PILLS: Record<string, string> = {
@@ -89,8 +89,8 @@ export function sortTasks(tasks: Task[], field: SortField, dir: SortDir): Task[]
 function SortIcon({ field, currentField, dir }: { field: SortField; currentField: SortField; dir: SortDir }) {
   if (field !== currentField) return null;
   return dir === 'asc'
-    ? <ChevronUp className="h-3 w-3 text-[#d4af37]" />
-    : <ChevronDown className="h-3 w-3 text-[#d4af37]" />;
+    ? <ChevronUp className="h-3 w-3 text-gold-500" />
+    : <ChevronDown className="h-3 w-3 text-gold-500" />;
 }
 
 export function TaskListView({
@@ -112,12 +112,12 @@ export function TaskListView({
     onSort(field);
   };
 
-  const headerClass = 'px-3 py-2.5 text-left text-xs font-medium text-[#64748b] uppercase tracking-wider cursor-pointer hover:text-white select-none transition-colors';
+  const headerClass = 'px-3 py-2.5 text-left text-xs font-medium text-navy-600 uppercase tracking-wider cursor-pointer hover:text-white select-none transition-colors';
 
   return (
-    <div className="rounded-xl border border-[#2d3a52] overflow-hidden bg-[#0a1628]/50">
+    <div className="rounded-xl border border-navy-800 overflow-hidden bg-navy-950/50">
       {/* Table Header */}
-      <div className={`hidden md:grid grid-cols-[40px_44px_1fr_100px_100px_100px_80px] bg-[#1a2744] border-b border-[#2d3a52]`}>
+      <div className={`hidden md:grid grid-cols-[40px_44px_1fr_100px_100px_100px_80px] bg-navy-900 border-b border-navy-800`}>
         <div className="px-3 py-2.5 flex items-center">
           <input
             type="checkbox"
@@ -130,7 +130,7 @@ export function TaskListView({
               }
             }}
             aria-label="Select all tasks"
-            className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
+            className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer"
           />
         </div>
         <div className={headerClass} onClick={() => handleHeaderSort('priority')}>
@@ -164,7 +164,7 @@ export function TaskListView({
       </div>
 
       {/* Rows */}
-      <div className="divide-y divide-[#2d3a52]/50">
+      <div className="divide-y divide-navy-800/50">
         {sorted.map((task) => {
           const isSelected = selectedIds.has(task.id);
           const isOverdue = task.due_date && task.status !== 'done' && isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date));
@@ -202,8 +202,8 @@ export function TaskListView({
               }}
               className={`cursor-pointer transition-colors ${
                 isSelected
-                  ? 'bg-[#d4af37]/10 border-l-2 border-l-[#d4af37]'
-                  : 'hover:bg-[#1a2744]/50'
+                  ? 'bg-gold-500/10 border-l-2 border-l-gold-500'
+                  : 'hover:bg-navy-900/50'
               }`}
               style={{ minHeight: 44 }}
             >
@@ -216,7 +216,7 @@ export function TaskListView({
                     onChange={(e) => { e.stopPropagation(); onToggleSelect(task.id); }}
                     onClick={(e) => e.stopPropagation()}
                     aria-label={`Select task: ${task.title}`}
-                    className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
+                    className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer"
                   />
                 </div>
                 <div className="px-3 py-2.5">
@@ -227,16 +227,16 @@ export function TaskListView({
                 </div>
                 <div className="px-3 py-2.5">
                   {task.agency && (
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${AGENCY_COLORS[task.agency] || 'bg-[#2d3a52] text-[#94a3b8]'}`}>
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${AGENCY_COLORS[task.agency] || 'bg-navy-800 text-slate-400'}`}>
                       {task.agency}
                     </span>
                   )}
                 </div>
-                <div className="px-3 py-2.5 text-xs text-[#94a3b8] truncate">
+                <div className="px-3 py-2.5 text-xs text-slate-400 truncate">
                   {task.owner_name ? task.owner_name.split(' ').map(w => w[0]).join('').toUpperCase() : ''}
                 </div>
                 <div className={`px-3 py-2.5 text-xs flex items-center gap-1 ${
-                  isOverdue ? 'text-red-400' : 'text-[#64748b]'
+                  isOverdue ? 'text-red-400' : 'text-navy-600'
                 }`}>
                   {task.due_date ? (
                     <>
@@ -263,7 +263,7 @@ export function TaskListView({
                     onChange={(e) => { e.stopPropagation(); onToggleSelect(task.id); }}
                     onClick={(e) => e.stopPropagation()}
                     aria-label={`Select task: ${task.title}`}
-                    className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer shrink-0"
+                    className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer shrink-0"
                   />
                 )}
                 {priorityDot && <div className={`w-2 h-2 rounded-full shrink-0 ${priorityDot}`} />}
@@ -271,7 +271,7 @@ export function TaskListView({
                   <p className="text-sm text-white truncate">{task.title}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     {task.agency && (
-                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${AGENCY_COLORS[task.agency] || 'bg-[#2d3a52] text-[#94a3b8]'}`}>
+                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${AGENCY_COLORS[task.agency] || 'bg-navy-800 text-slate-400'}`}>
                         {task.agency}
                       </span>
                     )}
@@ -281,7 +281,7 @@ export function TaskListView({
                   </div>
                 </div>
                 {task.due_date && (
-                  <span className={`text-xs shrink-0 ${isOverdue ? 'text-red-400' : 'text-[#64748b]'}`}>
+                  <span className={`text-xs shrink-0 ${isOverdue ? 'text-red-400' : 'text-navy-600'}`}>
                     {isToday(parseISO(task.due_date)) ? 'Today' : format(parseISO(task.due_date), 'MMM d')}
                   </span>
                 )}
@@ -291,7 +291,7 @@ export function TaskListView({
         })}
 
         {sorted.length === 0 && (
-          <div className="flex items-center justify-center h-32 text-[#64748b] text-sm">
+          <div className="flex items-center justify-center h-32 text-navy-600 text-sm">
             No tasks match your filters
           </div>
         )}

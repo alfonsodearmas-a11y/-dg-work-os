@@ -92,7 +92,7 @@ export function GoogleCalendarCard() {
     return (
       <div className="card-premium p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Calendar className="h-5 w-5 text-[#d4af37]" />
+          <Calendar className="h-5 w-5 text-gold-500" />
           <h2 className="text-lg font-semibold text-white">Google Calendar</h2>
         </div>
         <div className="animate-pulse space-y-3">
@@ -107,16 +107,16 @@ export function GoogleCalendarCard() {
     <div className="card-premium p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-[#d4af37]" />
+          <Calendar className="h-5 w-5 text-gold-500" />
           <h2 className="text-lg font-semibold text-white">Google Calendar</h2>
         </div>
         {status?.connected ? (
-          <span className="flex items-center gap-1.5 text-xs font-medium text-[#059669] bg-[#059669]/10 px-2.5 py-1 rounded-full">
+          <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 bg-[#059669]/10 px-2.5 py-1 rounded-full">
             <CheckCircle2 className="h-3.5 w-3.5" />
             Connected
           </span>
         ) : (
-          <span className="flex items-center gap-1.5 text-xs font-medium text-[#64748b] bg-white/5 px-2.5 py-1 rounded-full">
+          <span className="flex items-center gap-1.5 text-xs font-medium text-navy-600 bg-white/5 px-2.5 py-1 rounded-full">
             <XCircle className="h-3.5 w-3.5" />
             Not connected
           </span>
@@ -128,8 +128,8 @@ export function GoogleCalendarCard() {
         <div
           className={`mb-4 px-3 py-2 rounded-lg text-sm ${
             toast.type === 'success'
-              ? 'bg-[#059669]/10 border border-[#059669]/20 text-[#059669]'
-              : 'bg-[#dc2626]/10 border border-[#dc2626]/20 text-[#dc2626]'
+              ? 'bg-[#059669]/10 border border-[#059669]/20 text-emerald-600'
+              : 'bg-red-600/10 border border-[#dc2626]/20 text-red-600'
           }`}
         >
           {toast.message}
@@ -168,7 +168,7 @@ export function GoogleCalendarCard() {
           <button
             onClick={handleDisconnect}
             disabled={disconnecting}
-            className="flex items-center gap-2 text-sm text-[#dc2626]/80 hover:text-[#dc2626] transition-colors mt-2 disabled:opacity-50"
+            className="flex items-center gap-2 text-sm text-red-600/80 hover:text-red-600 transition-colors mt-2 disabled:opacity-50"
           >
             {disconnecting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -185,7 +185,7 @@ export function GoogleCalendarCard() {
           </p>
 
           {status?.has_env_fallback && (
-            <p className="text-xs text-[#d4af37]/70">
+            <p className="text-xs text-gold-500/70">
               Using environment variable fallback. Connect here for automatic token management.
             </p>
           )}

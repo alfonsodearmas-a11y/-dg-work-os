@@ -4,14 +4,14 @@ import { signOut } from 'next-auth/react';
 
 export default function AccessDeniedPage() {
   return (
-    <div className="min-h-screen bg-[#0a1628] flex items-center justify-center px-6">
+    <div className="min-h-screen bg-navy-950 flex items-center justify-center px-6">
       <div className="max-w-md w-full text-center space-y-8">
         {/* App name */}
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">
-            DG Work <span className="text-[#d4af37]">OS</span>
+            DG Work <span className="text-gold-500">OS</span>
           </h1>
-          <p className="text-xs text-[#64748b] uppercase tracking-widest mt-1">
+          <p className="text-xs text-navy-600 uppercase tracking-widest mt-1">
             Ministry of Public Utilities &amp; Aviation
           </p>
         </div>
@@ -35,7 +35,7 @@ export default function AccessDeniedPage() {
           </div>
 
           <h2 className="text-xl font-bold text-white">Access not granted</h2>
-          <p className="text-sm text-[#94a3b8] leading-relaxed">
+          <p className="text-sm text-slate-400 leading-relaxed">
             Your Google account is not authorized to access DG Work OS.
             Contact the Director General to request access.
           </p>

@@ -14,7 +14,7 @@ const confirmSchema = z.object({
 });
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const session = await auth();
+  const session = await auth(); // TODO: migrate to requireRole()
   const userId = session?.user?.id || 'system';
 
   const { data, error } = await parseBody(request, confirmSchema);

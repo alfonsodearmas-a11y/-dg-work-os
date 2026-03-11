@@ -73,7 +73,7 @@ export function TaskNotificationBell({ basePath = '/dashboard' }: { basePath?: s
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="relative p-2 rounded-lg hover:bg-[#2d3a52]/50 text-[#64748b] hover:text-white transition-colors"
+        className="relative p-2 rounded-lg hover:bg-navy-800/50 text-navy-600 hover:text-white transition-colors"
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
       >
         <Bell className="h-5 w-5" />
@@ -85,11 +85,11 @@ export function TaskNotificationBell({ basePath = '/dashboard' }: { basePath?: s
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-[#1a2744] border border-[#2d3a52] rounded-xl shadow-xl z-50 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d3a52]">
+        <div className="absolute right-0 top-full mt-2 w-80 bg-navy-900 border border-navy-800 rounded-xl shadow-xl z-50 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-navy-800">
             <h3 className="text-sm font-semibold text-white">Notifications</h3>
             {unreadCount > 0 && (
-              <button onClick={markAllRead} className="text-xs text-[#d4af37] hover:underline">
+              <button onClick={markAllRead} className="text-xs text-gold-500 hover:underline">
                 Mark all read
               </button>
             )}
@@ -97,20 +97,20 @@ export function TaskNotificationBell({ basePath = '/dashboard' }: { basePath?: s
 
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
-              <p className="text-center text-sm text-[#64748b] py-8">No notifications</p>
+              <p className="text-center text-sm text-navy-600 py-8">No notifications</p>
             ) : (
               notifications.map(n => (
                 <button
                   key={n.id}
                   onClick={() => handleNotifClick(n)}
-                  className={`w-full text-left px-4 py-3 hover:bg-[#2d3a52]/30 transition-colors border-b border-[#2d3a52]/50 ${!n.is_read ? 'bg-[#d4af37]/5' : ''}`}
+                  className={`w-full text-left px-4 py-3 hover:bg-navy-800/30 transition-colors border-b border-navy-800/50 ${!n.is_read ? 'bg-gold-500/5' : ''}`}
                 >
                   <div className="flex items-start gap-2">
-                    {!n.is_read && <div className="w-2 h-2 rounded-full bg-[#d4af37] mt-1.5 shrink-0" />}
+                    {!n.is_read && <div className="w-2 h-2 rounded-full bg-gold-500 mt-1.5 shrink-0" />}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-white font-medium truncate">{n.title}</p>
-                      {n.message && <p className="text-xs text-[#64748b] mt-0.5 line-clamp-2">{n.message}</p>}
-                      <p className="text-xs text-[#64748b] mt-1">
+                      {n.message && <p className="text-xs text-navy-600 mt-0.5 line-clamp-2">{n.message}</p>}
+                      <p className="text-xs text-navy-600 mt-1">
                         {new Date(n.created_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>

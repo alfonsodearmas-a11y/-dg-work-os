@@ -35,14 +35,14 @@ const PRIORITY_DOT: Record<string, string> = {
   critical: 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]',
   high: 'bg-red-500',
   medium: 'bg-amber-500',
-  low: 'bg-[#64748b]',
+  low: 'bg-navy-600',
 };
 
 const PRIORITY_BORDER: Record<string, string> = {
   critical: 'border-l-red-500',
   high: 'border-l-red-400',
   medium: 'border-l-amber-500',
-  low: 'border-l-[#64748b]',
+  low: 'border-l-navy-600',
 };
 
 function getInitials(name: string | null): string {
@@ -154,11 +154,11 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
   };
 
   const getDueDateColor = () => {
-    if (!task.due_date) return 'text-[#64748b]';
+    if (!task.due_date) return 'text-navy-600';
     const date = parseISO(task.due_date);
     if (task.status !== 'done' && isPast(date) && !isToday(date)) return 'text-red-400';
-    if (isToday(date)) return 'text-[#d4af37]';
-    return 'text-[#64748b]';
+    if (isToday(date)) return 'text-gold-500';
+    return 'text-navy-600';
   };
 
   const formatDueDate = () => {
@@ -185,9 +185,9 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
         onTouchEnd={cancelLongPress}
         onTouchMove={cancelLongPress}
         className={`group relative rounded-xl border bg-gradient-to-b from-[#1a2744] to-[#0f1d32] p-3 cursor-pointer
-          hover:border-[#d4af37]/50 hover:shadow-lg hover:shadow-[#d4af37]/5 transition-all duration-200
-          ${isDragging ? 'opacity-50 scale-105 shadow-2xl !border-[#d4af37]' : ''}
-          ${isSelected ? 'border-l-2 border-l-[#d4af37] !bg-[#1e2d4a] border-[#d4af37]/40' : 'border-[#2d3a52]'}
+          hover:border-gold-500/50 hover:shadow-lg hover:shadow-gold-500/5 transition-all duration-200
+          ${isDragging ? 'opacity-50 scale-105 shadow-2xl !border-gold-500' : ''}
+          ${isSelected ? 'border-l-2 border-l-gold-500 !bg-[#1e2d4a] border-gold-500/40' : 'border-navy-800'}
           ${expanded && !isSelected ? `border-l-2 ${priorityBorder} !bg-[#1e2d4a]` : ''}`}
         style={{ touchAction: 'manipulation' }}
       >
@@ -204,7 +204,7 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
               onChange={() => onToggleSelect?.(task.id)}
               onClick={(e) => e.stopPropagation()}
               aria-label={`Select task: ${task.title}`}
-              className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
+              className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer"
             />
           </div>
         )}
@@ -216,7 +216,7 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
               onChange={() => onToggleSelect?.(task.id)}
               onClick={(e) => e.stopPropagation()}
               aria-label={`Select task: ${task.title}`}
-              className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
+              className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer"
             />
           </div>
         )}
@@ -227,7 +227,7 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
             className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
             onClick={(e) => e.stopPropagation()}
           >
-            <GripVertical className="h-4 w-4 text-[#64748b]" />
+            <GripVertical className="h-4 w-4 text-navy-600" />
           </div>
         )}
 
@@ -243,7 +243,7 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
                 onContextMenu(task, { x: rect.right, y: rect.bottom });
               }
             }}
-            className={`absolute right-2 top-2 p-1.5 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-all z-10 ${
+            className={`absolute right-2 top-2 p-1.5 rounded-lg text-navy-600 hover:text-white hover:bg-navy-800 transition-all z-10 ${
               isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
             }`}
             style={{ minWidth: 28, minHeight: 28, touchAction: 'manipulation' }}
@@ -281,12 +281,12 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
           {(task.agency || task.role) && (
             <div className="flex flex-wrap gap-1.5 mb-2">
               {task.agency && (
-                <span className={`px-2 py-0.5 rounded text-xs font-medium border ${AGENCY_COLORS[task.agency] || 'bg-[#2d3a52] text-[#94a3b8] border-[#3d4a62]'}`}>
+                <span className={`px-2 py-0.5 rounded text-xs font-medium border ${AGENCY_COLORS[task.agency] || 'bg-navy-800 text-slate-400 border-[#3d4a62]'}`}>
                   {task.agency}
                 </span>
               )}
               {task.role && (
-                <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#2d3a52] text-[#94a3b8]">
+                <span className="px-2 py-0.5 rounded text-xs font-medium bg-navy-800 text-slate-400">
                   {task.role}
                 </span>
               )}
@@ -297,10 +297,10 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
           {expanded && (
             <div className="space-y-1.5 mb-2 text-xs">
               {task.owner_name && (
-                <p className="text-[#94a3b8]">Assigned to {task.owner_name}</p>
+                <p className="text-slate-400">Assigned to {task.owner_name}</p>
               )}
               {task.description && (
-                <p className="text-[#64748b] leading-relaxed">
+                <p className="text-navy-600 leading-relaxed">
                   {task.description.length > 200 ? task.description.slice(0, 200) + '...' : task.description}
                 </p>
               )}
@@ -323,7 +323,7 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
             </div>
             <div className="flex items-center gap-1.5">
               {task.owner_name && !expanded && (
-                <div className="w-5 h-5 rounded-full bg-[#2d3a52] flex items-center justify-center text-xs font-bold text-[#94a3b8] shrink-0" title={task.owner_name}>
+                <div className="w-5 h-5 rounded-full bg-navy-800 flex items-center justify-center text-xs font-bold text-slate-400 shrink-0" title={task.owner_name}>
                   {getInitials(task.owner_name)}
                 </div>
               )}
@@ -331,7 +331,7 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
                 <button
                   onClick={(e) => { e.stopPropagation(); onCalendar(task); }}
                   onMouseDown={(e) => e.stopPropagation()}
-                  className="p-1 rounded text-[#64748b] hover:text-[#d4af37] hover:bg-[#d4af37]/10 transition-colors opacity-0 group-hover:opacity-100"
+                  className="p-1 rounded text-navy-600 hover:text-gold-500 hover:bg-gold-500/10 transition-colors opacity-0 group-hover:opacity-100"
                   title="Add to Calendar"
                   aria-label="Add to calendar"
                 >

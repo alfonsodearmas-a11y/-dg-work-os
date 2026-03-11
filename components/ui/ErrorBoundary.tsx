@@ -30,19 +30,19 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   render() {
     if (this.state.hasError) {
       return (
-        <div className="bg-[#1a2744] rounded-xl border border-red-500/30 p-6 md:p-10 text-center">
+        <div className="bg-navy-900 rounded-xl border border-red-500/30 p-6 md:p-10 text-center">
           <div className="w-14 h-14 rounded-2xl bg-red-500/15 flex items-center justify-center mx-auto mb-4">
             <AlertTriangle className="w-7 h-7 text-red-400" />
           </div>
-          <h3 className="text-[#f1f5f9] text-lg font-semibold mb-2">
+          <h3 className="text-slate-100 text-lg font-semibold mb-2">
             {this.props.fallbackTitle || 'Something went wrong'}
           </h3>
-          <p className="text-[#64748b] text-sm mb-4 max-w-md mx-auto">
+          <p className="text-navy-600 text-sm mb-4 max-w-md mx-auto">
             {this.state.error?.message || 'An unexpected error occurred while loading this section.'}
           </p>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#2d3a52] hover:bg-[#3d4a62] text-white rounded-lg text-sm font-medium transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-navy-800 hover:bg-[#3d4a62] text-white rounded-lg text-sm font-medium transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
             Try Again

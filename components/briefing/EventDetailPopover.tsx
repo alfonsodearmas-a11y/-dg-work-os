@@ -38,7 +38,7 @@ const CATEGORY_BADGES: Record<string, { label: string; className: string }> = {
   board: { label: 'Board', className: 'badge-gold' },
   external: { label: 'External', className: 'bg-teal-500/20 text-teal-400 border border-teal-500/30' },
   personal: { label: 'Personal', className: 'badge-info' },
-  blocked: { label: 'Blocked', className: 'bg-[#2d3a52]/50 text-[#94a3b8] border border-[#2d3a52]' },
+  blocked: { label: 'Blocked', className: 'bg-navy-800/50 text-slate-400 border border-navy-800' },
 };
 
 const STATUS_BADGES: Record<string, { label: string; className: string }> = {
@@ -51,7 +51,7 @@ const RSVP_ICON: Record<string, { icon: React.ElementType; color: string }> = {
   accepted: { icon: Check, color: 'text-emerald-400' },
   declined: { icon: XCircle, color: 'text-red-400' },
   tentative: { icon: HelpCircle, color: 'text-amber-400' },
-  needsAction: { icon: Clock, color: 'text-[#64748b]' },
+  needsAction: { icon: Clock, color: 'text-navy-600' },
 };
 
 function getInitials(name: string): string {
@@ -90,9 +90,9 @@ export function EventDetailPopover({
       <div className="slide-panel-backdrop" onClick={onClose} />
 
       {/* Panel */}
-      <div className="fixed top-0 right-0 bottom-0 w-full sm:max-w-[400px] bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border-l border-[#2d3a52] shadow-2xl z-50 animate-slide-in-right overflow-y-auto">
+      <div className="fixed top-0 right-0 bottom-0 w-full sm:max-w-[400px] bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border-l border-navy-800 shadow-2xl z-50 animate-slide-in-right overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-[#1a2744]/95 backdrop-blur-sm border-b border-[#2d3a52] p-3 md:p-4 z-10">
+        <div className="sticky top-0 bg-navy-900/95 backdrop-blur-sm border-b border-navy-800 p-3 md:p-4 z-10">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-semibold text-white">{event.title}</h2>
@@ -109,7 +109,7 @@ export function EventDetailPopover({
             </div>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors flex-shrink-0"
+              className="p-2 rounded-lg text-navy-600 hover:text-white hover:bg-navy-800 transition-colors flex-shrink-0"
               aria-label="Close"
             >
               <X className="h-4 w-4" />
@@ -137,7 +137,7 @@ export function EventDetailPopover({
 
           {/* Time */}
           <div className="flex items-start gap-3">
-            <Clock className="h-4 w-4 text-[#64748b] mt-0.5 flex-shrink-0" />
+            <Clock className="h-4 w-4 text-navy-600 mt-0.5 flex-shrink-0" />
             <div>
               {event.start_time && (
                 <>
@@ -145,13 +145,13 @@ export function EventDetailPopover({
                     {format(parseISO(event.start_time), 'EEEE, MMMM d, yyyy')}
                   </p>
                   {!event.all_day && (
-                    <p className="text-sm text-[#94a3b8]">
+                    <p className="text-sm text-slate-400">
                       {format(parseISO(event.start_time), 'h:mm a')}
                       {event.end_time && ` \u2013 ${format(parseISO(event.end_time), 'h:mm a')}`}
-                      <span className="text-[#64748b] ml-2">({formatDuration(duration)})</span>
+                      <span className="text-navy-600 ml-2">({formatDuration(duration)})</span>
                     </p>
                   )}
-                  {event.all_day && <p className="text-sm text-[#94a3b8]">All day</p>}
+                  {event.all_day && <p className="text-sm text-slate-400">All day</p>}
                 </>
               )}
             </div>
@@ -160,17 +160,17 @@ export function EventDetailPopover({
           {/* Location */}
           {event.location && (
             <div className="flex items-start gap-3">
-              <MapPin className="h-4 w-4 text-[#64748b] mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-[#94a3b8]">{event.location}</p>
+              <MapPin className="h-4 w-4 text-navy-600 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-slate-400">{event.location}</p>
             </div>
           )}
 
           {/* Video Call */}
           {videoLink && (
             <div className="flex items-center gap-3">
-              <Video className="h-4 w-4 text-[#d4af37] flex-shrink-0" />
+              <Video className="h-4 w-4 text-gold-500 flex-shrink-0" />
               <div className="flex items-center gap-3 flex-1">
-                <span className="text-sm text-[#94a3b8]">
+                <span className="text-sm text-slate-400">
                   {event.conference_data?.conference_solution?.name || 'Video Call'}
                 </span>
                 <button
@@ -187,24 +187,24 @@ export function EventDetailPopover({
           {event.attendees && event.attendees.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <Users className="h-4 w-4 text-[#64748b]" />
-                <span className="text-sm text-[#94a3b8]">{event.attendees.length} attendee{event.attendees.length > 1 ? 's' : ''}</span>
+                <Users className="h-4 w-4 text-navy-600" />
+                <span className="text-sm text-slate-400">{event.attendees.length} attendee{event.attendees.length > 1 ? 's' : ''}</span>
               </div>
               <div className="space-y-2">
                 {event.attendees.map((attendee, i) => {
                   const rsvp = attendee.response_status ? RSVP_ICON[attendee.response_status] : null;
                   const RsvpIcon = rsvp?.icon;
                   return (
-                    <div key={attendee.email} className="flex items-center gap-3 p-2 rounded-lg bg-[#0a1628]/50">
+                    <div key={attendee.email} className="flex items-center gap-3 p-2 rounded-lg bg-navy-950/50">
                       <div className={`w-8 h-8 rounded-full ${AVATAR_COLORS[i % AVATAR_COLORS.length]} flex items-center justify-center text-xs font-bold text-white`}>
                         {getInitials(attendee.display_name || attendee.email.split('@')[0])}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-white truncate">
                           {attendee.display_name || attendee.email.split('@')[0]}
-                          {attendee.organizer && <span className="text-[#d4af37] text-xs ml-1">(organizer)</span>}
+                          {attendee.organizer && <span className="text-gold-500 text-xs ml-1">(organizer)</span>}
                         </p>
-                        <p className="text-xs text-[#64748b] truncate">{attendee.email}</p>
+                        <p className="text-xs text-navy-600 truncate">{attendee.email}</p>
                       </div>
                       {RsvpIcon && (
                         <RsvpIcon className={`h-4 w-4 ${rsvp.color} flex-shrink-0`} />
@@ -222,13 +222,13 @@ export function EventDetailPopover({
             const lines = cleaned.split('\n');
             return (
               <div>
-                <p className="text-sm text-[#94a3b8] whitespace-pre-wrap">
+                <p className="text-sm text-slate-400 whitespace-pre-wrap">
                   {showFullDescription ? cleaned : lines.slice(0, 3).join('\n')}
                 </p>
                 {lines.length > 3 && (
                   <button
                     onClick={() => setShowFullDescription(s => !s)}
-                    className="text-xs text-[#d4af37] mt-1 hover:underline"
+                    className="text-xs text-gold-500 mt-1 hover:underline"
                   >
                     {showFullDescription ? 'Show less' : 'Show more'}
                   </button>
@@ -239,7 +239,7 @@ export function EventDetailPopover({
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-[#1a2744]/95 backdrop-blur-sm border-t border-[#2d3a52] p-3 md:p-4 flex items-center justify-between" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
+        <div className="sticky bottom-0 bg-navy-900/95 backdrop-blur-sm border-t border-navy-800 p-3 md:p-4 flex items-center justify-between" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
           <div className="flex gap-2">
             <button
               onClick={() => onEdit(event)}
@@ -261,7 +261,7 @@ export function EventDetailPopover({
               href={event.html_link}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-xs text-[#64748b] hover:text-[#d4af37] transition-colors"
+              className="flex items-center gap-1.5 text-xs text-navy-600 hover:text-gold-500 transition-colors"
             >
               <ExternalLink className="h-3.5 w-3.5" />
               Google Calendar

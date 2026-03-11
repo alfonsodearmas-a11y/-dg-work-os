@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth';
 import PendingApplicationsClient from './PendingApplicationsClient';
 
 export default async function PendingApplicationsPage() {
-  const session = await auth();
+  const session = await auth(); // TODO: migrate to requireRole()
 
   const userRole = session?.user?.role || 'officer';
   const userAgency = session?.user?.agency || null;

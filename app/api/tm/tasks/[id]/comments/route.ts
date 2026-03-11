@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { authenticateAny, canAccessTask, AuthError } from '@/lib/auth';
+import { canAccessTask } from '@/lib/auth';
+import { requireRole } from '@/lib/auth-helpers';
 import { getTask, createComment, getComments } from '@/lib/task-queries';
 import { createTaskNotification, sendTaskEmail } from '@/lib/task-notifications';
 import { commentAddedEmail } from '@/lib/task-email-templates';
@@ -13,8 +14,11 @@ const createCommentSchema = z.object({
 });
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+  const user = { ...authResult.session.user, fullName: authResult.session.user.name, full_name: authResult.session.user.name };
+
   try {
-    const user = await authenticateAny(request);
     const { id } = await params;
     const task = await getTask(id);
     if (!task) return NextResponse.json({ success: false, error: 'Task not found' }, { status: 404 });
@@ -22,14 +26,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const comments = await getComments(id);
     return NextResponse.json({ success: true, data: comments });
   } catch (error: any) {
-    if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
 export const POST = withErrorHandler(async (request: NextRequest, ctx?: unknown) => {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+  const user = { ...authResult.session.user, fullName: authResult.session.user.name, full_name: authResult.session.user.name };
+
   try {
-    const user = await authenticateAny(request);
     const { id } = await (ctx as { params: Promise<{ id: string }> }).params;
     const task = await getTask(id);
     if (!task) return NextResponse.json({ success: false, error: 'Task not found' }, { status: 404 });
@@ -51,7 +57,6 @@ export const POST = withErrorHandler(async (request: NextRequest, ctx?: unknown)
 
     return NextResponse.json({ success: true, data: comment }, { status: 201 });
   } catch (error: any) {
-    if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
     return apiError('INTERNAL_ERROR', error.message, 500);
   }
 });

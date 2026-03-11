@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import Anthropic from '@anthropic-ai/sdk';
 import { format } from 'date-fns';
@@ -13,7 +13,7 @@ import { compressHistory } from '@/lib/ai/history-compressor';
 import { tryLocalAnswer } from '@/lib/ai/local-answers';
 import { getAnthropicTools, buildActionProposal, isQueryTool, executeQueryTool } from '@/lib/ai/tools';
 import { ModelTier, MODEL_IDS, MAX_TOKENS, TIER_LABELS, MetricSnapshot, ChatStreamEvent } from '@/lib/ai/types';
-import { auth } from '@/lib/auth';
+import { requireRole } from '@/lib/auth-helpers';
 import { parseBody } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 
@@ -103,8 +103,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const session = await auth();
-    const userId = session?.user?.id || 'anonymous';
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    if (authResult instanceof NextResponse) return authResult;
+    const userId = authResult.session.user.id;
 
     const { data, error } = await parseBody(request, chatSchema);
     if (error) return error;

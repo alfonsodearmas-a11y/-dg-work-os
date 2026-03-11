@@ -6,6 +6,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
+import { CHART_THEME } from '@/lib/constants/chart-theme';
 import type { GPLDataWarning, GPLChronicOutlierRow } from '@/lib/gpl/types';
 
 interface QualitySnapshot {
@@ -290,13 +291,13 @@ export function DataQuality() {
                 })}
                 margin={{ left: 0, right: 10, top: 5, bottom: 5 }}
               >
-                <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="date" tick={{ fill: CHART_THEME.colors.navy600, fontSize: 9 }} axisLine={false} tickLine={false} />
                 <YAxis
-                  tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} width={40}
+                  tick={{ fill: CHART_THEME.colors.navy600, fontSize: 10 }} axisLine={false} tickLine={false} width={40}
                   domain={[80, 100]} tickFormatter={v => `${v}%`}
                 />
                 <Tooltip
-                  contentStyle={{ background: '#1a2744', border: '1px solid #2d3a52', borderRadius: 8, color: '#fff', fontSize: 12 }}
+                  contentStyle={CHART_THEME.tooltip}
                   formatter={(v: number) => [`${v}%`, 'Data Quality']}
                 />
                 <Line type="monotone" dataKey="quality" name="Quality" stroke="#059669" strokeWidth={2} dot={{ fill: '#059669', r: 3 }} />

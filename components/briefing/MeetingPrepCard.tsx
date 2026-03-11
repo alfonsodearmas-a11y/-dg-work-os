@@ -16,7 +16,7 @@ const CATEGORY_BADGES: Record<string, { label: string; className: string }> = {
   board: { label: 'Board', className: 'badge-gold' },
   external: { label: 'External', className: 'bg-teal-500/20 text-teal-400 border border-teal-500/30' },
   personal: { label: 'Personal', className: 'badge-info' },
-  blocked: { label: 'Blocked', className: 'bg-[#2d3a52]/50 text-[#94a3b8] border border-[#2d3a52]' },
+  blocked: { label: 'Blocked', className: 'bg-navy-800/50 text-slate-400 border border-navy-800' },
 };
 
 const AGENCY_PATTERNS: Array<{ pattern: RegExp; slug: string; name: string }> = [
@@ -45,7 +45,7 @@ export function MeetingPrepCard({ events, onJoinCall }: MeetingPrepCardProps) {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-medium text-[#94a3b8] uppercase tracking-wider flex items-center gap-2">
+      <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wider flex items-center gap-2">
         <Clock className="h-4 w-4" />
         Meeting Prep
       </h3>
@@ -58,7 +58,7 @@ export function MeetingPrepCard({ events, onJoinCall }: MeetingPrepCardProps) {
         return (
           <div
             key={event.google_id}
-            className="p-4 rounded-xl bg-[#1a2744]/50 border border-[#2d3a52]/50"
+            className="p-4 rounded-xl bg-navy-900/50 border border-navy-800/50"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
@@ -68,7 +68,7 @@ export function MeetingPrepCard({ events, onJoinCall }: MeetingPrepCardProps) {
                     {badge.label}
                   </span>
                   {event.start_time && (
-                    <span className="text-xs text-[#d4af37]">
+                    <span className="text-xs text-gold-500">
                       in {formatDistanceToNowStrict(parseISO(event.start_time))}
                     </span>
                   )}
@@ -76,7 +76,7 @@ export function MeetingPrepCard({ events, onJoinCall }: MeetingPrepCardProps) {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 mt-2 text-xs text-[#64748b]">
+            <div className="flex items-center gap-3 mt-2 text-xs text-navy-600">
               {event.start_time && (
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
@@ -111,7 +111,7 @@ export function MeetingPrepCard({ events, onJoinCall }: MeetingPrepCardProps) {
               {agency && (
                 <Link
                   href={`/intel/${agency.slug}`}
-                  className="flex items-center gap-1 text-xs text-[#d4af37] hover:underline"
+                  className="flex items-center gap-1 text-xs text-gold-500 hover:underline"
                 >
                   View {agency.name} Dashboard
                   <ArrowRight className="h-3 w-3" />

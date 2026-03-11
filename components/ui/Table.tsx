@@ -13,7 +13,7 @@ interface TableRootProps extends TableProps {
 
 export function Table({ children, className = '', ariaLabel }: TableRootProps) {
   return (
-    <div className={`overflow-x-auto rounded-xl border border-[#2d3a52] ${className}`}>
+    <div className={`overflow-x-auto rounded-xl border border-navy-800 ${className}`}>
       <table className="table-premium min-w-full" aria-label={ariaLabel}>
         {children}
       </table>

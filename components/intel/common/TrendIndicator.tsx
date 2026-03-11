@@ -12,7 +12,7 @@ interface TrendIndicatorProps {
 export function TrendIndicator({ value, inverse = false, showIcon = true, suffix = '%' }: TrendIndicatorProps) {
   if (value === 0 || value === null || value === undefined) {
     return (
-      <span className="flex items-center gap-1 text-sm text-[#94a3b8]">
+      <span className="flex items-center gap-1 text-sm text-slate-400">
         {showIcon && <Minus size={14} />}
         <span>0{suffix}</span>
       </span>

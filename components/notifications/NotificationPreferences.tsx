@@ -26,7 +26,7 @@ function Toggle({
         aria-checked={checked}
         onClick={() => onChange(!checked)}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
-          checked ? 'bg-[#d4af37]' : 'bg-[#2d3a52]'
+          checked ? 'bg-gold-500' : 'bg-navy-800'
         }`}
       >
         <span
@@ -84,10 +84,10 @@ export function NotificationPreferences() {
     return (
       <div className="card-premium p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Bell className="h-5 w-5 text-[#d4af37]" />
+          <Bell className="h-5 w-5 text-gold-500" />
           <h2 className="text-lg font-semibold text-white">Notification Preferences</h2>
         </div>
-        <p className="text-[#64748b] text-sm">Loading preferences...</p>
+        <p className="text-navy-600 text-sm">Loading preferences...</p>
       </div>
     );
   }
@@ -96,10 +96,10 @@ export function NotificationPreferences() {
     <div className="card-premium p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <Bell className="h-5 w-5 text-[#d4af37]" />
+          <Bell className="h-5 w-5 text-gold-500" />
           <h2 className="text-lg font-semibold text-white">Notification Preferences</h2>
         </div>
-        {saving && <span className="text-xs text-[#d4af37] uppercase tracking-wider">Saving...</span>}
+        {saving && <span className="text-xs text-gold-500 uppercase tracking-wider">Saving...</span>}
       </div>
 
       {/* Meeting Reminders */}
@@ -108,7 +108,7 @@ export function NotificationPreferences() {
           <Clock className="h-4 w-4 text-white/40" />
           <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider">Meeting Reminders</h3>
         </div>
-        <div className="divide-y divide-[#2d3a52]/30">
+        <div className="divide-y divide-navy-800/30">
           <Toggle
             label="24 hours before"
             description="Get reminded about meetings the day before"
@@ -136,7 +136,7 @@ export function NotificationPreferences() {
           <Bell className="h-4 w-4 text-white/40" />
           <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider">Task Alerts</h3>
         </div>
-        <div className="divide-y divide-[#2d3a52]/30">
+        <div className="divide-y divide-navy-800/30">
           <Toggle
             label="Due date reminders"
             description="Get alerts when tasks are due tomorrow or today"
@@ -154,7 +154,7 @@ export function NotificationPreferences() {
 
       {/* Other */}
       <div className="mb-6">
-        <div className="divide-y divide-[#2d3a52]/30">
+        <div className="divide-y divide-navy-800/30">
           <Toggle
             label="Meeting minutes ready"
             description="Get notified when AI-generated meeting minutes are ready"
@@ -170,7 +170,7 @@ export function NotificationPreferences() {
           <Moon className="h-4 w-4 text-white/40" />
           <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider">Quiet Mode</h3>
         </div>
-        <div className="divide-y divide-[#2d3a52]/30">
+        <div className="divide-y divide-navy-800/30">
           <Toggle
             label="Do not disturb"
             description="Suppress all toast notifications"

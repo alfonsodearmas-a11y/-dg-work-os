@@ -13,11 +13,11 @@ interface WeekStripProps {
 }
 
 const DOT_COLORS: Record<EventCategory, string> = {
-  ministry: 'bg-[#4a5568]',
-  board: 'bg-[#d4af37]',
+  ministry: 'bg-navy-700',
+  board: 'bg-gold-500',
   external: 'bg-teal-500',
-  personal: 'bg-[#64748b]',
-  blocked: 'bg-[#2d3a52]',
+  personal: 'bg-navy-600',
+  blocked: 'bg-navy-800',
 };
 
 export function WeekStrip({ weekEvents, todayEvents, onDayClick, selectedDay }: WeekStripProps) {
@@ -63,13 +63,13 @@ export function WeekStrip({ weekEvents, todayEvents, onDayClick, selectedDay }: 
           // Styling: selected gets gold, today (unselected) gets subtle gold, others default
           let cellClass: string;
           if (isSelected) {
-            cellClass = 'bg-[#d4af37]/20 border border-[#d4af37]/60 shadow-[0_0_8px_rgba(212,175,55,0.15)]';
+            cellClass = 'bg-gold-500/20 border border-gold-500/60 shadow-[0_0_8px_rgba(212,175,55,0.15)]';
           } else if (isToday) {
             cellClass = selectedDay
-              ? 'bg-[#d4af37]/8 border border-[#d4af37]/20'
-              : 'bg-[#d4af37]/20 border border-[#d4af37]/40';
+              ? 'bg-gold-500/8 border border-gold-500/20'
+              : 'bg-gold-500/20 border border-gold-500/40';
           } else {
-            cellClass = 'border border-transparent hover:bg-[#1a2744]/50';
+            cellClass = 'border border-transparent hover:bg-navy-900/50';
           }
 
           return (
@@ -81,7 +81,7 @@ export function WeekStrip({ weekEvents, todayEvents, onDayClick, selectedDay }: 
               {/* Day name */}
               <span
                 className={`text-xs font-medium ${
-                  isSelected ? 'text-[#d4af37]' : isToday ? 'text-[#d4af37]/70' : 'text-[#64748b]'
+                  isSelected ? 'text-gold-500' : isToday ? 'text-gold-500/70' : 'text-navy-600'
                 }`}
               >
                 {format(day, 'EEE')}
@@ -90,7 +90,7 @@ export function WeekStrip({ weekEvents, todayEvents, onDayClick, selectedDay }: 
               {/* Day number */}
               <span
                 className={`text-sm md:text-base font-bold ${
-                  isSelected ? 'text-[#d4af37]' : isToday ? 'text-[#d4af37]/70' : 'text-white'
+                  isSelected ? 'text-gold-500' : isToday ? 'text-gold-500/70' : 'text-white'
                 }`}
               >
                 {format(day, 'd')}
@@ -107,7 +107,7 @@ export function WeekStrip({ weekEvents, todayEvents, onDayClick, selectedDay }: 
                       />
                     ))}
                     {overflow > 0 && (
-                      <span className="text-[8px] text-[#64748b] ml-0.5">
+                      <span className="text-[8px] text-navy-600 ml-0.5">
                         +{overflow}
                       </span>
                     )}
@@ -122,7 +122,7 @@ export function WeekStrip({ weekEvents, todayEvents, onDayClick, selectedDay }: 
       </div>
 
       {/* Summary line */}
-      <p className="text-xs text-[#64748b] mt-3 text-center">
+      <p className="text-xs text-navy-600 mt-3 text-center">
         {weekStats.total_events} meeting{weekStats.total_events !== 1 ? 's' : ''} this week
         {' '}&middot; {weekStats.total_hours}h total
         {' '}&middot; {focusedStats.free_hours}h free {focusedLabel}

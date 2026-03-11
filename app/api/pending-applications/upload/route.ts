@@ -86,7 +86,7 @@ async function insertCompletedConnections(records: PendingRecord[], dataAsOf: st
  */
 async function validateAuth(request: NextRequest): Promise<string | null> {
   // Check NextAuth session — authenticated users
-  const session = await auth();
+  const session = await auth(); // TODO: migrate to requireRole()
   if (session?.user?.id) {
     const role = session.user.role;
     // DG/Minister/PS can upload for any agency

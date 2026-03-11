@@ -18,7 +18,7 @@ export function ConnectivityPill({ isOnline, isSyncing, syncQueueCount }: Connec
   if (isSyncing) {
     icon = <RefreshCw className="h-3 w-3 animate-spin" aria-hidden="true" />;
     label = syncQueueCount > 0 ? `Syncing ${syncQueueCount}...` : 'Syncing...';
-    classes = 'bg-[#d4af37]/15 text-[#d4af37] border-[#d4af37]/30';
+    classes = 'bg-gold-500/15 text-gold-500 border-gold-500/30';
   } else if (!isOnline) {
     icon = <WifiOff className="h-3 w-3" />;
     label = syncQueueCount > 0 ? `Offline \u00b7 ${syncQueueCount} queued` : 'Offline';
@@ -27,7 +27,7 @@ export function ConnectivityPill({ isOnline, isSyncing, syncQueueCount }: Connec
     // Online with pending queue items (not yet syncing)
     icon = <Wifi className="h-3 w-3" />;
     label = `${syncQueueCount} pending`;
-    classes = 'bg-[#d4af37]/10 text-[#d4af37]/70 border-[#d4af37]/20';
+    classes = 'bg-gold-500/10 text-gold-500/70 border-gold-500/20';
   }
 
   return (

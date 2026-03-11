@@ -16,10 +16,10 @@ export default function GPLIntelPage() {
       <div className="flex items-center gap-2 md:gap-4">
         <Link
           href="/intel"
-          className="p-2.5 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] transition-colors touch-active shrink-0"
+          className="p-2.5 rounded-lg bg-navy-900 border border-navy-800 hover:border-gold-500 transition-colors touch-active shrink-0"
           aria-label="Back"
         >
-          <ArrowLeft className="h-5 w-5 text-[#94a3b8]" />
+          <ArrowLeft className="h-5 w-5 text-slate-400" />
         </Link>
         <div className="flex items-center gap-2 md:gap-3 min-w-0">
           <div className="p-2 md:p-2.5 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shrink-0">
@@ -27,7 +27,7 @@ export default function GPLIntelPage() {
           </div>
           <div className="min-w-0">
             <h1 className="text-lg md:text-2xl font-bold text-white truncate">GPL Deep Dive</h1>
-            <p className="text-[#64748b] text-xs md:text-sm truncate">Guyana Power & Light</p>
+            <p className="text-navy-600 text-xs md:text-sm truncate">Guyana Power & Light</p>
           </div>
         </div>
       </div>
@@ -39,21 +39,21 @@ export default function GPLIntelPage() {
       <ErrorBoundary fallbackTitle="Failed to load GPL dashboard">
         {isLoading ? (
           <div className="space-y-6 animate-pulse">
-            <div className="flex gap-2 border-b border-[#2d3a52] pb-3">
+            <div className="flex gap-2 border-b border-navy-800 pb-3">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-9 bg-[#2d3a52] rounded-lg w-24" />
+                <div key={i} className="h-9 bg-navy-800 rounded-lg w-24" />
               ))}
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="card-premium p-5">
-                  <div className="h-8 bg-[#2d3a52] rounded w-16 mb-2" />
-                  <div className="h-4 bg-[#2d3a52] rounded w-24" />
+                  <div className="h-8 bg-navy-800 rounded w-16 mb-2" />
+                  <div className="h-4 bg-navy-800 rounded w-24" />
                 </div>
               ))}
             </div>
             <div className="card-premium p-6">
-              <div className="h-48 bg-[#2d3a52] rounded" />
+              <div className="h-48 bg-navy-800 rounded" />
             </div>
           </div>
         ) : (

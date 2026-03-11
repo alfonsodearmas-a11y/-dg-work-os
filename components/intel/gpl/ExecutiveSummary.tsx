@@ -9,6 +9,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
+import { CHART_THEME } from '@/lib/constants/chart-theme';
 import type { GPLSnapshotRow, GPLMetricsRow, GPLChronicOutlierRow } from '@/lib/gpl/types';
 
 interface LatestData {
@@ -364,9 +365,9 @@ function TrendChart({ title, data, lines }: {
       <div className="h-36">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-            <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 9 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} width={30} />
-            <Tooltip contentStyle={{ background: '#1a2744', border: '1px solid #2d3a52', borderRadius: 8, color: '#fff', fontSize: 12 }} />
+            <XAxis dataKey="date" tick={{ fill: CHART_THEME.colors.navy600, fontSize: 9 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: CHART_THEME.colors.navy600, fontSize: 10 }} axisLine={false} tickLine={false} width={30} />
+            <Tooltip contentStyle={CHART_THEME.tooltip} />
             {lines.map(l => (
               <Line key={l.key} type="monotone" dataKey={l.key} name={l.label} stroke={l.color} strokeWidth={2} dot={false} />
             ))}
@@ -433,9 +434,9 @@ function CompletionChart({ title, snapshots }: { title: string; snapshots: GPLSn
       <div className="h-36">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-            <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 9 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} width={30} />
-            <Tooltip contentStyle={{ background: '#1a2744', border: '1px solid #2d3a52', borderRadius: 8, color: '#fff', fontSize: 12 }} />
+            <XAxis dataKey="date" tick={{ fill: CHART_THEME.colors.navy600, fontSize: 9 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: CHART_THEME.colors.navy600, fontSize: 10 }} axisLine={false} tickLine={false} width={30} />
+            <Tooltip contentStyle={CHART_THEME.tooltip} />
             <Bar dataKey="simple" name="Simple" fill="#10b981" radius={[2, 2, 0, 0]} barSize={8} stackId="a" />
             <Bar dataKey="estimates" name="Estimates" fill="#8b5cf6" radius={[0, 0, 0, 0]} barSize={8} stackId="a" />
             <Bar dataKey="capitalWorks" name="Capital Works" fill="#f59e0b" radius={[2, 2, 0, 0]} barSize={8} stackId="a" />

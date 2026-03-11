@@ -65,7 +65,7 @@ export default function PendingApplicationsClient({ isDG, userAgency }: Props) {
       <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
         <ShieldAlert className="h-12 w-12 text-red-400" />
         <h2 className="text-xl font-semibold text-white">Access Denied</h2>
-        <p className="text-[#64748b] max-w-md">
+        <p className="text-navy-600 max-w-md">
           Your account does not have permission to view this page.
         </p>
       </div>
@@ -79,10 +79,10 @@ export default function PendingApplicationsClient({ isDG, userAgency }: Props) {
         {isDG && (
           <Link
             href="/intel"
-            className="p-2.5 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] transition-colors touch-active shrink-0"
+            className="p-2.5 rounded-lg bg-navy-900 border border-navy-800 hover:border-gold-500 transition-colors touch-active shrink-0"
             aria-label="Back"
           >
-            <ArrowLeft className="h-5 w-5 text-[#94a3b8]" />
+            <ArrowLeft className="h-5 w-5 text-slate-400" />
           </Link>
         )}
         <div className="flex items-center gap-2 md:gap-3 min-w-0">
@@ -91,7 +91,7 @@ export default function PendingApplicationsClient({ isDG, userAgency }: Props) {
           </div>
           <div className="min-w-0">
             <h1 className="text-lg md:text-2xl font-bold text-white truncate">Pending Applications</h1>
-            <p className="text-[#64748b] text-xs md:text-sm truncate">
+            <p className="text-navy-600 text-xs md:text-sm truncate">
               {isDG ? 'New Service Connections — GPL & GWI' : 'GPL New Service Connections'}
             </p>
           </div>
@@ -102,7 +102,7 @@ export default function PendingApplicationsClient({ isDG, userAgency }: Props) {
       {activeTab === 'overview' && isDG && <TrendCharts refreshKey={refreshKey} />}
 
       {/* Tab Bar */}
-      <div className="flex items-center gap-1 p-1 rounded-xl bg-[#1a2744] border border-[#2d3a52] overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-navy-900 border border-navy-800 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
         {allowedTabs.map(tab => {
           const Icon = tab.icon;
           const active = activeTab === tab.key;
@@ -112,8 +112,8 @@ export default function PendingApplicationsClient({ isDG, userAgency }: Props) {
               onClick={() => setActiveTab(tab.key)}
               className={`flex items-center gap-1.5 px-4 py-3 sm:py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex-1 sm:flex-none justify-center sm:justify-start ${
                 active
-                  ? 'bg-[#d4af37] text-[#0a1628]'
-                  : 'text-[#94a3b8] hover:text-white hover:bg-[#2d3a52]/50'
+                  ? 'bg-gold-500 text-navy-950'
+                  : 'text-slate-400 hover:text-white hover:bg-navy-800/50'
               }`}
             >
               <Icon className="h-4 w-4" />

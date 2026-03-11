@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useReducer, useCallback, useRef, useMemo } from 'react';
 import { format } from 'date-fns';
 import {
   RefreshCw,
@@ -30,19 +30,91 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id'];
 
+// ── Reducer ──────────────────────────────────────────────────────────────────
+
+interface BriefingState {
+  activeTab: TabId;
+  actions: ActionsData | null;
+  calendar: CalendarData | null;
+  meetings: MeetingsData | null;
+  meetingSummary: MeetingSummaryData | null;
+  briefing: BriefingData | null;
+  actionsError: string | null;
+  calendarError: string | null;
+  meetingsError: string | null;
+  briefingLoading: boolean;
+  refreshing: boolean;
+  showCreateEvent: boolean;
+}
+
+type BriefingAction =
+  | { type: 'SET_TAB'; tab: TabId }
+  | { type: 'SET_ACTIONS'; data: ActionsData }
+  | { type: 'SET_ACTIONS_ERROR'; error: string }
+  | { type: 'SET_CALENDAR'; data: CalendarData }
+  | { type: 'SET_CALENDAR_ERROR'; error: string }
+  | { type: 'SET_MEETINGS'; data: MeetingsData }
+  | { type: 'SET_MEETINGS_ERROR'; error: string }
+  | { type: 'SET_MEETING_SUMMARY'; data: MeetingSummaryData }
+  | { type: 'SET_BRIEFING'; data: BriefingData }
+  | { type: 'SET_BRIEFING_LOADING'; loading: boolean }
+  | { type: 'SET_REFRESHING'; refreshing: boolean }
+  | { type: 'SET_SHOW_CREATE_EVENT'; show: boolean };
+
+const initialState: BriefingState = {
+  activeTab: 'brief',
+  actions: null,
+  calendar: null,
+  meetings: null,
+  meetingSummary: null,
+  briefing: null,
+  actionsError: null,
+  calendarError: null,
+  meetingsError: null,
+  briefingLoading: true,
+  refreshing: false,
+  showCreateEvent: false,
+};
+
+function briefingReducer(state: BriefingState, action: BriefingAction): BriefingState {
+  switch (action.type) {
+    case 'SET_TAB':
+      return { ...state, activeTab: action.tab };
+    case 'SET_ACTIONS':
+      return { ...state, actions: action.data, actionsError: null };
+    case 'SET_ACTIONS_ERROR':
+      return { ...state, actionsError: action.error };
+    case 'SET_CALENDAR':
+      return { ...state, calendar: action.data, calendarError: null };
+    case 'SET_CALENDAR_ERROR':
+      return { ...state, calendarError: action.error };
+    case 'SET_MEETINGS':
+      return { ...state, meetings: action.data, meetingsError: null };
+    case 'SET_MEETINGS_ERROR':
+      return { ...state, meetingsError: action.error };
+    case 'SET_MEETING_SUMMARY':
+      return { ...state, meetingSummary: action.data };
+    case 'SET_BRIEFING':
+      return { ...state, briefing: action.data };
+    case 'SET_BRIEFING_LOADING':
+      return { ...state, briefingLoading: action.loading };
+    case 'SET_REFRESHING':
+      return { ...state, refreshing: action.refreshing };
+    case 'SET_SHOW_CREATE_EVENT':
+      return { ...state, showCreateEvent: action.show };
+    default:
+      return state;
+  }
+}
+
+// ── Component ────────────────────────────────────────────────────────────────
+
 export function BriefingDashboard() {
-  const [activeTab, setActiveTab] = useState<TabId>('brief');
-  const [actions, setActions] = useState<ActionsData | null>(null);
-  const [calendar, setCalendar] = useState<CalendarData | null>(null);
-  const [meetings, setMeetings] = useState<MeetingsData | null>(null);
-  const [meetingSummary, setMeetingSummary] = useState<MeetingSummaryData | null>(null);
-  const [briefing, setBriefing] = useState<BriefingData | null>(null);
-  const [actionsError, setActionsError] = useState<string | null>(null);
-  const [calendarError, setCalendarError] = useState<string | null>(null);
-  const [meetingsError, setMeetingsError] = useState<string | null>(null);
-  const [briefingLoading, setBriefingLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const [state, dispatch] = useReducer(briefingReducer, initialState);
+  const {
+    activeTab, actions, calendar, meetings, meetingSummary, briefing,
+    actionsError, calendarError, meetingsError, briefingLoading, refreshing, showCreateEvent,
+  } = state;
   const tabsRef = useRef<HTMLDivElement>(null);
 
   const fetchAll = useCallback(async () => {
@@ -53,28 +125,28 @@ export function BriefingDashboard() {
       fetch('/api/meetings/summary').then(r => r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))),
     ]);
 
-    if (actionsP.status === 'fulfilled') { setActions(actionsP.value); setActionsError(null); }
-    else setActionsError('Failed to load actions');
+    if (actionsP.status === 'fulfilled') dispatch({ type: 'SET_ACTIONS', data: actionsP.value });
+    else dispatch({ type: 'SET_ACTIONS_ERROR', error: 'Failed to load actions' });
 
-    if (calendarP.status === 'fulfilled') { setCalendar(calendarP.value); setCalendarError(null); }
-    else setCalendarError('Failed to load calendar');
+    if (calendarP.status === 'fulfilled') dispatch({ type: 'SET_CALENDAR', data: calendarP.value });
+    else dispatch({ type: 'SET_CALENDAR_ERROR', error: 'Failed to load calendar' });
 
-    if (meetingsP.status === 'fulfilled') { setMeetings(meetingsP.value); setMeetingsError(null); }
-    else setMeetingsError('Failed to load meetings');
+    if (meetingsP.status === 'fulfilled') dispatch({ type: 'SET_MEETINGS', data: meetingsP.value });
+    else dispatch({ type: 'SET_MEETINGS_ERROR', error: 'Failed to load meetings' });
 
-    if (meetingSummaryP.status === 'fulfilled') setMeetingSummary(meetingSummaryP.value);
+    if (meetingSummaryP.status === 'fulfilled') dispatch({ type: 'SET_MEETING_SUMMARY', data: meetingSummaryP.value });
   }, []);
 
   const fetchBriefing = useCallback(async () => {
-    setBriefingLoading(true);
+    dispatch({ type: 'SET_BRIEFING_LOADING', loading: true });
     try {
       const res = await fetch('/api/briefing/generate');
       if (!res.ok) throw new Error(`${res.status}`);
-      setBriefing(await res.json());
+      dispatch({ type: 'SET_BRIEFING', data: await res.json() });
     } catch {
       // card will show empty state
     } finally {
-      setBriefingLoading(false);
+      dispatch({ type: 'SET_BRIEFING_LOADING', loading: false });
     }
   }, []);
 
@@ -84,9 +156,9 @@ export function BriefingDashboard() {
   }, [fetchAll, fetchBriefing]);
 
   const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
+    dispatch({ type: 'SET_REFRESHING', refreshing: true });
     await Promise.all([fetchAll(), fetchBriefing()]);
-    setRefreshing(false);
+    dispatch({ type: 'SET_REFRESHING', refreshing: false });
   }, [fetchAll, fetchBriefing]);
 
   const stats = useMemo(() => {
@@ -101,13 +173,13 @@ export function BriefingDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-[#64748b] text-xs font-semibold uppercase tracking-wider mb-1">Daily Briefing</p>
+          <p className="text-navy-600 text-xs font-semibold uppercase tracking-wider mb-1">Daily Briefing</p>
           <h1 className="text-white text-2xl md:text-3xl font-bold">{format(new Date(), 'EEEE, MMMM d')}</h1>
         </div>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#2d3a52]/50 bg-[#0f1d32] text-[#94a3b8] text-sm font-medium hover:text-white hover:border-[#d4af37]/30 transition-all duration-200 disabled:opacity-50 min-h-[44px]"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-navy-800/50 bg-[#0f1d32] text-slate-400 text-sm font-medium hover:text-white hover:border-gold-500/30 transition-all duration-200 disabled:opacity-50 min-h-[44px]"
           aria-label="Refresh"
         >
           <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
@@ -118,7 +190,7 @@ export function BriefingDashboard() {
       {/* Tab Bar */}
       <div
         ref={tabsRef}
-        className="flex gap-1 overflow-x-auto scrollbar-hide border-b border-[#2d3a52]/30 pb-px"
+        className="flex gap-1 overflow-x-auto scrollbar-hide border-b border-navy-800/30 pb-px"
       >
         {TABS.map(tab => {
           const Icon = tab.icon;
@@ -126,11 +198,11 @@ export function BriefingDashboard() {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => dispatch({ type: 'SET_TAB', tab: tab.id })}
               className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold whitespace-nowrap rounded-t-lg transition-all duration-200 shrink-0 min-h-[44px] ${
                 isActive
-                  ? 'text-[#d4af37] border-b-2 border-[#d4af37] bg-[#d4af37]/5'
-                  : 'text-[#64748b] hover:text-[#94a3b8] border-b-2 border-transparent'
+                  ? 'text-gold-500 border-b-2 border-gold-500 bg-gold-500/5'
+                  : 'text-navy-600 hover:text-slate-400 border-b-2 border-transparent'
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -170,7 +242,7 @@ export function BriefingDashboard() {
         )}
 
         {activeTab === 'schedule' && (
-          calendarError ? <SectionError message={calendarError} /> : <ScheduleSection calendar={calendar} actions={actions} onNewEvent={() => setShowCreateEvent(true)} />
+          calendarError ? <SectionError message={calendarError} /> : <ScheduleSection calendar={calendar} actions={actions} onNewEvent={() => dispatch({ type: 'SET_SHOW_CREATE_EVENT', show: true })} />
         )}
 
         {activeTab === 'intel' && (
@@ -180,7 +252,7 @@ export function BriefingDashboard() {
 
       <CreateEventModal
         isOpen={showCreateEvent}
-        onClose={() => setShowCreateEvent(false)}
+        onClose={() => dispatch({ type: 'SET_SHOW_CREATE_EVENT', show: false })}
       />
     </div>
   );

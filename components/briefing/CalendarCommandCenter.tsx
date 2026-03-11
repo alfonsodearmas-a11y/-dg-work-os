@@ -178,12 +178,12 @@ export function CalendarCommandCenter({ todayEvents, weekEvents, onRefresh, cale
         <div className="lg:col-span-2">
           <div className="card-premium p-3 md:p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-[#94a3b8] uppercase tracking-wider">
+              <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wider">
                 {isViewingToday ? 'Timeline' : `${focusedDayLabel}\u2019s Timeline`}
               </h3>
               <button
                 onClick={handleNewEvent}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#d4af37] text-[#0a1628] text-xs font-medium hover:bg-[#c9a432] transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-500 text-navy-950 text-xs font-medium hover:bg-[#c9a432] transition-colors"
               >
                 <Plus className="h-3.5 w-3.5" />
                 New Event

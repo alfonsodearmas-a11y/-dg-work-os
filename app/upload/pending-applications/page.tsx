@@ -62,8 +62,8 @@ export default function UploadPortalPage() {
 
   if (checking) {
     return (
-      <div className="min-h-screen bg-[#0a1628] flex items-center justify-center" role="status" aria-label="Loading">
-        <Loader2 className="h-6 w-6 text-[#d4af37] animate-spin" aria-hidden="true" />
+      <div className="min-h-screen bg-navy-950 flex items-center justify-center" role="status" aria-label="Loading">
+        <Loader2 className="h-6 w-6 text-gold-500 animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -71,8 +71,8 @@ export default function UploadPortalPage() {
   // Authenticated — show upload UI
   if (agency) {
     return (
-      <div className="min-h-screen bg-[#0a1628]">
-        <header className="border-b border-[#2d3a52]/50 bg-[#0a1628]">
+      <div className="min-h-screen bg-navy-950">
+        <header className="border-b border-navy-800/50 bg-navy-950">
           <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
             <div className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -90,7 +90,7 @@ export default function UploadPortalPage() {
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-navy-600 hover:text-white hover:bg-navy-900 transition-colors"
             >
               <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
               Logout
@@ -107,19 +107,19 @@ export default function UploadPortalPage() {
 
   // Login form
   return (
-    <div className="min-h-screen bg-[#0a1628] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-navy-950 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/ministry-logo.png" alt="" className="h-16 w-16 rounded-full mx-auto mb-4 ring-2 ring-[#d4af37]/30" />
+          <img src="/ministry-logo.png" alt="" className="h-16 w-16 rounded-full mx-auto mb-4 ring-2 ring-gold-500/30" />
           <h1 className="text-xl font-semibold text-white">Upload Portal</h1>
-          <p className="text-sm text-[#64748b] mt-1">Pending Applications</p>
+          <p className="text-sm text-navy-600 mt-1">Pending Applications</p>
         </div>
 
         <form onSubmit={handleLogin} className="card-premium p-6 space-y-5">
           {/* Agency Selection */}
           <div>
-            <label className="block text-sm font-medium text-[#94a3b8] mb-2">Agency</label>
+            <label className="block text-sm font-medium text-slate-400 mb-2">Agency</label>
             <div className="grid grid-cols-2 gap-2">
               {(['GPL', 'GWI'] as const).map(a => (
                 <button
@@ -131,7 +131,7 @@ export default function UploadPortalPage() {
                       ? a === 'GPL'
                         ? 'bg-amber-500/20 text-amber-400 ring-1 ring-amber-500/50'
                         : 'bg-cyan-500/20 text-cyan-400 ring-1 ring-cyan-500/50'
-                      : 'bg-[#1a2744] text-[#64748b] hover:text-[#94a3b8]'
+                      : 'bg-navy-900 text-navy-600 hover:text-slate-400'
                   }`}
                 >
                   {a === 'GPL' ? 'GPL (Power)' : 'GWI (Water)'}
@@ -142,11 +142,11 @@ export default function UploadPortalPage() {
 
           {/* Access Code */}
           <div>
-            <label htmlFor="code" className="block text-sm font-medium text-[#94a3b8] mb-2">
+            <label htmlFor="code" className="block text-sm font-medium text-slate-400 mb-2">
               Access Code
             </label>
             <div className="relative">
-              <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
+              <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-navy-600" />
               <input
                 id="code"
                 type="password"
@@ -156,7 +156,7 @@ export default function UploadPortalPage() {
                 required
                 aria-required="true"
                 autoFocus
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] text-sm focus:outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37]/50"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-navy-950 border border-navy-800 text-white placeholder-navy-600 text-sm focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/50"
               />
             </div>
           </div>
@@ -172,7 +172,7 @@ export default function UploadPortalPage() {
           <button
             type="submit"
             disabled={loading || !code}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#d4af37] text-[#0a1628] font-semibold text-sm hover:bg-[#e5c547] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gold-500 text-navy-950 font-semibold text-sm hover:bg-[#e5c547] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? (
               <><Loader2 className="h-4 w-4 animate-spin" />Verifying...</>

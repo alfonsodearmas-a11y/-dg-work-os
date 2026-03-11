@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseKpiCsv } from '@/lib/gpl-kpi-csv-parser';
-import { requireRole, canUploadData } from '@/lib/auth-helpers';
+import { requireUploadRole } from '@/lib/auth-helpers';
 import { apiError, withErrorHandler } from '@/lib/api-utils';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const authResult = await requireRole(['dg', 'agency_admin', 'officer']);
+  const authResult = await requireUploadRole('GPL');
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
-  if (!canUploadData(session.user.role, session.user.agency, 'GPL')) return NextResponse.json({ error: 'Cannot upload GPL data' }, { status: 403 });
 
   const formData = await request.formData();
   const file = formData.get('file') as File;

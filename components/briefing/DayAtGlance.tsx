@@ -91,9 +91,9 @@ export function DayAtGlance({ events, weekEvents, onJoinNextCall, onNewEvent, on
     <div className="card-premium p-4 md:p-6">
       {/* Calendar disconnected — clean reconnect card instead of raw error */}
       {calendarError && (
-        <div className="mb-4 p-4 rounded-xl bg-[#0a1628]/60 border border-[#d4af37]/20 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-[#d4af37]/10 flex items-center justify-center flex-shrink-0">
-            <Calendar className="h-5 w-5 text-[#d4af37]" />
+        <div className="mb-4 p-4 rounded-xl bg-navy-950/60 border border-gold-500/20 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-gold-500/10 flex items-center justify-center flex-shrink-0">
+            <Calendar className="h-5 w-5 text-gold-500" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm text-white font-medium">
@@ -103,7 +103,7 @@ export function DayAtGlance({ events, weekEvents, onJoinNextCall, onNewEvent, on
                 ? 'Calendar temporarily unavailable'
                 : 'Calendar sync issue'}
             </p>
-            <p className="text-xs text-[#64748b] mt-0.5">
+            <p className="text-xs text-navy-600 mt-0.5">
               {calendarError.type === 'token_expired' || calendarError.type === 'invalid_credentials'
                 ? 'Google Calendar needs to be reconnected. Other briefing data is still available.'
                 : calendarError.type === 'network_error'
@@ -114,7 +114,7 @@ export function DayAtGlance({ events, weekEvents, onJoinNextCall, onNewEvent, on
           {calendarError.type === 'network_error' ? (
             <button
               onClick={() => window.location.reload()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2d3a52] text-white text-xs font-medium hover:bg-[#3d4a62] transition-colors flex-shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-navy-800 text-white text-xs font-medium hover:bg-[#3d4a62] transition-colors flex-shrink-0"
             >
               <RefreshCcw className="h-3.5 w-3.5" />
               Retry
@@ -122,7 +122,7 @@ export function DayAtGlance({ events, weekEvents, onJoinNextCall, onNewEvent, on
           ) : (
             <button
               onClick={() => window.location.href = '/admin?reconnect=calendar'}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/30 text-[#d4af37] text-xs font-medium hover:bg-[#d4af37]/25 transition-colors flex-shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-500/15 border border-gold-500/30 text-gold-500 text-xs font-medium hover:bg-gold-500/25 transition-colors flex-shrink-0"
             >
               <RefreshCcw className="h-3.5 w-3.5" />
               Reconnect
@@ -134,24 +134,24 @@ export function DayAtGlance({ events, weekEvents, onJoinNextCall, onNewEvent, on
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Left: Stats */}
         <div className="space-y-3">
-          <h3 className="text-sm font-medium text-[#94a3b8] uppercase tracking-wider flex items-center gap-2">
+          <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wider flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             {dayLabel} at a Glance
           </h3>
           <div>
             <p className="stat-number">{stats.total_events}</p>
-            <p className="text-[#64748b] text-sm mt-0.5">
+            <p className="text-navy-600 text-sm mt-0.5">
               meeting{stats.total_events !== 1 ? 's' : ''}
             </p>
           </div>
           <div className="flex items-baseline gap-4">
             <div>
-              <p className="text-xl font-semibold text-[#d4af37]">{stats.total_hours}h</p>
-              <p className="text-xs text-[#64748b]">booked</p>
+              <p className="text-xl font-semibold text-gold-500">{stats.total_hours}h</p>
+              <p className="text-xs text-navy-600">booked</p>
             </div>
             <div>
               <p className="text-xl font-semibold text-emerald-400">{stats.free_hours}h</p>
-              <p className="text-xs text-[#64748b]">free</p>
+              <p className="text-xs text-navy-600">free</p>
             </div>
           </div>
         </div>
@@ -161,23 +161,23 @@ export function DayAtGlance({ events, weekEvents, onJoinNextCall, onNewEvent, on
           {nextEvent ? (
             <button
               onClick={() => onEventClick?.(nextEvent)}
-              className="w-full p-4 rounded-xl bg-[#0a1628]/50 border border-[#d4af37]/20 hover:border-[#d4af37]/40 transition-all text-left"
+              className="w-full p-4 rounded-xl bg-navy-950/50 border border-gold-500/20 hover:border-gold-500/40 transition-all text-left"
             >
-              <p className="text-xs text-[#d4af37] uppercase tracking-wider font-medium mb-2">Next Meeting</p>
+              <p className="text-xs text-gold-500 uppercase tracking-wider font-medium mb-2">Next Meeting</p>
               <p className="text-sm font-semibold text-white truncate">{nextEvent.title}</p>
               {nextEvent.start_time && (
                 <>
-                  <p className="text-xs text-[#94a3b8] mt-1">
+                  <p className="text-xs text-slate-400 mt-1">
                     {format(parseISO(nextEvent.start_time), 'h:mm a')}
                     {nextEvent.end_time && ` – ${format(parseISO(nextEvent.end_time), 'h:mm a')}`}
                   </p>
                   {countdown && (
-                    <p className="text-lg font-bold text-[#d4af37] mt-2">{countdown}</p>
+                    <p className="text-lg font-bold text-gold-500 mt-2">{countdown}</p>
                   )}
                 </>
               )}
               {nextEvent.location && (
-                <p className="text-xs text-[#64748b] mt-1 flex items-center gap-1">
+                <p className="text-xs text-navy-600 mt-1 flex items-center gap-1">
                   <MapPin className="h-3 w-3" />{nextEvent.location}
                 </p>
               )}
@@ -194,21 +194,21 @@ export function DayAtGlance({ events, weekEvents, onJoinNextCall, onNewEvent, on
           ) : nextWeekEvent ? (
             <button
               onClick={() => onEventClick?.(nextWeekEvent)}
-              className="w-full p-4 rounded-xl bg-[#0a1628]/50 border border-[#2d3a52] hover:border-[#2d3a52]/80 transition-all text-left"
+              className="w-full p-4 rounded-xl bg-navy-950/50 border border-navy-800 hover:border-navy-800/80 transition-all text-left"
             >
-              <p className="text-xs text-[#64748b] uppercase tracking-wider mb-2">No meetings {isToday ? 'today' : dayLabel}</p>
-              <p className="text-xs text-[#94a3b8] mt-2">Next meeting:</p>
+              <p className="text-xs text-navy-600 uppercase tracking-wider mb-2">No meetings {isToday ? 'today' : dayLabel}</p>
+              <p className="text-xs text-slate-400 mt-2">Next meeting:</p>
               <p className="text-sm font-medium text-white truncate mt-0.5">{nextWeekEvent.title}</p>
               {nextWeekEvent.start_time && (
-                <p className="text-xs text-[#d4af37] mt-1">
+                <p className="text-xs text-gold-500 mt-1">
                   {format(parseISO(nextWeekEvent.start_time), 'EEEE')} at {format(parseISO(nextWeekEvent.start_time), 'h:mm a')}
                 </p>
               )}
             </button>
           ) : (
             <div className="text-center p-4">
-              <Clock className="h-8 w-8 text-[#4a5568] mx-auto mb-2" />
-              <p className="text-xs text-[#64748b]">No meetings scheduled</p>
+              <Clock className="h-8 w-8 text-navy-700 mx-auto mb-2" />
+              <p className="text-xs text-navy-600">No meetings scheduled</p>
               <p className="text-lg font-semibold text-emerald-400 mt-1">All clear</p>
             </div>
           )}
@@ -217,31 +217,31 @@ export function DayAtGlance({ events, weekEvents, onJoinNextCall, onNewEvent, on
         {/* Right: Remaining or next day info + new event */}
         <div className="flex flex-col justify-between gap-3">
           {events.filter(e => !e.all_day).length > 0 ? (
-            <div className="p-4 rounded-xl bg-[#0a1628]/50 border border-[#2d3a52]">
-              <p className="text-xs text-[#64748b] uppercase tracking-wider mb-1">Remaining {isToday ? 'Today' : dayLabel}</p>
+            <div className="p-4 rounded-xl bg-navy-950/50 border border-navy-800">
+              <p className="text-xs text-navy-600 uppercase tracking-wider mb-1">Remaining {isToday ? 'Today' : dayLabel}</p>
               <p className="text-2xl font-bold text-white">{remainingToday}</p>
-              <p className="text-xs text-[#64748b] mt-0.5">
+              <p className="text-xs text-navy-600 mt-0.5">
                 meeting{remainingToday !== 1 ? 's' : ''} left
               </p>
             </div>
           ) : nextDayInfo ? (
-            <div className="p-4 rounded-xl bg-[#0a1628]/50 border border-[#2d3a52]">
-              <p className="text-xs text-[#64748b] uppercase tracking-wider mb-1">{nextDayInfo.day}</p>
+            <div className="p-4 rounded-xl bg-navy-950/50 border border-navy-800">
+              <p className="text-xs text-navy-600 uppercase tracking-wider mb-1">{nextDayInfo.day}</p>
               <p className="text-2xl font-bold text-white">{nextDayInfo.count}</p>
-              <p className="text-xs text-[#64748b] mt-0.5">
+              <p className="text-xs text-navy-600 mt-0.5">
                 meeting{nextDayInfo.count !== 1 ? 's' : ''}
               </p>
             </div>
           ) : (
-            <div className="p-4 rounded-xl bg-[#0a1628]/50 border border-[#2d3a52]">
-              <p className="text-xs text-[#64748b]">No upcoming meetings</p>
+            <div className="p-4 rounded-xl bg-navy-950/50 border border-navy-800">
+              <p className="text-xs text-navy-600">No upcoming meetings</p>
             </div>
           )}
 
           {onNewEvent && (
             <button
               onClick={onNewEvent}
-              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#d4af37]/10 border border-[#d4af37]/20 text-[#d4af37] text-xs font-medium hover:bg-[#d4af37]/20 transition-colors"
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-gold-500/10 border border-gold-500/20 text-gold-500 text-xs font-medium hover:bg-gold-500/20 transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
               New Event

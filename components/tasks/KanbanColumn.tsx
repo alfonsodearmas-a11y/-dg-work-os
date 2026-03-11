@@ -100,7 +100,7 @@ export function KanbanColumn({
                 checked={allSelected}
                 onChange={handleSelectAll}
                 aria-label={`Select all ${title} tasks`}
-                className="w-4 h-4 rounded border-[#2d3a52] accent-[#d4af37] cursor-pointer"
+                className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer"
               />
             )}
             <div className={`w-2 h-2 rounded-full ${styles.dot}`} />
@@ -121,8 +121,8 @@ export function KanbanColumn({
         } : {})}
         className={`space-y-2 p-2 rounded-xl min-h-[200px] transition-colors duration-200 ${
           isOver
-            ? 'bg-[#d4af37]/10 border-2 border-dashed border-[#d4af37]/50'
-            : isMobile ? '' : 'bg-[#0a1628]/50 border-2 border-transparent'
+            ? 'bg-gold-500/10 border-2 border-dashed border-gold-500/50'
+            : isMobile ? '' : 'bg-navy-950/50 border-2 border-transparent'
         }`}
       >
         {tasks.map((task) => (
@@ -142,7 +142,7 @@ export function KanbanColumn({
         ))}
 
         {tasks.length === 0 && (
-          <div className="flex items-center justify-center h-24 text-[#64748b] text-sm">
+          <div className="flex items-center justify-center h-24 text-navy-600 text-sm">
             No tasks
           </div>
         )}
@@ -151,7 +151,7 @@ export function KanbanColumn({
         {!isMobile && onQuickAdd && (
           <button
             onClick={() => onQuickAdd(id as TaskStatus)}
-            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs text-[#64748b] hover:text-[#d4af37] hover:bg-[#d4af37]/5 border border-transparent hover:border-[#d4af37]/20 transition-all"
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs text-navy-600 hover:text-gold-500 hover:bg-gold-500/5 border border-transparent hover:border-gold-500/20 transition-all"
           >
             <Plus className="h-3.5 w-3.5" />
             Add task

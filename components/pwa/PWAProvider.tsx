@@ -120,15 +120,15 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
       {/* Update available toast */}
       {updateAvailable && (
         <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-4 md:w-80 z-[999] animate-slide-up">
-          <div className="bg-[#1a2744] border border-[#d4af37]/30 rounded-xl p-4 shadow-xl flex items-center gap-3">
-            <RefreshCw className="h-5 w-5 text-[#d4af37] flex-shrink-0" />
+          <div className="bg-navy-900 border border-gold-500/30 rounded-xl p-4 shadow-xl flex items-center gap-3">
+            <RefreshCw className="h-5 w-5 text-gold-500 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white">Update available</p>
-              <p className="text-xs text-[#64748b]">A new version is ready</p>
+              <p className="text-xs text-navy-600">A new version is ready</p>
             </div>
             <button
               onClick={handleUpdate}
-              className="px-3 py-1.5 rounded-lg bg-[#d4af37] text-[#0a1628] text-xs font-semibold hover:bg-[#c9a432] transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-gold-500 text-navy-950 text-xs font-semibold hover:bg-[#c9a432] transition-colors"
             >
               Refresh
             </button>
@@ -139,27 +139,27 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
       {/* Android/Desktop install banner */}
       {showInstall && (
         <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-4 md:w-80 z-[999] animate-slide-up">
-          <div className="bg-[#1a2744] border border-[#d4af37]/30 rounded-xl p-4 shadow-xl">
+          <div className="bg-navy-900 border border-gold-500/30 rounded-xl p-4 shadow-xl">
             <div className="flex items-start gap-3">
-              <Download className="h-5 w-5 text-[#d4af37] flex-shrink-0 mt-0.5" />
+              <Download className="h-5 w-5 text-gold-500 flex-shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white">Install DG Work OS</p>
-                <p className="text-xs text-[#64748b] mt-0.5">Add to your home screen for quick access</p>
+                <p className="text-xs text-navy-600 mt-0.5">Add to your home screen for quick access</p>
               </div>
-              <button onClick={dismissInstall} className="text-[#64748b] hover:text-white transition-colors" aria-label="Dismiss">
+              <button onClick={dismissInstall} className="text-navy-600 hover:text-white transition-colors" aria-label="Dismiss">
                 <X className="h-4 w-4" />
               </button>
             </div>
             <div className="flex gap-2 mt-3">
               <button
                 onClick={handleInstall}
-                className="flex-1 px-3 py-2 rounded-lg bg-[#d4af37] text-[#0a1628] text-xs font-semibold hover:bg-[#c9a432] transition-colors"
+                className="flex-1 px-3 py-2 rounded-lg bg-gold-500 text-navy-950 text-xs font-semibold hover:bg-[#c9a432] transition-colors"
               >
                 Install
               </button>
               <button
                 onClick={dismissInstall}
-                className="px-3 py-2 rounded-lg bg-[#0a1628] text-[#64748b] text-xs font-medium hover:text-white transition-colors border border-[#2d3a52]"
+                className="px-3 py-2 rounded-lg bg-navy-950 text-navy-600 text-xs font-medium hover:text-white transition-colors border border-navy-800"
               >
                 Not now
               </button>
@@ -171,17 +171,17 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
       {/* iOS install banner */}
       {showIOSInstall && (
         <div className="fixed bottom-20 left-4 right-4 z-[999] animate-slide-up">
-          <div className="bg-[#1a2744] border border-[#d4af37]/30 rounded-xl p-4 shadow-xl">
+          <div className="bg-navy-900 border border-gold-500/30 rounded-xl p-4 shadow-xl">
             <div className="flex items-start gap-3">
-              <Download className="h-5 w-5 text-[#d4af37] flex-shrink-0 mt-0.5" />
+              <Download className="h-5 w-5 text-gold-500 flex-shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white">Install DG Work OS</p>
-                <p className="text-xs text-[#94a3b8] mt-1">
-                  Tap <span className="inline-block px-1 py-0.5 bg-[#2d3a52] rounded text-white text-[10px]">Share &#x2197;</span> then
+                <p className="text-xs text-slate-400 mt-1">
+                  Tap <span className="inline-block px-1 py-0.5 bg-navy-800 rounded text-white text-[10px]">Share &#x2197;</span> then
                   &quot;Add to Home Screen&quot;
                 </p>
               </div>
-              <button onClick={dismissIOSInstall} className="text-[#64748b] hover:text-white transition-colors" aria-label="Dismiss">
+              <button onClick={dismissIOSInstall} className="text-navy-600 hover:text-white transition-colors" aria-label="Dismiss">
                 <X className="h-4 w-4" />
               </button>
             </div>

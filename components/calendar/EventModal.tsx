@@ -251,21 +251,21 @@ export function EventModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="event-modal-title"
-        className="relative w-full md:max-w-lg bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border-t md:border border-[#2d3a52] shadow-2xl flex flex-col mt-auto md:mt-0 md:rounded-2xl animate-slide-up md:animate-fade-in"
+        className="relative w-full md:max-w-lg bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border-t md:border border-navy-800 shadow-2xl flex flex-col mt-auto md:mt-0 md:rounded-2xl animate-slide-up md:animate-fade-in"
         style={{
           maxHeight: 'min(100dvh, 100vh)',
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}
       >
         {/* Header */}
-        <div className="flex-shrink-0 flex items-center justify-between p-3 md:p-4 border-b border-[#2d3a52] bg-[#1a2744]/95 backdrop-blur-sm rounded-t-2xl md:rounded-t-2xl">
+        <div className="flex-shrink-0 flex items-center justify-between p-3 md:p-4 border-b border-navy-800 bg-navy-900/95 backdrop-blur-sm rounded-t-2xl md:rounded-t-2xl">
           <h2 id="event-modal-title" className="text-lg font-semibold text-white">
             {isNew ? 'New Event' : 'Edit Event'}
           </h2>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
+            className="p-2 rounded-lg text-navy-600 hover:text-white hover:bg-navy-800 transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -283,8 +283,8 @@ export function EventModal({
 
           {/* Quick Create */}
           {showQuickCreate && (
-            <div className="p-4 rounded-xl bg-[#0a1628]/50 border border-[#2d3a52] space-y-3">
-              <div className="flex items-center gap-2 text-sm text-[#d4af37]">
+            <div className="p-4 rounded-xl bg-navy-950/50 border border-navy-800 space-y-3">
+              <div className="flex items-center gap-2 text-sm text-gold-500">
                 <Sparkles className="h-4 w-4" />
                 Quick Create
               </div>
@@ -296,20 +296,20 @@ export function EventModal({
                 placeholder="e.g. Meeting with GPL team tomorrow at 2pm about load shedding"
                 autoFocus
                 aria-label="Quick create event description"
-                className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] transition-colors text-sm"
+                className="w-full px-3 py-2 rounded-lg bg-navy-950 border border-navy-800 text-white placeholder-navy-600 focus:outline-none focus:border-gold-500 transition-colors text-sm"
               />
               <div className="flex gap-2">
                 <button
                   onClick={handleQuickParse}
                   disabled={parsing || !quickInput.trim()}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#d4af37] text-[#0a1628] text-xs font-medium hover:bg-[#c9a432] transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-500 text-navy-950 text-xs font-medium hover:bg-[#c9a432] transition-colors disabled:opacity-50"
                 >
                   {parsing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                   Parse with AI
                 </button>
                 <button
                   onClick={() => setShowQuickCreate(false)}
-                  className="px-3 py-1.5 rounded-lg text-xs text-[#94a3b8] hover:text-white hover:bg-[#2d3a52] transition-colors"
+                  className="px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-navy-800 transition-colors"
                 >
                   Manual entry
                 </button>
@@ -321,7 +321,7 @@ export function EventModal({
           {!showQuickCreate && (
             <>
               <div>
-                <label htmlFor="event-title" className="block text-sm font-medium text-[#94a3b8] mb-1.5">
+                <label htmlFor="event-title" className="block text-sm font-medium text-slate-400 mb-1.5">
                   Event Title
                 </label>
                 <input
@@ -332,7 +332,7 @@ export function EventModal({
                   placeholder="Meeting with..."
                   autoFocus={!enableQuickCreate}
                   aria-required="true"
-                  className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] transition-colors"
+                  className="w-full px-3 py-2 rounded-lg bg-navy-950 border border-navy-800 text-white placeholder-navy-600 focus:outline-none focus:border-gold-500 transition-colors"
                 />
               </div>
 
@@ -345,7 +345,7 @@ export function EventModal({
                   aria-label="Toggle all-day event"
                   onClick={() => setFormData({ ...formData, all_day: !formData.all_day })}
                   className={`relative w-11 h-6 rounded-full transition-colors ${
-                    formData.all_day ? 'bg-[#d4af37]' : 'bg-[#2d3a52]'
+                    formData.all_day ? 'bg-gold-500' : 'bg-navy-800'
                   }`}
                 >
                   <span
@@ -354,36 +354,36 @@ export function EventModal({
                     }`}
                   />
                 </button>
-                <span className="text-sm text-[#94a3b8]">All-day event</span>
+                <span className="text-sm text-slate-400">All-day event</span>
               </div>
 
               {/* Date/Time */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="event-start" className="block text-sm font-medium text-[#94a3b8] mb-1.5">Start</label>
+                  <label htmlFor="event-start" className="block text-sm font-medium text-slate-400 mb-1.5">Start</label>
                   <input
                     id="event-start"
                     type={formData.all_day ? 'date' : 'datetime-local'}
                     value={formatDateTimeForInput(formData.start_time)}
                     onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white focus:outline-none focus:border-[#d4af37] transition-colors"
+                    className="w-full px-3 py-2 rounded-lg bg-navy-950 border border-navy-800 text-white focus:outline-none focus:border-gold-500 transition-colors"
                   />
                 </div>
                 <div>
-                  <label htmlFor="event-end" className="block text-sm font-medium text-[#94a3b8] mb-1.5">End</label>
+                  <label htmlFor="event-end" className="block text-sm font-medium text-slate-400 mb-1.5">End</label>
                   <input
                     id="event-end"
                     type={formData.all_day ? 'date' : 'datetime-local'}
                     value={formatDateTimeForInput(formData.end_time)}
                     onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white focus:outline-none focus:border-[#d4af37] transition-colors"
+                    className="w-full px-3 py-2 rounded-lg bg-navy-950 border border-navy-800 text-white focus:outline-none focus:border-gold-500 transition-colors"
                   />
                 </div>
               </div>
 
               {/* Location */}
               <div>
-                <label htmlFor="event-location" className="block text-sm font-medium text-[#94a3b8] mb-1.5">
+                <label htmlFor="event-location" className="block text-sm font-medium text-slate-400 mb-1.5">
                   <MapPin className="inline h-3.5 w-3.5 mr-1" />
                   Location
                 </label>
@@ -393,7 +393,7 @@ export function EventModal({
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   placeholder="Office, Zoom link, etc."
-                  className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] transition-colors"
+                  className="w-full px-3 py-2 rounded-lg bg-navy-950 border border-navy-800 text-white placeholder-navy-600 focus:outline-none focus:border-gold-500 transition-colors"
                 />
               </div>
 
@@ -406,7 +406,7 @@ export function EventModal({
                   aria-label="Toggle Google Meet"
                   onClick={() => setFormData({ ...formData, add_google_meet: !formData.add_google_meet })}
                   className={`relative w-11 h-6 rounded-full transition-colors ${
-                    formData.add_google_meet ? 'bg-[#d4af37]' : 'bg-[#2d3a52]'
+                    formData.add_google_meet ? 'bg-gold-500' : 'bg-navy-800'
                   }`}
                 >
                   <span
@@ -415,7 +415,7 @@ export function EventModal({
                     }`}
                   />
                 </button>
-                <span className="text-sm text-[#94a3b8] flex items-center gap-1.5">
+                <span className="text-sm text-slate-400 flex items-center gap-1.5">
                   <Video className="h-3.5 w-3.5" />
                   Add Google Meet
                 </span>
@@ -423,7 +423,7 @@ export function EventModal({
 
               {/* Attendees */}
               <div>
-                <label className="block text-sm font-medium text-[#94a3b8] mb-1.5">
+                <label className="block text-sm font-medium text-slate-400 mb-1.5">
                   <Users className="inline h-3.5 w-3.5 mr-1" />
                   Attendees
                 </label>
@@ -438,26 +438,26 @@ export function EventModal({
                       }}
                       placeholder="email@example.com"
                       aria-label="Attendee email address"
-                      className="flex-1 px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] transition-colors text-sm"
+                      className="flex-1 px-3 py-2 rounded-lg bg-navy-950 border border-navy-800 text-white placeholder-navy-600 focus:outline-none focus:border-gold-500 transition-colors text-sm"
                     />
                     <button
                       onClick={() => addAttendee(attendeeInput)}
-                      className="px-3 py-2 rounded-lg bg-[#2d3a52] text-[#94a3b8] hover:text-white text-sm transition-colors"
+                      className="px-3 py-2 rounded-lg bg-navy-800 text-slate-400 hover:text-white text-sm transition-colors"
                     >
                       Add
                     </button>
                   </div>
                   {/* Contact suggestions dropdown */}
                   {contactSuggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-12 mt-1 bg-[#1a2744] border border-[#2d3a52] rounded-lg shadow-xl z-20 overflow-hidden">
+                    <div className="absolute top-full left-0 right-12 mt-1 bg-navy-900 border border-navy-800 rounded-lg shadow-xl z-20 overflow-hidden">
                       {contactSuggestions.map(c => (
                         <button
                           key={c.email}
                           onClick={() => addAttendee(c.email)}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-[#2d3a52] transition-colors"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-navy-800 transition-colors"
                         >
                           <p className="text-white text-xs">{c.display_name || c.email}</p>
-                          {c.display_name && <p className="text-[#64748b] text-[10px]">{c.email}</p>}
+                          {c.display_name && <p className="text-navy-600 text-[10px]">{c.email}</p>}
                         </button>
                       ))}
                     </div>
@@ -469,13 +469,13 @@ export function EventModal({
                     {formData.attendees.map(email => (
                       <span
                         key={email}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#2d3a52] text-xs text-[#94a3b8]"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-navy-800 text-xs text-slate-400"
                       >
                         {email}
                         <button
                           onClick={() => removeAttendee(email)}
                           aria-label={`Remove ${email}`}
-                          className="text-[#64748b] hover:text-red-400 transition-colors"
+                          className="text-navy-600 hover:text-red-400 transition-colors"
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -488,7 +488,7 @@ export function EventModal({
               {/* Reminder + Recurrence row */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="event-reminder" className="block text-sm font-medium text-[#94a3b8] mb-1.5">
+                  <label htmlFor="event-reminder" className="block text-sm font-medium text-slate-400 mb-1.5">
                     <Bell className="inline h-3.5 w-3.5 mr-1" />
                     Reminder
                   </label>
@@ -496,7 +496,7 @@ export function EventModal({
                     id="event-reminder"
                     value={formData.reminder_minutes}
                     onChange={(e) => setFormData({ ...formData, reminder_minutes: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white focus:outline-none focus:border-[#d4af37] transition-colors text-sm"
+                    className="w-full px-3 py-2 rounded-lg bg-navy-950 border border-navy-800 text-white focus:outline-none focus:border-gold-500 transition-colors text-sm"
                   >
                     <option value={5}>5 minutes</option>
                     <option value={10}>10 minutes</option>
@@ -506,7 +506,7 @@ export function EventModal({
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="event-recurrence" className="block text-sm font-medium text-[#94a3b8] mb-1.5">
+                  <label htmlFor="event-recurrence" className="block text-sm font-medium text-slate-400 mb-1.5">
                     <Repeat className="inline h-3.5 w-3.5 mr-1" />
                     Recurrence
                   </label>
@@ -514,7 +514,7 @@ export function EventModal({
                     id="event-recurrence"
                     value={formData.recurrence}
                     onChange={(e) => setFormData({ ...formData, recurrence: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white focus:outline-none focus:border-[#d4af37] transition-colors text-sm"
+                    className="w-full px-3 py-2 rounded-lg bg-navy-950 border border-navy-800 text-white focus:outline-none focus:border-gold-500 transition-colors text-sm"
                   >
                     <option value="none">None</option>
                     <option value="daily">Daily</option>
@@ -526,7 +526,7 @@ export function EventModal({
 
               {/* Description */}
               <div>
-                <label htmlFor="event-description" className="block text-sm font-medium text-[#94a3b8] mb-1.5">
+                <label htmlFor="event-description" className="block text-sm font-medium text-slate-400 mb-1.5">
                   <FileText className="inline h-3.5 w-3.5 mr-1" />
                   Description
                 </label>
@@ -536,7 +536,7 @@ export function EventModal({
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Add details..."
                   rows={3}
-                  className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] transition-colors resize-none"
+                  className="w-full px-3 py-2 rounded-lg bg-navy-950 border border-navy-800 text-white placeholder-navy-600 focus:outline-none focus:border-gold-500 transition-colors resize-none"
                 />
               </div>
             </>
@@ -545,7 +545,7 @@ export function EventModal({
 
         {/* Footer */}
         {!showQuickCreate && (
-          <div className="flex-shrink-0 flex items-center justify-between p-3 md:p-4 border-t border-[#2d3a52] bg-[#1a2744]">
+          <div className="flex-shrink-0 flex items-center justify-between p-3 md:p-4 border-t border-navy-800 bg-navy-900">
             {!isNew && onDelete ? (
               <button
                 onClick={handleDelete}
@@ -561,14 +561,14 @@ export function EventModal({
             <div className="flex gap-2">
               <button
                 onClick={onClose}
-                className="px-4 py-2 rounded-lg text-[#94a3b8] hover:text-white hover:bg-[#2d3a52] transition-colors"
+                className="px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-navy-800 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving || !formData.title.trim()}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#d4af37] text-[#0a1628] font-medium hover:bg-[#c9a432] transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gold-500 text-navy-950 font-medium hover:bg-[#c9a432] transition-colors disabled:opacity-50"
               >
                 {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                 {isNew ? 'Create Event' : 'Save Changes'}

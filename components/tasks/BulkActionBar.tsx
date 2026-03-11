@@ -53,7 +53,7 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
     u.name.toLowerCase().includes(userSearch.toLowerCase())
   );
 
-  const popoverBase = 'absolute bottom-full mb-2 rounded-xl bg-[#142238] border border-[#2d3a52] shadow-[0_8px_24px_rgba(0,0,0,0.5)] p-3 z-10';
+  const popoverBase = 'absolute bottom-full mb-2 rounded-xl bg-[#142238] border border-navy-800 shadow-[0_8px_24px_rgba(0,0,0,0.5)] p-3 z-10';
   const popoverLeft = isMobile ? 'left-0 right-0 mx-4' : 'left-0 min-w-[240px]';
 
   return (
@@ -62,15 +62,15 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
       style={{ paddingBottom: isMobile ? 'max(0px, env(safe-area-inset-bottom))' : 0 }}
     >
       <div className="mx-auto max-w-4xl px-4 pb-3">
-        <div className="relative rounded-xl bg-gradient-to-r from-[#1a2744] to-[#0f1d32] border border-[#d4af37]/30 shadow-[0_-4px_24px_rgba(0,0,0,0.4)] px-4 py-3">
+        <div className="relative rounded-xl bg-gradient-to-r from-[#1a2744] to-[#0f1d32] border border-gold-500/30 shadow-[0_-4px_24px_rgba(0,0,0,0.4)] px-4 py-3">
           {/* Top row: count + clear */}
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-white">
-              <span className="text-[#d4af37]">{count}</span> task{count !== 1 ? 's' : ''} selected
+              <span className="text-gold-500">{count}</span> task{count !== 1 ? 's' : ''} selected
             </span>
             <button
               onClick={onClear}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-[#94a3b8] hover:text-white hover:bg-[#2d3a52] transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-navy-800 transition-colors"
               style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
               aria-label="Clear selection"
             >
@@ -87,8 +87,8 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                 onClick={() => setActivePopover(activePopover === 'date' ? null : 'date')}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors ${
                   activePopover === 'date'
-                    ? 'bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/50'
-                    : 'bg-[#0a1628] text-[#94a3b8] border border-[#2d3a52] hover:border-[#3d4a62]'
+                    ? 'bg-gold-500/20 text-gold-500 border border-gold-500/50'
+                    : 'bg-navy-950 text-slate-400 border border-navy-800 hover:border-[#3d4a62]'
                 }`}
                 style={{ minHeight: isMobile ? 44 : undefined, minWidth: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
                 aria-label="Due Date"
@@ -98,20 +98,20 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
               </button>
               {activePopover === 'date' && (
                 <div className={`${popoverBase} ${popoverLeft}`}>
-                  <label className="block text-xs text-[#94a3b8] mb-2">Set due date</label>
+                  <label className="block text-xs text-slate-400 mb-2">Set due date</label>
                   <input
                     type="date"
                     value={dateValue}
                     onChange={(e) => setDateValue(e.target.value)}
                     aria-label="Due date"
-                    className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
+                    className="w-full px-3 py-2 rounded-lg bg-navy-950 border border-navy-800 text-white text-sm focus:outline-none focus:border-gold-500"
                     style={{ minHeight: isMobile ? 44 : undefined }}
                   />
                   <div className="flex gap-2 mt-2">
                     <button
                       onClick={() => handleAction({ due_date: null })}
                       disabled={loading}
-                      className="flex-1 px-3 py-2 rounded-lg text-xs text-[#94a3b8] hover:text-white bg-[#0a1628] border border-[#2d3a52] transition-colors"
+                      className="flex-1 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-white bg-navy-950 border border-navy-800 transition-colors"
                       style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
                     >
                       Clear date
@@ -119,7 +119,7 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                     <button
                       onClick={() => dateValue && handleAction({ due_date: dateValue })}
                       disabled={!dateValue || loading}
-                      className="flex-1 px-3 py-2 rounded-lg text-xs text-[#0a1628] bg-[#d4af37] hover:bg-[#c9a432] disabled:opacity-50 transition-colors font-medium"
+                      className="flex-1 px-3 py-2 rounded-lg text-xs text-navy-950 bg-gold-500 hover:bg-[#c9a432] disabled:opacity-50 transition-colors font-medium"
                       style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
                     >
                       {loading ? <Loader2 className="h-3 w-3 animate-spin mx-auto" /> : 'Apply'}
@@ -135,8 +135,8 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                 onClick={() => setActivePopover(activePopover === 'assignee' ? null : 'assignee')}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors ${
                   activePopover === 'assignee'
-                    ? 'bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/50'
-                    : 'bg-[#0a1628] text-[#94a3b8] border border-[#2d3a52] hover:border-[#3d4a62]'
+                    ? 'bg-gold-500/20 text-gold-500 border border-gold-500/50'
+                    : 'bg-navy-950 text-slate-400 border border-navy-800 hover:border-[#3d4a62]'
                 }`}
                 style={{ minHeight: isMobile ? 44 : undefined, minWidth: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
                 aria-label="Assignee"
@@ -152,13 +152,13 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
                     aria-label="Search users"
-                    className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] mb-2"
+                    className="w-full px-3 py-2 rounded-lg bg-navy-950 border border-navy-800 text-white text-sm placeholder-navy-600 focus:outline-none focus:border-gold-500 mb-2"
                     style={{ minHeight: isMobile ? 44 : undefined, fontSize: isMobile ? 16 : undefined }}
                   />
                   <button
                     onClick={() => handleAction({ assignee_id: null })}
                     disabled={loading}
-                    className="w-full text-left px-3 py-2 rounded-lg text-xs text-[#94a3b8] hover:text-white hover:bg-[#2d3a52] transition-colors mb-1"
+                    className="w-full text-left px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-navy-800 transition-colors mb-1"
                     style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
                   >
                     Unassign
@@ -169,11 +169,11 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                         key={u.id}
                         onClick={() => handleAction({ assignee_id: u.id })}
                         disabled={loading}
-                        className="w-full text-left px-3 py-2 rounded-lg text-sm text-[#e2e8f0] hover:bg-[#2d3a52] transition-colors"
+                        className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-navy-800 transition-colors"
                         style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
                       >
                         {u.name}
-                        {u.agency && <span className="text-xs text-[#64748b] ml-1">({u.agency})</span>}
+                        {u.agency && <span className="text-xs text-navy-600 ml-1">({u.agency})</span>}
                       </button>
                     ))}
                   </div>
@@ -187,8 +187,8 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                 onClick={() => setActivePopover(activePopover === 'agency' ? null : 'agency')}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors ${
                   activePopover === 'agency'
-                    ? 'bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/50'
-                    : 'bg-[#0a1628] text-[#94a3b8] border border-[#2d3a52] hover:border-[#3d4a62]'
+                    ? 'bg-gold-500/20 text-gold-500 border border-gold-500/50'
+                    : 'bg-navy-950 text-slate-400 border border-navy-800 hover:border-[#3d4a62]'
                 }`}
                 style={{ minHeight: isMobile ? 44 : undefined, minWidth: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
                 aria-label="Agency"
@@ -201,7 +201,7 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                   <button
                     onClick={() => handleAction({ agency: null })}
                     disabled={loading}
-                    className="w-full text-left px-3 py-2 rounded-lg text-xs text-[#94a3b8] hover:text-white hover:bg-[#2d3a52] transition-colors mb-1"
+                    className="w-full text-left px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-navy-800 transition-colors mb-1"
                     style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
                   >
                     Clear agency
@@ -212,7 +212,7 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                         key={a}
                         onClick={() => handleAction({ agency: a })}
                         disabled={loading}
-                        className="w-full text-left px-3 py-2 rounded-lg text-sm text-[#e2e8f0] hover:bg-[#2d3a52] transition-colors"
+                        className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-navy-800 transition-colors"
                         style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
                       >
                         {a}
@@ -229,8 +229,8 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                 onClick={() => setActivePopover(activePopover === 'status' ? null : 'status')}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors ${
                   activePopover === 'status'
-                    ? 'bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/50'
-                    : 'bg-[#0a1628] text-[#94a3b8] border border-[#2d3a52] hover:border-[#3d4a62]'
+                    ? 'bg-gold-500/20 text-gold-500 border border-gold-500/50'
+                    : 'bg-navy-950 text-slate-400 border border-navy-800 hover:border-[#3d4a62]'
                 }`}
                 style={{ minHeight: isMobile ? 44 : undefined, minWidth: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
                 aria-label="Status"
@@ -246,7 +246,7 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                         key={s.value}
                         onClick={() => handleAction({ status: s.value })}
                         disabled={loading}
-                        className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-lg text-sm text-[#e2e8f0] hover:bg-[#2d3a52] transition-colors"
+                        className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-navy-800 transition-colors"
                         style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
                       >
                         <span className={`w-2 h-2 rounded-full ${s.dot}`} />
@@ -254,7 +254,7 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                       </button>
                     ))}
                   </div>
-                  <div className="border-t border-[#2d3a52] pt-2">
+                  <div className="border-t border-navy-800 pt-2">
                     <label className="block text-xs text-amber-400 mb-1.5">Block with reason:</label>
                     <input
                       type="text"
@@ -262,7 +262,7 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                       onChange={(e) => setBlockedReason(e.target.value)}
                       placeholder="Reason for blocking..."
                       aria-label="Reason for blocking"
-                      className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-amber-500/30 text-white text-sm placeholder-[#64748b] focus:outline-none focus:border-amber-500 mb-2"
+                      className="w-full px-3 py-2 rounded-lg bg-navy-950 border border-amber-500/30 text-white text-sm placeholder-navy-600 focus:outline-none focus:border-amber-500 mb-2"
                       style={{ minHeight: isMobile ? 44 : undefined, fontSize: isMobile ? 16 : undefined }}
                     />
                     <button
@@ -285,7 +285,7 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors ${
                   activePopover === 'delete'
                     ? 'bg-red-500/20 text-red-400 border border-red-500/50'
-                    : 'bg-[#0a1628] text-red-400 border border-red-500/30 hover:bg-red-500/10'
+                    : 'bg-navy-950 text-red-400 border border-red-500/30 hover:bg-red-500/10'
                 }`}
                 style={{ minHeight: isMobile ? 44 : undefined, minWidth: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
                 aria-label="Delete"
@@ -298,11 +298,11 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
                   <p className="text-sm font-semibold text-white mb-1">
                     Delete {count} task{count !== 1 ? 's' : ''}?
                   </p>
-                  <p className="text-xs text-[#64748b] mb-3">This cannot be undone.</p>
+                  <p className="text-xs text-navy-600 mb-3">This cannot be undone.</p>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setActivePopover(null)}
-                      className="flex-1 px-3 py-2 rounded-lg text-xs text-[#94a3b8] hover:text-white bg-[#0a1628] border border-[#2d3a52] transition-colors"
+                      className="flex-1 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-white bg-navy-950 border border-navy-800 transition-colors"
                       style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
                     >
                       Cancel

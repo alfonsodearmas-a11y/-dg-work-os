@@ -57,12 +57,12 @@ export function AgencyCard({ agency, onClick, compact = false }: AgencyCardProps
   return (
     <div
       onClick={onClick}
-      className={`bg-[#1a2744] backdrop-blur-sm border rounded-2xl ${compact ? 'p-4' : 'p-5'} cursor-pointer transition-all duration-200 group hover:shadow-xl ${
+      className={`bg-navy-900 backdrop-blur-sm border rounded-2xl ${compact ? 'p-4' : 'p-5'} cursor-pointer transition-all duration-200 group hover:shadow-xl ${
         status?.type === 'critical'
           ? 'border-red-500/40 hover:border-red-400/60 hover:shadow-red-500/10'
           : status?.type === 'warning'
           ? 'border-amber-500/40 hover:border-amber-400/60 hover:shadow-amber-500/10'
-          : 'border-[#2d3a52] hover:border-[#d4af37]/50 hover:shadow-[#d4af37]/10'
+          : 'border-navy-800 hover:border-gold-500/50 hover:shadow-gold-500/10'
       }`}
     >
       {/* Header */}
@@ -73,13 +73,13 @@ export function AgencyCard({ agency, onClick, compact = false }: AgencyCardProps
           </div>
           <div className="min-w-0">
             <h3 className="font-bold text-white text-base sm:text-lg leading-tight truncate">{title}</h3>
-            <p className="text-[#64748b] text-xs mt-0.5 truncate">{subtitle}</p>
+            <p className="text-navy-600 text-xs mt-0.5 truncate">{subtitle}</p>
           </div>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <StatusBadge status={status?.type} text={status?.text} />
           <ChevronRight
-            className="text-[#64748b] group-hover:text-[#d4af37] group-hover:translate-x-0.5 transition-all hidden sm:block"
+            className="text-navy-600 group-hover:text-gold-500 group-hover:translate-x-0.5 transition-all hidden sm:block"
             size={18}
           />
         </div>
@@ -153,9 +153,9 @@ export function AgencyCard({ agency, onClick, compact = false }: AgencyCardProps
           <div className={`grid ${agency.gridMetrics.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'} gap-x-3 gap-y-2.5 flex-1 min-w-0`}>
             {agency.gridMetrics.map((gm, i) => (
               <div key={i} className="min-w-0">
-                <p className="text-[#64748b] text-xs leading-tight truncate">{gm.label}</p>
+                <p className="text-navy-600 text-xs leading-tight truncate">{gm.label}</p>
                 <div className="flex items-baseline gap-1 mt-0.5">
-                  <span className="text-base font-bold text-[#d4af37] truncate">{gm.value}</span>
+                  <span className="text-base font-bold text-gold-500 truncate">{gm.value}</span>
                   {gm.badge && (
                     <span className={`text-[10px] font-medium px-1 py-px rounded whitespace-nowrap ${
                       gm.badgeColor === 'green' ? 'bg-emerald-500/20 text-emerald-400'
@@ -175,10 +175,10 @@ export function AgencyCard({ agency, onClick, compact = false }: AgencyCardProps
         <>
           {/* Primary Metric with Sparkline */}
           {metrics?.[0] && (
-            <div className={`flex items-end justify-between gap-2 ${compact ? '' : 'mb-4 pb-4 border-b border-[#2d3a52]'}`}>
+            <div className={`flex items-end justify-between gap-2 ${compact ? '' : 'mb-4 pb-4 border-b border-navy-800'}`}>
               <div className="min-w-0 flex-1">
-                <p className="text-[#64748b] text-xs mb-1">{metrics[0].label}</p>
-                <p className={`${compact ? 'text-lg' : 'text-xl sm:text-2xl'} font-bold truncate ${metrics[0].highlight ? 'text-[#d4af37]' : 'text-white'}`}>
+                <p className="text-navy-600 text-xs mb-1">{metrics[0].label}</p>
+                <p className={`${compact ? 'text-lg' : 'text-xl sm:text-2xl'} font-bold truncate ${metrics[0].highlight ? 'text-gold-500' : 'text-white'}`}>
                   {metrics[0].value}
                 </p>
               </div>
@@ -209,7 +209,7 @@ export function AgencyCard({ agency, onClick, compact = false }: AgencyCardProps
             <div className="space-y-2.5">
               {metrics?.slice(1).map((metric, i) => (
                 <div key={i} className="flex justify-between items-center gap-3">
-                  <span className="text-[#94a3b8] text-sm flex-shrink-0">{metric.label}</span>
+                  <span className="text-slate-400 text-sm flex-shrink-0">{metric.label}</span>
                   <span
                     className={`font-medium text-sm text-right ${
                       metric.status === 'good'

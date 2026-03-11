@@ -51,8 +51,8 @@ function relativeTime(dateStr: string): string {
 
 function NotificationIcon({ type, category }: { type: string; category?: string }) {
   // Meeting types
-  if (type === 'meeting_minutes_ready') return <FileText className="h-4 w-4 text-[#3b82f6]" />;
-  if (type.startsWith('meeting')) return <Calendar className="h-4 w-4 text-[#d4af37]" />;
+  if (type === 'meeting_minutes_ready') return <FileText className="h-4 w-4 text-blue-500" />;
+  if (type.startsWith('meeting')) return <Calendar className="h-4 w-4 text-gold-500" />;
 
   // Project types
   if (category === 'projects' || type.startsWith('project_')) return <Building2 className="h-4 w-4 text-[#f59e0b]" />;
@@ -61,13 +61,13 @@ function NotificationIcon({ type, category }: { type: string; category?: string 
   if (category === 'kpi' || type.startsWith('kpi_')) return <BarChart3 className="h-4 w-4 text-[#8b5cf6]" />;
 
   // Oversight types
-  if (category === 'oversight' || type.startsWith('oversight_')) return <Eye className="h-4 w-4 text-[#06b6d4]" />;
+  if (category === 'oversight' || type.startsWith('oversight_')) return <Eye className="h-4 w-4 text-cyan-500" />;
 
   // Task management bridge types
   if (type.startsWith('tm_')) return <UserCheck className="h-4 w-4 text-[#10b981]" />;
 
   // Default: task
-  return <CheckSquare className="h-4 w-4 text-[#22c55e]" />;
+  return <CheckSquare className="h-4 w-4 text-green-500" />;
 }
 
 function priorityColor(priority: string): string {
@@ -160,7 +160,7 @@ function NotificationCard({ notification, onRead }: { notification: Notification
         <div className="flex items-center gap-2 mt-1">
           <p className={`text-xs ${isUnread ? 'text-white/30' : 'text-white/20'}`}>{relativeTime(notification.scheduled_for)}</p>
           {notification.action_required && (
-            <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-[#d4af37]/20 text-[#d4af37]">
+            <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-gold-500/20 text-gold-500">
               {actionLabel(notification.action_type)}
             </span>
           )}
@@ -175,7 +175,7 @@ function NotificationCard({ notification, onRead }: { notification: Notification
       {/* Unread dot */}
       {isUnread && (
         <div className="flex-shrink-0 mt-2">
-          <div className="w-2 h-2 rounded-full bg-[#d4af37]" />
+          <div className="w-2 h-2 rounded-full bg-gold-500" />
         </div>
       )}
     </button>
@@ -244,19 +244,19 @@ export function NotificationPanel() {
       />
 
       {/* Panel */}
-      <div ref={notifPanelRef} role="dialog" aria-modal="true" aria-labelledby="notification-panel-title" className="fixed z-[52] md:top-0 md:right-0 md:bottom-0 md:w-full md:max-w-[400px] md:animate-slide-in-right bottom-0 left-0 right-0 max-h-[80vh] md:max-h-none rounded-t-2xl md:rounded-none bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border-l border-[#2d3a52]/60 shadow-[-8px_0_32px_rgba(0,0,0,0.5)] flex flex-col">
+      <div ref={notifPanelRef} role="dialog" aria-modal="true" aria-labelledby="notification-panel-title" className="fixed z-[52] md:top-0 md:right-0 md:bottom-0 md:w-full md:max-w-[400px] md:animate-slide-in-right bottom-0 left-0 right-0 max-h-[80vh] md:max-h-none rounded-t-2xl md:rounded-none bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border-l border-navy-800/60 shadow-[-8px_0_32px_rgba(0,0,0,0.5)] flex flex-col">
         {/* Mobile handle */}
         <div className="md:hidden flex justify-center pt-2">
           <div className="w-9 h-1 rounded-full bg-white/20" />
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d3a52]/50 flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-navy-800/50 flex-shrink-0">
           <h2 id="notification-panel-title" className="text-white font-semibold text-base">Notifications</h2>
           <div className="flex items-center gap-2">
             <button
               onClick={markAllRead}
-              className="text-xs text-[#d4af37] hover:text-[#f4d03f] transition-colors px-2 py-1"
+              className="text-xs text-gold-500 hover:text-gold-400 transition-colors px-2 py-1"
             >
               Mark all read
             </button>
@@ -284,7 +284,7 @@ export function NotificationPanel() {
                 onClick={() => setFilter(f.key)}
                 className={`text-xs px-2.5 py-1.5 rounded-full transition-colors ${
                   filter === f.key
-                    ? 'bg-[#d4af37]/20 text-[#d4af37] font-semibold'
+                    ? 'bg-gold-500/20 text-gold-500 font-semibold'
                     : 'bg-white/5 text-white/40 hover:text-white/60'
                 }`}
               >
@@ -323,7 +323,7 @@ export function NotificationPanel() {
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-[#2d3a52]/30">
+            <div className="divide-y divide-navy-800/30">
               {groupOrder.map(group => {
                 const items = groups.get(group);
                 if (!items || items.length === 0) return null;
@@ -344,7 +344,7 @@ export function NotificationPanel() {
 
         {/* Footer */}
         {notifications.length > 0 && (
-          <div className="border-t border-[#2d3a52]/50 px-4 py-2 flex-shrink-0">
+          <div className="border-t border-navy-800/50 px-4 py-2 flex-shrink-0">
             <button
               onClick={dismissAll}
               className="text-xs text-white/30 hover:text-white/50 transition-colors w-full text-center py-1"

@@ -35,7 +35,7 @@ export function GPLModule() {
         <button
           onClick={() => setShowUpload(!showUpload)}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-            showUpload ? 'bg-[#d4af37]/20 text-[#d4af37]' : 'text-[#64748b] hover:text-white hover:bg-[#2d3a52]/50 border border-[#2d3a52]'
+            showUpload ? 'bg-gold-500/20 text-gold-500' : 'text-navy-600 hover:text-white hover:bg-navy-800/50 border border-navy-800'
           }`}
         >
           <Upload className="h-3.5 w-3.5" />
@@ -54,8 +54,8 @@ export function GPLModule() {
             onClick={() => setActiveTab(tab.id)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
               activeTab === tab.id
-                ? 'bg-[#d4af37]/20 text-[#d4af37]'
-                : 'text-[#64748b] hover:text-white hover:bg-[#2d3a52]/50'
+                ? 'bg-gold-500/20 text-gold-500'
+                : 'text-navy-600 hover:text-white hover:bg-navy-800/50'
             }`}
           >
             <span className="hidden md:inline">{tab.fullLabel}</span>

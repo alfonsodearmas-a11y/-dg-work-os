@@ -26,17 +26,17 @@ export function CollapsibleSection({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className={`rounded-xl border border-[#2d3a52] bg-[#1a2744]/50 ${className}`}>
+    <div className={`rounded-xl border border-navy-800 bg-navy-900/50 ${className}`}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="collapsible-header w-full min-h-[48px]"
       >
         <div className="flex items-center gap-2.5 min-w-0">
-          {Icon && <Icon size={18} className="text-[#d4af37] shrink-0" />}
+          {Icon && <Icon size={18} className="text-gold-500 shrink-0" />}
           <span className="text-[15px] font-semibold text-white truncate">{title}</span>
           {subtitle && (
-            <span className="text-xs text-[#64748b] truncate hidden sm:inline">{subtitle}</span>
+            <span className="text-xs text-navy-600 truncate hidden sm:inline">{subtitle}</span>
           )}
           {badge && (
             <Badge variant={badge.variant || 'default'}>{badge.text}</Badge>
@@ -44,7 +44,7 @@ export function CollapsibleSection({
         </div>
         <ChevronDown
           size={18}
-          className={`text-[#64748b] shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+          className={`text-navy-600 shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
       <div className={`collapse-grid ${isOpen ? 'open' : ''}`}>

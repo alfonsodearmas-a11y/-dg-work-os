@@ -17,6 +17,7 @@ import {
   ComposedChart,
   ReferenceLine
 } from 'recharts';
+import { CHART_THEME } from '@/lib/constants/chart-theme';
 
 const API_BASE = '/api';
 
@@ -33,7 +34,7 @@ function MetricCard({ title, value, subtitle, trend, icon }: MetricCardProps) {
     danger: 'border-red-200 bg-red-50',
     warning: 'border-yellow-200 bg-yellow-50',
     success: 'border-green-200 bg-green-50',
-    normal: 'border-[#2d3a52] bg-[#1a2744]'
+    normal: 'border-navy-800 bg-navy-900'
   };
 
   const iconMap: Record<string, React.JSX.Element> = {
@@ -54,13 +55,13 @@ function MetricCard({ title, value, subtitle, trend, icon }: MetricCardProps) {
   return (
     <div className={`rounded-lg border p-4 ${trendColors[trend]}`}>
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-[#94a3b8]">{title}</p>
-        <svg className="w-5 h-5 text-[#94a3b8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <p className="text-sm font-medium text-slate-400">{title}</p>
+        <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           {iconMap[icon]}
         </svg>
       </div>
       <p className="mt-2 text-2xl font-bold text-white">{value}</p>
-      {subtitle && <p className="mt-1 text-sm text-[#64748b]">{subtitle}</p>}
+      {subtitle && <p className="mt-1 text-sm text-navy-600">{subtitle}</p>}
     </div>
   );
 }
@@ -123,7 +124,7 @@ export function GPLForecastDashboard() {
     return (
       <div className="flex items-center justify-center py-12" role="status" aria-label="Loading">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" aria-hidden="true"></div>
-        <span className="ml-3 text-[#94a3b8]">Loading forecast data...</span>
+        <span className="ml-3 text-slate-400">Loading forecast data...</span>
       </div>
     );
   }
@@ -150,14 +151,14 @@ export function GPLForecastDashboard() {
 
   if (!hasData) {
     return (
-      <div className="bg-[#1a2744] border border-[#2d3a52] rounded-lg p-8 text-center">
-        <div className="text-[#94a3b8] mb-4">
+      <div className="bg-navy-900 border border-navy-800 rounded-lg p-8 text-center">
+        <div className="text-slate-400 mb-4">
           <svg className="w-16 h-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
         </div>
         <h3 className="text-lg font-medium text-white mb-2">No Forecast Data Available</h3>
-        <p className="text-[#94a3b8] mb-4">
+        <p className="text-slate-400 mb-4">
           Upload daily DBIS Excel files and monthly KPI CSV data to generate forecasts.
         </p>
         <button
@@ -215,7 +216,7 @@ export function GPLForecastDashboard() {
         <div>
           <h2 className="text-xl font-semibold text-white">Predictive Analytics & Forecasting</h2>
           {forecastData.briefing?.dataThroughDate && (
-            <p className="text-sm text-[#64748b]">
+            <p className="text-sm text-navy-600">
               Data through: {new Date(forecastData.briefing.dataThroughDate).toLocaleDateString()}
               {forecastData.briefing.dailyDataPoints && ` (${forecastData.briefing.dailyDataPoints} daily records)`}
             </p>
@@ -224,7 +225,7 @@ export function GPLForecastDashboard() {
         <button
           onClick={() => handleRefresh(true)}
           disabled={refreshing}
-          className="inline-flex items-center px-4 py-2 border border-[#2d3a52] rounded-md shadow-sm text-sm font-medium text-white bg-[#1a2744] hover:bg-[#2d3a52] disabled:opacity-50"
+          className="inline-flex items-center px-4 py-2 border border-navy-800 rounded-md shadow-sm text-sm font-medium text-white bg-navy-900 hover:bg-navy-800 disabled:opacity-50"
         >
           {refreshing ? (
             <>
@@ -289,13 +290,13 @@ export function GPLForecastDashboard() {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-white">AI Strategic Briefing</h3>
-                <p className="text-sm text-[#94a3b8]">
+                <p className="text-sm text-slate-400">
                   Generated {new Date(forecastData.briefing.generatedAt).toLocaleString()}
                 </p>
               </div>
             </div>
             <svg
-              className={`w-5 h-5 text-[#94a3b8] transition-transform ${expandedSection === 'briefing' ? 'rotate-180' : ''}`}
+              className={`w-5 h-5 text-slate-400 transition-transform ${expandedSection === 'briefing' ? 'rotate-180' : ''}`}
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -306,7 +307,7 @@ export function GPLForecastDashboard() {
 
           {expandedSection === 'briefing' && (
             <div className="px-6 pb-6">
-              <div className="bg-[#2d3a52]/50 rounded-lg p-4 prose prose-invert prose-sm max-w-none">
+              <div className="bg-navy-800/50 rounded-lg p-4 prose prose-invert prose-sm max-w-none">
                 <div className="whitespace-pre-wrap text-white leading-relaxed">
                   {forecastData.briefing.executiveBriefing}
                 </div>
@@ -318,22 +319,22 @@ export function GPLForecastDashboard() {
 
       {/* Demand vs Capacity Chart - DBIS */}
       {demandChartData.length > 0 && (
-        <div className="bg-[#1a2744] rounded-lg shadow p-6">
+        <div className="bg-navy-900 rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-white mb-4">DBIS Grid: Demand vs Capacity Forecast</h3>
           <ResponsiveContainer width="100%" height={350}>
             <ComposedChart data={demandChartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2d3a52" />
-              <XAxis dataKey="month" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-              <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} label={{ value: 'MW', angle: -90, position: 'insideLeft', fill: '#94a3b8' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid.stroke} />
+              <XAxis dataKey="month" tick={{ fill: CHART_THEME.colors.slate400, fontSize: 12 }} />
+              <YAxis tick={{ fill: CHART_THEME.colors.slate400, fontSize: 12 }} label={{ value: 'MW', angle: -90, position: 'insideLeft', fill: CHART_THEME.colors.slate400 }} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#0f172a',
+                  backgroundColor: CHART_THEME.colors.navy950,
                   border: 'none',
                   borderRadius: '8px',
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
                   color: '#f1f5f9'
                 }}
-                labelStyle={{ color: '#94a3b8', fontWeight: 600 }}
+                labelStyle={{ color: CHART_THEME.colors.slate400, fontWeight: 600 }}
               />
               <Legend />
               <Area
@@ -374,7 +375,7 @@ export function GPLForecastDashboard() {
 
       {/* Essequibo Grid Outlook */}
       {esqChartData.length > 0 && (
-        <div className="bg-[#1a2744] rounded-lg shadow p-6">
+        <div className="bg-navy-900 rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-white">Essequibo Grid Outlook</h3>
             {esqCapacity && (
@@ -389,12 +390,12 @@ export function GPLForecastDashboard() {
           </div>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={esqChartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2d3a52" />
-              <XAxis dataKey="month" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-              <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} label={{ value: 'MW', angle: -90, position: 'insideLeft', fill: '#94a3b8' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid.stroke} />
+              <XAxis dataKey="month" tick={{ fill: CHART_THEME.colors.slate400, fontSize: 12 }} />
+              <YAxis tick={{ fill: CHART_THEME.colors.slate400, fontSize: 12 }} label={{ value: 'MW', angle: -90, position: 'insideLeft', fill: CHART_THEME.colors.slate400 }} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#0f172a',
+                  backgroundColor: CHART_THEME.colors.navy950,
                   border: 'none',
                   borderRadius: '8px',
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
@@ -427,29 +428,29 @@ export function GPLForecastDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Station Reliability */}
         {sortedStations.length > 0 && (
-          <div className="bg-[#1a2744] rounded-lg shadow overflow-hidden">
-            <div className="px-6 py-4 border-b border-[#2d3a52]">
+          <div className="bg-navy-900 rounded-lg shadow overflow-hidden">
+            <div className="px-6 py-4 border-b border-navy-800">
               <h3 className="text-lg font-semibold text-white">Station Reliability</h3>
-              <p className="text-sm text-[#64748b]">90-day performance analysis</p>
+              <p className="text-sm text-navy-600">90-day performance analysis</p>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-[#2d3a52]" aria-label="Station reliability">
-                <thead className="bg-[#0a1628]">
+              <table className="min-w-full divide-y divide-navy-800" aria-label="Station reliability">
+                <thead className="bg-navy-950">
                   <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-[#64748b] uppercase">Station</th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-[#64748b] uppercase">Uptime</th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-[#64748b] uppercase">Utilization</th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-[#64748b] uppercase">Units</th>
-                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-[#64748b] uppercase">Status</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-navy-600 uppercase">Station</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-navy-600 uppercase">Uptime</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-navy-600 uppercase">Utilization</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-navy-600 uppercase">Units</th>
+                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-navy-600 uppercase">Status</th>
                   </tr>
                 </thead>
-                <tbody className="bg-[#1a2744] divide-y divide-[#2d3a52]">
+                <tbody className="bg-navy-900 divide-y divide-navy-800">
                   {sortedStations.slice(0, 10).map((station: any, idx: number) => (
-                    <tr key={idx} className="hover:bg-[#2d3a52]/50">
+                    <tr key={idx} className="hover:bg-navy-800/50">
                       <td className="px-4 py-3 text-sm font-medium text-white">{station.station}</td>
-                      <td className="px-4 py-3 text-sm text-right text-[#94a3b8]">{(parseFloat(station.uptime_pct) || 0).toFixed(1)}%</td>
-                      <td className="px-4 py-3 text-sm text-right text-[#94a3b8]">{(parseFloat(station.avg_utilization_pct) || 0).toFixed(1)}%</td>
-                      <td className="px-4 py-3 text-sm text-right text-[#94a3b8]">{station.online_units}/{station.total_units}</td>
+                      <td className="px-4 py-3 text-sm text-right text-slate-400">{(parseFloat(station.uptime_pct) || 0).toFixed(1)}%</td>
+                      <td className="px-4 py-3 text-sm text-right text-slate-400">{(parseFloat(station.avg_utilization_pct) || 0).toFixed(1)}%</td>
+                      <td className="px-4 py-3 text-sm text-right text-slate-400">{station.online_units}/{station.total_units}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           station.risk_level === 'critical' ? 'bg-red-500/20 text-red-400' :
@@ -469,32 +470,32 @@ export function GPLForecastDashboard() {
 
         {/* Units at Risk */}
         {forecastData.unitsAtRisk?.length > 0 && (
-          <div className="bg-[#1a2744] rounded-lg shadow overflow-hidden">
-            <div className="px-6 py-4 border-b border-[#2d3a52]">
+          <div className="bg-navy-900 rounded-lg shadow overflow-hidden">
+            <div className="px-6 py-4 border-b border-navy-800">
               <h3 className="text-lg font-semibold text-white">Units at Risk</h3>
-              <p className="text-sm text-[#64748b]">High-risk units requiring attention</p>
+              <p className="text-sm text-navy-600">High-risk units requiring attention</p>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-[#2d3a52]" aria-label="Units at risk">
-                <thead className="bg-[#0a1628]">
+              <table className="min-w-full divide-y divide-navy-800" aria-label="Units at risk">
+                <thead className="bg-navy-950">
                   <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-[#64748b] uppercase">Unit</th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-[#64748b] uppercase">Capacity</th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-[#64748b] uppercase">Uptime</th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-[#64748b] uppercase">Failures</th>
-                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-[#64748b] uppercase">Risk</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-navy-600 uppercase">Unit</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-navy-600 uppercase">Capacity</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-navy-600 uppercase">Uptime</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-navy-600 uppercase">Failures</th>
+                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-navy-600 uppercase">Risk</th>
                   </tr>
                 </thead>
-                <tbody className="bg-[#1a2744] divide-y divide-[#2d3a52]">
+                <tbody className="bg-navy-900 divide-y divide-navy-800">
                   {forecastData.unitsAtRisk.slice(0, 10).map((unit: any, idx: number) => (
-                    <tr key={idx} className="hover:bg-[#2d3a52]/50">
+                    <tr key={idx} className="hover:bg-navy-800/50">
                       <td className="px-4 py-3">
                         <div className="text-sm font-medium text-white">{unit.station}</div>
-                        <div className="text-xs text-[#64748b]">{unit.unit_number}</div>
+                        <div className="text-xs text-navy-600">{unit.unit_number}</div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-right text-[#94a3b8]">{parseFloat(unit.derated_mw).toFixed(1)} MW</td>
-                      <td className="px-4 py-3 text-sm text-right text-[#94a3b8]">{parseFloat(unit.uptime_pct_90d).toFixed(1)}%</td>
-                      <td className="px-4 py-3 text-sm text-right text-[#94a3b8]">{unit.failure_count_90d}</td>
+                      <td className="px-4 py-3 text-sm text-right text-slate-400">{parseFloat(unit.derated_mw).toFixed(1)} MW</td>
+                      <td className="px-4 py-3 text-sm text-right text-slate-400">{parseFloat(unit.uptime_pct_90d).toFixed(1)}%</td>
+                      <td className="px-4 py-3 text-sm text-right text-slate-400">{unit.failure_count_90d}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           unit.risk_level === 'high' ? 'bg-red-500/20 text-red-400' :
@@ -515,27 +516,27 @@ export function GPLForecastDashboard() {
 
       {/* Load Shedding Analysis */}
       {forecastData.loadShedding && (
-        <div className="bg-[#1a2744] rounded-lg shadow p-6">
+        <div className="bg-navy-900 rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-white mb-4">Load Shedding Analysis</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div className="bg-[#0a1628] rounded-lg p-4">
-              <p className="text-sm text-[#64748b]">Period Analyzed</p>
+            <div className="bg-navy-950 rounded-lg p-4">
+              <p className="text-sm text-navy-600">Period Analyzed</p>
               <p className="text-xl font-semibold text-white">{forecastData.loadShedding.period_days} days</p>
             </div>
-            <div className="bg-[#0a1628] rounded-lg p-4">
-              <p className="text-sm text-[#64748b]">Average Daily</p>
+            <div className="bg-navy-950 rounded-lg p-4">
+              <p className="text-sm text-navy-600">Average Daily</p>
               <p className="text-xl font-semibold text-white">{parseFloat(forecastData.loadShedding.avg_shed_mw).toFixed(1)} MW</p>
             </div>
-            <div className="bg-[#0a1628] rounded-lg p-4">
-              <p className="text-sm text-[#64748b]">Maximum</p>
+            <div className="bg-navy-950 rounded-lg p-4">
+              <p className="text-sm text-navy-600">Maximum</p>
               <p className="text-xl font-semibold text-white">{parseFloat(forecastData.loadShedding.max_shed_mw).toFixed(1)} MW</p>
             </div>
-            <div className="bg-[#0a1628] rounded-lg p-4">
-              <p className="text-sm text-[#64748b]">Days with Shedding</p>
+            <div className="bg-navy-950 rounded-lg p-4">
+              <p className="text-sm text-navy-600">Days with Shedding</p>
               <p className="text-xl font-semibold text-white">{forecastData.loadShedding.shed_days_count}</p>
             </div>
-            <div className="bg-[#0a1628] rounded-lg p-4">
-              <p className="text-sm text-[#64748b]">6-Month Projection</p>
+            <div className="bg-navy-950 rounded-lg p-4">
+              <p className="text-sm text-navy-600">6-Month Projection</p>
               <p className="text-xl font-semibold text-white">{parseFloat(forecastData.loadShedding.projected_avg_6mo).toFixed(1)} MW</p>
             </div>
           </div>

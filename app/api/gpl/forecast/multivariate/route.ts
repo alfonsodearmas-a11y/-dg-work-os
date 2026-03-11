@@ -53,7 +53,7 @@ export async function GET() {
 }
 
 export const POST = withErrorHandler(async (_request: NextRequest) => {
-  const session = await auth();
+  const session = await auth(); // TODO: migrate to requireRole()
   const userId = session?.user?.id || 'system';
   let forecastResult;
   try {

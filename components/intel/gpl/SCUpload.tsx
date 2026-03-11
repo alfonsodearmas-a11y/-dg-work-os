@@ -78,20 +78,20 @@ export function SCUpload({ onSuccess }: { onSuccess?: () => void }) {
           <h3 className="text-sm font-semibold text-emerald-400">Upload Successful</h3>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs mb-3">
-          <div><span className="text-[#64748b]">Snapshot:</span> <span className="text-white">{result.snapshotDate}</span></div>
-          <div><span className="text-[#64748b]">Total Records:</span> <span className="text-white">{totalRecords}</span></div>
-          <div><span className="text-[#64748b]">Metrics Computed:</span> <span className="text-white">{result.metricsCount}</span></div>
-          <div><span className="text-[#64748b]">Simple Waiting:</span> <span className="text-white">{c.trackAOutstanding}</span></div>
-          <div><span className="text-[#64748b]">Simple Done:</span> <span className="text-white">{c.trackACompleted}</span></div>
-          <div><span className="text-[#64748b]">Estimates Waiting:</span> <span className="text-white">{c.trackBDesignOutstanding}</span></div>
-          <div><span className="text-[#64748b]">Estimates Done:</span> <span className="text-white">{c.trackBDesignCompleted}</span></div>
-          <div><span className="text-[#64748b]">Capital Works Waiting:</span> <span className="text-white">{c.trackBExecutionOutstanding}</span></div>
-          <div><span className="text-[#64748b]">Capital Works Done:</span> <span className="text-white">{c.trackBExecutionCompleted}</span></div>
+          <div><span className="text-navy-600">Snapshot:</span> <span className="text-white">{result.snapshotDate}</span></div>
+          <div><span className="text-navy-600">Total Records:</span> <span className="text-white">{totalRecords}</span></div>
+          <div><span className="text-navy-600">Metrics Computed:</span> <span className="text-white">{result.metricsCount}</span></div>
+          <div><span className="text-navy-600">Simple Waiting:</span> <span className="text-white">{c.trackAOutstanding}</span></div>
+          <div><span className="text-navy-600">Simple Done:</span> <span className="text-white">{c.trackACompleted}</span></div>
+          <div><span className="text-navy-600">Estimates Waiting:</span> <span className="text-white">{c.trackBDesignOutstanding}</span></div>
+          <div><span className="text-navy-600">Estimates Done:</span> <span className="text-white">{c.trackBDesignCompleted}</span></div>
+          <div><span className="text-navy-600">Capital Works Waiting:</span> <span className="text-white">{c.trackBExecutionOutstanding}</span></div>
+          <div><span className="text-navy-600">Capital Works Done:</span> <span className="text-white">{c.trackBExecutionCompleted}</span></div>
         </div>
         {result.warnings.length > 0 && (
           <div className="text-xs text-amber-400 mb-3">{result.warnings.length} notes flagged during processing</div>
         )}
-        <button onClick={reset} className="text-xs text-[#d4af37] hover:text-[#f0d060]">Upload another file</button>
+        <button onClick={reset} className="text-xs text-gold-500 hover:text-[#f0d060]">Upload another file</button>
       </div>
     );
   }
@@ -100,11 +100,11 @@ export function SCUpload({ onSuccess }: { onSuccess?: () => void }) {
     <div className="card-premium p-4 md:p-6">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Upload className="h-4 w-4 text-[#d4af37]" />
+          <Upload className="h-4 w-4 text-gold-500" />
           <h3 className="text-sm font-semibold text-white">Upload Service Connection Excel</h3>
         </div>
         {file && (
-          <button onClick={reset} className="text-[#64748b] hover:text-white" aria-label="Remove file">
+          <button onClick={reset} className="text-navy-600 hover:text-white" aria-label="Remove file">
             <X className="h-4 w-4" />
           </button>
         )}
@@ -116,7 +116,7 @@ export function SCUpload({ onSuccess }: { onSuccess?: () => void }) {
           onDragLeave={() => setDragOver(false)}
           onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
           className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
-            dragOver ? 'border-[#d4af37] bg-[#d4af37]/5' : 'border-[#2d3a52] hover:border-[#64748b]'
+            dragOver ? 'border-gold-500 bg-gold-500/5' : 'border-navy-800 hover:border-navy-600'
           }`}
         >
           <input
@@ -128,17 +128,17 @@ export function SCUpload({ onSuccess }: { onSuccess?: () => void }) {
             aria-label="Upload GPL Service Connection Excel file"
           />
           <label htmlFor="sc-upload-input" className="cursor-pointer">
-            <FileSpreadsheet className="h-8 w-8 text-[#64748b] mx-auto mb-2" />
-            <p className="text-sm text-[#94a3b8]">Drop GPL Excel file here or click to browse</p>
-            <p className="text-xs text-[#64748b] mt-1">.xls or .xlsx, max 10MB</p>
+            <FileSpreadsheet className="h-8 w-8 text-navy-600 mx-auto mb-2" />
+            <p className="text-sm text-slate-400">Drop GPL Excel file here or click to browse</p>
+            <p className="text-xs text-navy-600 mt-1">.xls or .xlsx, max 10MB</p>
           </label>
         </div>
       ) : (
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm">
-            <FileSpreadsheet className="h-4 w-4 text-[#d4af37]" />
+            <FileSpreadsheet className="h-4 w-4 text-gold-500" />
             <span className="text-white">{file.name}</span>
-            <span className="text-[#64748b] text-xs">({(file.size / 1024).toFixed(0)} KB)</span>
+            <span className="text-navy-600 text-xs">({(file.size / 1024).toFixed(0)} KB)</span>
           </div>
           <button
             onClick={upload}

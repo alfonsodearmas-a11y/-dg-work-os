@@ -5,7 +5,7 @@ import { invalidateCalendarClientCache } from '@/lib/google-calendar';
 import { withErrorHandler } from '@/lib/api-utils';
 
 export const POST = withErrorHandler(async () => {
-  const session = await auth();
+  const session = await auth(); // TODO: migrate to requireRole()
   const userId = session?.user?.id;
   if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 

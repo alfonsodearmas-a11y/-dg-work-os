@@ -13,6 +13,7 @@ import {
 import { EscalationControls } from '@/components/projects/EscalationControls';
 import { ProjectAISummary } from '@/components/projects/ProjectAISummary';
 import { ProjectActivityLog } from '@/components/projects/ProjectActivityLog';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { fmtCurrency, fmtDate } from '@/lib/format';
 import { AGENCY_NAMES, PROJECT_STATUS_STYLES as STATUS_STYLES, HEALTH_DOT_LABELED as HEALTH_DOT } from '@/lib/constants/agencies';
 import { Spinner } from '@/components/ui/Spinner';
@@ -137,6 +138,15 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="space-y-8 max-w-6xl">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Projects', href: '/projects' },
+          { label: project.project_name || 'Project' },
+        ]}
+        className="mb--4"
+      />
+
       {/* Header */}
       <div className="flex items-start gap-4">
         <Link

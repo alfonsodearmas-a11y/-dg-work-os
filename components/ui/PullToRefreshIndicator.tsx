@@ -25,7 +25,7 @@ export function PullToRefreshIndicator({ pullDistance, isRefreshing, threshold =
         }}
       >
         {isRefreshing ? (
-          <div className="w-5 h-5 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" role="status" aria-label="Refreshing" />
+          <div className="w-5 h-5 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" role="status" aria-label="Refreshing" />
         ) : (
           <svg
             width="20"

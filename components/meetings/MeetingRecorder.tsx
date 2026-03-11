@@ -298,11 +298,12 @@ export function MeetingRecorder({ title, attendees = [], onComplete }: MeetingRe
       <div className="flex flex-col items-center py-6">
         <button
           onClick={startRecording}
-          className="w-20 h-20 rounded-full bg-[#d4af37]/20 border-2 border-[#d4af37] flex items-center justify-center hover:bg-[#d4af37]/30 transition-colors group"
+          className="w-20 h-20 rounded-full bg-gold-500/20 border-2 border-gold-500 flex items-center justify-center hover:bg-gold-500/30 transition-colors group"
+          aria-label="Start recording"
         >
-          <Mic className="h-8 w-8 text-[#d4af37] group-hover:scale-110 transition-transform" />
+          <Mic className="h-8 w-8 text-gold-500 group-hover:scale-110 transition-transform" />
         </button>
-        <p className="text-[#94a3b8] text-sm font-medium mt-4">Start Recording</p>
+        <p className="text-slate-400 text-sm font-medium mt-4">Start Recording</p>
         {error && (
           <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-3 mt-4 w-full">
             <p className="text-red-400 text-sm">{error}</p>
@@ -337,7 +338,7 @@ export function MeetingRecorder({ title, attendees = [], onComplete }: MeetingRe
         >
           <Square className="h-6 w-6 text-red-400 group-hover:scale-110 transition-transform" />
         </button>
-        <p className="text-[#64748b] text-xs mt-3">Tap to stop</p>
+        <p className="text-navy-600 text-xs mt-3">Tap to stop</p>
       </div>
     );
   }
@@ -385,10 +386,10 @@ export function MeetingRecorder({ title, attendees = [], onComplete }: MeetingRe
                     <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
                   )}
                   {stepState === 'active' && (
-                    <Loader2 className="h-5 w-5 text-[#d4af37] animate-spin shrink-0" />
+                    <Loader2 className="h-5 w-5 text-gold-500 animate-spin shrink-0" />
                   )}
                   {stepState === 'pending' && (
-                    <div className="w-5 h-5 rounded-full border-2 border-[#2d3a52] shrink-0" />
+                    <div className="w-5 h-5 rounded-full border-2 border-navy-800 shrink-0" />
                   )}
                   {stepState === 'error' && (
                     <XCircle className="h-5 w-5 text-red-400 shrink-0" />
@@ -398,10 +399,10 @@ export function MeetingRecorder({ title, attendees = [], onComplete }: MeetingRe
                       stepState === 'done'
                         ? 'text-emerald-400'
                         : stepState === 'active'
-                          ? 'text-[#d4af37]'
+                          ? 'text-gold-500'
                           : stepState === 'error'
                             ? 'text-red-400'
-                            : 'text-[#64748b]'
+                            : 'text-navy-600'
                     }`}
                   >
                     {stepState === 'active' ? s.activeLabel : s.label}
@@ -410,7 +411,7 @@ export function MeetingRecorder({ title, attendees = [], onComplete }: MeetingRe
                 {i < PIPELINE_STEPS.length - 1 && (
                   <div
                     className={`ml-[9px] h-4 w-px ${
-                      stepState === 'done' ? 'bg-emerald-400/30' : 'bg-[#2d3a52]'
+                      stepState === 'done' ? 'bg-emerald-400/30' : 'bg-navy-800'
                     }`}
                   />
                 )}

@@ -5,7 +5,7 @@ import { canAccessModule } from '@/lib/modules/access';
 
 // GET /api/applications — list with filters, agency-scoped
 export async function GET(req: NextRequest) {
-  const session = await auth();
+  const session = await auth(); // TODO: migrate to requireRole()
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }
@@ -107,7 +107,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/applications — create new application
 export async function POST(req: NextRequest) {
-  const session = await auth();
+  const session = await auth(); // TODO: migrate to requireRole()
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }

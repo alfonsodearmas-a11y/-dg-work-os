@@ -207,7 +207,7 @@ export function DailyExcelUpload({ onSuccess, onCancel }: DailyExcelUploadProps)
     : preview?.records?.slice(0, 15);
 
   return (
-    <div className="bg-[#1a2744] border border-[#2d3a52] rounded-2xl overflow-hidden">
+    <div className="bg-navy-900 border border-navy-800 rounded-2xl overflow-hidden">
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6">
         <div className="flex items-center justify-between">
@@ -274,15 +274,15 @@ export function DailyExcelUpload({ onSuccess, onCancel }: DailyExcelUploadProps)
             </div>
 
             {/* Executive Summary */}
-            <div className="mb-4 p-3 bg-[#0a1628] rounded-lg">
-              <h5 className="text-sm font-medium text-[#94a3b8] mb-2">Executive Summary</h5>
+            <div className="mb-4 p-3 bg-navy-950 rounded-lg">
+              <h5 className="text-sm font-medium text-slate-400 mb-2">Executive Summary</h5>
               <p className="text-white text-sm">{analysis.executive_summary}</p>
             </div>
 
             {/* Anomalies */}
             {analysis.anomalies && analysis.anomalies.length > 0 && (
               <div className="mb-4">
-                <h5 className="text-sm font-medium text-[#94a3b8] mb-2">Anomalies Detected</h5>
+                <h5 className="text-sm font-medium text-slate-400 mb-2">Anomalies Detected</h5>
                 <div className="space-y-2">
                   {analysis.anomalies.map((anomaly: any, i: number) => (
                     <div key={i} className={`p-3 rounded-lg border ${
@@ -298,7 +298,7 @@ export function DailyExcelUpload({ onSuccess, onCancel }: DailyExcelUploadProps)
                           'bg-blue-500/20 text-blue-300'
                         }`}>{anomaly.severity}</span>
                       </div>
-                      <p className="text-[#94a3b8] text-xs mt-1">{anomaly.reason}</p>
+                      <p className="text-slate-400 text-xs mt-1">{anomaly.reason}</p>
                     </div>
                   ))}
                 </div>
@@ -308,12 +308,12 @@ export function DailyExcelUpload({ onSuccess, onCancel }: DailyExcelUploadProps)
             {/* Attention Items */}
             {analysis.attention_items && analysis.attention_items.length > 0 && (
               <div>
-                <h5 className="text-sm font-medium text-[#94a3b8] mb-2">Attention Required</h5>
+                <h5 className="text-sm font-medium text-slate-400 mb-2">Attention Required</h5>
                 <div className="space-y-2">
                   {analysis.attention_items.map((item: any, i: number) => (
-                    <div key={i} className="p-3 bg-[#0a1628] rounded-lg">
+                    <div key={i} className="p-3 bg-navy-950 rounded-lg">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs bg-[#2d3a52] text-[#94a3b8] px-2 py-0.5 rounded">{item.agency}</span>
+                        <span className="text-xs bg-navy-800 text-slate-400 px-2 py-0.5 rounded">{item.agency}</span>
                         <span className={`text-xs px-2 py-0.5 rounded ${
                           item.priority === 'URGENT' ? 'bg-red-500/20 text-red-300' :
                           item.priority === 'HIGH' ? 'bg-amber-500/20 text-amber-300' :
@@ -322,7 +322,7 @@ export function DailyExcelUpload({ onSuccess, onCancel }: DailyExcelUploadProps)
                       </div>
                       <p className="text-white text-sm">{item.item}</p>
                       {item.next_steps && (
-                        <p className="text-[#64748b] text-xs mt-1">{item.next_steps}</p>
+                        <p className="text-navy-600 text-xs mt-1">{item.next_steps}</p>
                       )}
                     </div>
                   ))}
@@ -342,14 +342,14 @@ export function DailyExcelUpload({ onSuccess, onCancel }: DailyExcelUploadProps)
               className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
                 dragOver
                   ? 'border-indigo-400 bg-indigo-400/10'
-                  : 'border-[#2d3a52] hover:border-[#3a4a69]'
+                  : 'border-navy-800 hover:border-[#3a4a69]'
               }`}
             >
-              <Upload className={`w-12 h-12 mx-auto mb-4 ${dragOver ? 'text-indigo-400' : 'text-[#64748b]'}`} />
+              <Upload className={`w-12 h-12 mx-auto mb-4 ${dragOver ? 'text-indigo-400' : 'text-navy-600'}`} />
               <p className="text-white mb-2">
                 {file ? file.name : 'Drag and drop your daily Excel file here'}
               </p>
-              <p className="text-[#64748b] text-sm mb-4">Supports wide-format Excel (.xlsx) with 2,500+ columns</p>
+              <p className="text-navy-600 text-sm mb-4">Supports wide-format Excel (.xlsx) with 2,500+ columns</p>
               <label className="inline-block px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-lg cursor-pointer transition-colors">
                 Browse Files
                 <input
@@ -361,7 +361,7 @@ export function DailyExcelUpload({ onSuccess, onCancel }: DailyExcelUploadProps)
                 />
               </label>
               {file && (
-                <p className="mt-4 text-sm text-[#94a3b8]">
+                <p className="mt-4 text-sm text-slate-400">
                   Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
                 </p>
               )}
@@ -372,7 +372,7 @@ export function DailyExcelUpload({ onSuccess, onCancel }: DailyExcelUploadProps)
               <button
                 onClick={parseFile}
                 disabled={loading}
-                className="mt-4 w-full py-3 bg-indigo-500 hover:bg-indigo-600 disabled:bg-[#2d3a52] text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
+                className="mt-4 w-full py-3 bg-indigo-500 hover:bg-indigo-600 disabled:bg-navy-800 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
               >
                 {loading ? (
                   <>
@@ -411,7 +411,7 @@ export function DailyExcelUpload({ onSuccess, onCancel }: DailyExcelUploadProps)
                         <span className="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded">Expected: {preview.expectedDate}</span>
                       )}
                     </div>
-                    <p className="text-[#94a3b8] text-sm">
+                    <p className="text-slate-400 text-sm">
                       Data column: {preview.dateColumn} | {preview.recordCount} metrics extracted
                     </p>
                   </div>
@@ -420,58 +420,58 @@ export function DailyExcelUpload({ onSuccess, onCancel }: DailyExcelUploadProps)
 
               {/* Stats Overview */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="p-3 bg-[#0a1628] rounded-lg">
-                  <div className="text-[#64748b] text-xs">Total Records</div>
+                <div className="p-3 bg-navy-950 rounded-lg">
+                  <div className="text-navy-600 text-xs">Total Records</div>
                   <div className="text-xl font-bold text-white">{preview.stats?.total || 0}</div>
                 </div>
-                <div className="p-3 bg-[#0a1628] rounded-lg">
-                  <div className="text-[#64748b] text-xs">Numeric Values</div>
+                <div className="p-3 bg-navy-950 rounded-lg">
+                  <div className="text-navy-600 text-xs">Numeric Values</div>
                   <div className="text-xl font-bold text-emerald-400">{preview.stats?.numeric || 0}</div>
                 </div>
-                <div className="p-3 bg-[#0a1628] rounded-lg">
-                  <div className="text-[#64748b] text-xs">Empty Cells</div>
+                <div className="p-3 bg-navy-950 rounded-lg">
+                  <div className="text-navy-600 text-xs">Empty Cells</div>
                   <div className="text-xl font-bold text-amber-400">{preview.stats?.empty || 0}</div>
                 </div>
-                <div className="p-3 bg-[#0a1628] rounded-lg">
-                  <div className="text-[#64748b] text-xs">Errors</div>
+                <div className="p-3 bg-navy-950 rounded-lg">
+                  <div className="text-navy-600 text-xs">Errors</div>
                   <div className="text-xl font-bold text-red-400">{preview.stats?.errors || 0}</div>
                 </div>
               </div>
 
               {/* Metrics Preview */}
-              <div className="p-4 bg-[#0a1628] rounded-lg">
+              <div className="p-4 bg-navy-950 rounded-lg">
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-medium text-[#94a3b8] flex items-center gap-2">
+                  <h4 className="text-sm font-medium text-slate-400 flex items-center gap-2">
                     <BarChart3 className="w-4 h-4" />
                     Extracted Metrics Preview
                   </h4>
-                  <span className="text-xs text-[#64748b]">
+                  <span className="text-xs text-navy-600">
                     Showing {displayedMetrics?.length || 0} of {preview.records?.length || 0}
                   </span>
                 </div>
 
                 <div className="max-h-64 overflow-y-auto space-y-1">
                   {displayedMetrics?.map((record: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between py-2 px-3 bg-[#1a2744] rounded text-sm">
+                    <div key={i} className="flex items-center justify-between py-2 px-3 bg-navy-900 rounded text-sm">
                       <div className="flex-1 min-w-0">
                         <span className="text-white truncate block">{record.metric_name || `Row ${record.row}`}</span>
                         {record.category && (
-                          <span className="text-xs text-[#64748b]">{record.category}</span>
+                          <span className="text-xs text-navy-600">{record.category}</span>
                         )}
                       </div>
                       <div className="flex items-center gap-2 ml-3">
                         {record.has_error ? (
                           <span className="text-red-400 text-xs">{record.error_detail}</span>
                         ) : record.value_type === 'empty' ? (
-                          <span className="text-[#64748b]">&mdash;</span>
+                          <span className="text-navy-600">&mdash;</span>
                         ) : (
                           <span className={`font-medium ${
                             record.value_type === 'number' ? 'text-emerald-400' :
                             record.value_type === 'percentage' ? 'text-cyan-400' :
-                            'text-[#94a3b8]'
+                            'text-slate-400'
                           }`}>
                             {record.numeric_value !== null ? record.numeric_value.toLocaleString() : record.raw_value}
-                            {record.unit && <span className="text-[#64748b] text-xs ml-1">{record.unit}</span>}
+                            {record.unit && <span className="text-navy-600 text-xs ml-1">{record.unit}</span>}
                           </span>
                         )}
                       </div>
@@ -499,23 +499,23 @@ export function DailyExcelUpload({ onSuccess, onCancel }: DailyExcelUploadProps)
                   <Brain className="w-5 h-5 text-indigo-400" />
                   <span className="text-indigo-300 font-medium">AI Analysis</span>
                 </div>
-                <p className="text-[#94a3b8] text-sm mt-2">
+                <p className="text-slate-400 text-sm mt-2">
                   After confirming, Claude will analyze the metrics for anomalies, generate an executive summary, and identify items requiring attention.
                 </p>
               </div>
 
               {/* Actions */}
-              <div className="flex gap-3 pt-4 border-t border-[#2d3a52]">
+              <div className="flex gap-3 pt-4 border-t border-navy-800">
                 <button
                   onClick={reset}
-                  className="flex-1 py-3 bg-[#2d3a52] hover:bg-[#3a4a69] text-white font-medium rounded-lg transition-colors"
+                  className="flex-1 py-3 bg-navy-800 hover:bg-[#3a4a69] text-white font-medium rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => submitData(false)}
                   disabled={submitting}
-                  className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-[#2d3a52] text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
+                  className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-navy-800 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
                 >
                   {submitting ? (
                     <>
@@ -536,7 +536,7 @@ export function DailyExcelUpload({ onSuccess, onCancel }: DailyExcelUploadProps)
 
         {/* Processing Time */}
         {preview?.metadata?.processingTimeMs && (
-          <div className="mt-4 text-center text-xs text-[#64748b] flex items-center justify-center gap-1">
+          <div className="mt-4 text-center text-xs text-navy-600 flex items-center justify-center gap-1">
             <Clock size={12} />
             Parsed in {preview.metadata.processingTimeMs}ms
           </div>

@@ -64,9 +64,9 @@ export function ProjectActivityLog({ projectId }: ProjectActivityLogProps) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
-        <MessageSquare className="h-4 w-4 text-[#d4af37]" />
+        <MessageSquare className="h-4 w-4 text-gold-500" />
         <h4 className="text-white font-semibold text-sm">Activity Log</h4>
-        <span className="text-[#64748b] text-xs">({notes.length})</span>
+        <span className="text-navy-600 text-xs">({notes.length})</span>
       </div>
       <div className="flex items-start gap-2 mb-4">
         <textarea
@@ -75,7 +75,7 @@ export function ProjectActivityLog({ projectId }: ProjectActivityLogProps) {
           placeholder="Add a note..."
           rows={2}
           aria-label="Add a note"
-          className="flex-1 bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#d4af37] focus:outline-none resize-none"
+          className="flex-1 bg-navy-950 border border-navy-800 rounded-lg px-3 py-2 text-sm text-white placeholder-navy-600 focus:border-gold-500 focus:outline-none resize-none"
         />
         <button
           onClick={addNote}
@@ -87,10 +87,10 @@ export function ProjectActivityLog({ projectId }: ProjectActivityLogProps) {
       </div>
       {loading ? (
         <div className="space-y-3 animate-pulse">
-          {[1, 2].map(i => <div key={i} className="h-12 bg-[#2d3a52] rounded" />)}
+          {[1, 2].map(i => <div key={i} className="h-12 bg-navy-800 rounded" />)}
         </div>
       ) : notes.length === 0 ? (
-        <p className="text-[#64748b] text-sm">No notes yet.</p>
+        <p className="text-navy-600 text-sm">No notes yet.</p>
       ) : (
         <div className="space-y-3 max-h-[400px] overflow-y-auto">
           {notes.map(n => (
@@ -99,22 +99,22 @@ export function ProjectActivityLog({ projectId }: ProjectActivityLogProps) {
               className={`p-3 rounded-lg text-sm ${
                 n.note_type === 'escalation'
                   ? 'bg-red-500/5 border border-red-500/20'
-                  : 'bg-[#0a1628] border border-[#2d3a52]/50'
+                  : 'bg-navy-950 border border-navy-800/50'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <span className="text-white font-medium text-xs">{n.user_name}</span>
-                  <span className="text-[#4a5568] text-[10px]">{n.user_role}</span>
+                  <span className="text-navy-700 text-[10px]">{n.user_role}</span>
                   {n.note_type === 'escalation' && (
                     <span className="text-red-400 text-[10px] font-medium px-1.5 py-0.5 rounded bg-red-500/10">
                       ESCALATION
                     </span>
                   )}
                 </div>
-                <span className="text-[#4a5568] text-[10px]">{timeAgo(n.created_at)}</span>
+                <span className="text-navy-700 text-[10px]">{timeAgo(n.created_at)}</span>
               </div>
-              <p className="text-[#94a3b8] text-xs">{n.note_text}</p>
+              <p className="text-slate-400 text-xs">{n.note_text}</p>
             </div>
           ))}
         </div>

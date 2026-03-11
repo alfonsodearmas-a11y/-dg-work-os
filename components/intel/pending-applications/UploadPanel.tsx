@@ -107,7 +107,7 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
     <div className="space-y-6">
       <div className="card-premium p-6">
         <h3 className="text-lg font-semibold text-white mb-2">Upload Pending Applications</h3>
-        <p className="text-sm text-[#64748b] mb-6">
+        <p className="text-sm text-navy-600 mb-6">
           Upload GPL or GWI pending service connection Excel files. The agency will be auto-detected from the file structure.
         </p>
 
@@ -119,9 +119,9 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
-                dragOver ? 'border-[#d4af37] bg-[#d4af37]/5' :
+                dragOver ? 'border-gold-500 bg-gold-500/5' :
                 file ? 'border-emerald-500/50 bg-emerald-500/5' :
-                'border-[#2d3a52] hover:border-[#64748b]'
+                'border-navy-800 hover:border-navy-600'
               }`}
             >
               {file ? (
@@ -129,17 +129,17 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
                   <FileSpreadsheet className="h-8 w-8 text-emerald-400" />
                   <div className="text-left">
                     <p className="text-white font-medium">{file.name}</p>
-                    <p className="text-xs text-[#64748b]">{(file.size / 1024).toFixed(1)} KB</p>
+                    <p className="text-xs text-navy-600">{(file.size / 1024).toFixed(1)} KB</p>
                   </div>
-                  <button onClick={reset} className="p-1.5 rounded-lg hover:bg-[#2d3a52] text-[#64748b] hover:text-white ml-2" aria-label="Remove file">
+                  <button onClick={reset} className="p-1.5 rounded-lg hover:bg-navy-800 text-navy-600 hover:text-white ml-2" aria-label="Remove file">
                     <X className="h-4 w-4" />
                   </button>
                 </div>
               ) : (
                 <>
-                  <Upload className="h-10 w-10 text-[#64748b] mx-auto mb-3" />
-                  <p className="text-[#94a3b8] font-medium">Drop Excel file here or click to browse</p>
-                  <p className="text-xs text-[#64748b] mt-1">.xls or .xlsx files, up to 10MB</p>
+                  <Upload className="h-10 w-10 text-navy-600 mx-auto mb-3" />
+                  <p className="text-slate-400 font-medium">Drop Excel file here or click to browse</p>
+                  <p className="text-xs text-navy-600 mt-1">.xls or .xlsx files, up to 10MB</p>
                   <input
                     type="file"
                     accept=".xls,.xlsx"
@@ -154,7 +154,7 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
             {/* Agency Override (hidden when agency is locked) */}
             {file && !lockedAgency && (
               <div className="mt-4 flex items-center gap-3">
-                <label className="text-sm text-[#64748b]">Agency override (optional):</label>
+                <label className="text-sm text-navy-600">Agency override (optional):</label>
                 <div className="flex gap-2">
                   {(['', 'GPL', 'GWI'] as const).map(opt => (
                     <button
@@ -162,8 +162,8 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
                       onClick={() => setAgencyOverride(opt)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                         agencyOverride === opt
-                          ? 'bg-[#d4af37] text-[#0a1628]'
-                          : 'bg-[#1a2744] text-[#94a3b8] border border-[#2d3a52] hover:border-[#d4af37]'
+                          ? 'bg-gold-500 text-navy-950'
+                          : 'bg-navy-900 text-slate-400 border border-navy-800 hover:border-gold-500'
                       }`}
                     >
                       {opt || 'Auto'}
@@ -178,7 +178,7 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
               <button
                 onClick={handleUpload}
                 disabled={uploading}
-                className="mt-4 w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#d4af37] text-[#0a1628] font-semibold hover:bg-[#e5c547] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="mt-4 w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gold-500 text-navy-950 font-semibold hover:bg-[#e5c547] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {uploading ? (
                   <><Loader2 className="h-4 w-4 animate-spin" />Uploading &amp; Processing...</>
@@ -224,9 +224,9 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
                   .sort(([, a], [, b]) => b - a)
                   .map(([key, count]) => (
                     <div key={key} className="flex items-center justify-between text-sm">
-                      <span className="text-[#94a3b8]">{key}</span>
+                      <span className="text-slate-400">{key}</span>
                       <div className="flex items-center gap-2">
-                        <div className="w-24 h-1.5 rounded-full bg-[#2d3a52] overflow-hidden">
+                        <div className="w-24 h-1.5 rounded-full bg-navy-800 overflow-hidden">
                           <div
                             className={`h-full rounded-full ${result.agency === 'GPL' ? 'bg-amber-400' : 'bg-cyan-400'}`}
                             style={{ width: `${Math.round((count / result.recordCount) * 100)}%` }}
@@ -249,7 +249,7 @@ export function UploadPanel({ onSuccess, lockedAgency }: UploadPanelProps) {
               </div>
             )}
 
-            <button onClick={reset} className="w-full px-4 py-2.5 rounded-xl bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] hover:text-white text-sm transition-colors">
+            <button onClick={reset} className="w-full px-4 py-2.5 rounded-xl bg-navy-900 border border-navy-800 hover:border-gold-500 text-slate-400 hover:text-white text-sm transition-colors">
               Upload Another File
             </button>
           </div>

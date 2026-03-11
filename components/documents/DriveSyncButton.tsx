@@ -252,14 +252,15 @@ export function DriveSyncButton({ onSyncComplete, autoSync = true }: DriveSyncBu
         {/* Change / disconnect folder */}
         <button
           onClick={openPicker}
-          className="p-1.5 rounded-lg text-[#64748b] hover:text-[#d4af37] hover:bg-[#1a2744] transition-colors"
+          className="p-1.5 rounded-lg text-navy-600 hover:text-gold-500 hover:bg-navy-900 transition-colors"
           title={folderName ? `Connected: ${folderName} — click to change` : 'Change folder'}
+          aria-label="Change Drive folder"
         >
           <FolderOpen className="h-3.5 w-3.5" />
         </button>
 
         {lastSyncedAt && !syncing && (
-          <span className="text-[10px] text-[#64748b] hidden lg:inline">
+          <span className="text-[10px] text-navy-600 hidden lg:inline">
             {formatDistanceToNow(new Date(lastSyncedAt), { addSuffix: true })}
           </span>
         )}
@@ -345,20 +346,20 @@ function FolderPickerModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#2d3a52]">
+        <div className="flex items-center justify-between p-4 border-b border-navy-800">
           <div className="flex items-center gap-2">
-            <CloudDownload className="h-5 w-5 text-[#d4af37]" />
+            <CloudDownload className="h-5 w-5 text-gold-500" />
             <h3 className="text-white font-semibold">Choose Drive Folder</h3>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors">
+          <button onClick={onClose} className="p-1 rounded-lg text-navy-600 hover:text-white hover:bg-navy-900 transition-colors" aria-label="Close">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Current folder + disconnect */}
         {currentFolderName && onDisconnect && (
-          <div className="flex items-center justify-between px-4 py-2.5 bg-[#d4af37]/10 border-b border-[#2d3a52]">
-            <span className="text-xs text-[#94a3b8]">
+          <div className="flex items-center justify-between px-4 py-2.5 bg-gold-500/10 border-b border-navy-800">
+            <span className="text-xs text-slate-400">
               Currently syncing: <strong className="text-white">{currentFolderName}</strong>
             </span>
             <button
@@ -380,9 +381,9 @@ function FolderPickerModal({
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               autoFocus
-              className="w-full pl-10 pr-4 py-2.5 bg-[#1a2744] border border-[#2d3a52] rounded-xl text-white text-sm placeholder-[#64748b] focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-colors"
+              className="w-full pl-10 pr-4 py-2.5 bg-navy-900 border border-navy-800 rounded-xl text-white text-sm placeholder-navy-600 focus:ring-2 focus:ring-gold-500 focus:border-gold-500 transition-colors"
             />
-            <Search className="absolute left-3.5 top-3 h-4 w-4 text-[#64748b]" />
+            <Search className="absolute left-3.5 top-3 h-4 w-4 text-navy-600" />
           </div>
         </div>
 
@@ -390,12 +391,12 @@ function FolderPickerModal({
         <div className="px-4 pb-4 max-h-72 overflow-y-auto space-y-1">
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-5 w-5 text-[#d4af37] animate-spin" />
+              <Loader2 className="h-5 w-5 text-gold-500 animate-spin" />
             </div>
           ) : folders.length === 0 ? (
             <div className="text-center py-8">
-              <FolderOpen className="h-8 w-8 text-[#64748b] mx-auto mb-2" />
-              <p className="text-sm text-[#64748b]">
+              <FolderOpen className="h-8 w-8 text-navy-600 mx-auto mb-2" />
+              <p className="text-sm text-navy-600">
                 {search ? 'No folders match your search' : 'No folders found in your Drive'}
               </p>
             </div>
@@ -405,12 +406,12 @@ function FolderPickerModal({
                 key={folder.id}
                 onClick={() => onSelect(folder)}
                 disabled={saving}
-                className="w-full flex items-center gap-3 p-3 rounded-xl bg-[#1a2744]/50 hover:bg-[#1a2744] border border-transparent hover:border-[#d4af37]/30 transition-all text-left disabled:opacity-50"
+                className="w-full flex items-center gap-3 p-3 rounded-xl bg-navy-900/50 hover:bg-navy-900 border border-transparent hover:border-gold-500/30 transition-all text-left disabled:opacity-50"
               >
-                <FolderOpen className="h-5 w-5 text-[#d4af37] flex-shrink-0" />
+                <FolderOpen className="h-5 w-5 text-gold-500 flex-shrink-0" />
                 <span className="text-white text-sm font-medium truncate">{folder.name}</span>
                 {saving && (
-                  <Loader2 className="h-4 w-4 text-[#d4af37] animate-spin ml-auto flex-shrink-0" />
+                  <Loader2 className="h-4 w-4 text-gold-500 animate-spin ml-auto flex-shrink-0" />
                 )}
               </button>
             ))

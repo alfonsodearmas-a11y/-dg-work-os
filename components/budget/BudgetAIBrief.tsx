@@ -119,21 +119,21 @@ export function BudgetAIBrief({ allocation, onClose }: { allocation: Allocation;
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
 
       {/* Panel */}
-      <div ref={briefPanelRef} role="dialog" aria-modal="true" aria-labelledby="budget-ai-brief-title" className="relative w-full md:max-w-2xl md:max-h-[80vh] bg-gradient-to-b from-[#1a2744] to-[#0a1628] border border-[#2d3a52] rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col max-h-[85vh] animate-slide-up md:animate-fade-in">
+      <div ref={briefPanelRef} role="dialog" aria-modal="true" aria-labelledby="budget-ai-brief-title" className="relative w-full md:max-w-2xl md:max-h-[80vh] bg-gradient-to-b from-[#1a2744] to-[#0a1628] border border-navy-800 rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col max-h-[85vh] animate-slide-up md:animate-fade-in">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#2d3a52] shrink-0">
+        <div className="flex items-center justify-between p-4 border-b border-navy-800 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-[#d4af37]/20 flex items-center justify-center shrink-0">
-              <Sparkles className="h-4 w-4 text-[#d4af37]" />
+            <div className="w-8 h-8 rounded-lg bg-gold-500/20 flex items-center justify-center shrink-0">
+              <Sparkles className="h-4 w-4 text-gold-500" />
             </div>
             <div className="min-w-0">
               <h3 id="budget-ai-brief-title" className="text-white font-semibold text-sm truncate">Defence Brief</h3>
-              <p className="text-[#64748b] text-[10px] truncate">{allocation.line_item}</p>
+              <p className="text-navy-600 text-[10px] truncate">{allocation.line_item}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[#d4af37] font-mono text-sm font-bold">{allocation.budget_2026_fmt}</span>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#2d3a52] text-[#64748b] hover:text-white transition-colors" aria-label="Close">
+            <span className="text-gold-500 font-mono text-sm font-bold">{allocation.budget_2026_fmt}</span>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-navy-800 text-navy-600 hover:text-white transition-colors" aria-label="Close">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -144,18 +144,18 @@ export function BudgetAIBrief({ allocation, onClose }: { allocation: Allocation;
           {content ? (
             <div className="ai-brief-content" dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }} />
           ) : (
-            <div className="flex items-center gap-3 text-[#64748b]">
-              <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" />
+            <div className="flex items-center gap-3 text-navy-600">
+              <Loader2 className="h-5 w-5 animate-spin text-gold-500" />
               <span className="text-sm">Preparing defence brief...</span>
             </div>
           )}
           {isStreaming && content && (
-            <span className="inline-block w-2 h-4 bg-[#d4af37] animate-pulse ml-0.5" />
+            <span className="inline-block w-2 h-4 bg-gold-500 animate-pulse ml-0.5" />
           )}
         </div>
 
         {/* Follow-up Input */}
-        <form onSubmit={handleFollowUp} className="p-3 border-t border-[#2d3a52] shrink-0">
+        <form onSubmit={handleFollowUp} className="p-3 border-t border-navy-800 shrink-0">
           <div className="flex gap-2">
             <input
               type="text"
@@ -169,7 +169,7 @@ export function BudgetAIBrief({ allocation, onClose }: { allocation: Allocation;
             <button
               type="submit"
               disabled={isStreaming || !followUp.trim()}
-              className="px-3 py-2 rounded-lg bg-[#d4af37] text-[#0a1628] font-semibold disabled:opacity-40 hover:bg-[#f4d03f] transition-colors"
+              className="px-3 py-2 rounded-lg bg-gold-500 text-navy-950 font-semibold disabled:opacity-40 hover:bg-gold-400 transition-colors"
               aria-label="Send"
             >
               <Send className="h-4 w-4" />

@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { DocumentViewer } from '@/components/documents/DocumentViewer';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { Spinner } from '@/components/ui/Spinner';
 
 export default function DocumentPage() {
@@ -57,6 +58,13 @@ export default function DocumentPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs
+        items={[
+          { label: 'Documents', href: '/documents' },
+          { label: document?.title || document?.file_name || 'Document' },
+        ]}
+      />
+
       <Link
         href="/documents"
         className="inline-flex items-center p-2 rounded-lg bg-navy-900 border border-navy-800 hover:border-gold-500 transition-colors text-slate-400 hover:text-white"

@@ -2,15 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { parseGPLExcel } from '@/lib/gpl-excel-parser';
 import { parseScheduleSheet } from '@/lib/gpl-schedule-parser';
 import { parseStatusSheet } from '@/lib/gpl-status-parser';
-import { requireRole, canUploadData } from '@/lib/auth-helpers';
+import { requireUploadRole } from '@/lib/auth-helpers';
 import { apiError, withErrorHandler } from '@/lib/api-utils';
 import * as XLSX from 'xlsx';
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const result = await requireRole(['dg', 'agency_admin', 'officer']);
+  const result = await requireUploadRole('GPL');
   if (result instanceof NextResponse) return result;
   const { session } = result;
-  if (!canUploadData(session.user.role, session.user.agency, 'GPL')) return NextResponse.json({ error: 'Cannot upload GPL data' }, { status: 403 });
 
   const formData = await request.formData();
   const file = formData.get('file');

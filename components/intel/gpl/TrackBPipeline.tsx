@@ -6,6 +6,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
+import { CHART_THEME } from '@/lib/constants/chart-theme';
 import type { GPLMetricsRow, GPLOutstandingRow, AgeingBucket } from '@/lib/gpl/types';
 
 interface PipelineData {
@@ -318,10 +319,10 @@ function AgeingChart({ title, buckets }: { title: string; buckets: AgeingBucket[
       <div className="h-40">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ left: 0, right: 10 }}>
-            <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 9 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} width={30} />
+            <XAxis dataKey="name" tick={{ fill: CHART_THEME.colors.slate400, fontSize: 9 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: CHART_THEME.colors.navy600, fontSize: 10 }} axisLine={false} tickLine={false} width={30} />
             <Tooltip
-              contentStyle={{ background: '#1a2744', border: '1px solid #2d3a52', borderRadius: 8, color: '#fff', fontSize: 12 }}
+              contentStyle={CHART_THEME.tooltip}
               formatter={(v: number, _n: string, props: { payload?: { pct: number } }) => [`${v} (${props.payload?.pct ?? 0}%)`, 'Count']}
             />
             <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={24}>

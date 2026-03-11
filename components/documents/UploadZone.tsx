@@ -88,23 +88,23 @@ export function UploadZone({ onUploadComplete }: UploadZoneProps) {
 
         {uploading ? (
           <div className="flex flex-col items-center" role="status" aria-label="Uploading">
-            <Loader2 className="h-12 w-12 text-[#d4af37] animate-spin mb-4" aria-hidden="true" />
+            <Loader2 className="h-12 w-12 text-gold-500 animate-spin mb-4" aria-hidden="true" />
             <p className="text-white font-medium">Uploading and analyzing...</p>
-            <p className="text-[#64748b] text-sm mt-1">Claude is processing your document</p>
+            <p className="text-navy-600 text-sm mt-1">Claude is processing your document</p>
           </div>
         ) : (
           <div className="flex flex-col items-center">
-            <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-[#d4af37]/20 flex items-center justify-center mb-4">
+            <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-gold-500/20 flex items-center justify-center mb-4">
               {isDragActive ? (
-                <FileText className="h-8 w-8 text-[#d4af37]" />
+                <FileText className="h-8 w-8 text-gold-500" />
               ) : (
-                <Upload className="h-8 w-8 text-[#d4af37]" />
+                <Upload className="h-8 w-8 text-gold-500" />
               )}
             </div>
             <p className="text-white font-medium">
               {isDragActive ? 'Drop your document here' : 'Drop document or click to browse'}
             </p>
-            <p className="text-[#64748b] text-sm mt-1">
+            <p className="text-navy-600 text-sm mt-1">
               PDF, Word, Excel, or Text files (max 4.5MB)
             </p>
           </div>

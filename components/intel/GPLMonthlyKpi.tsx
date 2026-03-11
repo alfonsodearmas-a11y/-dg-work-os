@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { GPLKpiUpload } from './GPLKpiUpload';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
+import { CHART_THEME } from '@/lib/constants/chart-theme';
 
 const API_BASE = '/api';
 
@@ -79,12 +80,12 @@ function InsightCard({ section }: { section: any }) {
           <p className="text-[15px] text-[#c8d0dc] font-medium leading-snug">{section.summary}</p>
         </div>
         <ChevronDown
-          className={`w-4 h-4 text-[#64748b] shrink-0 mt-1 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 text-navy-600 shrink-0 mt-1 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
         />
       </button>
       {expanded && (
         <div className="px-4 pb-4 pt-0">
-          <div className="ml-12 text-sm text-[#94a3b8] leading-relaxed">
+          <div className="ml-12 text-sm text-slate-400 leading-relaxed">
             {section.detail}
           </div>
         </div>
@@ -97,21 +98,21 @@ function ActionItemsCard({ items }: { items: any[] }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="card-premium rounded-xl border border-[#d4af37]/30 overflow-hidden">
+    <div className="card-premium rounded-xl border border-gold-500/30 overflow-hidden">
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
         className="w-full text-left px-4 py-3.5 flex items-center gap-3 hover:bg-white/[0.02] transition-colors"
       >
-        <div className="w-9 h-9 rounded-lg bg-[#d4af37]/15 flex items-center justify-center shrink-0">
-          <CheckCircle2 className="w-4.5 h-4.5 text-[#d4af37]" />
+        <div className="w-9 h-9 rounded-lg bg-gold-500/15 flex items-center justify-center shrink-0">
+          <CheckCircle2 className="w-4.5 h-4.5 text-gold-500" />
         </div>
         <div className="flex-1 min-w-0">
           <span className="text-[15px] font-semibold text-white">Key Action Items</span>
-          <span className="ml-2 text-xs text-[#64748b]">{items.length} recommendations</span>
+          <span className="ml-2 text-xs text-navy-600">{items.length} recommendations</span>
         </div>
         <ChevronDown
-          className={`w-4 h-4 text-[#64748b] shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 text-navy-600 shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
         />
       </button>
       {expanded && (
@@ -124,7 +125,7 @@ function ActionItemsCard({ items }: { items: any[] }) {
                 <UrgencyIcon className={`w-4 h-4 ${urgency.color} shrink-0 mt-0.5`} />
                 <div className="min-w-0">
                   <p className="text-sm text-white font-medium">{item.action}</p>
-                  <p className="text-xs text-[#64748b] mt-0.5">{item.impact}</p>
+                  <p className="text-xs text-navy-600 mt-0.5">{item.impact}</p>
                 </div>
               </div>
             );
@@ -200,7 +201,7 @@ export function GPLMonthlyKpi() {
   // Get trend icon and color
   const getTrendIndicator = (kpi: string, changePct: number | null | undefined) => {
     if (changePct === null || changePct === undefined) {
-      return { icon: Minus, color: 'text-[#94a3b8]', bg: 'bg-[#64748b]/20' };
+      return { icon: Minus, color: 'text-slate-400', bg: 'bg-navy-600/20' };
     }
 
     // For Affected Customers, down is good
@@ -234,9 +235,9 @@ export function GPLMonthlyKpi() {
   // If loading
   if (loading && !latestKpis && trends.length === 0) {
     return (
-      <div className="bg-[#1a2744]/50 rounded-xl p-8 border border-[#2d3a52] text-center" role="status" aria-label="Loading">
-        <RefreshCw className="w-8 h-8 text-[#64748b] animate-spin mx-auto mb-4" aria-hidden="true" />
-        <p className="text-[#94a3b8]">Loading KPI data...</p>
+      <div className="bg-navy-900/50 rounded-xl p-8 border border-navy-800 text-center" role="status" aria-label="Loading">
+        <RefreshCw className="w-8 h-8 text-navy-600 animate-spin mx-auto mb-4" aria-hidden="true" />
+        <p className="text-slate-400">Loading KPI data...</p>
       </div>
     );
   }
@@ -262,10 +263,10 @@ export function GPLMonthlyKpi() {
             onCancel={() => setShowUpload(false)}
           />
         ) : (
-          <div className="bg-[#1a2744]/50 rounded-xl p-8 border border-[#2d3a52] text-center">
-            <Zap className="w-12 h-12 text-[#4a5568] mx-auto mb-4" />
-            <p className="text-[#94a3b8] mb-2">No monthly KPI data available</p>
-            <p className="text-[#64748b] text-sm">Upload a KPI CSV file to see monthly trends</p>
+          <div className="bg-navy-900/50 rounded-xl p-8 border border-navy-800 text-center">
+            <Zap className="w-12 h-12 text-navy-700 mx-auto mb-4" />
+            <p className="text-slate-400 mb-2">No monthly KPI data available</p>
+            <p className="text-navy-600 text-sm">Upload a KPI CSV file to see monthly trends</p>
           </div>
         )}
       </div>
@@ -279,13 +280,13 @@ export function GPLMonthlyKpi() {
     const TrendIcon = trend.icon;
 
     return (
-      <div className="bg-[#1a2744]/80 rounded-xl p-3 md:p-4 border border-[#2d3a52]">
+      <div className="bg-navy-900/80 rounded-xl p-3 md:p-4 border border-navy-800">
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#2d3a52]/50 flex items-center justify-center">
-              <Icon className="w-4 h-4 text-[#94a3b8]" />
+            <div className="w-8 h-8 rounded-lg bg-navy-800/50 flex items-center justify-center">
+              <Icon className="w-4 h-4 text-slate-400" />
             </div>
-            <span className="text-[#94a3b8] text-sm">{name}</span>
+            <span className="text-slate-400 text-sm">{name}</span>
           </div>
           {data.changePct !== null && (
             <div className={`flex items-center gap-1 px-2 py-0.5 rounded ${trend.bg}`}>
@@ -300,7 +301,7 @@ export function GPLMonthlyKpi() {
           {formatValue(name, data.value)}
         </p>
         {data.previousValue !== null && (
-          <p className="text-xs text-[#64748b] mt-1">
+          <p className="text-xs text-navy-600 mt-1">
             vs {formatValue(name, data.previousValue)} last month
           </p>
         )}
@@ -315,7 +316,7 @@ export function GPLMonthlyKpi() {
         <div>
           <h3 className="text-[22px] font-semibold text-white">GPL Monthly Performance</h3>
           {latestKpis?.reportMonth && (
-            <p className="text-[#64748b] text-sm">
+            <p className="text-navy-600 text-sm">
               Latest data: {latestKpis.reportMonth.slice(0, 7)}
             </p>
           )}
@@ -359,23 +360,23 @@ export function GPLMonthlyKpi() {
         >
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Peak Demand Chart */}
-          <div className="bg-[#1a2744]/80 rounded-xl p-4 border border-[#2d3a52]">
+          <div className="bg-navy-900/80 rounded-xl p-4 border border-navy-800">
             <h4 className="text-white font-medium text-lg mb-4">Peak Demand Trends</h4>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid.stroke} />
                   <XAxis
                     dataKey="monthLabel"
-                    stroke="#94a3b8"
+                    stroke={CHART_THEME.colors.slate400}
                     tick={{ fontSize: 10 }}
                     interval="preserveStartEnd"
                   />
-                  <YAxis stroke="#94a3b8" tick={{ fontSize: 10 }} />
+                  <YAxis stroke={CHART_THEME.colors.slate400} tick={{ fontSize: 10 }} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#0f172a',
-                      border: '1px solid #334155',
+                      backgroundColor: CHART_THEME.colors.navy950,
+                      border: `1px solid ${CHART_THEME.colors.navy800}`,
                       borderRadius: '8px'
                     }}
                     labelStyle={{ color: '#f1f5f9' }}
@@ -405,23 +406,23 @@ export function GPLMonthlyKpi() {
           </div>
 
           {/* Installed Capacity Chart */}
-          <div className="bg-[#1a2744]/80 rounded-xl p-4 border border-[#2d3a52]">
+          <div className="bg-navy-900/80 rounded-xl p-4 border border-navy-800">
             <h4 className="text-white font-medium text-lg mb-4">Installed Capacity</h4>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid.stroke} />
                   <XAxis
                     dataKey="monthLabel"
-                    stroke="#94a3b8"
+                    stroke={CHART_THEME.colors.slate400}
                     tick={{ fontSize: 10 }}
                     interval="preserveStartEnd"
                   />
-                  <YAxis stroke="#94a3b8" tick={{ fontSize: 10 }} />
+                  <YAxis stroke={CHART_THEME.colors.slate400} tick={{ fontSize: 10 }} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#0f172a',
-                      border: '1px solid #334155',
+                      backgroundColor: CHART_THEME.colors.navy950,
+                      border: `1px solid ${CHART_THEME.colors.navy800}`,
                       borderRadius: '8px'
                     }}
                     labelStyle={{ color: '#f1f5f9' }}
@@ -451,23 +452,23 @@ export function GPLMonthlyKpi() {
           </div>
 
           {/* Generation Mix Chart */}
-          <div className="bg-[#1a2744]/80 rounded-xl p-4 border border-[#2d3a52]">
+          <div className="bg-navy-900/80 rounded-xl p-4 border border-navy-800">
             <h4 className="text-white font-medium text-lg mb-4">Generation Mix (HFO vs LFO)</h4>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid.stroke} />
                   <XAxis
                     dataKey="monthLabel"
-                    stroke="#94a3b8"
+                    stroke={CHART_THEME.colors.slate400}
                     tick={{ fontSize: 10 }}
                     interval="preserveStartEnd"
                   />
-                  <YAxis stroke="#94a3b8" tick={{ fontSize: 10 }} domain={[0, 100]} />
+                  <YAxis stroke={CHART_THEME.colors.slate400} tick={{ fontSize: 10 }} domain={[0, 100]} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#0f172a',
-                      border: '1px solid #334155',
+                      backgroundColor: CHART_THEME.colors.navy950,
+                      border: `1px solid ${CHART_THEME.colors.navy800}`,
                       borderRadius: '8px'
                     }}
                     labelStyle={{ color: '#f1f5f9' }}
@@ -500,23 +501,23 @@ export function GPLMonthlyKpi() {
           </div>
 
           {/* Affected Customers Chart */}
-          <div className="bg-[#1a2744]/80 rounded-xl p-4 border border-[#2d3a52]">
+          <div className="bg-navy-900/80 rounded-xl p-4 border border-navy-800">
             <h4 className="text-white font-medium text-lg mb-4">Affected Customers</h4>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid.stroke} />
                   <XAxis
                     dataKey="monthLabel"
-                    stroke="#94a3b8"
+                    stroke={CHART_THEME.colors.slate400}
                     tick={{ fontSize: 10 }}
                     interval="preserveStartEnd"
                   />
-                  <YAxis stroke="#94a3b8" tick={{ fontSize: 10 }} />
+                  <YAxis stroke={CHART_THEME.colors.slate400} tick={{ fontSize: 10 }} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#0f172a',
-                      border: '1px solid #334155',
+                      backgroundColor: CHART_THEME.colors.navy950,
+                      border: `1px solid ${CHART_THEME.colors.navy800}`,
                       borderRadius: '8px'
                     }}
                     labelStyle={{ color: '#f1f5f9' }}
@@ -542,23 +543,23 @@ export function GPLMonthlyKpi() {
           </div>
 
           {/* Collection Rate Chart */}
-          <div className="bg-[#1a2744]/80 rounded-xl p-4 border border-[#2d3a52] lg:col-span-2">
+          <div className="bg-navy-900/80 rounded-xl p-4 border border-navy-800 lg:col-span-2">
             <h4 className="text-white font-medium text-lg mb-4">Collection Rate Performance</h4>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid.stroke} />
                   <XAxis
                     dataKey="monthLabel"
-                    stroke="#94a3b8"
+                    stroke={CHART_THEME.colors.slate400}
                     tick={{ fontSize: 10 }}
                     interval="preserveStartEnd"
                   />
-                  <YAxis stroke="#94a3b8" tick={{ fontSize: 10 }} domain={[0, 120]} />
+                  <YAxis stroke={CHART_THEME.colors.slate400} tick={{ fontSize: 10 }} domain={[0, 120]} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#0f172a',
-                      border: '1px solid #334155',
+                      backgroundColor: CHART_THEME.colors.navy950,
+                      border: `1px solid ${CHART_THEME.colors.navy800}`,
                       borderRadius: '8px'
                     }}
                     labelStyle={{ color: '#f1f5f9' }}
@@ -596,7 +597,7 @@ export function GPLMonthlyKpi() {
             </div>
             <div>
               <h4 className="text-[15px] font-semibold text-white">AI Trend Analysis</h4>
-              <p className="text-[#64748b] text-xs">
+              <p className="text-navy-600 text-xs">
                 {analysis.date_range_start?.slice(0, 7)} to {analysis.date_range_end?.slice(0, 7)} &middot; {analysis.months_analyzed} months
               </p>
             </div>
@@ -618,9 +619,9 @@ export function GPLMonthlyKpi() {
 
       {/* No Analysis Message */}
       {!analysis && chartData.length > 0 && (
-        <div className="bg-[#1a2744]/50 rounded-xl p-6 border border-[#2d3a52] text-center">
-          <Sparkles className="w-8 h-8 text-[#64748b] mx-auto mb-3" />
-          <p className="text-[#94a3b8]">AI analysis will appear here after uploading new data</p>
+        <div className="bg-navy-900/50 rounded-xl p-6 border border-navy-800 text-center">
+          <Sparkles className="w-8 h-8 text-navy-600 mx-auto mb-3" />
+          <p className="text-slate-400">AI analysis will appear here after uploading new data</p>
         </div>
       )}
     </div>

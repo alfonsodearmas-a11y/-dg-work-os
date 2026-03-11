@@ -92,7 +92,7 @@ export function NewTaskModal({
         <div className="flex items-center gap-2">
           <button
             onClick={onLoadTemplates}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-[#94a3b8] hover:text-white bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37]/50 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white bg-navy-950 border border-navy-800 hover:border-gold-500/50 transition-colors"
             style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
           >
             <FileText className="h-3.5 w-3.5" />
@@ -101,7 +101,7 @@ export function NewTaskModal({
           <button
             onClick={onClose}
             aria-label="Close"
-            className="p-1.5 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
+            className="p-1.5 rounded-lg text-navy-600 hover:text-white hover:bg-navy-800 transition-colors"
             style={{ minWidth: isMobile ? 44 : undefined, minHeight: isMobile ? 44 : undefined }}
           >
             <X className="h-4 w-4" />
@@ -110,23 +110,23 @@ export function NewTaskModal({
       </div>
 
       {showTemplates && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-3 rounded-lg bg-[#0a1628] border border-[#2d3a52]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-3 rounded-lg bg-navy-950 border border-navy-800">
           {templates.length === 0 && (
-            <p className="text-[#64748b] text-sm col-span-full">Loading templates...</p>
+            <p className="text-navy-600 text-sm col-span-full">Loading templates...</p>
           )}
           {templates.map((t) => (
             <button
               key={t.id}
               onClick={() => onApplyTemplate(t)}
-              className="text-left p-3 rounded-lg bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37]/50 transition-colors"
+              className="text-left p-3 rounded-lg bg-navy-900 border border-navy-800 hover:border-gold-500/50 transition-colors"
               style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
             >
               <p className="text-white text-sm font-medium">{t.name}</p>
               {t.description && (
-                <p className="text-[#64748b] text-xs mt-1 line-clamp-2">{t.description}</p>
+                <p className="text-navy-600 text-xs mt-1 line-clamp-2">{t.description}</p>
               )}
               {t.agency_slug && (
-                <span className="inline-block mt-1.5 px-1.5 py-0.5 rounded text-xs font-medium bg-[#2d3a52] text-[#94a3b8]">
+                <span className="inline-block mt-1.5 px-1.5 py-0.5 rounded text-xs font-medium bg-navy-800 text-slate-400">
                   {t.agency_slug.toUpperCase()}
                 </span>
               )}
@@ -144,7 +144,7 @@ export function NewTaskModal({
         autoFocus
         aria-label="Task title"
         aria-required="true"
-        className="w-full px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37]"
+        className="w-full px-3 py-2.5 rounded-lg bg-navy-950 border border-navy-800 text-white placeholder-navy-600 focus:outline-none focus:border-gold-500"
         style={{ minHeight: isMobile ? 44 : undefined, fontSize: isMobile ? 16 : undefined }}
       />
 
@@ -154,7 +154,7 @@ export function NewTaskModal({
         onChange={(e) => onDescriptionChange(e.target.value)}
         rows={2}
         aria-label="Task description"
-        className="w-full px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white placeholder-[#64748b] focus:outline-none focus:border-[#d4af37] resize-none"
+        className="w-full px-3 py-2.5 rounded-lg bg-navy-950 border border-navy-800 text-white placeholder-navy-600 focus:outline-none focus:border-gold-500 resize-none"
         style={{ minHeight: isMobile ? 80 : undefined, fontSize: isMobile ? 16 : undefined }}
       />
 
@@ -163,7 +163,7 @@ export function NewTaskModal({
           value={agency}
           onChange={(e) => onAgencyChange(e.target.value)}
           aria-label="Agency"
-          className="px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
+          className="px-3 py-2.5 rounded-lg bg-navy-950 border border-navy-800 text-white text-sm focus:outline-none focus:border-gold-500"
           style={{ minHeight: isMobile ? 44 : undefined }}
         >
           <option value="">No Agency</option>
@@ -176,7 +176,7 @@ export function NewTaskModal({
           value={priority}
           onChange={(e) => onPriorityChange(e.target.value)}
           aria-label="Priority"
-          className="px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
+          className="px-3 py-2.5 rounded-lg bg-navy-950 border border-navy-800 text-white text-sm focus:outline-none focus:border-gold-500"
           style={{ minHeight: isMobile ? 44 : undefined }}
         >
           {PRIORITIES.map((p) => (
@@ -189,7 +189,7 @@ export function NewTaskModal({
           value={dueDate}
           onChange={(e) => onDueDateChange(e.target.value)}
           aria-label="Due date"
-          className="px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
+          className="px-3 py-2.5 rounded-lg bg-navy-950 border border-navy-800 text-white text-sm focus:outline-none focus:border-gold-500"
           style={{ minHeight: isMobile ? 44 : undefined }}
         />
 
@@ -197,7 +197,7 @@ export function NewTaskModal({
           value={assignee}
           onChange={(e) => onAssigneeChange(e.target.value)}
           aria-label="Assignee"
-          className="px-3 py-2.5 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm focus:outline-none focus:border-[#d4af37]"
+          className="px-3 py-2.5 rounded-lg bg-navy-950 border border-navy-800 text-white text-sm focus:outline-none focus:border-gold-500"
           style={{ minHeight: isMobile ? 44 : undefined }}
         >
           <option value="">Assign to me</option>
@@ -211,16 +211,16 @@ export function NewTaskModal({
 
   if (isMobile) {
     return (
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="new-task-mobile-title" className="fixed inset-0 z-50 flex flex-col bg-[#0a1628]">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="new-task-mobile-title" className="fixed inset-0 z-50 flex flex-col bg-navy-950">
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-9 h-1 rounded-full bg-white/20" />
         </div>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d3a52]">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-navy-800">
           <h2 id="new-task-mobile-title" className="text-lg font-semibold text-white">New Task</h2>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="p-2 rounded-lg text-[#64748b] hover:text-white"
+            className="p-2 rounded-lg text-navy-600 hover:text-white"
             style={{ minWidth: 44, minHeight: 44, touchAction: 'manipulation' }}
           >
             <X className="h-5 w-5" />
@@ -229,11 +229,11 @@ export function NewTaskModal({
         <div className="flex-1 overflow-y-auto px-4 py-4">
           {formContent}
         </div>
-        <div className="px-4 py-3 border-t border-[#2d3a52]" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+        <div className="px-4 py-3 border-t border-navy-800" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
           <button
             onClick={() => onSubmit()}
             disabled={!title.trim() || creating}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#d4af37] text-[#0a1628] font-semibold hover:bg-[#c9a432] transition-colors disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gold-500 text-navy-950 font-semibold hover:bg-[#c9a432] transition-colors disabled:opacity-50"
             style={{ minHeight: 48, touchAction: 'manipulation' }}
           >
             {creating ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
@@ -245,19 +245,19 @@ export function NewTaskModal({
   }
 
   return (
-    <div ref={dialogRef} role="dialog" aria-labelledby="new-task-modal-title" className="p-4 rounded-xl bg-[#1a2744] border border-[#d4af37]/50">
+    <div ref={dialogRef} role="dialog" aria-labelledby="new-task-modal-title" className="p-4 rounded-xl bg-navy-900 border border-gold-500/50">
       {formContent}
       <div className="flex justify-end gap-2 mt-3">
         <button
           onClick={onClose}
-          className="px-4 py-2 rounded-lg text-[#94a3b8] hover:text-white hover:bg-[#2d3a52] transition-colors text-sm"
+          className="px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-navy-800 transition-colors text-sm"
         >
           Cancel
         </button>
         <button
           onClick={() => onSubmit()}
           disabled={!title.trim() || creating}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#d4af37] text-[#0a1628] font-medium hover:bg-[#c9a432] transition-colors disabled:opacity-50 text-sm"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gold-500 text-navy-950 font-medium hover:bg-[#c9a432] transition-colors disabled:opacity-50 text-sm"
         >
           {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           Create

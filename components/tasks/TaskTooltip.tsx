@@ -10,7 +10,7 @@ const PRIORITY_LABELS: Record<string, { label: string; dot: string }> = {
   critical: { label: 'Critical', dot: 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]' },
   high: { label: 'High', dot: 'bg-red-500' },
   medium: { label: 'Medium', dot: 'bg-amber-500' },
-  low: { label: 'Low', dot: 'bg-[#64748b]' },
+  low: { label: 'Low', dot: 'bg-navy-600' },
 };
 
 interface TaskTooltipProps {
@@ -54,25 +54,25 @@ export function TaskTooltip({ task, cardRect, visible }: TaskTooltipProps) {
   return createPortal(
     <div
       style={style}
-      className="rounded-xl bg-[#1a2744] border border-[#2d3a52] shadow-2xl p-3 space-y-2 pointer-events-none animate-fade-in"
+      className="rounded-xl bg-navy-900 border border-navy-800 shadow-2xl p-3 space-y-2 pointer-events-none animate-fade-in"
     >
       <h4 className="text-white font-medium text-sm leading-snug">{task.title}</h4>
 
       <div className="flex flex-wrap gap-1.5">
         {priority && (
-          <span className="flex items-center gap-1 text-xs text-[#94a3b8]">
+          <span className="flex items-center gap-1 text-xs text-slate-400">
             <span className={`w-2 h-2 rounded-full ${priority.dot}`} />
             {priority.label}
           </span>
         )}
         {task.agency && (
-          <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-[#2d3a52] text-[#94a3b8]">
+          <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-navy-800 text-slate-400">
             {task.agency}
           </span>
         )}
       </div>
 
-      <div className="flex items-center gap-3 text-xs text-[#64748b]">
+      <div className="flex items-center gap-3 text-xs text-navy-600">
         {task.owner_name && <span>{task.owner_name}</span>}
         {task.due_date && (
           <span>
@@ -82,7 +82,7 @@ export function TaskTooltip({ task, cardRect, visible }: TaskTooltipProps) {
       </div>
 
       {task.description && (
-        <p className="text-xs text-[#64748b] leading-relaxed">
+        <p className="text-xs text-navy-600 leading-relaxed">
           {task.description.length > 120 ? task.description.slice(0, 120) + '...' : task.description}
         </p>
       )}

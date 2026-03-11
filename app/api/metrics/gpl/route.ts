@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireRole, canUploadData } from '@/lib/auth-helpers';
+import { requireUploadRole } from '@/lib/auth-helpers';
 import { transaction } from '@/lib/db-pg';
 import { auditService } from '@/lib/audit';
 import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
@@ -21,13 +21,9 @@ const gplMetricsSchema = z.object({
 });
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const authResult = await requireRole(['dg', 'agency_admin', 'officer']);
+  const authResult = await requireUploadRole('gpl');
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
-
-  if (!canUploadData(session.user.role, session.user.agency, 'gpl')) {
-    return NextResponse.json({ error: 'Not authorized to upload GPL data' }, { status: 403 });
-  }
 
   const { data, error } = await parseBody(request, gplMetricsSchema);
   if (error) return error;

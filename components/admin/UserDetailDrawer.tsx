@@ -2,20 +2,16 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  X, Shield, ShieldOff, Archive, RotateCcw, LogOut, Trash2, Mail,
-  ChevronDown, AlertTriangle, Clock, UserCheck, UserX, Blocks,
+  X, Shield, ShieldOff, Archive, RotateCcw, LogOut, Trash2,
+  ChevronDown, AlertTriangle,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
-import { formatDistanceToNow, format, parseISO } from 'date-fns';
-
-interface ModuleInfo {
-  id: string;
-  slug: string;
-  name: string;
-  icon: string | null;
-  default_roles: string[];
-  is_active: boolean;
-}
+import { UserProfileSection } from './UserProfileSection';
+import { UserRolesSection, ModuleAccessSection } from './UserRolesSection';
+import { UserActivitySection } from './UserActivitySection';
+import type { ModuleInfo } from './UserRolesSection';
+import type { AuditEntry } from './UserActivitySection';
+import { UserCheck, UserX, Clock } from 'lucide-react';
 
 interface User {
   id: string;
@@ -35,14 +31,6 @@ interface User {
   archived_at?: string | null;
 }
 
-interface AuditEntry {
-  id: string;
-  action: string;
-  metadata: Record<string, unknown>;
-  created_at: string;
-  actor_name: string;
-}
-
 interface UserDetailDrawerProps {
   user: User | null;
   isOpen: boolean;
@@ -52,40 +40,6 @@ interface UserDetailDrawerProps {
   onUserUpdated: () => void;
   showToast: (message: string, type: 'success' | 'error') => void;
 }
-
-const ROLE_OPTIONS = [
-  { value: 'dg', label: 'Director General' },
-  { value: 'minister', label: 'Minister' },
-  { value: 'ps', label: 'Permanent Secretary' },
-  { value: 'agency_admin', label: 'Agency Admin' },
-  { value: 'officer', label: 'Officer' },
-];
-
-const AGENCY_OPTIONS = [
-  { value: 'gpl', label: 'GPL' },
-  { value: 'gwi', label: 'GWI' },
-  { value: 'cjia', label: 'CJIA' },
-  { value: 'gcaa', label: 'GCAA' },
-  { value: 'heci', label: 'HECI' },
-  { value: 'marad', label: 'MARAD' },
-  { value: 'has', label: 'HAS' },
-];
-
-const ROLE_LABELS: Record<string, string> = {
-  dg: 'Director General',
-  minister: 'Minister',
-  ps: 'Permanent Secretary',
-  agency_admin: 'Agency Admin',
-  officer: 'Officer',
-};
-
-const ROLE_COLORS: Record<string, string> = {
-  dg: 'bg-gold-500/20 text-gold-500 border border-gold-500/30',
-  minister: 'bg-purple-500/20 text-purple-400 border border-purple-500/30',
-  ps: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
-  agency_admin: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30',
-  officer: 'bg-navy-700/20 text-slate-400 border border-navy-700/30',
-};
 
 const STATUS_STYLES: Record<string, { bg: string; label: string; icon: typeof UserCheck }> = {
   active: { bg: 'bg-green-500/20 text-green-400', label: 'Active', icon: UserCheck },
@@ -97,24 +51,11 @@ const STATUS_STYLES: Record<string, { bg: string; label: string; icon: typeof Us
 
 const MINISTRY_ROLES = ['dg', 'minister', 'ps'];
 
-const AUDIT_LABELS: Record<string, string> = {
-  created: 'created this account',
-  updated: 'updated user fields',
-  suspended: 'suspended this user',
-  reactivated: 'reactivated this user',
-  archived: 'archived this user',
-  restored: 'restored this user',
-  force_signout: 'forced sign-out',
-  resend_invite: 'resent the invite email',
-  deleted_permanently: 'permanently deleted this user',
-};
-
 export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, onUserUpdated, showToast }: UserDetailDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
   const [editRole, setEditRole] = useState('');
   const [editAgency, setEditAgency] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
-  const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
@@ -132,13 +73,19 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
   const isSelf = user?.id === currentUserId;
   const status = user?.status || (user?.is_active ? 'active' : 'inactive');
 
+  // Derive dirty flag from comparing edit values to user prop
+  const dirty = user
+    ? editRole !== user.role ||
+      editAgency !== user.agency ||
+      editName !== (user.name || '')
+    : false;
+
   // Reset form when user changes
   useEffect(() => {
     if (user) {
       setEditRole(user.role);
       setEditAgency(user.agency);
       setEditName(user.name || '');
-      setDirty(false);
       setShowDeleteConfirm(false);
       setDeleteConfirmEmail('');
       setExpandedSection('profile');
@@ -245,7 +192,6 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
     } else if (field === 'name') {
       setEditName(value || '');
     }
-    setDirty(true);
   };
 
   const saveChanges = async () => {
@@ -257,7 +203,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
       if (editAgency !== user.agency) payload.agency = MINISTRY_ROLES.includes(editRole) ? null : editAgency;
       if (editName !== (user.name || '')) payload.name = editName;
 
-      if (Object.keys(payload).length === 0) { setDirty(false); setSaving(false); return; }
+      if (Object.keys(payload).length === 0) { setSaving(false); return; }
 
       const res = await fetch(`/api/admin/users/${user.id}`, {
         method: 'PATCH',
@@ -267,7 +213,6 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
       const data = await res.json();
       if (res.ok) {
         showToast('User updated', 'success');
-        setDirty(false);
         onUserUpdated();
         fetchAudit();
       } else {
@@ -340,16 +285,6 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
     return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const formatDate = (d: string | null) => {
-    if (!d) return 'Never';
-    try { return format(parseISO(d), 'MMM d, yyyy'); } catch { return d; }
-  };
-
-  const formatRelative = (d: string | null) => {
-    if (!d) return 'Never';
-    try { return formatDistanceToNow(parseISO(d), { addSuffix: true }); } catch { return d; }
-  };
-
   return (
     <>
       {/* Backdrop */}
@@ -405,307 +340,67 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
 
           {/* Profile Info Section */}
           <Section title="Profile Info" id="profile" expanded={expandedSection === 'profile'} onToggle={() => toggleSection('profile')}>
-            <div className="space-y-3">
-              <Field label="Name">
-                {isDG && !isSelf ? (
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={e => handleFieldChange('name', e.target.value)}
-                    aria-label="User name"
-                    className="w-full px-3 py-1.5 bg-navy-950 border border-navy-800 rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
-                  />
-                ) : (
-                  <p className="text-sm text-white">{user.name || 'Not set'}</p>
-                )}
-              </Field>
-              <Field label="Email">
-                <p className="text-sm text-white">{user.email}</p>
-              </Field>
-              <Field label="Created">
-                <p className="text-sm text-slate-400">{formatDate(user.created_at)}</p>
-              </Field>
-              {user.invited_at && (
-                <Field label="Invited">
-                  <p className="text-sm text-slate-400">{formatDate(user.invited_at)}</p>
-                </Field>
-              )}
-              {isDG && status === 'pending' && (
-                <div>
-                  <button
-                    onClick={() => performAction('resend_invite', `Resend invite email to ${user.email}?`)}
-                    disabled={actionLoading === 'resend_invite'}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gold-500 hover:bg-gold-500/10 transition-colors disabled:opacity-50"
-                  >
-                    {actionLoading === 'resend_invite' ? (
-                      <Spinner size="sm" />
-                    ) : (
-                      <Mail className="h-4 w-4" />
-                    )}
-                    Resend Invite Email
-                  </button>
-                </div>
-              )}
-              <Field label="First Login">
-                <p className="text-sm text-slate-400">{formatDate(user.first_login_at)}</p>
-              </Field>
-              <Field label="Last Active">
-                <p className="text-sm text-slate-400">{formatRelative(user.last_seen_at || user.last_login)}</p>
-              </Field>
-              <Field label="Login Count">
-                <p className="text-sm text-slate-400">{user.login_count ?? 0}</p>
-              </Field>
-            </div>
+            <UserProfileSection
+              user={user}
+              isDG={isDG}
+              isSelf={isSelf}
+              status={status}
+              editName={editName}
+              actionLoading={actionLoading}
+              onFieldChange={handleFieldChange}
+              onAction={performAction}
+            />
           </Section>
 
           {/* Role & Permissions */}
           <Section title="Role & Permissions" id="role" expanded={expandedSection === 'role'} onToggle={() => toggleSection('role')}>
-            <div className="space-y-3">
-              <Field label="Role">
-                {isDG && !isSelf ? (
-                  <select
-                    value={editRole}
-                    onChange={e => handleFieldChange('role', e.target.value)}
-                    aria-label="User role"
-                    className="w-full px-3 py-1.5 bg-navy-950 border border-navy-800 rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
-                  >
-                    {ROLE_OPTIONS.map(r => (
-                      <option key={r.value} value={r.value}>{r.label}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <span className={`text-xs px-2.5 py-1 rounded ${ROLE_COLORS[user.role] || ROLE_COLORS.officer}`}>
-                    {ROLE_LABELS[user.role] || user.role}
-                  </span>
-                )}
-              </Field>
-              <Field label="Agency">
-                {isDG && !isSelf && !MINISTRY_ROLES.includes(editRole) ? (
-                  <select
-                    value={editAgency || ''}
-                    onChange={e => handleFieldChange('agency', e.target.value || null)}
-                    aria-label="User agency"
-                    className="w-full px-3 py-1.5 bg-navy-950 border border-navy-800 rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
-                  >
-                    <option value="">No agency</option>
-                    {AGENCY_OPTIONS.map(a => (
-                      <option key={a.value} value={a.value}>{a.label}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="text-sm text-slate-400">
-                    {MINISTRY_ROLES.includes(editRole) ? 'Ministry (all agencies)' : user.agency?.toUpperCase() || 'None'}
-                  </p>
-                )}
-              </Field>
-              {MINISTRY_ROLES.includes(editRole) && (
-                <p className="text-xs text-navy-600">Ministry roles have access to all agencies.</p>
-              )}
-            </div>
+            <UserRolesSection
+              user={user}
+              isDG={isDG}
+              isSelf={isSelf}
+              editRole={editRole}
+              editAgency={editAgency}
+              onFieldChange={handleFieldChange}
+            />
           </Section>
 
           {/* Module Access Section (DG only, not self) */}
           {isDG && !isSelf && user.role !== 'dg' && (
             <Section title="Module Access" id="modules" expanded={expandedSection === 'modules'} onToggle={() => toggleSection('modules')}>
-              {modulesLoading ? (
-                <div className="flex items-center justify-center py-6">
-                  <Spinner size="sm" />
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {allModules
-                    .filter(m => m.is_active)
-                    .map(mod => {
-                      const isDefaultForRole = mod.default_roles.includes(user.role);
-                      const hasExplicitGrant = userModuleGrants.includes(mod.slug);
-                      const hasAccess = isDefaultForRole || hasExplicitGrant;
-                      const isToggling = moduleToggling === mod.slug;
-
-                      return (
-                        <label
-                          key={mod.slug}
-                          className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                            hasAccess ? 'bg-gold-500/5' : 'hover:bg-navy-800/30'
-                          } ${isToggling ? 'opacity-50' : ''}`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={hasAccess}
-                            onChange={() => {
-                              if (isDefaultForRole && !hasExplicitGrant) {
-                                // Can't revoke default role access via this UI
-                                return;
-                              }
-                              toggleModuleAccess(mod.slug, hasExplicitGrant);
-                            }}
-                            disabled={isToggling || (isDefaultForRole && !hasExplicitGrant)}
-                            className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer disabled:cursor-not-allowed"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-white">{mod.name}</p>
-                            {isDefaultForRole && (
-                              <p className="text-[10px] text-gold-500">Default for {ROLE_LABELS[user.role] || user.role}</p>
-                            )}
-                            {hasExplicitGrant && !isDefaultForRole && (
-                              <p className="text-[10px] text-green-400">Explicitly granted</p>
-                            )}
-                          </div>
-                          {isToggling && (
-                            <Spinner size="sm" className="shrink-0" />
-                          )}
-                        </label>
-                      );
-                    })}
-                </div>
-              )}
+              <ModuleAccessSection
+                user={user}
+                allModules={allModules}
+                userModuleGrants={userModuleGrants}
+                modulesLoading={modulesLoading}
+                moduleToggling={moduleToggling}
+                onToggleModuleAccess={toggleModuleAccess}
+              />
             </Section>
           )}
 
           {/* Security Section (DG only, not self) */}
           {isDG && !isSelf && (
             <Section title="Security" id="security" expanded={expandedSection === 'security'} onToggle={() => toggleSection('security')}>
-              <div className="space-y-2">
-                {/* Suspend / Reactivate */}
-                {status === 'suspended' ? (
-                  <ActionButton
-                    icon={RotateCcw}
-                    label="Reactivate User"
-                    desc="Restore access for this user"
-                    color="text-green-400 hover:bg-green-500/10"
-                    loading={actionLoading === 'reactivate'}
-                    onClick={() => performAction('reactivate', 'Reactivate this user? They will regain access.')}
-                  />
-                ) : status !== 'archived' ? (
-                  <ActionButton
-                    icon={ShieldOff}
-                    label="Suspend User"
-                    desc="Immediately revoke access"
-                    color="text-amber-400 hover:bg-amber-500/10"
-                    loading={actionLoading === 'suspend'}
-                    onClick={() => performAction('suspend', 'Suspend this user? They will lose access immediately.')}
-                  />
-                ) : null}
-
-                {/* Archive / Restore */}
-                {status === 'archived' ? (
-                  <ActionButton
-                    icon={RotateCcw}
-                    label="Restore User"
-                    desc="Move back to active users"
-                    color="text-blue-400 hover:bg-blue-500/10"
-                    loading={actionLoading === 'restore'}
-                    onClick={() => performAction('restore', 'Restore this archived user?')}
-                  />
-                ) : status !== 'archived' ? (
-                  <ActionButton
-                    icon={Archive}
-                    label="Archive User"
-                    desc="Move to archived — can be restored later"
-                    color="text-gray-400 hover:bg-gray-500/10"
-                    loading={actionLoading === 'archive'}
-                    onClick={() => performAction('archive', 'Archive this user? They will be moved to the archived tab.')}
-                  />
-                ) : null}
-
-                {/* Force Sign Out */}
-                <ActionButton
-                  icon={LogOut}
-                  label="Force Sign Out"
-                  desc="End all active sessions"
-                  color="text-orange-400 hover:bg-orange-500/10"
-                  loading={actionLoading === 'force_signout'}
-                  onClick={() => performAction('force_signout', 'Force sign out this user?')}
-                />
-
-                {/* Permanent Delete */}
-                <div className="mt-4 pt-4 border-t border-navy-800">
-                  <p className="text-xs font-semibold text-red-400 mb-2 flex items-center gap-1.5">
-                    <AlertTriangle className="h-3.5 w-3.5" />
-                    Danger Zone
-                  </p>
-                  {!showDeleteConfirm ? (
-                    <button
-                      onClick={() => setShowDeleteConfirm(true)}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm"
-                    >
-                      <Trash2 className="h-4 w-4 shrink-0" />
-                      <div className="text-left">
-                        <p className="font-medium">Permanently Delete</p>
-                        <p className="text-xs text-red-400/60">This cannot be undone</p>
-                      </div>
-                    </button>
-                  ) : (
-                    <div className="space-y-2 p-3 rounded-lg border border-red-500/30 bg-red-500/5">
-                      <p className="text-xs text-red-400">
-                        Type <span className="font-mono font-bold">{user.email}</span> to confirm:
-                      </p>
-                      <input
-                        type="text"
-                        value={deleteConfirmEmail}
-                        onChange={e => setDeleteConfirmEmail(e.target.value)}
-                        placeholder={user.email}
-                        aria-label="Type email to confirm deletion"
-                        aria-required="true"
-                        className="w-full px-3 py-1.5 bg-navy-950 border border-red-500/30 rounded text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-red-500/50"
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleDelete}
-                          disabled={deleteConfirmEmail !== user.email || actionLoading === 'delete'}
-                          className="flex-1 py-1.5 rounded bg-red-600 text-white text-xs font-semibold hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {actionLoading === 'delete' ? 'Deleting...' : 'Delete Forever'}
-                        </button>
-                        <button
-                          onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmEmail(''); }}
-                          className="px-3 py-1.5 rounded text-xs text-slate-400 hover:text-white transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <SecuritySection
+                user={user}
+                status={status}
+                actionLoading={actionLoading}
+                showDeleteConfirm={showDeleteConfirm}
+                deleteConfirmEmail={deleteConfirmEmail}
+                onAction={performAction}
+                onDelete={handleDelete}
+                onShowDeleteConfirm={setShowDeleteConfirm}
+                onDeleteConfirmEmailChange={setDeleteConfirmEmail}
+              />
             </Section>
           )}
 
           {/* Activity Log */}
           <Section title="Activity Log" id="activity" expanded={expandedSection === 'activity'} onToggle={() => toggleSection('activity')}>
-            {loadingAudit ? (
-              <div className="flex items-center justify-center py-6">
-                <Spinner size="sm" />
-              </div>
-            ) : audit.length === 0 ? (
-              <p className="text-xs text-navy-600 py-4 text-center">No activity recorded</p>
-            ) : (
-              <div className="space-y-0">
-                {audit.map(entry => (
-                  <div key={entry.id} className="flex gap-3 py-2.5 border-b border-navy-800/50 last:border-0">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#3d4a62] mt-2 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-slate-400">
-                        <span className="text-white font-medium">{entry.actor_name}</span>{' '}
-                        {AUDIT_LABELS[entry.action] || entry.action}
-                      </p>
-                      {entry.metadata && Object.keys(entry.metadata).length > 0 && entry.action === 'updated' && (
-                        <div className="mt-1 text-xs text-navy-600">
-                          {Object.entries(entry.metadata).map(([key, val]) => {
-                            const change = val as { from: unknown; to: unknown };
-                            return (
-                              <p key={key}>
-                                {key}: {String(change.from || 'none')} → {String(change.to || 'none')}
-                              </p>
-                            );
-                          })}
-                        </div>
-                      )}
-                      <p className="text-[10px] text-navy-700 mt-0.5">{formatRelative(entry.created_at)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <UserActivitySection
+              audit={audit}
+              loadingAudit={loadingAudit}
+            />
           </Section>
         </div>
 
@@ -720,7 +415,6 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                     setEditRole(user.role);
                     setEditAgency(user.agency);
                     setEditName(user.name || '');
-                    setDirty(false);
                   }
                 }}
                 className="px-3 py-1.5 rounded text-xs text-slate-400 hover:text-white transition-colors"
@@ -742,7 +436,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
   );
 }
 
-// --- Sub-components ---
+// --- Sub-components kept in this file ---
 
 function Section({ title, id, expanded, onToggle, children }: {
   title: string;
@@ -769,11 +463,120 @@ function Section({ title, id, expanded, onToggle, children }: {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function SecuritySection({ user, status, actionLoading, showDeleteConfirm, deleteConfirmEmail, onAction, onDelete, onShowDeleteConfirm, onDeleteConfirmEmailChange }: {
+  user: { id: string; email: string };
+  status: string;
+  actionLoading: string | null;
+  showDeleteConfirm: boolean;
+  deleteConfirmEmail: string;
+  onAction: (action: string, confirmMsg: string) => void;
+  onDelete: () => void;
+  onShowDeleteConfirm: (show: boolean) => void;
+  onDeleteConfirmEmailChange: (email: string) => void;
+}) {
   return (
-    <div>
-      <label className="block text-xs text-navy-600 mb-1">{label}</label>
-      {children}
+    <div className="space-y-2">
+      {/* Suspend / Reactivate */}
+      {status === 'suspended' ? (
+        <ActionButton
+          icon={RotateCcw}
+          label="Reactivate User"
+          desc="Restore access for this user"
+          color="text-green-400 hover:bg-green-500/10"
+          loading={actionLoading === 'reactivate'}
+          onClick={() => onAction('reactivate', 'Reactivate this user? They will regain access.')}
+        />
+      ) : status !== 'archived' ? (
+        <ActionButton
+          icon={ShieldOff}
+          label="Suspend User"
+          desc="Immediately revoke access"
+          color="text-amber-400 hover:bg-amber-500/10"
+          loading={actionLoading === 'suspend'}
+          onClick={() => onAction('suspend', 'Suspend this user? They will lose access immediately.')}
+        />
+      ) : null}
+
+      {/* Archive / Restore */}
+      {status === 'archived' ? (
+        <ActionButton
+          icon={RotateCcw}
+          label="Restore User"
+          desc="Move back to active users"
+          color="text-blue-400 hover:bg-blue-500/10"
+          loading={actionLoading === 'restore'}
+          onClick={() => onAction('restore', 'Restore this archived user?')}
+        />
+      ) : status !== 'archived' ? (
+        <ActionButton
+          icon={Archive}
+          label="Archive User"
+          desc="Move to archived — can be restored later"
+          color="text-gray-400 hover:bg-gray-500/10"
+          loading={actionLoading === 'archive'}
+          onClick={() => onAction('archive', 'Archive this user? They will be moved to the archived tab.')}
+        />
+      ) : null}
+
+      {/* Force Sign Out */}
+      <ActionButton
+        icon={LogOut}
+        label="Force Sign Out"
+        desc="End all active sessions"
+        color="text-orange-400 hover:bg-orange-500/10"
+        loading={actionLoading === 'force_signout'}
+        onClick={() => onAction('force_signout', 'Force sign out this user?')}
+      />
+
+      {/* Permanent Delete */}
+      <div className="mt-4 pt-4 border-t border-navy-800">
+        <p className="text-xs font-semibold text-red-400 mb-2 flex items-center gap-1.5">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          Danger Zone
+        </p>
+        {!showDeleteConfirm ? (
+          <button
+            onClick={() => onShowDeleteConfirm(true)}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm"
+          >
+            <Trash2 className="h-4 w-4 shrink-0" />
+            <div className="text-left">
+              <p className="font-medium">Permanently Delete</p>
+              <p className="text-xs text-red-400/60">This cannot be undone</p>
+            </div>
+          </button>
+        ) : (
+          <div className="space-y-2 p-3 rounded-lg border border-red-500/30 bg-red-500/5">
+            <p className="text-xs text-red-400">
+              Type <span className="font-mono font-bold">{user.email}</span> to confirm:
+            </p>
+            <input
+              type="text"
+              value={deleteConfirmEmail}
+              onChange={e => onDeleteConfirmEmailChange(e.target.value)}
+              placeholder={user.email}
+              aria-label="Type email to confirm deletion"
+              aria-required="true"
+              className="w-full px-3 py-1.5 bg-navy-950 border border-red-500/30 rounded text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-red-500/50"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={onDelete}
+                disabled={deleteConfirmEmail !== user.email || actionLoading === 'delete'}
+                className="flex-1 py-1.5 rounded bg-red-600 text-white text-xs font-semibold hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {actionLoading === 'delete' ? 'Deleting...' : 'Delete Forever'}
+              </button>
+              <button
+                onClick={() => { onShowDeleteConfirm(false); onDeleteConfirmEmailChange(''); }}
+                className="px-3 py-1.5 rounded text-xs text-slate-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

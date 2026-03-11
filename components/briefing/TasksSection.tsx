@@ -53,7 +53,7 @@ function isDueThisWeek(task: Task): boolean {
 }
 
 function formatDueDate(task: Task): { label: string; className: string } {
-  if (!task.due_date) return { label: '', className: 'text-[#64748b]' };
+  if (!task.due_date) return { label: '', className: 'text-navy-600' };
 
   const due = parseISO(task.due_date);
   const formatted = format(due, 'MMM d');
@@ -75,11 +75,11 @@ function formatDueDate(task: Task): { label: string; className: string } {
     return { label: `Tomorrow \u00b7 ${formatted}`, className: 'text-amber-400' };
   }
 
-  return { label: formatted, className: 'text-[#64748b]' };
+  return { label: formatted, className: 'text-navy-600' };
 }
 
 const statusStyles: Record<string, string> = {
-  new: 'bg-[#4a5568]/30 text-[#94a3b8]',
+  new: 'bg-navy-700/30 text-slate-400',
   active: 'bg-blue-500/20 text-blue-400',
   blocked: 'bg-amber-500/20 text-amber-400',
   done: 'bg-emerald-500/20 text-emerald-400',
@@ -96,7 +96,7 @@ const priorityDot: Record<string, string> = {
   critical: 'bg-red-500',
   high: 'bg-amber-500',
   medium: 'bg-blue-500',
-  low: 'bg-[#4a5568]',
+  low: 'bg-navy-700',
 };
 
 export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps) {
@@ -225,7 +225,7 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
   ];
 
   const inputClasses =
-    'w-full px-3 py-2 bg-[#1a2744] border border-[#2d3a52] rounded-lg text-white text-sm placeholder-[#64748b] focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] outline-none';
+    'w-full px-3 py-2 bg-navy-900 border border-navy-800 rounded-lg text-white text-sm placeholder-navy-600 focus:ring-2 focus:ring-gold-500 focus:border-gold-500 outline-none';
 
   return (
     <div className="card-premium p-4 md:p-6">
@@ -233,13 +233,13 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold text-white">TASKS</h2>
-          <span className="bg-[#d4af37]/20 text-[#d4af37] text-xs font-bold px-2 py-0.5 rounded-full">
+          <span className="bg-gold-500/20 text-gold-500 text-xs font-bold px-2 py-0.5 rounded-full">
             {tasks.filter((t) => t.status !== 'done').length}
           </span>
         </div>
         <button
           onClick={() => setShowQuickAdd((prev) => !prev)}
-          className="flex items-center gap-1 bg-[#d4af37] text-[#0a1628] text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-[#d4af37]/90 transition-colors"
+          className="flex items-center gap-1 bg-gold-500 text-navy-950 text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-gold-500/90 transition-colors"
         >
           {showQuickAdd ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
           {showQuickAdd ? 'Cancel' : 'New Task'}
@@ -298,7 +298,7 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
             <button
               type="submit"
               disabled={submitting || !newTitle.trim()}
-              className="flex items-center gap-2 bg-[#d4af37] text-[#0a1628] text-sm font-medium px-4 py-2 rounded-lg hover:bg-[#d4af37]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 bg-gold-500 text-navy-950 text-sm font-medium px-4 py-2 rounded-lg hover:bg-gold-500/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               Add Task
@@ -317,8 +317,8 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
               onClick={() => setActiveFilter(label)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all whitespace-nowrap ${
                 isActive
-                  ? 'bg-[#d4af37] text-[#0a1628]'
-                  : 'bg-[#1a2744] text-[#94a3b8] border border-[#2d3a52] hover:bg-[#1a2744]/80'
+                  ? 'bg-gold-500 text-navy-950'
+                  : 'bg-navy-900 text-slate-400 border border-navy-800 hover:bg-navy-900/80'
               }`}
             >
               {label}
@@ -337,8 +337,8 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
       {/* Agency Groups */}
       {agencyGroups.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <CheckSquare className="h-10 w-10 text-[#2d3a52] mb-3" />
-          <p className="text-sm text-[#64748b]">No tasks match this filter</p>
+          <CheckSquare className="h-10 w-10 text-navy-800 mb-3" />
+          <p className="text-sm text-navy-600">No tasks match this filter</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -351,15 +351,15 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
                 {/* Agency Group Header */}
                 <button
                   onClick={() => toggleExpanded(agency)}
-                  className="w-full flex items-center gap-2 p-3 rounded-xl bg-[#0a1628]/50 border border-[#2d3a52]/50 hover:bg-[#0a1628]/80 transition-colors"
+                  className="w-full flex items-center gap-2 p-3 rounded-xl bg-navy-950/50 border border-navy-800/50 hover:bg-navy-950/80 transition-colors"
                 >
                   {isExpanded ? (
-                    <ChevronDown className="h-4 w-4 text-[#64748b] flex-shrink-0" />
+                    <ChevronDown className="h-4 w-4 text-navy-600 flex-shrink-0" />
                   ) : (
-                    <ChevronRight className="h-4 w-4 text-[#64748b] flex-shrink-0" />
+                    <ChevronRight className="h-4 w-4 text-navy-600 flex-shrink-0" />
                   )}
                   <span className="text-sm font-medium text-white">{agency}</span>
-                  <span className="text-xs text-[#64748b]">
+                  <span className="text-xs text-navy-600">
                     ({agencyTasks.length} task{agencyTasks.length !== 1 ? 's' : ''})
                   </span>
                   {agencyOverdue > 0 && (
@@ -378,14 +378,14 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
                         <div
                           key={task.id}
                           onClick={() => onEditTask(task)}
-                          className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#1a2744] transition-colors cursor-pointer min-h-[56px]"
+                          className="flex items-center gap-3 p-3 rounded-xl hover:bg-navy-900 transition-colors cursor-pointer min-h-[56px]"
                         >
                           {/* Priority Dot */}
                           <div
                             className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
                               task.priority
-                                ? priorityDot[task.priority] || 'bg-[#4a5568]'
-                                : 'bg-[#4a5568]'
+                                ? priorityDot[task.priority] || 'bg-navy-700'
+                                : 'bg-navy-700'
                             }`}
                           />
 
@@ -395,7 +395,7 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
                               {task.title}
                             </p>
                             {task.role && (
-                              <p className="text-xs text-[#64748b] mt-0.5 line-clamp-1">
+                              <p className="text-xs text-navy-600 mt-0.5 line-clamp-1">
                                 {task.role}
                               </p>
                             )}
@@ -410,7 +410,7 @@ export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps
                             )}
                             <span
                               className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium ${
-                                statusStyles[task.status] || 'bg-[#4a5568]/30 text-[#94a3b8]'
+                                statusStyles[task.status] || 'bg-navy-700/30 text-slate-400'
                               }`}
                             >
                               {statusLabels[task.status] || task.status}

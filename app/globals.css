@@ -29,6 +29,11 @@ html {
   --background: #0a1628;
   --foreground: #f8fafc;
   --card-bg: linear-gradient(135deg, #1a2744 0%, #0a1628 100%);
+
+  /* Transition durations */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
 }
 
 @theme inline {
@@ -49,6 +54,10 @@ html {
   --color-gold-400: #f4d03f;
   --color-gold-300: #fbbf24;
   --color-gold-100: #fef3c7;
+
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
 }
 
 * {
@@ -72,6 +81,23 @@ html {
 
 *::-webkit-scrollbar-thumb:hover {
   background: var(--gold-500);
+}
+
+/* Keyboard focus styles */
+:focus-visible {
+  outline: 2px solid var(--gold-500);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--gold-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.input-premium:focus-visible {
+  outline: none;
 }
 
 body {
@@ -920,6 +946,7 @@ button, a, [role="button"], .clickable, input, select, textarea {
   width: 200%;
   height: 40%;
   filter: blur(80px);
+  will-change: transform, opacity;
   opacity: 0.12;
   mix-blend-mode: screen;
 }
@@ -1119,6 +1146,7 @@ button, a, [role="button"], .clickable, input, select, textarea {
   width: 100%;
   max-width: 420px;
   padding: 44px 36px 36px;
+  will-change: transform, opacity, filter;
   background: linear-gradient(
     165deg,
     rgba(18, 30, 55, 0.85) 0%,
@@ -1926,5 +1954,56 @@ button, a, [role="button"], .clickable, input, select, textarea {
 
   .login-card {
     animation: loginFadeIn 300ms ease-out both !important;
+  }
+
+  .stagger-children > * {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  .sidebar,
+  header,
+  .bottom-nav,
+  .activity-panel,
+  .chat-button,
+  .notification-panel,
+  .push-prompt-banner {
+    display: none !important;
+  }
+
+  body,
+  html {
+    background: white !important;
+    color: black !important;
+  }
+
+  main {
+    margin: 0 !important;
+    padding: 1rem !important;
+  }
+
+  .card-premium,
+  .glass-card {
+    background: white !important;
+    border: 1px solid #ddd !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    color: black !important;
+  }
+
+  .stat-number,
+  .stat-number-lg {
+    color: black !important;
+    -webkit-text-fill-color: black !important;
+  }
+
+  .btn-gold,
+  .btn-navy {
+    border: 1px solid #333 !important;
+    background: white !important;
+    color: black !important;
   }
 }

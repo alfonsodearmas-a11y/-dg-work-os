@@ -8,6 +8,7 @@ import {
   Loader2, BarChart3, Plane,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { CHART_THEME } from '@/lib/constants/chart-theme';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { InsightCard, type InsightCardData } from '@/components/ui/InsightCard';
 import { HealthScoreTooltip } from '@/components/ui/HealthScoreTooltip';
@@ -59,17 +60,17 @@ function KPICard({ title, value, unit, subtitle, status = 'neutral', children }:
     good: 'text-emerald-400',
     warning: 'text-amber-400',
     critical: 'text-red-400',
-    neutral: 'text-[#d4af37]',
+    neutral: 'text-gold-500',
   }[status];
 
   return (
-    <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-5">
-      <p className="text-[#94a3b8] text-sm mb-2">{title}</p>
+    <div className="bg-navy-900 rounded-xl border border-navy-800 p-3 md:p-5">
+      <p className="text-slate-400 text-sm mb-2">{title}</p>
       <div className="flex items-end gap-2 mb-1">
         <span className={`text-2xl md:text-3xl font-bold ${valueColor}`}>{value}</span>
-        {unit && <span className="text-[#94a3b8] text-base md:text-lg mb-1">{unit}</span>}
+        {unit && <span className="text-slate-400 text-base md:text-lg mb-1">{unit}</span>}
       </div>
-      {subtitle && <p className="text-[#64748b] text-sm">{subtitle}</p>}
+      {subtitle && <p className="text-navy-600 text-sm">{subtitle}</p>}
       {children}
     </div>
   );
@@ -165,8 +166,8 @@ export function GCAADetail({ data }: GCAADetailProps) {
     return (
       <div className="flex items-center justify-center py-24" role="status" aria-label="Loading">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-[#d4af37] animate-spin" aria-hidden="true" />
-          <p className="text-[#94a3b8] text-[15px]">Loading GCAA data...</p>
+          <Loader2 className="w-8 h-8 text-gold-500 animate-spin" aria-hidden="true" />
+          <p className="text-slate-400 text-[15px]">Loading GCAA data...</p>
         </div>
       </div>
     );
@@ -175,7 +176,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
   return (
     <div className="space-y-4">
       {/* ═══════════════════ TOP SECTION ═══════════════════ */}
-      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-3 md:p-5">
+      <div className="bg-navy-900 rounded-xl border border-navy-800 p-3 md:p-5">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           {/* Left: Health Score Gauge */}
           <div className="flex items-center gap-3 md:gap-5 w-full md:flex-1 md:min-w-0">
@@ -189,7 +190,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
               </div>
             ) : insightsLoading ? (
               <div className="w-20 h-20 md:w-[100px] md:h-[100px] flex items-center justify-center" role="status" aria-label="Loading">
-                <Loader2 className="w-6 h-6 text-[#64748b] animate-spin" aria-hidden="true" />
+                <Loader2 className="w-6 h-6 text-navy-600 animate-spin" aria-hidden="true" />
               </div>
             ) : null}
 
@@ -197,23 +198,23 @@ export function GCAADetail({ data }: GCAADetailProps) {
             <div className="min-w-0 flex-1">
               {insights?.overall?.headline ? (
                 <>
-                  <p className="text-[10px] uppercase tracking-widest text-[#d4af37] font-semibold mb-1">AI Analysis</p>
-                  <p className="text-base md:text-[20px] font-bold text-[#f1f5f9] leading-snug line-clamp-3 md:line-clamp-none">
+                  <p className="text-[10px] uppercase tracking-widest text-gold-500 font-semibold mb-1">AI Analysis</p>
+                  <p className="text-base md:text-[20px] font-bold text-slate-100 leading-snug line-clamp-3 md:line-clamp-none">
                     {insights.overall.headline}
                   </p>
                   {insights.overall.summary && (
-                    <p className="text-[#94a3b8] text-[15px] mt-1 leading-relaxed line-clamp-2 md:line-clamp-none">{insights.overall.summary}</p>
+                    <p className="text-slate-400 text-[15px] mt-1 leading-relaxed line-clamp-2 md:line-clamp-none">{insights.overall.summary}</p>
                   )}
                 </>
               ) : health ? (
                 <div>
-                  <p className="text-base md:text-[20px] font-bold text-[#f1f5f9] leading-snug">
+                  <p className="text-base md:text-[20px] font-bold text-slate-100 leading-snug">
                     GCAA — {health.label}
                   </p>
-                  <p className="text-[#94a3b8] text-[15px] mt-1">Guyana Civil Aviation Authority — Regulatory Dashboard</p>
+                  <p className="text-slate-400 text-[15px] mt-1">Guyana Civil Aviation Authority — Regulatory Dashboard</p>
                 </div>
               ) : (
-                <p className="text-[#94a3b8] text-[15px]">GCAA — Regulatory Compliance Dashboard</p>
+                <p className="text-slate-400 text-[15px]">GCAA — Regulatory Compliance Dashboard</p>
               )}
             </div>
           </div>
@@ -222,7 +223,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={() => {/* Upload placeholder */}}
-              className="px-3 py-1.5 min-h-[44px] bg-[#2d3a52] hover:bg-[#3d4a62] text-[#94a3b8] rounded-lg text-sm flex items-center gap-1.5 transition-colors"
+              className="px-3 py-1.5 min-h-[44px] bg-navy-800 hover:bg-[#3d4a62] text-slate-400 rounded-lg text-sm flex items-center gap-1.5 transition-colors"
             >
               <Upload className="w-4 h-4" />
               Upload
@@ -231,7 +232,8 @@ export function GCAADetail({ data }: GCAADetailProps) {
               <button
                 onClick={handleRegenerate}
                 disabled={regenerating}
-                className="px-3 py-1.5 min-h-[44px] bg-[#2d3a52] hover:bg-[#3d4a62] text-[#94a3b8] rounded-lg text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                className="px-3 py-1.5 min-h-[44px] bg-navy-800 hover:bg-[#3d4a62] text-slate-400 rounded-lg text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                aria-label="Regenerate analysis"
               >
                 <RefreshCw className={`w-4 h-4 ${regenerating ? 'animate-spin' : ''}`} />
               </button>
@@ -254,7 +256,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
                     <p className="text-amber-400 text-sm font-medium mb-2">Issues</p>
                     <ul className="space-y-1.5">
                       {insights.cross_cutting.issues.map((issue, i) => (
-                        <li key={i} className="text-[#94a3b8] text-sm flex items-start gap-2">
+                        <li key={i} className="text-slate-400 text-sm flex items-start gap-2">
                           <span className="text-amber-400 mt-0.5">•</span>
                           {issue}
                         </li>
@@ -267,7 +269,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
                     <p className="text-emerald-400 text-sm font-medium mb-2">Opportunities</p>
                     <ul className="space-y-1.5">
                       {insights.cross_cutting.opportunities.map((opp, i) => (
-                        <li key={i} className="text-[#94a3b8] text-sm flex items-start gap-2">
+                        <li key={i} className="text-slate-400 text-sm flex items-start gap-2">
                           <span className="text-emerald-400 mt-0.5">•</span>
                           {opp}
                         </li>
@@ -282,7 +284,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
       </div>
 
       {/* ═══════════════════ TAB BAR ═══════════════════ */}
-      <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-1.5">
+      <div className="bg-navy-900 rounded-xl border border-navy-800 p-1.5">
         <div className="flex gap-1">
           {tabs.map(tab => (
             <button
@@ -290,8 +292,8 @@ export function GCAADetail({ data }: GCAADetailProps) {
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 px-2 md:px-4 py-2 md:py-2.5 min-h-[44px] rounded-lg text-xs md:text-base font-medium transition-all ${
                 activeTab === tab.id
-                  ? 'bg-[#d4af37] text-[#0a1628] shadow-lg shadow-[#d4af37]/20'
-                  : 'text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-[#2d3a52]'
+                  ? 'bg-gold-500 text-navy-950 shadow-lg shadow-gold-500/20'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-navy-800'
               }`}
             >
               <span className="md:hidden">{tab.label}</span>
@@ -307,14 +309,14 @@ export function GCAADetail({ data }: GCAADetailProps) {
         {/* ────────── TAB 1: COMPLIANCE ────────── */}
         {activeTab === 'compliance' && (
           <div className="space-y-4">
-            <h3 className="text-[#f1f5f9] font-medium text-lg md:text-[22px]">Regulatory Compliance</h3>
+            <h3 className="text-slate-100 font-medium text-lg md:text-[22px]">Regulatory Compliance</h3>
 
             {data ? (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Compliance Rate Radial */}
-                  <div className="bg-[#1a2744] rounded-xl p-3 md:p-5 border border-[#2d3a52]">
-                    <h4 className="text-[#94a3b8] text-sm mb-4">Compliance Audit Rate</h4>
+                  <div className="bg-navy-900 rounded-xl p-3 md:p-5 border border-navy-800">
+                    <h4 className="text-slate-400 text-sm mb-4">Compliance Audit Rate</h4>
                     <div className="flex flex-col items-center">
                       <div className="relative w-32 h-32" role="progressbar" aria-valuenow={Math.round(data.complianceRate)} aria-valuemin={0} aria-valuemax={100} aria-label={`Compliance Audit Rate: ${data.complianceRate?.toFixed(1)}%`}>
                         <svg className="w-full h-full transform -rotate-90" aria-hidden="true">
@@ -333,7 +335,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
                           </span>
                         </div>
                       </div>
-                      <p className="text-[#64748b] text-sm mt-3">Target: 95%</p>
+                      <p className="text-navy-600 text-sm mt-3">Target: 95%</p>
                     </div>
                   </div>
 
@@ -347,15 +349,15 @@ export function GCAADetail({ data }: GCAADetailProps) {
                 </div>
               </>
             ) : (
-              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-6 md:p-12 text-center">
-                <p className="text-[#64748b] text-base">No compliance data available. Upload GCAA reports to populate.</p>
+              <div className="bg-navy-900 rounded-xl border border-navy-800 p-6 md:p-12 text-center">
+                <p className="text-navy-600 text-base">No compliance data available. Upload GCAA reports to populate.</p>
               </div>
             )}
 
             {/* AI Insights */}
             {insights?.compliance?.cards && insights.compliance.cards.length > 0 && (
               <div className="space-y-3">
-                <p className="text-[10px] uppercase tracking-widest text-[#d4af37] font-semibold">AI Compliance Insights</p>
+                <p className="text-[10px] uppercase tracking-widest text-gold-500 font-semibold">AI Compliance Insights</p>
                 {insights.compliance.cards.map((card, i) => (
                   <InsightCard key={i} card={card} />
                 ))}
@@ -367,7 +369,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
         {/* ────────── TAB 2: INSPECTIONS ────────── */}
         {activeTab === 'inspections' && (
           <div className="space-y-4">
-            <h3 className="text-[#f1f5f9] font-medium text-lg md:text-[22px]">Inspection Program</h3>
+            <h3 className="text-slate-100 font-medium text-lg md:text-[22px]">Inspection Program</h3>
 
             {data ? (
               <>
@@ -394,11 +396,11 @@ export function GCAADetail({ data }: GCAADetailProps) {
                     <div className="h-40">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={data.inspectionTrend}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#2d3a52" />
-                          <XAxis dataKey="week" stroke="#94a3b8" tick={{ fontSize: 12 }} />
-                          <YAxis stroke="#94a3b8" tick={{ fontSize: 12 }} />
+                          <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid.stroke} />
+                          <XAxis dataKey="week" stroke={CHART_THEME.colors.slate400} tick={{ fontSize: 12 }} />
+                          <YAxis stroke={CHART_THEME.colors.slate400} tick={{ fontSize: 12 }} />
                           <Tooltip
-                            contentStyle={{ backgroundColor: '#1a2744', border: '1px solid #2d3a52', borderRadius: '8px' }}
+                            contentStyle={{ backgroundColor: CHART_THEME.colors.navy900, border: `1px solid ${CHART_THEME.colors.navy800}`, borderRadius: '8px' }}
                             formatter={(value: number) => [value, 'Completed']}
                           />
                           <Bar dataKey="completed" fill="#0d9488" radius={[4, 4, 0, 0]} />
@@ -409,15 +411,15 @@ export function GCAADetail({ data }: GCAADetailProps) {
                 )}
               </>
             ) : (
-              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-6 md:p-12 text-center">
-                <p className="text-[#64748b] text-base">No inspection data available. Upload GCAA reports to populate.</p>
+              <div className="bg-navy-900 rounded-xl border border-navy-800 p-6 md:p-12 text-center">
+                <p className="text-navy-600 text-base">No inspection data available. Upload GCAA reports to populate.</p>
               </div>
             )}
 
             {/* AI Insights */}
             {insights?.inspections?.cards && insights.inspections.cards.length > 0 && (
               <div className="space-y-3">
-                <p className="text-[10px] uppercase tracking-widest text-[#d4af37] font-semibold">AI Inspection Insights</p>
+                <p className="text-[10px] uppercase tracking-widest text-gold-500 font-semibold">AI Inspection Insights</p>
                 {insights.inspections.cards.map((card, i) => (
                   <InsightCard key={i} card={card} />
                 ))}
@@ -429,7 +431,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
         {/* ────────── TAB 3: REGISTRATIONS ────────── */}
         {activeTab === 'registrations' && (
           <div className="space-y-4">
-            <h3 className="text-[#f1f5f9] font-medium text-lg md:text-[22px]">Aircraft Registrations</h3>
+            <h3 className="text-slate-100 font-medium text-lg md:text-[22px]">Aircraft Registrations</h3>
 
             {data ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -451,15 +453,15 @@ export function GCAADetail({ data }: GCAADetailProps) {
                 />
               </div>
             ) : (
-              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-6 md:p-12 text-center">
-                <p className="text-[#64748b] text-base">No registration data available. Upload GCAA reports to populate.</p>
+              <div className="bg-navy-900 rounded-xl border border-navy-800 p-6 md:p-12 text-center">
+                <p className="text-navy-600 text-base">No registration data available. Upload GCAA reports to populate.</p>
               </div>
             )}
 
             {/* AI Insights */}
             {insights?.registrations?.cards && insights.registrations.cards.length > 0 && (
               <div className="space-y-3">
-                <p className="text-[10px] uppercase tracking-widest text-[#d4af37] font-semibold">AI Registration Insights</p>
+                <p className="text-[10px] uppercase tracking-widest text-gold-500 font-semibold">AI Registration Insights</p>
                 {insights.registrations.cards.map((card, i) => (
                   <InsightCard key={i} card={card} />
                 ))}
@@ -471,7 +473,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
         {/* ────────── TAB 4: SAFETY ────────── */}
         {activeTab === 'safety' && (
           <div className="space-y-4">
-            <h3 className="text-[#f1f5f9] font-medium text-lg md:text-[22px]">Safety & Incidents</h3>
+            <h3 className="text-slate-100 font-medium text-lg md:text-[22px]">Safety & Incidents</h3>
 
             {data ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -489,15 +491,15 @@ export function GCAADetail({ data }: GCAADetailProps) {
                 />
               </div>
             ) : (
-              <div className="bg-[#1a2744] rounded-xl border border-[#2d3a52] p-6 md:p-12 text-center">
-                <p className="text-[#64748b] text-base">No safety data available. Upload GCAA reports to populate.</p>
+              <div className="bg-navy-900 rounded-xl border border-navy-800 p-6 md:p-12 text-center">
+                <p className="text-navy-600 text-base">No safety data available. Upload GCAA reports to populate.</p>
               </div>
             )}
 
             {/* AI Insights */}
             {insights?.safety?.cards && insights.safety.cards.length > 0 && (
               <div className="space-y-3">
-                <p className="text-[10px] uppercase tracking-widest text-[#d4af37] font-semibold">AI Safety Insights</p>
+                <p className="text-[10px] uppercase tracking-widest text-gold-500 font-semibold">AI Safety Insights</p>
                 {insights.safety.cards.map((card, i) => (
                   <InsightCard key={i} card={card} />
                 ))}
@@ -508,7 +510,7 @@ export function GCAADetail({ data }: GCAADetailProps) {
       </div>
 
       {/* Data source footer */}
-      <p className="text-[#64748b] text-[10px] sm:text-xs text-center">
+      <p className="text-navy-600 text-[10px] sm:text-xs text-center">
         Source: GCAA Monthly Reports | Regulatory compliance and inspection data
       </p>
     </div>

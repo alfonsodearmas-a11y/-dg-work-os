@@ -64,7 +64,7 @@ export function BudgetAgencyDetail({ agencyCode }: { agencyCode: string }) {
     );
   }
 
-  if (!data) return <p className="text-[#64748b]">Failed to load data.</p>;
+  if (!data) return <p className="text-navy-600">Failed to load data.</p>;
 
   const totals = data.allocations.filter(a => a.expenditure_type === 'total');
   const currentItems = data.allocations.filter(a => a.expenditure_type === 'current');
@@ -85,24 +85,24 @@ export function BudgetAgencyDetail({ agencyCode }: { agencyCode: string }) {
             <div key={i} className="flex items-center justify-between">
               <div>
                 <p className="text-white font-semibold text-sm">{t.line_item}</p>
-                <p className="text-[#64748b] text-xs">{t.programme} &middot; {t.source}</p>
+                <p className="text-navy-600 text-xs">{t.programme} &middot; {t.source}</p>
               </div>
-              <p className="text-[#d4af37] font-bold text-lg font-mono">{t.budget_2026_fmt}</p>
+              <p className="text-gold-500 font-bold text-lg font-mono">{t.budget_2026_fmt}</p>
             </div>
           ))}
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-[#0a1628] rounded-xl p-1">
+      <div className="flex gap-1 bg-navy-950 rounded-xl p-1">
         {tabs.map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
               activeTab === tab.key
-                ? 'bg-[#d4af37]/20 text-[#d4af37]'
-                : 'text-[#64748b] hover:text-white'
+                ? 'bg-gold-500/20 text-gold-500'
+                : 'text-navy-600 hover:text-white'
             }`}
           >
             {tab.label} ({tab.count})
@@ -133,7 +133,7 @@ export function BudgetAgencyDetail({ agencyCode }: { agencyCode: string }) {
       {activeTab === 'projects' && (
         <div className="space-y-2">
           {data.projects.length === 0 ? (
-            <p className="text-[#64748b] text-sm p-4">No capital project profiles for this agency.</p>
+            <p className="text-navy-600 text-sm p-4">No capital project profiles for this agency.</p>
           ) : (
             data.projects.map((p, i) => (
               <div key={i} className="glass-card p-3 space-y-1">
@@ -141,10 +141,10 @@ export function BudgetAgencyDetail({ agencyCode }: { agencyCode: string }) {
                   <p className="text-white font-semibold text-sm">{p.project_title as string}</p>
                   <Badge variant={p.status === 'Ongoing' ? 'success' : 'gold'}>{p.status as string}</Badge>
                 </div>
-                <p className="text-[#94a3b8] text-xs">{p.description as string}</p>
+                <p className="text-slate-400 text-xs">{p.description as string}</p>
                 <div className="flex gap-3 text-xs">
-                  <span className="text-[#64748b]">Total: <span className="text-white font-mono">G${((p.total_project_cost as number) / 1000).toFixed(2)}M</span></span>
-                  <span className="text-[#64748b]">2026: <span className="text-[#d4af37] font-mono">G${((p.budget_2026 as number) / 1000).toFixed(2)}M</span></span>
+                  <span className="text-navy-600">Total: <span className="text-white font-mono">G${((p.total_project_cost as number) / 1000).toFixed(2)}M</span></span>
+                  <span className="text-navy-600">2026: <span className="text-gold-500 font-mono">G${((p.budget_2026 as number) / 1000).toFixed(2)}M</span></span>
                 </div>
               </div>
             ))
@@ -155,16 +155,16 @@ export function BudgetAgencyDetail({ agencyCode }: { agencyCode: string }) {
       {activeTab === 'documents' && (
         <div className="space-y-2">
           {data.documents.length === 0 ? (
-            <p className="text-[#64748b] text-sm p-4">No supporting documents for this agency.</p>
+            <p className="text-navy-600 text-sm p-4">No supporting documents for this agency.</p>
           ) : (
             data.documents.map((doc, i) => (
               <div key={i} className="glass-card p-3">
                 <div className="flex items-center gap-2 mb-1">
-                  <FileText className="h-4 w-4 text-[#d4af37] shrink-0" />
+                  <FileText className="h-4 w-4 text-gold-500 shrink-0" />
                   <p className="text-white text-sm font-medium truncate">{doc.document_name}</p>
                 </div>
-                <p className="text-[#94a3b8] text-xs line-clamp-2">{doc.first_snippet}</p>
-                <p className="text-[#64748b] text-[10px] mt-1">{doc.chunk_count} section{doc.chunk_count !== 1 ? 's' : ''}</p>
+                <p className="text-slate-400 text-xs line-clamp-2">{doc.first_snippet}</p>
+                <p className="text-navy-600 text-[10px] mt-1">{doc.chunk_count} section{doc.chunk_count !== 1 ? 's' : ''}</p>
               </div>
             ))
           )}
@@ -199,8 +199,8 @@ function AllocationGroup({
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between py-2 px-1 text-left"
       >
-        <span className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">{title}</span>
-        {expanded ? <ChevronDown className="h-3 w-3 text-[#64748b]" /> : <ChevronRight className="h-3 w-3 text-[#64748b]" />}
+        <span className="text-navy-600 text-xs font-semibold uppercase tracking-wider">{title}</span>
+        {expanded ? <ChevronDown className="h-3 w-3 text-navy-600" /> : <ChevronRight className="h-3 w-3 text-navy-600" />}
       </button>
       {expanded && (
         <div className="space-y-1.5">
@@ -209,48 +209,48 @@ function AllocationGroup({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-white text-sm font-medium">{item.line_item}</p>
-                  <p className="text-[#64748b] text-[10px] mt-0.5">{item.source}</p>
+                  <p className="text-navy-600 text-[10px] mt-0.5">{item.source}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-[#d4af37] font-bold text-sm font-mono">{item.budget_2026_fmt}</p>
+                  <p className="text-gold-500 font-bold text-sm font-mono">{item.budget_2026_fmt}</p>
                 </div>
               </div>
 
               {/* 4-year trend */}
               <div className="grid grid-cols-4 gap-2 mt-2 text-[10px]">
                 <div>
-                  <p className="text-[#64748b]">2024 Act</p>
+                  <p className="text-navy-600">2024 Act</p>
                   <p className="text-white font-mono">{item.actual_2024_fmt}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748b]">2025 Bud</p>
+                  <p className="text-navy-600">2025 Bud</p>
                   <p className="text-white font-mono">{item.budget_2025_fmt}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748b]">2025 Rev</p>
+                  <p className="text-navy-600">2025 Rev</p>
                   <p className="text-white font-mono">{item.revised_2025_fmt}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748b]">2026 Bud</p>
-                  <p className="text-[#d4af37] font-mono font-bold">{item.budget_2026_fmt}</p>
+                  <p className="text-navy-600">2026 Bud</p>
+                  <p className="text-gold-500 font-mono font-bold">{item.budget_2026_fmt}</p>
                 </div>
               </div>
 
               {item.notes && (
-                <p className="text-[#64748b] text-[10px] mt-1 italic">{item.notes}</p>
+                <p className="text-navy-600 text-[10px] mt-1 italic">{item.notes}</p>
               )}
 
               {/* AI button */}
               <div className="flex items-center gap-2 mt-2">
                 <button
                   onClick={() => onAnalyze(item)}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#d4af37]/10 border border-[#d4af37]/20 text-[#d4af37] text-[11px] font-medium hover:bg-[#d4af37]/20 hover:border-[#d4af37]/40 transition-colors"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gold-500/10 border border-gold-500/20 text-gold-500 text-[11px] font-medium hover:bg-gold-500/20 hover:border-gold-500/40 transition-colors"
                 >
                   <Sparkles className="h-3 w-3" />
                   Defence Brief
                 </button>
                 {item.linked_docs.length > 0 && (
-                  <span className="text-[#64748b] text-[10px]">
+                  <span className="text-navy-600 text-[10px]">
                     {item.linked_docs.length} doc{item.linked_docs.length !== 1 ? 's' : ''} linked
                   </span>
                 )}

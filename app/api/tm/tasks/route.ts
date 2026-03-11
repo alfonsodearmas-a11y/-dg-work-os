@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { authenticateAny, AuthError } from '@/lib/auth';
+import { requireRole } from '@/lib/auth-helpers';
 import { createTask, getTasksList } from '@/lib/task-queries';
 import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
 
@@ -8,7 +8,7 @@ const createTmTaskSchema = z.object({
   title: z.string().min(1),
   assignee_id: z.string().min(1),
   description: z.string().optional(),
-  priority: z.enum(['high', 'medium', 'low']).optional(),
+  priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
   agency: z.string().optional(),
   due_date: z.string().optional(),
   tags: z.array(z.string()).optional(),
@@ -17,10 +17,12 @@ const createTmTaskSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-  try {
-    const user = await authenticateAny(request);
-    const url = request.nextUrl;
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+  const { session } = authResult;
 
+  try {
+    const url = request.nextUrl;
     const filters: any = {};
     if (url.searchParams.get('status')) {
       const s = url.searchParams.get('status')!;
@@ -37,18 +39,19 @@ export async function GET(request: NextRequest) {
     if (url.searchParams.get('sort_by')) filters.sort_by = url.searchParams.get('sort_by');
     if (url.searchParams.get('sort_dir')) filters.sort_dir = url.searchParams.get('sort_dir');
 
-    const result = await getTasksList(filters, user.id, user.role);
+    const result = await getTasksList(filters, session.user.id, session.user.role);
     return NextResponse.json({ success: true, data: result });
   } catch (error: any) {
-    if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  try {
-    const user = await authenticateAny(request);
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+  const { session } = authResult;
 
+  try {
     const { data, error: validationError } = await parseBody(request, createTmTaskSchema);
     if (validationError) return validationError;
 
@@ -57,10 +60,9 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       agency: data.agency || 'ministry',
     };
 
-    const task = await createTask(taskData, user.id);
+    const task = await createTask(taskData, session.user.id);
     return NextResponse.json({ success: true, data: task }, { status: 201 });
   } catch (error: any) {
-    if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
     return apiError('INTERNAL_ERROR', error.message, 500);
   }
 });

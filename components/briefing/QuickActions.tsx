@@ -35,8 +35,8 @@ export function AgenciesSection({ actions, meetings }: { actions: ActionsData | 
   const pulse = actions.agencyPulse;
   if (pulse.length === 0) {
     return (
-      <div className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32] p-6 text-center">
-        <p className="text-[#64748b] text-sm">No agency data available.</p>
+      <div className="rounded-xl border border-navy-800/50 bg-[#0f1d32] p-6 text-center">
+        <p className="text-navy-600 text-sm">No agency data available.</p>
       </div>
     );
   }
@@ -66,7 +66,7 @@ export function AgenciesSection({ actions, meetings }: { actions: ActionsData | 
           <div
             key={ag.agency}
             className={`rounded-xl border bg-[#0f1d32] p-4 md:p-6 transition-all duration-300 ${
-              isCritical ? 'border-red-500/30 animate-[pulse-border_3s_ease-in-out_infinite]' : 'border-[#2d3a52]/50 hover:border-[#2d3a52]'
+              isCritical ? 'border-red-500/30 animate-[pulse-border_3s_ease-in-out_infinite]' : 'border-navy-800/50 hover:border-navy-800'
             }`}
           >
             {/* Agency header */}
@@ -85,25 +85,25 @@ export function AgenciesSection({ actions, meetings }: { actions: ActionsData | 
             <div className="grid grid-cols-3 gap-3 text-center mb-4">
               <div>
                 <p className="text-white font-bold text-2xl">{ag.openCount}</p>
-                <p className="text-[#64748b] text-xs font-medium uppercase tracking-wider">Open</p>
+                <p className="text-navy-600 text-xs font-medium uppercase tracking-wider">Open</p>
               </div>
               <div>
                 <p className={`font-bold text-2xl ${ag.overdueCount > 0 ? 'text-red-400' : 'text-white'}`}>{ag.overdueCount}</p>
-                <p className="text-[#64748b] text-xs font-medium uppercase tracking-wider">Overdue</p>
+                <p className="text-navy-600 text-xs font-medium uppercase tracking-wider">Overdue</p>
               </div>
               <div>
                 <p className={`font-bold text-2xl ${ag.staleCount > 0 ? 'text-amber-400' : 'text-white'}`}>{ag.staleCount}</p>
-                <p className="text-[#64748b] text-xs font-medium uppercase tracking-wider">Stale</p>
+                <p className="text-navy-600 text-xs font-medium uppercase tracking-wider">Stale</p>
               </div>
             </div>
 
             {/* Health bar */}
             <div className="mb-4">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs text-[#64748b]">Health</span>
+                <span className="text-xs text-navy-600">Health</span>
                 <span className={`text-xs font-bold ${healthTextColor}`}>{healthPct}%</span>
               </div>
-              <div className="w-full h-2 rounded-full bg-[#1a2744] overflow-hidden flex">
+              <div className="w-full h-2 rounded-full bg-navy-900 overflow-hidden flex">
                 {overduePct > 0 && (
                   <div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${overduePct}%` }} />
                 )}
@@ -113,11 +113,11 @@ export function AgenciesSection({ actions, meetings }: { actions: ActionsData | 
 
             {/* Latest meeting */}
             {latestMeeting && (
-              <div className="rounded-lg bg-[#1a2744]/60 border border-[#2d3a52]/30 p-3">
-                <p className="text-xs text-[#64748b] font-medium uppercase tracking-wider mb-1">Latest Meeting</p>
-                <p className="text-[#94a3b8] text-sm font-medium truncate">{latestMeeting.title}</p>
+              <div className="rounded-lg bg-navy-900/60 border border-navy-800/30 p-3">
+                <p className="text-xs text-navy-600 font-medium uppercase tracking-wider mb-1">Latest Meeting</p>
+                <p className="text-slate-400 text-sm font-medium truncate">{latestMeeting.title}</p>
                 {latestMeeting.date && (
-                  <p className="text-[#64748b] text-xs mt-1">{latestMeeting.date}</p>
+                  <p className="text-navy-600 text-xs mt-1">{latestMeeting.date}</p>
                 )}
               </div>
             )}
@@ -138,9 +138,9 @@ export function IntelSection({ meetings, actions }: { meetings: MeetingsData | n
 
   if (meetings.meetings.length === 0) {
     return (
-      <div className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32] p-8 text-center">
-        <FileText className="h-12 w-12 text-[#2d3a52] mx-auto mb-3" />
-        <p className="text-[#64748b] text-base">No meeting notes from the last 7 days.</p>
+      <div className="rounded-xl border border-navy-800/50 bg-[#0f1d32] p-8 text-center">
+        <FileText className="h-12 w-12 text-navy-800 mx-auto mb-3" />
+        <p className="text-navy-600 text-base">No meeting notes from the last 7 days.</p>
       </div>
     );
   }
@@ -159,25 +159,25 @@ export function IntelSection({ meetings, actions }: { meetings: MeetingsData | n
             href={m.url}
             target="_blank"
             rel="noopener noreferrer"
-            className={`block rounded-xl border border-[#2d3a52]/50 border-t-2 ${topBorder} bg-[#0f1d32] p-4 md:p-6 hover:border-[#2d3a52] transition-all duration-200 group`}
+            className={`block rounded-xl border border-navy-800/50 border-t-2 ${topBorder} bg-[#0f1d32] p-4 md:p-6 hover:border-navy-800 transition-all duration-200 group`}
           >
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="min-w-0">
-                <p className="text-white text-base font-bold group-hover:text-[#d4af37] transition-colors">{m.title}</p>
+                <p className="text-white text-base font-bold group-hover:text-gold-500 transition-colors">{m.title}</p>
                 <div className="flex items-center gap-2 mt-2">
-                  {m.date && <span className="text-[#64748b] text-xs font-medium">{m.date}</span>}
+                  {m.date && <span className="text-navy-600 text-xs font-medium">{m.date}</span>}
                   {m.category && <AgencyTag agency={m.category} />}
                   {m.relatedAgency && m.relatedAgency !== m.category && <AgencyTag agency={m.relatedAgency} />}
                 </div>
               </div>
               {relActions.length > 0 && (
-                <span className="rounded-lg bg-[#d4af37]/15 text-[#d4af37] font-bold px-3 py-1 text-sm shrink-0">
+                <span className="rounded-lg bg-gold-500/15 text-gold-500 font-bold px-3 py-1 text-sm shrink-0">
                   {relActions.length} actions
                 </span>
               )}
             </div>
             {m.summary && (
-              <p className="text-[#94a3b8] text-sm leading-relaxed line-clamp-3">{m.summary}</p>
+              <p className="text-slate-400 text-sm leading-relaxed line-clamp-3">{m.summary}</p>
             )}
           </a>
         );
@@ -190,34 +190,34 @@ export function MeetingsWeekSection({ data }: { data: MeetingSummaryData | null 
   if (!data) return <Skeleton className="h-36 rounded-xl" />;
 
   return (
-    <div className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32] p-4 md:p-6">
+    <div className="rounded-xl border border-navy-800/50 bg-[#0f1d32] p-4 md:p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2.5">
-          <Mic className="h-5 w-5 text-[#d4af37]" />
+          <Mic className="h-5 w-5 text-gold-500" />
           <h3 className="text-lg font-bold text-white">Meetings</h3>
         </div>
-        <span className="rounded-lg bg-[#d4af37]/15 text-[#d4af37] font-bold px-3 py-1 text-sm">
+        <span className="rounded-lg bg-gold-500/15 text-gold-500 font-bold px-3 py-1 text-sm">
           {data.meetingsThisWeek} this week
         </span>
       </div>
 
       {data.actions.length > 0 ? (
         <div className="space-y-3 mb-4">
-          <p className="text-xs text-[#64748b] font-bold uppercase tracking-wider">Open Actions Due This Week</p>
+          <p className="text-xs text-navy-600 font-bold uppercase tracking-wider">Open Actions Due This Week</p>
           {data.actions.map(a => (
             <div
               key={a.id}
-              className="rounded-xl border border-[#2d3a52]/50 bg-[#0f1d32] p-4 hover:border-[#2d3a52] transition-all duration-200"
+              className="rounded-xl border border-navy-800/50 bg-[#0f1d32] p-4 hover:border-navy-800 transition-all duration-200"
             >
               <p className="text-white text-sm font-medium">{a.task}</p>
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 {a.meeting_title && (
-                  <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-[#1a2744] text-[#94a3b8] border border-[#2d3a52]/50">
+                  <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-navy-900 text-slate-400 border border-navy-800/50">
                     {a.meeting_title}
                   </span>
                 )}
                 {a.due_date && (
-                  <span className="flex items-center gap-1 text-xs text-[#64748b]">
+                  <span className="flex items-center gap-1 text-xs text-navy-600">
                     <Clock className="h-3 w-3" />
                     {a.due_date}
                   </span>
@@ -227,7 +227,7 @@ export function MeetingsWeekSection({ data }: { data: MeetingSummaryData | null 
           ))}
         </div>
       ) : (
-        <p className="text-[#64748b] text-sm mb-4">No meeting actions due this week.</p>
+        <p className="text-navy-600 text-sm mb-4">No meeting actions due this week.</p>
       )}
 
       {/* Needs Review banner */}
@@ -244,7 +244,7 @@ export function MeetingsWeekSection({ data }: { data: MeetingSummaryData | null 
               <Link
                 key={m.meeting_id}
                 href="/meetings"
-                className="flex items-center justify-between text-xs text-[#94a3b8] hover:text-white transition-colors"
+                className="flex items-center justify-between text-xs text-slate-400 hover:text-white transition-colors"
               >
                 <span>{m.meeting_title}</span>
                 <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-medium">
@@ -258,7 +258,7 @@ export function MeetingsWeekSection({ data }: { data: MeetingSummaryData | null 
 
       <Link
         href="/meetings"
-        className="flex items-center gap-1.5 text-[#d4af37] text-sm font-medium hover:underline"
+        className="flex items-center gap-1.5 text-gold-500 text-sm font-medium hover:underline"
       >
         View all meetings <ArrowRight className="h-3.5 w-3.5" />
       </Link>

@@ -22,6 +22,7 @@ import {
   Eye,
   CheckSquare,
   CalendarDays,
+  ChevronsLeft,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
@@ -68,7 +69,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [agenciesOpen, setAgenciesOpen] = useState(true);
-  const { mobileOpen, setMobileOpen } = useSidebar();
+  const { mobileOpen, setMobileOpen, collapsed, toggleCollapse } = useSidebar();
   const { canAccess } = useModuleAccess();
 
   const userRole = (session?.user as { role?: string })?.role || 'officer';
@@ -119,14 +120,14 @@ export function Sidebar() {
       )}
 
       <aside
-        className={`sidebar w-64 min-h-screen flex flex-col shrink-0 fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-out md:static md:translate-x-0 ${
+        className={`sidebar min-h-screen flex flex-col shrink-0 fixed inset-y-0 left-0 z-50 transition-all duration-300 ease-out md:static md:translate-x-0 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        } ${collapsed ? 'md:w-16' : 'w-64'}`}
       >
         {/* Logo */}
-        <div className="px-6 py-5 border-b border-[#2d3a52]/50 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3" onClick={handleNavClick}>
-            <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-[#d4af37]/40 shadow-lg shadow-[#d4af37]/10 shrink-0">
+        <div className={`${collapsed ? 'px-2 py-5' : 'px-6 py-5'} border-b border-navy-800/50 flex items-center justify-between transition-all duration-300`}>
+          <Link href="/" className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`} onClick={handleNavClick}>
+            <div className={`${collapsed ? 'w-10 h-10' : 'w-12 h-12'} rounded-full overflow-hidden ring-2 ring-gold-500/40 shadow-lg shadow-gold-500/10 shrink-0 transition-all duration-300`}>
               <Image
                 src="/app-icon.png"
                 alt="DG Work OS"
@@ -136,14 +137,16 @@ export function Sidebar() {
                 className="w-full h-full object-cover"
               />
             </div>
-            <div>
-              <h1 className="font-bold text-white text-base leading-tight tracking-tight">Work <span className="text-[#d4af37]">OS</span></h1>
-              <p className="text-[#64748b] text-xs font-medium tracking-wide uppercase">{roleLabel}</p>
-            </div>
+            {!collapsed && (
+              <div>
+                <h1 className="font-bold text-white text-base leading-tight tracking-tight">Work <span className="text-gold-500">OS</span></h1>
+                <p className="text-navy-600 text-xs font-medium tracking-wide uppercase">{roleLabel}</p>
+              </div>
+            )}
           </Link>
           <button
             onClick={() => setMobileOpen(false)}
-            className="md:hidden p-2.5 rounded-lg hover:bg-[#2d3a52]/50 text-[#64748b] hover:text-white transition-colors touch-active"
+            className="md:hidden p-2.5 rounded-lg hover:bg-navy-800/50 text-navy-600 hover:text-white transition-colors touch-active"
             aria-label="Close menu"
           >
             <X size={20} />
@@ -152,9 +155,11 @@ export function Sidebar() {
 
         {/* Main Navigation */}
         <nav className="flex-1 py-6 overflow-y-auto" role="navigation" aria-label="Main navigation">
-          <div className="px-4 mb-2">
-            <span className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">Main Menu</span>
-          </div>
+          {!collapsed && (
+            <div className="px-4 mb-2">
+              <span className="text-navy-600 text-xs font-semibold uppercase tracking-wider">Main Menu</span>
+            </div>
+          )}
           {filteredMainNav.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -163,12 +168,13 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 onClick={handleNavClick}
-                className={`sidebar-item ${active ? 'active' : ''}`}
+                title={collapsed ? item.label : undefined}
+                className={`sidebar-item ${active ? 'active' : ''} ${collapsed ? 'justify-center px-2' : ''}`}
                 {...(active ? { 'aria-current': 'page' as const } : {})}
               >
-                <Icon className={active ? 'text-[#d4af37]' : ''} aria-hidden="true" />
-                <span className="text-[15px]">{item.label}</span>
-                {active && <ChevronRight className="ml-auto h-4 w-4" aria-hidden="true" />}
+                <Icon className={active ? 'text-gold-500' : ''} aria-hidden="true" />
+                {!collapsed && <span className="text-[15px]">{item.label}</span>}
+                {active && !collapsed && <ChevronRight className="ml-auto h-4 w-4" aria-hidden="true" />}
               </Link>
             );
           })}
@@ -176,20 +182,22 @@ export function Sidebar() {
           {/* Agencies Section */}
           {filteredAgencies.length > 0 && (
             <div className="mt-8">
-              <button
-                onClick={() => setAgenciesOpen(!agenciesOpen)}
-                className="w-full px-4 mb-2 flex items-center justify-between"
-                aria-expanded={agenciesOpen}
-                aria-label="Agencies"
-              >
-                <span className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">Agencies</span>
-                {agenciesOpen ? (
-                  <ChevronDown className="h-3 w-3 text-[#64748b]" aria-hidden="true" />
-                ) : (
-                  <ChevronRight className="h-3 w-3 text-[#64748b]" aria-hidden="true" />
-                )}
-              </button>
-              {agenciesOpen && (
+              {!collapsed && (
+                <button
+                  onClick={() => setAgenciesOpen(!agenciesOpen)}
+                  className="w-full px-4 mb-2 flex items-center justify-between"
+                  aria-expanded={agenciesOpen}
+                  aria-label="Agencies"
+                >
+                  <span className="text-navy-600 text-xs font-semibold uppercase tracking-wider">Agencies</span>
+                  {agenciesOpen ? (
+                    <ChevronDown className="h-3 w-3 text-navy-600" aria-hidden="true" />
+                  ) : (
+                    <ChevronRight className="h-3 w-3 text-navy-600" aria-hidden="true" />
+                  )}
+                </button>
+              )}
+              {(agenciesOpen || collapsed) && (
                 <div className="space-y-0.5">
                   {filteredAgencies.map((agency) => {
                     const Icon = agency.icon;
@@ -200,12 +208,13 @@ export function Sidebar() {
                         key={agency.code}
                         href={href}
                         onClick={handleNavClick}
-                        className={`sidebar-item ${active ? 'active' : ''}`}
+                        title={collapsed ? agency.label : undefined}
+                        className={`sidebar-item ${active ? 'active' : ''} ${collapsed ? 'justify-center px-2' : ''}`}
                         {...(active ? { 'aria-current': 'page' as const } : {})}
                       >
-                        <Icon className={`h-4 w-4 ${active ? 'text-[#d4af37]' : ''}`} aria-hidden="true" />
-                        <span className="text-[15px]">{agency.label}</span>
-                        <span className="ml-auto text-xs text-[#64748b] hidden group-hover:inline">{agency.name}</span>
+                        <Icon className={`h-4 w-4 ${active ? 'text-gold-500' : ''}`} aria-hidden="true" />
+                        {!collapsed && <span className="text-[15px]">{agency.label}</span>}
+                        {!collapsed && <span className="ml-auto text-xs text-navy-600 hidden group-hover:inline">{agency.name}</span>}
                       </Link>
                     );
                   })}
@@ -217,9 +226,12 @@ export function Sidebar() {
           {/* Admin Section (DG, Minister, PS only) */}
           {showAdmin && filteredAdminItems.length > 0 && (
             <>
-              <div className="mt-8 px-4 mb-2">
-                <span className="text-[#64748b] text-xs font-semibold uppercase tracking-wider">Admin</span>
-              </div>
+              {!collapsed && (
+                <div className="mt-8 px-4 mb-2">
+                  <span className="text-navy-600 text-xs font-semibold uppercase tracking-wider">Admin</span>
+                </div>
+              )}
+              {collapsed && <div className="mt-4" />}
               {filteredAdminItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
@@ -228,34 +240,65 @@ export function Sidebar() {
                     key={item.href}
                     href={item.href}
                     onClick={handleNavClick}
-                    className={`sidebar-item ${active ? 'active' : ''}`}
+                    title={collapsed ? item.label : undefined}
+                    className={`sidebar-item ${active ? 'active' : ''} ${collapsed ? 'justify-center px-2' : ''}`}
                     {...(active ? { 'aria-current': 'page' as const } : {})}
                   >
-                    <Icon className={active ? 'text-[#d4af37]' : ''} aria-hidden="true" />
-                    <span className="text-[15px]">{item.label}</span>
+                    <Icon className={active ? 'text-gold-500' : ''} aria-hidden="true" />
+                    {!collapsed && <span className="text-[15px]">{item.label}</span>}
                   </Link>
                 );
               })}
             </>
           )}
+
+          {/* Collapse toggle (desktop only) */}
+          <div className="hidden md:block mt-auto pt-4 px-2">
+            <button
+              onClick={toggleCollapse}
+              className="w-full flex items-center justify-center p-2 rounded-lg text-navy-600 hover:text-gold-500 hover:bg-gold-500/10 transition-colors"
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <ChevronsLeft className={`h-4 w-4 transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-[#2d3a52]/50 space-y-3">
-          <div className="glass-card p-4">
-            <p className="text-sm font-medium text-white truncate">{userName}</p>
-            <p className="text-xs text-[#d4af37] mt-0.5">{roleLabel}</p>
-            {userAgency && (
-              <p className="text-xs text-[#64748b] mt-0.5">{userAgency}</p>
-            )}
-          </div>
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-2 w-full px-4 py-2.5 rounded-lg text-[#64748b] hover:text-red-400 hover:bg-red-500/10 transition-colors text-sm"
-          >
-            <LogOut className="h-4 w-4" aria-hidden="true" />
-            Sign Out
-          </button>
+        <div className={`${collapsed ? 'p-2' : 'p-4'} border-t border-navy-800/50 space-y-3 transition-all duration-300`}>
+          {collapsed ? (
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center shrink-0" title={userName}>
+                <span className="text-navy-950 font-bold text-xs">{userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="p-2 rounded-lg text-navy-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                title="Sign Out"
+                aria-label="Sign Out"
+              >
+                <LogOut className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="glass-card p-4">
+                <p className="text-sm font-medium text-white truncate">{userName}</p>
+                <p className="text-xs text-gold-500 mt-0.5">{roleLabel}</p>
+                {userAgency && (
+                  <p className="text-xs text-navy-600 mt-0.5">{userAgency}</p>
+                )}
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-2 w-full px-4 py-2.5 rounded-lg text-navy-600 hover:text-red-400 hover:bg-red-500/10 transition-colors text-sm"
+              >
+                <LogOut className="h-4 w-4" aria-hidden="true" />
+                Sign Out
+              </button>
+            </>
+          )}
         </div>
       </aside>
     </>

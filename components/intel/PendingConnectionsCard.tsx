@@ -45,18 +45,18 @@ export function PendingConnectionsCard({ agency, compact }: Props) {
 
   if (compact) {
     return (
-      <Link href={linkHref} className="card-premium p-4 hover:border-[#d4af37]/50 transition-colors block">
+      <Link href={linkHref} className="card-premium p-4 hover:border-gold-500/50 transition-colors block">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4 text-purple-400" />
             <span className="text-sm font-medium text-white">Pending Connections</span>
           </div>
-          <ArrowRight className="h-4 w-4 text-[#64748b]" />
+          <ArrowRight className="h-4 w-4 text-navy-600" />
         </div>
         <div className="flex items-end justify-between">
           <div>
             <div className="text-2xl font-bold text-white">{total}</div>
-            <div className="text-xs text-[#64748b]">avg {avgDays} days wait</div>
+            <div className="text-xs text-navy-600">avg {avgDays} days wait</div>
           </div>
           {/* Mini bracket bar */}
           <div className="flex h-6 w-24 rounded overflow-hidden">
@@ -89,7 +89,7 @@ export function PendingConnectionsCard({ agency, compact }: Props) {
         </div>
         <Link
           href={linkHref}
-          className="text-xs text-[#d4af37] hover:text-[#f0d060] flex items-center gap-1"
+          className="text-xs text-gold-500 hover:text-[#f0d060] flex items-center gap-1"
         >
           View all <ArrowRight className="h-3 w-3" />
         </Link>
@@ -98,17 +98,17 @@ export function PendingConnectionsCard({ agency, compact }: Props) {
       <div className="grid grid-cols-3 gap-3">
         <div>
           <div className="text-2xl font-bold text-white">{total}</div>
-          <div className="text-xs text-[#64748b]">applications</div>
+          <div className="text-xs text-navy-600">applications</div>
         </div>
         <div>
-          <div className="text-2xl font-bold text-white">{avgDays}<span className="text-base font-normal text-[#64748b]">d</span></div>
-          <div className="text-xs text-[#64748b]">avg wait</div>
+          <div className="text-2xl font-bold text-white">{avgDays}<span className="text-base font-normal text-navy-600">d</span></div>
+          <div className="text-xs text-navy-600">avg wait</div>
         </div>
         <div>
           <div className={`text-2xl font-bold ${(brackets[3]?.count || 0) > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
             {brackets[3]?.count || 0}
           </div>
-          <div className="text-xs text-[#64748b]">&gt; 30 days</div>
+          <div className="text-xs text-navy-600">&gt; 30 days</div>
         </div>
       </div>
 
@@ -131,16 +131,16 @@ export function PendingConnectionsCard({ agency, compact }: Props) {
             )
           ))}
         </div>
-        <div className="flex items-center gap-3 text-[10px] text-[#64748b]">
+        <div className="flex items-center gap-3 text-[10px] text-navy-600">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /> &lt;7d</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#d4af37]" /> 7–14d</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gold-500" /> 7–14d</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500" /> 15–30d</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> &gt;30d</span>
         </div>
       </div>
 
       {agencyStats?.dataAsOf && (
-        <div className="flex items-center gap-1.5 text-[10px] text-[#64748b]">
+        <div className="flex items-center gap-1.5 text-[10px] text-navy-600">
           <Clock className="h-3 w-3" />
           Data as of {new Date(agencyStats.dataAsOf + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </div>

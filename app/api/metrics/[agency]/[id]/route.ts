@@ -18,7 +18,7 @@ const patchSchema = z.object({
 });
 
 export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown) => {
-  const session = await auth();
+  const session = await auth(); // TODO: migrate to requireRole()
   const userId = session?.user?.id || 'system';
   const { agency, id } = await (ctx as { params: Promise<{ agency: string; id: string }> }).params;
 

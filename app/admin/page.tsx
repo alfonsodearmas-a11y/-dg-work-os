@@ -48,10 +48,10 @@ function AIUsageSection() {
     return (
       <div className="card-premium p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Cpu className="h-5 w-5 text-[#d4af37]" />
+          <Cpu className="h-5 w-5 text-gold-500" />
           <h2 className="text-lg font-semibold text-white">AI Usage</h2>
         </div>
-        <p className="text-[#64748b] text-sm">Loading usage data...</p>
+        <p className="text-navy-600 text-sm">Loading usage data...</p>
       </div>
     );
   }
@@ -60,10 +60,10 @@ function AIUsageSection() {
     return (
       <div className="card-premium p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Cpu className="h-5 w-5 text-[#d4af37]" />
+          <Cpu className="h-5 w-5 text-gold-500" />
           <h2 className="text-lg font-semibold text-white">AI Usage</h2>
         </div>
-        <p className="text-[#64748b] text-sm">No AI usage data yet. Usage will appear here once the AI assistant is used.</p>
+        <p className="text-navy-600 text-sm">No AI usage data yet. Usage will appear here once the AI assistant is used.</p>
       </div>
     );
   }
@@ -80,7 +80,7 @@ function AIUsageSection() {
   return (
     <div className="card-premium p-6">
       <div className="flex items-center gap-2 mb-6">
-        <Cpu className="h-5 w-5 text-[#d4af37]" />
+        <Cpu className="h-5 w-5 text-gold-500" />
         <h2 className="text-lg font-semibold text-white">AI Usage (7 days)</h2>
       </div>
 
@@ -99,14 +99,14 @@ function AIUsageSection() {
             <Database className="h-3 w-3 text-white/40" />
             <p className="text-[10px] text-white/40 uppercase tracking-wider">Cache Hit</p>
           </div>
-          <p className="text-xl font-bold text-[#3b82f6]">{totals.cached_pct}%</p>
+          <p className="text-xl font-bold text-blue-500">{totals.cached_pct}%</p>
         </div>
         <div className="bg-white/5 rounded-xl p-3 border border-white/5">
           <div className="flex items-center gap-1 mb-1">
             <Zap className="h-3 w-3 text-white/40" />
             <p className="text-[10px] text-white/40 uppercase tracking-wider">Local Answers</p>
           </div>
-          <p className="text-xl font-bold text-[#22c55e]">{totals.local_pct}%</p>
+          <p className="text-xl font-bold text-green-500">{totals.local_pct}%</p>
         </div>
       </div>
 
@@ -146,7 +146,7 @@ function AIUsageSection() {
             <span className="text-white/50">Sonnet {sonnetPct}%</span>
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-[#d4af37]" />
+            <span className="w-2 h-2 rounded-full bg-gold-500" />
             <span className="text-white/50">Opus {opusPct}%</span>
           </span>
         </div>
@@ -196,8 +196,8 @@ function AIUsageSection() {
       {/* Cost savings indicator */}
       {(totals.cached_pct > 0 || totals.local_pct > 0) && (
         <div className="mt-4 flex items-center gap-2 p-3 rounded-lg bg-[#22c55e]/10 border border-[#22c55e]/20">
-          <TrendingDown className="h-4 w-4 text-[#22c55e]" />
-          <p className="text-xs text-[#22c55e]">
+          <TrendingDown className="h-4 w-4 text-green-500" />
+          <p className="text-xs text-green-500">
             {totals.cached_pct + totals.local_pct}% of requests served at zero API cost (cached + local answers)
           </p>
         </div>
@@ -210,10 +210,10 @@ export default function AdminPage() {
   return (
     <div className="animate-fade-in">
       <div className="flex items-center space-x-3 mb-8">
-        <Settings className="h-8 w-8 text-[#d4af37]" />
+        <Settings className="h-8 w-8 text-gold-500" />
         <div>
           <h1 className="text-3xl font-bold text-white">Admin</h1>
-          <p className="text-[#64748b] text-sm mt-1">User management & data entry portal</p>
+          <p className="text-navy-600 text-sm mt-1">User management & data entry portal</p>
         </div>
       </div>
 

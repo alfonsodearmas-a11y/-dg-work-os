@@ -57,17 +57,17 @@ export function SlidePanel({ isOpen, onClose, title, subtitle, icon: Icon, accen
         role="dialog"
         aria-modal="true"
         aria-labelledby="slide-panel-title"
-        className={`fixed inset-y-0 right-0 w-full sm:w-[600px] lg:w-[700px] bg-[#0a1628] border-l border-[#2d3a52] z-50 flex flex-col transform transition-transform duration-300 ease-out ${
+        className={`fixed inset-y-0 right-0 w-full sm:w-[600px] lg:w-[700px] bg-navy-950 border-l border-navy-800 z-50 flex flex-col transform transition-transform duration-300 ease-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         {/* Header */}
-        <div className="flex-shrink-0 bg-[#1a2744]/95 backdrop-blur-sm border-b border-[#2d3a52] px-4 md:px-6 py-3 md:py-4 z-10">
+        <div className="flex-shrink-0 bg-navy-900/95 backdrop-blur-sm border-b border-navy-800 px-4 md:px-6 py-3 md:py-4 z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 md:gap-4 min-w-0">
               <button
                 onClick={onClose}
-                className="p-2.5 -ml-2 rounded-lg hover:bg-[#2d3a52] text-[#94a3b8] hover:text-white transition-colors lg:hidden touch-active"
+                className="p-2.5 -ml-2 rounded-lg hover:bg-navy-800 text-slate-400 hover:text-white transition-colors lg:hidden touch-active"
                 aria-label="Close panel"
               >
                 <ArrowLeft size={20} />
@@ -79,12 +79,12 @@ export function SlidePanel({ isOpen, onClose, title, subtitle, icon: Icon, accen
               )}
               <div>
                 <h2 id="slide-panel-title" className="text-xl font-bold text-white">{title}</h2>
-                {subtitle && <p className="text-[#94a3b8] text-sm">{subtitle}</p>}
+                {subtitle && <p className="text-slate-400 text-sm">{subtitle}</p>}
               </div>
             </div>
             <button
               onClick={onClose}
-              className="hidden lg:flex p-2 rounded-lg hover:bg-[#2d3a52] text-[#94a3b8] hover:text-white transition-colors"
+              className="hidden lg:flex p-2 rounded-lg hover:bg-navy-800 text-slate-400 hover:text-white transition-colors"
               aria-label="Close panel"
             >
               <X size={20} />

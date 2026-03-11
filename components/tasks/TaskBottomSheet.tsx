@@ -54,7 +54,7 @@ export function TaskBottomSheet({ task, onClose, onEdit, onMove, onDelete }: Tas
         role="dialog"
         aria-modal="true"
         aria-label="Task actions"
-        className="relative w-full rounded-t-2xl bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border-t border-[#2d3a52] shadow-2xl animate-slide-up"
+        className="relative w-full rounded-t-2xl bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border-t border-navy-800 shadow-2xl animate-slide-up"
         style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
       >
         {/* Drag handle */}
@@ -67,7 +67,7 @@ export function TaskBottomSheet({ task, onClose, onEdit, onMove, onDelete }: Tas
             {/* Task info */}
             <div className="mb-3 px-1">
               <p className="text-white text-sm font-medium line-clamp-1">{task.title}</p>
-              <div className="flex items-center gap-2 text-xs text-[#64748b] mt-1">
+              <div className="flex items-center gap-2 text-xs text-navy-600 mt-1">
                 {task.agency && <span>{task.agency}</span>}
                 {task.priority && <span className="capitalize">{task.priority}</span>}
                 {task.due_date && (
@@ -80,30 +80,30 @@ export function TaskBottomSheet({ task, onClose, onEdit, onMove, onDelete }: Tas
 
             <button
               onClick={() => { onEdit(); onClose(); }}
-              className="w-full flex items-center gap-3 px-3 py-3.5 text-sm text-[#e2e8f0] rounded-lg active:bg-[#2d3a52]/50 transition-colors"
+              className="w-full flex items-center gap-3 px-3 py-3.5 text-sm text-slate-200 rounded-lg active:bg-navy-800/50 transition-colors"
               style={{ minHeight: 44, touchAction: 'manipulation' }}
             >
-              <Pencil className="h-4 w-4 text-[#64748b]" />
+              <Pencil className="h-4 w-4 text-navy-600" />
               Edit task
             </button>
 
             {nextStatus && (
               <button
                 onClick={() => { onMove(task.id, nextStatus.value); onClose(); }}
-                className="w-full flex items-center gap-3 px-3 py-3.5 text-sm text-[#e2e8f0] rounded-lg active:bg-[#2d3a52]/50 transition-colors"
+                className="w-full flex items-center gap-3 px-3 py-3.5 text-sm text-slate-200 rounded-lg active:bg-navy-800/50 transition-colors"
                 style={{ minHeight: 44, touchAction: 'manipulation' }}
               >
-                <ArrowRight className="h-4 w-4 text-[#64748b]" />
+                <ArrowRight className="h-4 w-4 text-navy-600" />
                 {nextStatus.label}
               </button>
             )}
 
             <button
               onClick={() => setView('move')}
-              className="w-full flex items-center gap-3 px-3 py-3.5 text-sm text-[#e2e8f0] rounded-lg active:bg-[#2d3a52]/50 transition-colors"
+              className="w-full flex items-center gap-3 px-3 py-3.5 text-sm text-slate-200 rounded-lg active:bg-navy-800/50 transition-colors"
               style={{ minHeight: 44, touchAction: 'manipulation' }}
             >
-              <ArrowRight className="h-4 w-4 text-[#64748b]" />
+              <ArrowRight className="h-4 w-4 text-navy-600" />
               Move to...
             </button>
 
@@ -120,7 +120,7 @@ export function TaskBottomSheet({ task, onClose, onEdit, onMove, onDelete }: Tas
 
             <button
               onClick={onClose}
-              className="w-full mt-2 py-3.5 rounded-xl bg-[#2d3a52] text-sm font-medium text-[#94a3b8] active:bg-[#3d4a62]"
+              className="w-full mt-2 py-3.5 rounded-xl bg-navy-800 text-sm font-medium text-slate-400 active:bg-[#3d4a62]"
               style={{ minHeight: 44, touchAction: 'manipulation' }}
             >
               Cancel
@@ -140,21 +140,21 @@ export function TaskBottomSheet({ task, onClose, onEdit, onMove, onDelete }: Tas
                 }}
                 className={`w-full flex items-center gap-3 px-3 py-3.5 text-sm rounded-lg transition-colors ${
                   s.value === task.status
-                    ? 'text-white bg-[#2d3a52]/60'
-                    : 'text-[#e2e8f0] active:bg-[#2d3a52]/50'
+                    ? 'text-white bg-navy-800/60'
+                    : 'text-slate-200 active:bg-navy-800/50'
                 }`}
                 style={{ minHeight: 44, touchAction: 'manipulation' }}
               >
                 <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
                 {s.label}
                 {s.value === task.status && (
-                  <span className="ml-auto text-xs text-[#64748b]">current</span>
+                  <span className="ml-auto text-xs text-navy-600">current</span>
                 )}
               </button>
             ))}
             <button
               onClick={() => setView('actions')}
-              className="w-full mt-2 py-3.5 rounded-xl bg-[#2d3a52] text-sm font-medium text-[#94a3b8] active:bg-[#3d4a62]"
+              className="w-full mt-2 py-3.5 rounded-xl bg-navy-800 text-sm font-medium text-slate-400 active:bg-[#3d4a62]"
               style={{ minHeight: 44, touchAction: 'manipulation' }}
             >
               Back
@@ -165,11 +165,11 @@ export function TaskBottomSheet({ task, onClose, onEdit, onMove, onDelete }: Tas
         {view === 'confirmDelete' && (
           <div className="px-4 pb-3">
             <p className="text-white text-sm font-semibold mb-1 px-1">Delete this task?</p>
-            <p className="text-[#64748b] text-xs mb-4 px-1">This cannot be undone.</p>
+            <p className="text-navy-600 text-xs mb-4 px-1">This cannot be undone.</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setView('actions')}
-                className="flex-1 py-3.5 rounded-xl bg-[#2d3a52] text-sm font-medium text-[#94a3b8] active:bg-[#3d4a62]"
+                className="flex-1 py-3.5 rounded-xl bg-navy-800 text-sm font-medium text-slate-400 active:bg-[#3d4a62]"
                 style={{ minHeight: 44, touchAction: 'manipulation' }}
               >
                 Cancel

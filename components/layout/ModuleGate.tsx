@@ -70,10 +70,10 @@ export function ModuleGate({ children }: { children: React.ReactNode }) {
           <ShieldOff className="h-8 w-8 text-red-400" />
         </div>
         <h2 className="text-xl font-bold text-white mb-2">Access Denied</h2>
-        <p className="text-[#64748b] text-sm max-w-md">
+        <p className="text-navy-600 text-sm max-w-md">
           You don&apos;t have access to this module. Contact the Director General to request access.
         </p>
-        <p className="text-[#4a5568] text-xs mt-4">Redirecting to home...</p>
+        <p className="text-navy-700 text-xs mt-4">Redirecting to home...</p>
       </div>
     );
   }

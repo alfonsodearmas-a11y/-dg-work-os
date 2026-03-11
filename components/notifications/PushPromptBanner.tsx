@@ -127,17 +127,17 @@ export function PushPromptBanner() {
   if (showIOSInstructions) {
     return (
       <div className="fixed bottom-20 left-3 right-3 md:bottom-6 md:left-auto md:right-6 md:max-w-sm z-[55] animate-slide-up">
-        <div className="bg-[#1a2744]/95 backdrop-blur-md border border-[#2d3a52] rounded-2xl p-4 shadow-lg">
+        <div className="bg-navy-900/95 backdrop-blur-md border border-navy-800 rounded-2xl p-4 shadow-lg">
           <div className="flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-[#d4af37]/10 flex-shrink-0">
-              <Share className="h-5 w-5 text-[#d4af37]" />
+            <div className="p-2 rounded-xl bg-gold-500/10 flex-shrink-0">
+              <Share className="h-5 w-5 text-gold-500" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white">Add to Home Screen</p>
               <p className="text-xs text-white/50 mt-1 leading-relaxed">
                 To enable push notifications on iOS, tap the{' '}
                 <span className="inline-flex items-center align-middle">
-                  <Share className="h-3 w-3 text-[#d4af37] inline" />
+                  <Share className="h-3 w-3 text-gold-500 inline" />
                 </span>{' '}
                 share button, then &quot;Add to Home Screen&quot;.
               </p>
@@ -160,10 +160,10 @@ export function PushPromptBanner() {
 
   return (
     <div className="fixed bottom-20 left-3 right-3 md:bottom-6 md:left-auto md:right-6 md:max-w-sm z-[55] animate-slide-up">
-      <div className="bg-[#1a2744]/95 backdrop-blur-md border border-[#2d3a52] rounded-2xl p-4 shadow-lg">
+      <div className="bg-navy-900/95 backdrop-blur-md border border-navy-800 rounded-2xl p-4 shadow-lg">
         <div className="flex items-start gap-3">
-          <div className="p-2 rounded-xl bg-[#d4af37]/10 flex-shrink-0">
-            <Bell className="h-5 w-5 text-[#d4af37]" />
+          <div className="p-2 rounded-xl bg-gold-500/10 flex-shrink-0">
+            <Bell className="h-5 w-5 text-gold-500" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white">Enable notifications</p>
@@ -173,7 +173,7 @@ export function PushPromptBanner() {
             <div className="flex gap-2 mt-3">
               <button
                 onClick={handleEnable}
-                className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-[#d4af37] text-[#0a1628] hover:bg-[#f4d03f] transition-colors"
+                className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-gold-500 text-navy-950 hover:bg-gold-400 transition-colors"
               >
                 Enable
               </button>

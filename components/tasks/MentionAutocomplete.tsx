@@ -167,11 +167,11 @@ export function MentionAutocomplete({ users, textareaRef, onSelect }: MentionAut
             close();
           }}
           className={`w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors ${
-            i === activeIndex ? 'bg-[#d4af37]/15' : 'hover:bg-[#1a2744]'
+            i === activeIndex ? 'bg-gold-500/15' : 'hover:bg-navy-900'
           }`}
         >
           {/* Avatar circle */}
-          <div className="w-7 h-7 rounded-full bg-[#2d3a52] flex items-center justify-center shrink-0 text-xs font-medium text-[#d4af37]">
+          <div className="w-7 h-7 rounded-full bg-navy-800 flex items-center justify-center shrink-0 text-xs font-medium text-gold-500">
             {user.name
               .split(' ')
               .map((w) => w[0])
@@ -181,7 +181,7 @@ export function MentionAutocomplete({ users, textareaRef, onSelect }: MentionAut
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm text-white truncate">{user.name}</p>
-            <p className="text-xs text-[#64748b] truncate">
+            <p className="text-xs text-navy-600 truncate">
               {ROLE_LABELS[user.role] || user.role}
               {user.agency && ` · ${user.agency}`}
             </p>

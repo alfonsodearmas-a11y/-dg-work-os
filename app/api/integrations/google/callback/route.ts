@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
   const oauth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 
   try {
-    const session = await auth();
+    const session = await auth(); // TODO: migrate to requireRole()
     const userId = session?.user?.id;
     if (!userId) {
       return adminRedirect(request, 'google=error&reason=not_authenticated');

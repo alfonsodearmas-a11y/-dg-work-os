@@ -198,16 +198,16 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
         role="dialog"
         aria-modal="true"
         aria-labelledby="new-meeting-modal-title"
-        className="relative w-full max-w-lg rounded-t-2xl md:rounded-2xl bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border border-[#2d3a52] shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up md:animate-fade-in"
+        className="relative w-full max-w-lg rounded-t-2xl md:rounded-2xl bg-gradient-to-b from-[#1a2744] to-[#0f1d32] border border-navy-800 shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up md:animate-fade-in"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#2d3a52]">
+        <div className="flex items-center justify-between p-4 border-b border-navy-800">
           <div className="flex items-center gap-2">
             {step === 2 && !pipelineRunning && (
               <button
                 onClick={() => setStep(1)}
-                className="p-1.5 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
+                className="p-1.5 rounded-lg text-navy-600 hover:text-white hover:bg-navy-800 transition-colors"
               >
                 <ArrowLeft className="h-4 w-4" />
               </button>
@@ -220,7 +220,7 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
             onClick={handleClose}
             disabled={pipelineRunning}
             aria-label="Close"
-            className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors disabled:opacity-50"
+            className="p-2 rounded-lg text-navy-600 hover:text-white hover:bg-navy-800 transition-colors disabled:opacity-50"
           >
             <X className="h-4 w-4" />
           </button>
@@ -232,7 +232,7 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
           {step === 1 && (
             <>
               <div>
-                <label htmlFor="new-meeting-title" className="block text-sm font-medium text-[#94a3b8] mb-1.5">
+                <label htmlFor="new-meeting-title" className="block text-sm font-medium text-slate-400 mb-1.5">
                   Title <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -247,8 +247,8 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
                 />
               </div>
               <div>
-                <label htmlFor="new-meeting-attendees" className="block text-sm font-medium text-[#94a3b8] mb-1.5">
-                  Attendees <span className="text-[#64748b]">(optional, comma-separated)</span>
+                <label htmlFor="new-meeting-attendees" className="block text-sm font-medium text-slate-400 mb-1.5">
+                  Attendees <span className="text-navy-600">(optional, comma-separated)</span>
                 </label>
                 <input
                   id="new-meeting-attendees"
@@ -261,13 +261,13 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
               </div>
 
               {/* Mode toggle */}
-              <div className="flex rounded-lg border border-[#2d3a52] overflow-hidden">
+              <div className="flex rounded-lg border border-navy-800 overflow-hidden">
                 <button
                   onClick={() => setInputMode('record')}
                   className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors ${
                     inputMode === 'record'
-                      ? 'bg-[#d4af37]/10 text-[#d4af37] border-b-2 border-[#d4af37]'
-                      : 'text-[#64748b] hover:text-white'
+                      ? 'bg-gold-500/10 text-gold-500 border-b-2 border-gold-500'
+                      : 'text-navy-600 hover:text-white'
                   }`}
                 >
                   <Mic className="h-4 w-4" />
@@ -277,8 +277,8 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
                   onClick={() => setInputMode('upload')}
                   className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors ${
                     inputMode === 'upload'
-                      ? 'bg-[#d4af37]/10 text-[#d4af37] border-b-2 border-[#d4af37]'
-                      : 'text-[#64748b] hover:text-white'
+                      ? 'bg-gold-500/10 text-gold-500 border-b-2 border-gold-500'
+                      : 'text-navy-600 hover:text-white'
                   }`}
                 >
                   <Upload className="h-4 w-4" />
@@ -323,9 +323,9 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
                         <input {...getInputProps()} aria-label="Select audio or video file to upload" />
                         {audioFile ? (
                           <div>
-                            <FileText className="h-8 w-8 text-[#d4af37] mx-auto mb-2" />
+                            <FileText className="h-8 w-8 text-gold-500 mx-auto mb-2" />
                             <p className="text-white font-medium truncate">{audioFile.name}</p>
-                            <p className="text-[#64748b] text-sm mt-1">
+                            <p className="text-navy-600 text-sm mt-1">
                               {(audioFile.size / 1024 / 1024).toFixed(1)} MB — click or drop to replace
                             </p>
                           </div>
@@ -333,13 +333,13 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
                           <div>
                             <Upload
                               className={`h-8 w-8 mx-auto mb-2 ${
-                                isDragActive ? 'text-[#d4af37]' : 'text-[#64748b]'
+                                isDragActive ? 'text-gold-500' : 'text-navy-600'
                               }`}
                             />
                             <p className="text-white font-medium">
                               {isDragActive ? 'Drop file here...' : 'Drop audio or video file'}
                             </p>
-                            <p className="text-[#64748b] text-sm mt-1">Max 25 MB</p>
+                            <p className="text-navy-600 text-sm mt-1">Max 25 MB</p>
                           </div>
                         )}
                       </div>
@@ -366,10 +366,10 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
                                 <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
                               )}
                               {state === 'active' && (
-                                <Loader2 className="h-5 w-5 text-[#d4af37] animate-spin shrink-0" />
+                                <Loader2 className="h-5 w-5 text-gold-500 animate-spin shrink-0" />
                               )}
                               {state === 'pending' && (
-                                <div className="w-5 h-5 rounded-full border-2 border-[#2d3a52] shrink-0" />
+                                <div className="w-5 h-5 rounded-full border-2 border-navy-800 shrink-0" />
                               )}
                               {state === 'error' && (
                                 <XCircle className="h-5 w-5 text-red-400 shrink-0" />
@@ -379,10 +379,10 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
                                   state === 'done'
                                     ? 'text-emerald-400'
                                     : state === 'active'
-                                      ? 'text-[#d4af37]'
+                                      ? 'text-gold-500'
                                       : state === 'error'
                                         ? 'text-red-400'
-                                        : 'text-[#64748b]'
+                                        : 'text-navy-600'
                                 }`}
                               >
                                 {s.label}
@@ -391,7 +391,7 @@ export function NewMeetingModal({ isOpen, onClose, onComplete }: NewMeetingModal
                             {i < PIPELINE_STEPS.length - 1 && (
                               <div
                                 className={`ml-[9px] h-4 w-px ${
-                                  state === 'done' ? 'bg-emerald-400/30' : 'bg-[#2d3a52]'
+                                  state === 'done' ? 'bg-emerald-400/30' : 'bg-navy-800'
                                 }`}
                               />
                             )}

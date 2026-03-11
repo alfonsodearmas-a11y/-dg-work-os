@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
-    const session = await auth();
+    const session = await auth(); // TODO: migrate to requireRole()
     const userId = session?.user?.id;
     if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
@@ -19,7 +19,7 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await auth(); // TODO: migrate to requireRole()
     const userId = session?.user?.id;
     if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 

@@ -85,13 +85,13 @@ export function BudgetSectorDetail({ sector }: { sector: string }) {
   if (isLoading) {
     return (
       <div className="flex items-center gap-3 p-8 justify-center" role="status" aria-label="Loading">
-        <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" aria-hidden="true" />
-        <span className="text-[#64748b] text-sm">Loading sector data...</span>
+        <Loader2 className="h-5 w-5 animate-spin text-gold-500" aria-hidden="true" />
+        <span className="text-navy-600 text-sm">Loading sector data...</span>
       </div>
     );
   }
 
-  if (!data) return <p className="text-[#64748b] p-4">Failed to load sector data.</p>;
+  if (!data) return <p className="text-navy-600 p-4">Failed to load sector data.</p>;
 
   const meta = SECTOR_META[sector] || { label: sector, icon: '📋', color: '#64748b' };
 
@@ -131,7 +131,7 @@ export function BudgetSectorDetail({ sector }: { sector: string }) {
   return (
     <div className="space-y-4">
       {/* Tabs */}
-      <div className="flex gap-1 bg-[#0a1628] rounded-xl p-1 overflow-x-auto">
+      <div className="flex gap-1 bg-navy-950 rounded-xl p-1 overflow-x-auto">
         {tabs.map(tab => {
           const Icon = tab.icon;
           return (
@@ -140,8 +140,8 @@ export function BudgetSectorDetail({ sector }: { sector: string }) {
               onClick={() => setActiveTab(tab.key)}
               className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                 activeTab === tab.key
-                  ? 'bg-[#d4af37]/20 text-[#d4af37]'
-                  : 'text-[#64748b] hover:text-white'
+                  ? 'bg-gold-500/20 text-gold-500'
+                  : 'text-navy-600 hover:text-white'
               }`}
             >
               <Icon className="h-3.5 w-3.5" />
@@ -170,37 +170,37 @@ export function BudgetSectorDetail({ sector }: { sector: string }) {
                 {/* Agency header — always visible */}
                 <button
                   onClick={() => toggleAgency(agencyCode)}
-                  className="w-full flex items-center justify-between p-3 md:p-4 hover:bg-[#d4af37]/5 transition-colors"
+                  className="w-full flex items-center justify-between p-3 md:p-4 hover:bg-gold-500/5 transition-colors"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-[#d4af37] font-mono text-xs font-bold bg-[#d4af37]/10 px-2 py-0.5 rounded">{agencyCode}</span>
+                    <span className="text-gold-500 font-mono text-xs font-bold bg-gold-500/10 px-2 py-0.5 rounded">{agencyCode}</span>
                     <span className="text-white font-semibold text-sm truncate">{agencyName}</span>
-                    <span className="text-[#64748b] text-[10px] shrink-0">
+                    <span className="text-navy-600 text-[10px] shrink-0">
                       {items.filter(a => a.expenditure_type !== 'total').length} items
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {agencyTotal > 0 && (
-                      <span className="text-[#d4af37] font-bold text-sm font-mono">{fmtAmountClient(agencyTotal)}</span>
+                      <span className="text-gold-500 font-bold text-sm font-mono">{fmtAmountClient(agencyTotal)}</span>
                     )}
                     {isExpanded
-                      ? <ChevronDown className="h-4 w-4 text-[#64748b]" />
-                      : <ChevronRight className="h-4 w-4 text-[#64748b]" />
+                      ? <ChevronDown className="h-4 w-4 text-navy-600" />
+                      : <ChevronRight className="h-4 w-4 text-navy-600" />
                     }
                   </div>
                 </button>
 
                 {/* Expanded content */}
                 {isExpanded && (
-                  <div className="border-t border-[#2d3a52]/50 px-3 md:px-4 pb-3 space-y-3">
+                  <div className="border-t border-navy-800/50 px-3 md:px-4 pb-3 space-y-3">
                     {/* Summary totals */}
                     {totals.length > 0 && (
                       <div className="flex flex-wrap gap-2 pt-3">
                         {totals.map((t, i) => (
-                          <div key={i} className="bg-[#0a1628]/60 rounded-lg px-3 py-2 flex-1 min-w-[120px]">
-                            <p className="text-[10px] text-[#64748b] uppercase">{t.line_item.replace('Total ', '')}</p>
+                          <div key={i} className="bg-navy-950/60 rounded-lg px-3 py-2 flex-1 min-w-[120px]">
+                            <p className="text-[10px] text-navy-600 uppercase">{t.line_item.replace('Total ', '')}</p>
                             <p className="text-white font-semibold text-sm font-mono">{t.budget_2026_fmt}</p>
-                            <div className="flex gap-2 text-[9px] text-[#64748b] mt-0.5">
+                            <div className="flex gap-2 text-[9px] text-navy-600 mt-0.5">
                               <span>2024: {t.actual_2024_fmt}</span>
                               <span>2025: {t.budget_2025_fmt}</span>
                             </div>
@@ -235,25 +235,25 @@ export function BudgetSectorDetail({ sector }: { sector: string }) {
       {activeTab === 'projects' && (
         <div className="space-y-2">
           {data.projects.length === 0 ? (
-            <p className="text-[#64748b] text-sm p-4">No capital project profiles for this sector.</p>
+            <p className="text-navy-600 text-sm p-4">No capital project profiles for this sector.</p>
           ) : (
             data.projects.map((p, i) => (
               <div key={i} className="glass-card p-3 space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-white font-semibold text-sm">{p.project_title as string}</p>
-                    <p className="text-[#64748b] text-[10px]">{p.agency_code as string} · Ref: {p.ref_number as string}</p>
+                    <p className="text-navy-600 text-[10px]">{p.agency_code as string} · Ref: {p.ref_number as string}</p>
                   </div>
                   <Badge variant={p.status === 'Ongoing' ? 'success' : 'gold'}>{p.status as string}</Badge>
                 </div>
-                <p className="text-[#94a3b8] text-xs">{p.description as string}</p>
+                <p className="text-slate-400 text-xs">{p.description as string}</p>
                 <div className="flex flex-wrap gap-3 text-xs">
-                  <span className="text-[#64748b]">Total Cost: <span className="text-white font-mono">G${((p.total_project_cost as number) / 1000).toFixed(2)}M</span></span>
-                  <span className="text-[#64748b]">2026: <span className="text-[#d4af37] font-mono font-bold">G${((p.budget_2026 as number) / 1000).toFixed(2)}M</span></span>
-                  {!!p.region && <span className="text-[#64748b]">Region: <span className="text-white">{p.region as string}</span></span>}
+                  <span className="text-navy-600">Total Cost: <span className="text-white font-mono">G${((p.total_project_cost as number) / 1000).toFixed(2)}M</span></span>
+                  <span className="text-navy-600">2026: <span className="text-gold-500 font-mono font-bold">G${((p.budget_2026 as number) / 1000).toFixed(2)}M</span></span>
+                  {!!p.region && <span className="text-navy-600">Region: <span className="text-white">{p.region as string}</span></span>}
                 </div>
                 {!!p.benefits && (
-                  <p className="text-[#64748b] text-[10px] italic">Benefits: {p.benefits as string}</p>
+                  <p className="text-navy-600 text-[10px] italic">Benefits: {p.benefits as string}</p>
                 )}
               </div>
             ))
@@ -265,17 +265,17 @@ export function BudgetSectorDetail({ sector }: { sector: string }) {
       {activeTab === 'documents' && (
         <div className="space-y-2">
           {data.documents.length === 0 ? (
-            <p className="text-[#64748b] text-sm p-4">No supporting documents for this sector.</p>
+            <p className="text-navy-600 text-sm p-4">No supporting documents for this sector.</p>
           ) : (
             data.documents.map((doc, i) => (
               <div key={i} className="glass-card p-3">
                 <div className="flex items-center gap-2 mb-1">
-                  <FileText className="h-4 w-4 text-[#d4af37] shrink-0" />
+                  <FileText className="h-4 w-4 text-gold-500 shrink-0" />
                   <p className="text-white text-sm font-medium truncate">{doc.document_name}</p>
-                  <span className="text-[#d4af37] font-mono text-[10px] bg-[#d4af37]/10 px-1.5 py-0.5 rounded shrink-0">{doc.agency}</span>
+                  <span className="text-gold-500 font-mono text-[10px] bg-gold-500/10 px-1.5 py-0.5 rounded shrink-0">{doc.agency}</span>
                 </div>
-                <p className="text-[#94a3b8] text-xs line-clamp-2">{doc.first_snippet}</p>
-                <p className="text-[#64748b] text-[10px] mt-1">{doc.chunk_count} section{doc.chunk_count !== 1 ? 's' : ''}</p>
+                <p className="text-slate-400 text-xs line-clamp-2">{doc.first_snippet}</p>
+                <p className="text-navy-600 text-[10px] mt-1">{doc.chunk_count} section{doc.chunk_count !== 1 ? 's' : ''}</p>
               </div>
             ))
           )}
@@ -286,24 +286,24 @@ export function BudgetSectorDetail({ sector }: { sector: string }) {
       {activeTab === 'kpis' && (
         <div className="space-y-2">
           {data.indicators.length === 0 ? (
-            <p className="text-[#64748b] text-sm p-4">No performance indicators for this sector.</p>
+            <p className="text-navy-600 text-sm p-4">No performance indicators for this sector.</p>
           ) : (
             data.indicators.map((ind, i) => (
               <div key={i} className="glass-card p-3">
                 <p className="text-white text-sm font-medium">{ind.indicator as string}</p>
-                <p className="text-[#64748b] text-[10px]">{ind.agency_code as string} · {ind.programme as string}</p>
+                <p className="text-navy-600 text-[10px]">{ind.agency_code as string} · {ind.programme as string}</p>
                 <div className="grid grid-cols-3 gap-2 mt-2 text-[10px]">
                   <div>
-                    <p className="text-[#64748b]">Actual 2024</p>
+                    <p className="text-navy-600">Actual 2024</p>
                     <p className="text-white font-mono">{(ind.actual_2024 as string) || '—'}</p>
                   </div>
                   <div>
-                    <p className="text-[#64748b]">Target 2025</p>
+                    <p className="text-navy-600">Target 2025</p>
                     <p className="text-white font-mono">{(ind.target_2025 as string) || '—'}</p>
                   </div>
                   <div>
-                    <p className="text-[#64748b]">Target 2026</p>
-                    <p className="text-[#d4af37] font-mono font-bold">{(ind.target_2026 as string) || '—'}</p>
+                    <p className="text-navy-600">Target 2026</p>
+                    <p className="text-gold-500 font-mono font-bold">{(ind.target_2026 as string) || '—'}</p>
                   </div>
                 </div>
               </div>
@@ -314,18 +314,18 @@ export function BudgetSectorDetail({ sector }: { sector: string }) {
           {data.loans.length > 0 && (
             <>
               <div className="pt-2">
-                <p className="text-[#64748b] text-xs font-semibold uppercase tracking-wider mb-2">Outstanding GPL Loans</p>
+                <p className="text-navy-600 text-xs font-semibold uppercase tracking-wider mb-2">Outstanding GPL Loans</p>
               </div>
               {data.loans.map((loan, i) => (
                 <div key={i} className="glass-card p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="text-white text-sm font-medium">{loan.lender as string}</p>
-                      <p className="text-[#64748b] text-[10px]">{loan.purpose as string}</p>
+                      <p className="text-navy-600 text-[10px]">{loan.purpose as string}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-[#d4af37] font-bold text-sm font-mono">US${((loan.outstanding_usd as number) || 0).toLocaleString()}</p>
-                      <p className="text-[#64748b] text-[10px]">outstanding</p>
+                      <p className="text-gold-500 font-bold text-sm font-mono">US${((loan.outstanding_usd as number) || 0).toLocaleString()}</p>
+                      <p className="text-navy-600 text-[10px]">outstanding</p>
                     </div>
                   </div>
                 </div>
@@ -381,7 +381,7 @@ function GplDetailPanel({
             className={`px-3 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition-colors ${
               subTab === t.key
                 ? 'bg-[#ef4444]/20 text-[#ef4444] border border-[#ef4444]/30'
-                : 'text-[#64748b] hover:text-white bg-[#0a1628]/60'
+                : 'text-navy-600 hover:text-white bg-navy-950/60'
             }`}
           >
             {t.label}
@@ -392,33 +392,33 @@ function GplDetailPanel({
       {/* P&L */}
       {subTab === 'pnl' && (
         <div className="space-y-1">
-          <p className="text-[#64748b] text-[10px] font-semibold uppercase tracking-wider pb-1">GPL Profit & Loss Statement</p>
+          <p className="text-navy-600 text-[10px] font-semibold uppercase tracking-wider pb-1">GPL Profit & Loss Statement</p>
           {gpl.pnl.map((row, i) => (
-            <div key={i} className={`bg-[#0a1628]/40 rounded-lg p-2.5 ${(row.item as string || '').includes('Total') || (row.item as string || '').includes('Net') ? 'border-l-2 border-[#ef4444]' : ''}`}>
+            <div key={i} className={`bg-navy-950/40 rounded-lg p-2.5 ${(row.item as string || '').includes('Total') || (row.item as string || '').includes('Net') ? 'border-l-2 border-[#ef4444]' : ''}`}>
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <p className={`text-sm ${(row.item as string || '').includes('Total') || (row.item as string || '').includes('Net') ? 'text-white font-semibold' : 'text-[#94a3b8]'}`}>
-                    {row.category && row.category !== row.item ? <span className="text-[#64748b] text-[10px] mr-2">{row.category as string}</span> : null}
+                  <p className={`text-sm ${(row.item as string || '').includes('Total') || (row.item as string || '').includes('Net') ? 'text-white font-semibold' : 'text-slate-400'}`}>
+                    {row.category && row.category !== row.item ? <span className="text-navy-600 text-[10px] mr-2">{row.category as string}</span> : null}
                     {row.item as string}
                   </p>
                 </div>
               </div>
               <div className="grid grid-cols-4 gap-2 mt-1.5 text-[10px]">
                 <div>
-                  <p className="text-[#64748b]">2024 Act</p>
+                  <p className="text-navy-600">2024 Act</p>
                   <p className="text-white font-mono">{(row.actual_2024_fmt as string) || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748b]">2025 Proj</p>
+                  <p className="text-navy-600">2025 Proj</p>
                   <p className="text-white font-mono">{(row.projection_2025_fmt as string) || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748b]">2025 Bud</p>
+                  <p className="text-navy-600">2025 Bud</p>
                   <p className="text-white font-mono">{(row.budget_2025_fmt as string) || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748b]">2026 Bud</p>
-                  <p className="text-[#d4af37] font-mono font-bold">{(row.budget_2026_fmt as string) || '—'}</p>
+                  <p className="text-navy-600">2026 Bud</p>
+                  <p className="text-gold-500 font-mono font-bold">{(row.budget_2026_fmt as string) || '—'}</p>
                 </div>
               </div>
             </div>
@@ -429,24 +429,24 @@ function GplDetailPanel({
       {/* Employment */}
       {subTab === 'employment' && (
         <div className="space-y-1">
-          <p className="text-[#64748b] text-[10px] font-semibold uppercase tracking-wider pb-1">GPL Employment Costs (G$)</p>
+          <p className="text-navy-600 text-[10px] font-semibold uppercase tracking-wider pb-1">GPL Employment Costs (G$)</p>
           {gpl.employment.map((row, i) => (
-            <div key={i} className="bg-[#0a1628]/40 rounded-lg p-2.5">
+            <div key={i} className="bg-navy-950/40 rounded-lg p-2.5">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[#94a3b8] text-sm">{row.category as string}</p>
-                {!!row.pct_of_total && <span className="text-[#64748b] text-[10px] font-mono shrink-0">{row.pct_of_total as number}%</span>}
+                <p className="text-slate-400 text-sm">{row.category as string}</p>
+                {!!row.pct_of_total && <span className="text-navy-600 text-[10px] font-mono shrink-0">{row.pct_of_total as number}%</span>}
               </div>
               <div className="grid grid-cols-3 gap-2 mt-1.5 text-[10px]">
                 <div>
-                  <p className="text-[#64748b]">2025 Est</p>
+                  <p className="text-navy-600">2025 Est</p>
                   <p className="text-white font-mono">{(row.estimate_2025_fmt as string) || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748b]">2026 Bud</p>
-                  <p className="text-[#d4af37] font-mono font-bold">{(row.budget_2026_fmt as string) || '—'}</p>
+                  <p className="text-navy-600">2026 Bud</p>
+                  <p className="text-gold-500 font-mono font-bold">{(row.budget_2026_fmt as string) || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748b]">Variance</p>
+                  <p className="text-navy-600">Variance</p>
                   <p className={`font-mono ${(row.variance as number) > 0 ? 'text-green-400' : (row.variance as number) < 0 ? 'text-red-400' : 'text-white'}`}>
                     {(row.variance_fmt as string) || '—'}
                   </p>
@@ -460,11 +460,11 @@ function GplDetailPanel({
       {/* Generation Plan */}
       {subTab === 'generation' && (
         <div className="space-y-1">
-          <p className="text-[#64748b] text-[10px] font-semibold uppercase tracking-wider pb-1">GPL 2026 Generation Plan (MWh)</p>
+          <p className="text-navy-600 text-[10px] font-semibold uppercase tracking-wider pb-1">GPL 2026 Generation Plan (MWh)</p>
           <div className="overflow-x-auto">
             <table className="w-full text-[11px]" aria-label="GPL 2026 generation plan">
               <thead>
-                <tr className="text-[#64748b] text-[10px] uppercase tracking-wider">
+                <tr className="text-navy-600 text-[10px] uppercase tracking-wider">
                   <th scope="col" className="text-left py-2 px-2">Month</th>
                   <th scope="col" className="text-right py-2 px-2">Thermal</th>
                   <th scope="col" className="text-right py-2 px-2">Solar</th>
@@ -476,13 +476,13 @@ function GplDetailPanel({
               </thead>
               <tbody>
                 {gpl.generation.map((row, i) => (
-                  <tr key={i} className="border-t border-[#2d3a52]/30">
+                  <tr key={i} className="border-t border-navy-800/30">
                     <td className="py-1.5 px-2 text-white font-medium">{row.month as string}</td>
-                    <td className="py-1.5 px-2 text-right text-[#94a3b8] font-mono">{((row.thermal_mwh as number) || 0).toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right text-slate-400 font-mono">{((row.thermal_mwh as number) || 0).toLocaleString()}</td>
                     <td className="py-1.5 px-2 text-right text-green-400 font-mono">{((row.solar_mwh as number) || 0).toLocaleString()}</td>
                     <td className="py-1.5 px-2 text-right text-cyan-400 font-mono">{((row.wind_mwh as number) || 0).toLocaleString()}</td>
                     <td className="py-1.5 px-2 text-right text-white font-mono font-bold">{((row.total_mwh as number) || 0).toLocaleString()}</td>
-                    <td className="py-1.5 px-2 text-right text-[#64748b] font-mono">{row.thermal_pct as number}%</td>
+                    <td className="py-1.5 px-2 text-right text-navy-600 font-mono">{row.thermal_pct as number}%</td>
                     <td className="py-1.5 px-2 text-right text-green-400 font-mono">{row.solar_pct as number}%</td>
                   </tr>
                 ))}
@@ -495,24 +495,24 @@ function GplDetailPanel({
       {/* Capital Projects */}
       {subTab === 'capex' && (
         <div className="space-y-2">
-          <p className="text-[#64748b] text-[10px] font-semibold uppercase tracking-wider pb-1">GPL Capital Projects (Disaggregated)</p>
+          <p className="text-navy-600 text-[10px] font-semibold uppercase tracking-wider pb-1">GPL Capital Projects (Disaggregated)</p>
           {gpl.capital_projects.map((cp, i) => (
             <div key={i} className="glass-card p-3 space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-white font-semibold text-sm">#{cp.project_number as number}: {cp.project_name as string}</p>
-                  <p className="text-[#64748b] text-[10px]">Contractor: {cp.contractor as string}</p>
+                  <p className="text-navy-600 text-[10px]">Contractor: {cp.contractor as string}</p>
                 </div>
                 <Badge variant={cp.is_rollover ? 'default' : 'gold'}>
                   {cp.is_rollover ? 'Rollover' : 'New'}
                 </Badge>
               </div>
               <div className="flex flex-wrap gap-3 text-xs">
-                <span className="text-[#64748b]">USD: <span className="text-white font-mono">{cp.project_cost_usd_fmt as string}</span></span>
-                <span className="text-[#64748b]">GYD: <span className="text-[#d4af37] font-mono font-bold">{cp.project_cost_gyd_fmt as string}</span></span>
+                <span className="text-navy-600">USD: <span className="text-white font-mono">{cp.project_cost_usd_fmt as string}</span></span>
+                <span className="text-navy-600">GYD: <span className="text-gold-500 font-mono font-bold">{cp.project_cost_gyd_fmt as string}</span></span>
               </div>
-              {!!cp.scope && <p className="text-[#94a3b8] text-[11px]">{cp.scope as string}</p>}
-              {!!cp.benefits && <p className="text-[#64748b] text-[10px] italic">Benefits: {cp.benefits as string}</p>}
+              {!!cp.scope && <p className="text-slate-400 text-[11px]">{cp.scope as string}</p>}
+              {!!cp.benefits && <p className="text-navy-600 text-[10px] italic">Benefits: {cp.benefits as string}</p>}
             </div>
           ))}
         </div>
@@ -521,23 +521,23 @@ function GplDetailPanel({
       {/* Admin Expenses */}
       {subTab === 'admin' && (
         <div className="space-y-1">
-          <p className="text-[#64748b] text-[10px] font-semibold uppercase tracking-wider pb-1">GPL Administrative Expenses (G$)</p>
+          <p className="text-navy-600 text-[10px] font-semibold uppercase tracking-wider pb-1">GPL Administrative Expenses (G$)</p>
           {gpl.admin_expenses.map((row, i) => (
-            <div key={i} className="bg-[#0a1628]/40 rounded-lg p-2.5">
+            <div key={i} className="bg-navy-950/40 rounded-lg p-2.5">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[#94a3b8] text-sm">{row.category as string}</p>
+                <p className="text-slate-400 text-sm">{row.category as string}</p>
               </div>
               <div className="grid grid-cols-3 gap-2 mt-1.5 text-[10px]">
                 <div>
-                  <p className="text-[#64748b]">2025 Act</p>
+                  <p className="text-navy-600">2025 Act</p>
                   <p className="text-white font-mono">{(row.actual_2025_fmt as string) || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748b]">2026 Bud</p>
-                  <p className="text-[#d4af37] font-mono font-bold">{(row.budget_2026_fmt as string) || '—'}</p>
+                  <p className="text-navy-600">2026 Bud</p>
+                  <p className="text-gold-500 font-mono font-bold">{(row.budget_2026_fmt as string) || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748b]">Change</p>
+                  <p className="text-navy-600">Change</p>
                   <p className={`font-mono ${(row.change_amount as number) > 0 ? 'text-green-400' : (row.change_amount as number) < 0 ? 'text-red-400' : 'text-white'}`}>
                     {(row.change_amount_fmt as string) || '—'}
                   </p>
@@ -562,35 +562,35 @@ function AllocationSection({
 }) {
   return (
     <div>
-      <p className="text-[#64748b] text-[10px] font-semibold uppercase tracking-wider pt-2 pb-1">{title}</p>
+      <p className="text-navy-600 text-[10px] font-semibold uppercase tracking-wider pt-2 pb-1">{title}</p>
       <div className="space-y-1.5">
         {items.map((item, i) => (
-          <div key={i} className="bg-[#0a1628]/40 rounded-lg p-2.5">
+          <div key={i} className="bg-navy-950/40 rounded-lg p-2.5">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-white text-sm">{item.line_item}</p>
-                <p className="text-[#64748b] text-[9px] mt-0.5">{item.source} · {item.notes || item.programme}</p>
+                <p className="text-navy-600 text-[9px] mt-0.5">{item.source} · {item.notes || item.programme}</p>
               </div>
-              <p className="text-[#d4af37] font-bold text-sm font-mono shrink-0">{item.budget_2026_fmt}</p>
+              <p className="text-gold-500 font-bold text-sm font-mono shrink-0">{item.budget_2026_fmt}</p>
             </div>
 
             {/* 4-year trend */}
             <div className="grid grid-cols-4 gap-2 mt-2 text-[10px]">
               <div>
-                <p className="text-[#64748b]">2024 Act</p>
+                <p className="text-navy-600">2024 Act</p>
                 <p className="text-white font-mono">{item.actual_2024_fmt}</p>
               </div>
               <div>
-                <p className="text-[#64748b]">2025 Bud</p>
+                <p className="text-navy-600">2025 Bud</p>
                 <p className="text-white font-mono">{item.budget_2025_fmt}</p>
               </div>
               <div>
-                <p className="text-[#64748b]">2025 Rev</p>
+                <p className="text-navy-600">2025 Rev</p>
                 <p className="text-white font-mono">{item.revised_2025_fmt}</p>
               </div>
               <div>
-                <p className="text-[#64748b]">2026 Bud</p>
-                <p className="text-[#d4af37] font-mono font-bold">{item.budget_2026_fmt}</p>
+                <p className="text-navy-600">2026 Bud</p>
+                <p className="text-gold-500 font-mono font-bold">{item.budget_2026_fmt}</p>
               </div>
             </div>
 
@@ -598,13 +598,13 @@ function AllocationSection({
             <div className="flex items-center gap-2 mt-2">
               <button
                 onClick={() => onAnalyze(item)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#d4af37]/10 border border-[#d4af37]/20 text-[#d4af37] text-[11px] font-medium hover:bg-[#d4af37]/20 hover:border-[#d4af37]/40 transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gold-500/10 border border-gold-500/20 text-gold-500 text-[11px] font-medium hover:bg-gold-500/20 hover:border-gold-500/40 transition-colors"
               >
                 <Sparkles className="h-3 w-3" />
                 Defence Brief
               </button>
               {item.linked_docs.length > 0 && (
-                <span className="text-[#64748b] text-[10px]">
+                <span className="text-navy-600 text-[10px]">
                   {item.linked_docs.length} doc{item.linked_docs.length !== 1 ? 's' : ''} linked
                 </span>
               )}

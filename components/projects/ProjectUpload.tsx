@@ -91,23 +91,23 @@ export function ProjectUpload({ onUploadComplete }: ProjectUploadProps) {
 
         {uploading ? (
           <div className="flex flex-col items-center" role="status" aria-label="Processing">
-            <Loader2 className="h-12 w-12 text-[#d4af37] animate-spin mb-4" aria-hidden="true" />
+            <Loader2 className="h-12 w-12 text-gold-500 animate-spin mb-4" aria-hidden="true" />
             <p className="text-white font-medium">Processing Excel file...</p>
-            <p className="text-[#64748b] text-sm mt-1">Analyzing project data</p>
+            <p className="text-navy-600 text-sm mt-1">Analyzing project data</p>
           </div>
         ) : (
           <div className="flex flex-col items-center">
-            <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-[#d4af37]/20 flex items-center justify-center mb-4">
+            <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-gold-500/20 flex items-center justify-center mb-4">
               {isDragActive ? (
-                <FileSpreadsheet className="h-8 w-8 text-[#d4af37]" />
+                <FileSpreadsheet className="h-8 w-8 text-gold-500" />
               ) : (
-                <Upload className="h-8 w-8 text-[#d4af37]" />
+                <Upload className="h-8 w-8 text-gold-500" />
               )}
             </div>
             <p className="text-white font-medium">
               {isDragActive ? 'Drop your Excel file here' : 'Drop Excel file or click to browse'}
             </p>
-            <p className="text-[#64748b] text-sm mt-1">
+            <p className="text-navy-600 text-sm mt-1">
               oversight.gov.gy export (.xlsx, .xls)
             </p>
           </div>
@@ -125,42 +125,42 @@ export function ProjectUpload({ onUploadComplete }: ProjectUploadProps) {
 
           {/* Data Quality Report */}
           {dataQuality && (
-            <div className="p-4 rounded-xl bg-[#1a2744] border border-[#2d3a52]">
+            <div className="p-4 rounded-xl bg-navy-900 border border-navy-800">
               <h3 className="text-white font-medium mb-3 flex items-center">
-                <AlertTriangle className="h-4 w-4 mr-2 text-[#d4af37]" />
+                <AlertTriangle className="h-4 w-4 mr-2 text-gold-500" />
                 Data Quality Report
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                <div className="p-3 rounded-lg bg-[#0a1628]">
-                  <p className="text-[#64748b]">Total Projects</p>
+                <div className="p-3 rounded-lg bg-navy-950">
+                  <p className="text-navy-600">Total Projects</p>
                   <p className="text-white font-semibold text-lg">{dataQuality.total_projects}</p>
                 </div>
-                <div className={`p-3 rounded-lg ${dataQuality.missing_completion_percent > 0 ? 'bg-amber-500/10' : 'bg-[#0a1628]'}`}>
-                  <p className="text-[#64748b]">Missing Completion %</p>
+                <div className={`p-3 rounded-lg ${dataQuality.missing_completion_percent > 0 ? 'bg-amber-500/10' : 'bg-navy-950'}`}>
+                  <p className="text-navy-600">Missing Completion %</p>
                   <p className={`font-semibold text-lg ${dataQuality.missing_completion_percent > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
                     {dataQuality.missing_completion_percent}
                   </p>
                 </div>
-                <div className={`p-3 rounded-lg ${dataQuality.missing_contractor > 0 ? 'bg-amber-500/10' : 'bg-[#0a1628]'}`}>
-                  <p className="text-[#64748b]">Missing Contractor</p>
+                <div className={`p-3 rounded-lg ${dataQuality.missing_contractor > 0 ? 'bg-amber-500/10' : 'bg-navy-950'}`}>
+                  <p className="text-navy-600">Missing Contractor</p>
                   <p className={`font-semibold text-lg ${dataQuality.missing_contractor > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
                     {dataQuality.missing_contractor}
                   </p>
                 </div>
-                <div className={`p-3 rounded-lg ${dataQuality.missing_region > 0 ? 'bg-amber-500/10' : 'bg-[#0a1628]'}`}>
-                  <p className="text-[#64748b]">Missing Region</p>
+                <div className={`p-3 rounded-lg ${dataQuality.missing_region > 0 ? 'bg-amber-500/10' : 'bg-navy-950'}`}>
+                  <p className="text-navy-600">Missing Region</p>
                   <p className={`font-semibold text-lg ${dataQuality.missing_region > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
                     {dataQuality.missing_region}
                   </p>
                 </div>
-                <div className={`p-3 rounded-lg ${dataQuality.missing_contract_value > 0 ? 'bg-amber-500/10' : 'bg-[#0a1628]'}`}>
-                  <p className="text-[#64748b]">Missing Value</p>
+                <div className={`p-3 rounded-lg ${dataQuality.missing_contract_value > 0 ? 'bg-amber-500/10' : 'bg-navy-950'}`}>
+                  <p className="text-navy-600">Missing Value</p>
                   <p className={`font-semibold text-lg ${dataQuality.missing_contract_value > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
                     {dataQuality.missing_contract_value}
                   </p>
                 </div>
-                <div className={`p-3 rounded-lg ${dataQuality.missing_status > 0 ? 'bg-amber-500/10' : 'bg-[#0a1628]'}`}>
-                  <p className="text-[#64748b]">Missing Status</p>
+                <div className={`p-3 rounded-lg ${dataQuality.missing_status > 0 ? 'bg-amber-500/10' : 'bg-navy-950'}`}>
+                  <p className="text-navy-600">Missing Status</p>
                   <p className={`font-semibold text-lg ${dataQuality.missing_status > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
                     {dataQuality.missing_status}
                   </p>
@@ -169,8 +169,8 @@ export function ProjectUpload({ onUploadComplete }: ProjectUploadProps) {
 
               {/* Show sample projects with missing data */}
               {dataQuality.projects_without_completion.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-[#2d3a52]">
-                  <p className="text-[#64748b] text-sm mb-2">Projects without completion %:</p>
+                <div className="mt-4 pt-4 border-t border-navy-800">
+                  <p className="text-navy-600 text-sm mb-2">Projects without completion %:</p>
                   <div className="flex flex-wrap gap-2">
                     {dataQuality.projects_without_completion.map((ref) => (
                       <span key={ref} className="px-2 py-1 rounded text-xs font-mono bg-amber-500/10 text-amber-400">
@@ -178,7 +178,7 @@ export function ProjectUpload({ onUploadComplete }: ProjectUploadProps) {
                       </span>
                     ))}
                     {dataQuality.missing_completion_percent > 10 && (
-                      <span className="px-2 py-1 rounded text-xs text-[#64748b]">
+                      <span className="px-2 py-1 rounded text-xs text-navy-600">
                         +{dataQuality.missing_completion_percent - 10} more
                       </span>
                     )}

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { format, addMonths } from 'date-fns';
 import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { HoverPreview } from '@/components/ui/HoverPreview';
 import { fmtCurrency } from '@/lib/format';
 
 const AGENCY_COLORS: Record<string, string> = {
@@ -135,7 +136,36 @@ export function ProjectList({ projects }: ProjectListProps) {
               </span>
             </div>
             <div className="col-span-3">
-              <p className="font-medium text-gray-900 truncate">{project.project_name}</p>
+              <HoverPreview
+                preview={
+                  <div className="space-y-2 text-sm">
+                    <p className="text-white font-semibold">{project.project_name}</p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                      <div>
+                        <span className="text-navy-600">Contractor</span>
+                        <p className="text-slate-300">{project.contractor || '-'}</p>
+                      </div>
+                      <div>
+                        <span className="text-navy-600">Value</span>
+                        <p className="text-gold-500 font-medium">{fmtCurrency(project.contract_value)}</p>
+                      </div>
+                      <div>
+                        <span className="text-navy-600">Progress</span>
+                        <p className="text-slate-300">{project.completion_percent || 0}%</p>
+                      </div>
+                      <div>
+                        <span className="text-navy-600">Region</span>
+                        <p className="text-slate-300">{project.region || '-'}</p>
+                      </div>
+                    </div>
+                    {project.remarks && (
+                      <p className="text-navy-600 text-xs line-clamp-2">{project.remarks}</p>
+                    )}
+                  </div>
+                }
+              >
+                <p className="font-medium text-gray-900 truncate">{project.project_name}</p>
+              </HoverPreview>
               <p className="text-xs text-gray-500 font-mono">{project.project_reference}</p>
             </div>
             <div className="col-span-2 text-sm text-gray-700 truncate">

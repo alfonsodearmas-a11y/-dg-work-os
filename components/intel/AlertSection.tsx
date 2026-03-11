@@ -49,9 +49,9 @@ export function AlertSection({ alerts, onAlertAction, onAlertDismiss }: AlertSec
           </span>
         </div>
         {isExpanded ? (
-          <ChevronUp className="text-[#94a3b8]" size={18} />
+          <ChevronUp className="text-slate-400" size={18} />
         ) : (
-          <ChevronDown className="text-[#94a3b8]" size={18} />
+          <ChevronDown className="text-slate-400" size={18} />
         )}
       </button>
 

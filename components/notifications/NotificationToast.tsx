@@ -8,13 +8,13 @@ import type { Notification } from '@/lib/notifications';
 import { resolveNotificationUrl } from './NotificationPanel';
 
 function ToastIcon({ type, category }: { type: string; category?: string }) {
-  if (type === 'meeting_minutes_ready') return <FileText className="h-4 w-4 text-[#3b82f6]" />;
-  if (type.startsWith('meeting')) return <Calendar className="h-4 w-4 text-[#d4af37]" />;
+  if (type === 'meeting_minutes_ready') return <FileText className="h-4 w-4 text-blue-500" />;
+  if (type.startsWith('meeting')) return <Calendar className="h-4 w-4 text-gold-500" />;
   if (category === 'projects' || type.startsWith('project_')) return <Building2 className="h-4 w-4 text-[#f59e0b]" />;
   if (category === 'kpi' || type.startsWith('kpi_')) return <BarChart3 className="h-4 w-4 text-[#8b5cf6]" />;
-  if (category === 'oversight' || type.startsWith('oversight_')) return <Eye className="h-4 w-4 text-[#06b6d4]" />;
+  if (category === 'oversight' || type.startsWith('oversight_')) return <Eye className="h-4 w-4 text-cyan-500" />;
   if (type.startsWith('tm_')) return <UserCheck className="h-4 w-4 text-[#10b981]" />;
-  return <CheckSquare className="h-4 w-4 text-[#22c55e]" />;
+  return <CheckSquare className="h-4 w-4 text-green-500" />;
 }
 
 function priorityColor(priority: string): string {
@@ -79,7 +79,7 @@ function SingleToast({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={handleClick}
-      className={`relative max-w-sm w-full bg-[#1a2744]/95 backdrop-blur-md border border-[#2d3a52] rounded-xl shadow-lg cursor-pointer transition-all duration-300 ${
+      className={`relative max-w-sm w-full bg-navy-900/95 backdrop-blur-md border border-navy-800 rounded-xl shadow-lg cursor-pointer transition-all duration-300 ${
         exiting ? 'opacity-0 translate-x-full' : 'animate-slide-in-right'
       }`}
       style={{ marginTop: index > 0 ? '8px' : '0' }}

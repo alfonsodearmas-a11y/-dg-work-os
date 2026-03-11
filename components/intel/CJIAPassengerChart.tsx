@@ -13,6 +13,7 @@ import {
   BarChart,
   Bar
 } from 'recharts';
+import { CHART_THEME } from '@/lib/constants/chart-theme';
 
 interface PassengerDataPoint {
   month: string;
@@ -57,11 +58,11 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload as PassengerDataPoint;
     return (
-      <div className="bg-[#1a2744] p-3 border border-[#2d3a52] rounded-lg shadow-lg">
+      <div className="bg-navy-900 p-3 border border-navy-800 rounded-lg shadow-lg">
         <p className="font-semibold text-white mb-2">{data.monthFull}</p>
         <p className="text-emerald-400">Arrivals: {formatNumber(data.arrivals)}</p>
         <p className="text-blue-400">Departures: {formatNumber(data.departures)}</p>
-        <p className="text-white font-medium mt-1 pt-1 border-t border-[#2d3a52]">
+        <p className="text-white font-medium mt-1 pt-1 border-t border-navy-800">
           Total: {formatNumber(data.total)}
         </p>
       </div>
@@ -74,14 +75,14 @@ export function CJIAPassengerChart() {
   const [chartType, setChartType] = useState<'area' | 'bar'>('area');
 
   return (
-    <div className="bg-[#1a2744] rounded-xl shadow-sm border border-[#2d3a52] p-6">
+    <div className="bg-navy-900 rounded-xl shadow-sm border border-navy-800 p-6">
       {/* Header */}
       <div className="flex justify-between items-start mb-6">
         <div>
           <h2 className="text-xl font-semibold text-white">
             CJIA Passenger Movements
           </h2>
-          <p className="text-[#64748b] text-sm mt-1">Monthly arrivals and departures -- 2025</p>
+          <p className="text-navy-600 text-sm mt-1">Monthly arrivals and departures -- 2025</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -89,7 +90,7 @@ export function CJIAPassengerChart() {
             className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
               chartType === 'area'
                 ? 'bg-emerald-500/20 text-emerald-400'
-                : 'bg-[#2d3a52] text-[#94a3b8] hover:bg-[#2d3a52]/80'
+                : 'bg-navy-800 text-slate-400 hover:bg-navy-800/80'
             }`}
           >
             Area
@@ -99,7 +100,7 @@ export function CJIAPassengerChart() {
             className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
               chartType === 'bar'
                 ? 'bg-emerald-500/20 text-emerald-400'
-                : 'bg-[#2d3a52] text-[#94a3b8] hover:bg-[#2d3a52]/80'
+                : 'bg-navy-800 text-slate-400 hover:bg-navy-800/80'
             }`}
           >
             Bar
@@ -143,10 +144,10 @@ export function CJIAPassengerChart() {
                   <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2d3a52" />
-              <XAxis dataKey="month" tick={{ fill: '#94a3b8', fontSize: 12 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid.stroke} />
+              <XAxis dataKey="month" tick={{ fill: CHART_THEME.colors.slate400, fontSize: 12 }} />
               <YAxis
-                tick={{ fill: '#94a3b8', fontSize: 12 }}
+                tick={{ fill: CHART_THEME.colors.slate400, fontSize: 12 }}
                 tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
               />
               <Tooltip content={<CustomTooltip />} />
@@ -172,10 +173,10 @@ export function CJIAPassengerChart() {
             </AreaChart>
           ) : (
             <BarChart data={passengerData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2d3a52" />
-              <XAxis dataKey="month" tick={{ fill: '#94a3b8', fontSize: 12 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid.stroke} />
+              <XAxis dataKey="month" tick={{ fill: CHART_THEME.colors.slate400, fontSize: 12 }} />
               <YAxis
-                tick={{ fill: '#94a3b8', fontSize: 12 }}
+                tick={{ fill: CHART_THEME.colors.slate400, fontSize: 12 }}
                 tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
               />
               <Tooltip content={<CustomTooltip />} />
@@ -188,8 +189,8 @@ export function CJIAPassengerChart() {
       </div>
 
       {/* Year Total */}
-      <div className="mt-4 pt-4 border-t border-[#2d3a52] text-center">
-        <p className="text-[#64748b] text-sm">
+      <div className="mt-4 pt-4 border-t border-navy-800 text-center">
+        <p className="text-navy-600 text-sm">
           2025 Total Passenger Movements: <span className="font-semibold text-white">{formatNumber(totalPassengers)}</span>
         </p>
       </div>

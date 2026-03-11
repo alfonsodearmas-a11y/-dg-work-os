@@ -88,7 +88,7 @@ function BreakdownContent({
   return (
     <>
       {/* Header */}
-      <div className="px-4 py-3 border-b border-[#2d3a52]">
+      <div className="px-4 py-3 border-b border-navy-800">
         <p className="text-white text-sm font-semibold">
           Health Score: {score.toFixed(1)}/10 — {severityLabel(score)}
         </p>
@@ -100,24 +100,24 @@ function BreakdownContent({
           {breakdown.map((item, i) => (
             <div key={i} className="flex items-center gap-2 text-xs">
               <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dotColor(item.score)}`} aria-label={`Score: ${item.score >= 7 ? 'Good' : item.score >= 4 ? 'Warning' : 'Critical'}`} />
-              <span className="text-[#94a3b8] flex-1 truncate">{item.factor}</span>
-              <span className="text-[#64748b] w-9 text-right flex-shrink-0">{Math.round(item.weight * 100)}%</span>
-              <span className="text-[#d4af37] w-14 text-right flex-shrink-0 truncate">{item.actualValue}</span>
+              <span className="text-slate-400 flex-1 truncate">{item.factor}</span>
+              <span className="text-navy-600 w-9 text-right flex-shrink-0">{Math.round(item.weight * 100)}%</span>
+              <span className="text-gold-500 w-14 text-right flex-shrink-0 truncate">{item.actualValue}</span>
               <span className="text-white w-5 text-right font-medium flex-shrink-0">{item.score}</span>
             </div>
           ))}
         </div>
       ) : (
         <div className="px-4 py-3">
-          <p className="text-[#64748b] text-xs">
+          <p className="text-navy-600 text-xs">
             Health score unavailable — upload monthly reports to enable scoring
           </p>
         </div>
       )}
 
       {/* Footer */}
-      <div className="px-4 py-2 border-t border-[#2d3a52]">
-        <p className="text-[#64748b] text-[10px]">
+      <div className="px-4 py-2 border-t border-navy-800">
+        <p className="text-navy-600 text-[10px]">
           {dataDate ? `Based on data from ${dataDate}` : 'Based on latest available data'}
         </p>
       </div>
@@ -242,13 +242,13 @@ export function HealthScoreTooltip({
       {/* Arrow */}
       <div
         style={{ left: pos.arrowLeft }}
-        className={`absolute -translate-x-1/2 w-3 h-3 rotate-45 bg-[#0a1628] border-[#d4af37]/40 ${
+        className={`absolute -translate-x-1/2 w-3 h-3 rotate-45 bg-navy-950 border-gold-500/40 ${
           pos.above
             ? 'bottom-[-7px] border-r border-b'
             : 'top-[-7px] border-l border-t'
         }`}
       />
-      <div className="bg-[#0a1628] border border-[#d4af37]/40 rounded-xl shadow-xl overflow-hidden">
+      <div className="bg-navy-950 border border-gold-500/40 rounded-xl shadow-xl overflow-hidden">
         <BreakdownContent score={score} breakdown={breakdown} dataDate={dataDate} />
       </div>
     </div>,
@@ -270,19 +270,19 @@ export function HealthScoreTooltip({
         role="dialog"
         aria-modal="true"
         aria-label="Health score breakdown"
-        className="fixed bottom-0 left-0 right-0 z-[1101] bg-[#0a1628] border-t border-[#2d3a52] rounded-t-2xl animate-slide-up"
+        className="fixed bottom-0 left-0 right-0 z-[1101] bg-navy-950 border-t border-navy-800 rounded-t-2xl animate-slide-up"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/* Handle */}
         <div className="flex justify-center pt-2 pb-1">
-          <div className="w-9 h-1 rounded-full bg-[#2d3a52]" />
+          <div className="w-9 h-1 rounded-full bg-navy-800" />
         </div>
         <BreakdownContent score={score} breakdown={breakdown} dataDate={dataDate} />
         {/* Close button */}
         <div className="px-4 pb-4 pt-2">
           <button
             onClick={() => setOpen(false)}
-            className="w-full py-3 rounded-xl bg-[#1a2744] border border-[#2d3a52] text-[#94a3b8] text-sm font-medium touch-active"
+            className="w-full py-3 rounded-xl bg-navy-900 border border-navy-800 text-slate-400 text-sm font-medium touch-active"
           >
             Close
           </button>

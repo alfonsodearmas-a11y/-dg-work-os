@@ -85,7 +85,7 @@ function assembleMinimal(raw: RawContextData): string {
   }
 
   // Tasks
-  const activeTasks = raw.tasks.filter(t => t.status !== 'Done');
+  const activeTasks = raw.tasks.filter(t => t.status !== 'done');
   const overdue = activeTasks.filter(t => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)));
   lines.push(`TASKS: ${activeTasks.length} active, ${overdue.length} overdue`);
 
@@ -169,7 +169,7 @@ function assembleFocused(raw: RawContextData, currentPage: string): string {
   }
 
   // Tasks (compact)
-  const activeTasks = raw.tasks.filter(t => t.status !== 'Done');
+  const activeTasks = raw.tasks.filter(t => t.status !== 'done');
   const overdue = activeTasks.filter(t => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)));
   const dueToday = activeTasks.filter(t => t.due_date && isToday(new Date(t.due_date)));
   lines.push(`\n== TASKS: ${activeTasks.length} active, ${overdue.length} overdue, ${dueToday.length} today ==`);

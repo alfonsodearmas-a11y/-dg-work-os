@@ -135,7 +135,7 @@ function EscalationModal({
           </div>
           <div>
             <h2 id="escalation-controls-modal-title" className="text-lg font-semibold text-white">Escalate Project</h2>
-            <p className="text-[#64748b] text-xs line-clamp-1" title={projectName}>{projectName}</p>
+            <p className="text-navy-600 text-xs line-clamp-1" title={projectName}>{projectName}</p>
           </div>
         </div>
         <textarea
@@ -144,7 +144,7 @@ function EscalationModal({
           placeholder="Why does this project need escalation?"
           aria-label="Escalation reason"
           aria-required="true"
-          className="w-full bg-[#0a1628] border border-[#2d3a52] rounded-lg px-3 py-3 text-sm text-white placeholder-[#64748b] focus:border-red-400 focus:outline-none resize-none h-28"
+          className="w-full bg-navy-950 border border-navy-800 rounded-lg px-3 py-3 text-sm text-white placeholder-navy-600 focus:border-red-400 focus:outline-none resize-none h-28"
         />
         <div className="flex items-center justify-end gap-3 mt-4">
           <button onClick={onClose} className="btn-navy px-4 py-2 text-sm">Cancel</button>

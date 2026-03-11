@@ -4,101 +4,22 @@ import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
-  Upload, AlertTriangle, Building2, DollarSign, Clock, CheckCircle,
-  ChevronDown, ChevronUp, ChevronRight, RefreshCw, Loader2, Search,
-  Filter, Camera, X, CircleDot, SlidersHorizontal, Shield, ShieldAlert,
-  Download, BarChart3, List, GanttChart, LayoutGrid, Bookmark, BookmarkPlus, Trash2,
-  MessageSquare, Sparkles, AlertCircle, ArrowUpDown, Square, CheckSquare,
-  Send, Flag, XCircle,
+  Upload, AlertTriangle, Building2, DollarSign, CheckCircle,
+  ChevronDown, RefreshCw, Loader2, Search,
+  Filter, X, SlidersHorizontal, ShieldAlert,
+  List, GanttChart, LayoutGrid, Bookmark, BookmarkPlus,
+  MessageSquare, Sparkles, AlertCircle,
+  Send, Flag,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { fmtCurrency as _fmtCurrency, fmtDate } from '@/lib/format';
-import { AGENCY_NAMES_SHORT as AGENCY_NAMES, PROJECT_STATUS_VARIANTS as STATUS_STYLES, HEALTH_DOT } from '@/lib/constants/agencies';
-
-// ── Types ──────────────────────────────────────────────────────────────────
-
-interface Project {
-  id: string;
-  project_id: string;
-  executing_agency: string | null;
-  sub_agency: string | null;
-  project_name: string | null;
-  region: string | null;
-  contract_value: number | null;
-  contractor: string | null;
-  project_end_date: string | null;
-  completion_pct: number;
-  has_images: number;
-  status: string;
-  days_overdue: number;
-  health: 'green' | 'amber' | 'red';
-  escalated: boolean;
-  escalation_reason: string | null;
-  assigned_to: string | null;
-  start_date: string | null;
-  revised_start_date: string | null;
-  project_status: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-interface AgencySummary {
-  agency: string;
-  total: number;
-  complete: number;
-  in_progress: number;
-  delayed: number;
-  not_started: number;
-  total_value: number;
-  avg_completion: number;
-}
-
-interface PortfolioSummary {
-  total_projects: number;
-  total_value: number;
-  complete: number;
-  in_progress: number;
-  delayed: number;
-  not_started: number;
-  delayed_value: number;
-  at_risk: number;
-  agencies: AgencySummary[];
-  regions: Record<string, number>;
-}
-
-interface ProjectNote {
-  id: string;
-  project_id: string;
-  user_id: string;
-  note_text: string;
-  note_type: 'general' | 'escalation' | 'status_update';
-  created_at: string;
-  user_name?: string;
-  user_role?: string;
-}
-
-interface ProjectSummaryData {
-  id: string;
-  project_id: string;
-  summary: {
-    status_snapshot: string;
-    timeline_assessment: string;
-    budget_position: string;
-    key_risks: string[];
-    recommended_actions: string[];
-  };
-  generated_at: string;
-}
-
-interface SavedFilter {
-  id: string;
-  filter_name: string;
-  filter_params: Record<string, any>;
-  created_at: string;
-}
-
-type ViewMode = 'list' | 'board' | 'timeline';
+import { PROJECT_STATUS_VARIANTS as STATUS_STYLES, HEALTH_DOT } from '@/lib/constants/agencies';
+import type { Project, PortfolioSummary, ProjectNote, ProjectSummaryData, SavedFilter, ViewMode } from '@/types/projects';
+import { MultiSelect } from '@/components/projects/MultiSelectDropdown';
+import { ProjectTable } from '@/components/projects/ProjectTable';
+import { ProjectTimelineView } from '@/components/projects/ProjectTimelineView';
+import { ProjectBulkActionBar } from '@/components/projects/ProjectBulkActionBar';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -156,63 +77,6 @@ function timeAgo(iso: string): string {
   return `${days}d ago`;
 }
 
-// ── Multi-Select Dropdown Component ────────────────────────────────────────
-
-function MultiSelect({
-  label,
-  options,
-  selected,
-  onChange,
-  renderOption,
-}: {
-  label: string;
-  options: { value: string; label: string }[];
-  selected: string[];
-  onChange: (val: string[]) => void;
-  renderOption?: (opt: { value: string; label: string }) => React.ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  function toggle(val: string) {
-    onChange(selected.includes(val) ? selected.filter(v => v !== val) : [...selected, val]);
-  }
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="bg-navy-950 border border-navy-800 rounded-lg px-3 py-2 text-sm text-white focus:border-gold-500 focus:outline-none flex items-center gap-2 min-w-[130px]"
-      >
-        <span className="truncate">{selected.length ? `${label} (${selected.length})` : label}</span>
-        <ChevronDown className={`h-3.5 w-3.5 text-navy-600 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-1 bg-navy-900 border border-navy-800 rounded-lg shadow-xl z-50 min-w-[200px] max-h-[300px] overflow-y-auto">
-          {options.map(opt => (
-            <label key={opt.value} className="flex items-center gap-2 px-3 py-2 hover:bg-navy-950/60 cursor-pointer text-sm">
-              <input
-                type="checkbox"
-                checked={selected.includes(opt.value)}
-                onChange={() => toggle(opt.value)}
-                className="accent-gold-500"
-              />
-              {renderOption ? renderOption(opt) : <span className="text-white">{opt.label}</span>}
-            </label>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── Progress Bar ───────────────────────────────────────────────────────────
 
@@ -788,132 +652,10 @@ function ProjectSlidePanel({
   );
 }
 
-// ── Timeline View ──────────────────────────────────────────────────────────
-
-function TimelineView({ projects, groupBy }: { projects: Project[]; groupBy: 'agency' | 'region' }) {
-  // Group projects
-  const groups = useMemo(() => {
-    const g: Record<string, Project[]> = {};
-    for (const p of projects) {
-      const key = groupBy === 'agency' ? (p.sub_agency || 'Unknown') : fmtRegion(p.region);
-      if (!g[key]) g[key] = [];
-      g[key].push(p);
-    }
-    return Object.entries(g).sort((a, b) => b[1].length - a[1].length);
-  }, [projects, groupBy]);
-
-  // Calculate timeline range
-  const now = new Date();
-  const dates = projects.flatMap(p => {
-    const d: Date[] = [];
-    if (p.start_date) d.push(new Date(p.start_date));
-    if (p.project_end_date) d.push(new Date(p.project_end_date));
-    return d;
-  }).filter(d => !isNaN(d.getTime()));
-
-  if (dates.length === 0) {
-    return <div className="card-premium p-8 text-center text-navy-600">No date data available for timeline view.</div>;
-  }
-
-  const minDate = new Date(Math.min(...dates.map(d => d.getTime()), now.getTime() - 365 * 86400000));
-  const maxDate = new Date(Math.max(...dates.map(d => d.getTime()), now.getTime() + 180 * 86400000));
-  const totalDays = (maxDate.getTime() - minDate.getTime()) / 86400000;
-
-  function getPosition(dateStr: string | null): number {
-    if (!dateStr) return 0;
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return 0;
-    return ((d.getTime() - minDate.getTime()) / 86400000 / totalDays) * 100;
-  }
-
-  const nowPosition = ((now.getTime() - minDate.getTime()) / 86400000 / totalDays) * 100;
-
-  const healthColor: Record<string, string> = {
-    green: 'bg-emerald-500/80',
-    amber: 'bg-amber-500/80',
-    red: 'bg-red-500/80',
-  };
-
-  // Compute tick interval: aim for ~8-12 labels max
-  const tickMonths = totalDays <= 180 ? 1 : totalDays <= 365 ? 2 : totalDays <= 730 ? 3 : totalDays <= 1460 ? 6 : 12;
-  const ticks: { date: Date; pos: number }[] = [];
-  {
-    const tickStart = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
-    let cursor = new Date(tickStart);
-    while (cursor.getTime() <= maxDate.getTime()) {
-      const pos = ((cursor.getTime() - minDate.getTime()) / 86400000 / totalDays) * 100;
-      if (pos >= 0 && pos <= 100) ticks.push({ date: new Date(cursor), pos });
-      cursor = new Date(cursor.getFullYear(), cursor.getMonth() + tickMonths, 1);
-    }
-  }
-
-  return (
-    <div className="card-premium overflow-hidden">
-      <div className="overflow-x-auto">
-        <div className="min-w-[800px]">
-          {/* Header with months */}
-          <div className="flex items-center border-b border-navy-800 px-4 py-2 relative">
-            <div className="w-64 shrink-0 text-navy-600 text-xs font-medium uppercase">Project</div>
-            <div className="flex-1 relative h-6">
-              {/* Month markers — spaced by computed interval */}
-              {ticks.map((t, i) => (
-                <span key={i} className="absolute text-[10px] text-navy-700 whitespace-nowrap" style={{ left: `${t.pos}%`, transform: 'translateX(-50%)' }}>
-                  {t.date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Groups */}
-          {groups.map(([groupName, items]) => (
-            <div key={groupName}>
-              <div className="px-4 py-2 bg-navy-950/60 border-b border-navy-800/50">
-                <span className="text-gold-500 text-xs font-semibold">{groupName}</span>
-                <span className="text-navy-600 text-xs ml-2">({items.length})</span>
-              </div>
-              {items.slice(0, 20).map(p => {
-                const start = getPosition(p.start_date || p.created_at);
-                const end = getPosition(p.project_end_date);
-                const barLeft = Math.min(start, end || start);
-                const barWidth = Math.max((end || start + 2) - barLeft, 1);
-
-                return (
-                  <div key={p.id} className="flex items-center px-4 py-1.5 border-b border-navy-800/20 hover:bg-navy-900/30 group/row">
-                    <div className="w-64 shrink-0 pr-2 relative">
-                      <p className="text-white text-xs truncate">{p.project_name || '-'}</p>
-                      {/* Tooltip on hover showing full name */}
-                      {p.project_name && p.project_name.length > 35 && (
-                        <div className="hidden group-hover/row:block absolute left-0 top-full z-20 mt-1 px-3 py-2 bg-navy-900 border border-navy-800 rounded-lg shadow-xl text-white text-xs max-w-sm whitespace-normal">
-                          {p.project_name}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 relative h-5">
-                      {/* Now line */}
-                      <div className="absolute top-0 bottom-0 w-px bg-gold-500/30" style={{ left: `${nowPosition}%` }} />
-                      {/* Bar */}
-                      <div
-                        className={`absolute top-1 h-3 rounded-sm ${healthColor[p.health] || healthColor.green} ${p.escalated ? 'ring-1 ring-red-400' : ''}`}
-                        style={{ left: `${barLeft}%`, width: `${barWidth}%`, minWidth: '4px' }}
-                        title={`${p.project_name} (${p.completion_pct}%)`}
-                      >
-                        {barWidth > 5 && (
-                          <div className="h-full bg-white/20 rounded-sm" style={{ width: `${Math.min(p.completion_pct, 100)}%` }} />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── Board View (Cards grouped by status) ────────────────────────────────────
+
+const BOARD_STATUS_ORDER = ['Commenced', 'Awarded', 'Designed', 'Delayed', 'Rollover', 'Completed', 'Cancelled', 'Unknown'];
 
 function BoardView({
   projects,
@@ -925,7 +667,6 @@ function BoardView({
   onSelectProject: (p: Project) => void;
 }) {
   // Group projects by status
-  const statusOrder = ['Commenced', 'Awarded', 'Designed', 'Delayed', 'Rollover', 'Completed', 'Cancelled', 'Unknown'];
   const groups = useMemo(() => {
     const g: Record<string, Project[]> = {};
     for (const p of projects) {
@@ -933,12 +674,12 @@ function BoardView({
       if (!g[key]) g[key] = [];
       g[key].push(p);
     }
-    // Return sorted by statusOrder
-    return statusOrder
+    // Return sorted by BOARD_STATUS_ORDER
+    return BOARD_STATUS_ORDER
       .filter(s => g[s] && g[s].length > 0)
       .map(s => [s, g[s]] as [string, Project[]])
       .concat(
-        Object.entries(g).filter(([s]) => !statusOrder.includes(s))
+        Object.entries(g).filter(([s]) => !BOARD_STATUS_ORDER.includes(s))
       );
   }, [projects]);
 
@@ -968,7 +709,6 @@ function BoardView({
   return (
     <div className="space-y-6">
       {groups.map(([status, items]) => {
-        const ss = STATUS_STYLES[status] || STATUS_STYLES['Unknown'];
         const dotColor = STATUS_DOT[status] || STATUS_DOT['Unknown'];
         return (
           <div key={status}>
@@ -984,8 +724,12 @@ function BoardView({
               {items.map(p => (
                 <div
                   key={p.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${p.project_name || 'Unnamed project'} — ${p.status}, ${p.completion_pct}% complete`}
                   onClick={() => onSelectProject(p)}
-                  className={`bg-navy-900 border border-navy-800 rounded-xl p-4 cursor-pointer transition-all duration-200 hover:border-gold-500/40 hover:shadow-[0_0_12px_rgba(212,175,55,0.1)] ${p.escalated ? 'border-red-500/40 bg-red-500/5' : ''}`}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectProject(p); } }}
+                  className={`bg-navy-900 border border-navy-800 rounded-xl p-4 cursor-pointer transition-all duration-200 hover:border-gold-500/40 hover:shadow-[0_0_12px_rgba(212,175,55,0.1)] focus:outline-none focus:border-gold-500/60 focus:shadow-[0_0_12px_rgba(212,175,55,0.15)] ${p.escalated ? 'border-red-500/40 bg-red-500/5' : ''}`}
                 >
                   {/* Escalation badge */}
                   {p.escalated && (
@@ -1078,53 +822,6 @@ function KpiCard({
   );
 }
 
-// ── Bulk Action Bar ────────────────────────────────────────────────────────
-
-function BulkActionBar({
-  count,
-  onUpdateHealth,
-  onExport,
-  onClear,
-}: {
-  count: number;
-  onUpdateHealth: (health: string) => void;
-  onExport: () => void;
-  onClear: () => void;
-}) {
-  const [showHealthMenu, setShowHealthMenu] = useState(false);
-
-  return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-navy-900 border border-gold-500/40 rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3">
-      <span className="text-gold-500 font-semibold text-sm">{count} selected</span>
-
-      {/* Health */}
-      <div className="relative">
-        <button onClick={() => setShowHealthMenu(!showHealthMenu)} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1">
-          Health <ChevronDown className="h-3 w-3" />
-        </button>
-        {showHealthMenu && (
-          <div className="absolute bottom-full left-0 mb-2 bg-navy-900 border border-navy-800 rounded-lg shadow-xl min-w-[140px]">
-            {HEALTH_OPTIONS.map(h => (
-              <button key={h.value} onClick={() => { onUpdateHealth(h.value); setShowHealthMenu(false); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-white hover:bg-navy-950/60">
-                <span className={`w-2 h-2 rounded-full ${h.color}`} />{h.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Export */}
-      <button onClick={onExport} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1">
-        <Download className="h-3 w-3" /> CSV
-      </button>
-
-      {/* Clear */}
-      <button onClick={onClear} className="text-navy-600 hover:text-white" aria-label="Clear selection">
-        <X className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 
@@ -1736,7 +1433,7 @@ export default function ProjectsPage() {
 
       {/* Project List / Board / Timeline */}
       {viewMode === 'timeline' ? (
-        <TimelineView projects={projects} groupBy={timelineGroupBy} />
+        <ProjectTimelineView projects={projects} groupBy={timelineGroupBy} />
       ) : viewMode === 'board' ? (
         <>
           <BoardView
@@ -1761,164 +1458,16 @@ export default function ProjectsPage() {
         </>
       ) : (
         <>
-          {isMobile ? (
-            /* Mobile: Card List */
-            <div className="space-y-3">
-              {loadingProjects ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="mobile-card animate-pulse">
-                    <div className="h-5 bg-navy-800 rounded w-20 mb-2" />
-                    <div className="h-4 bg-navy-800 rounded w-full mb-2" />
-                    <div className="h-3 bg-navy-800 rounded w-2/3 mb-2" />
-                    <div className="h-1.5 bg-navy-800 rounded w-full" />
-                  </div>
-                ))
-              ) : projects.length === 0 ? (
-                <div className="card-premium p-8 text-center text-navy-600">
-                  {summary && summary.total_projects > 0 ? 'No projects match your filters.' : 'No projects yet. Upload an Excel file to get started.'}
-                </div>
-              ) : (
-                projects.map(p => {
-                  const ss = STATUS_STYLES[p.status] || STATUS_STYLES['Unknown'];
-                  return (
-                    <div
-                      key={p.id}
-                      onClick={() => setSelectedProject(p)}
-                      className={`mobile-card touch-active cursor-pointer ${p.escalated ? 'border-red-500/40 bg-red-500/5' : ''}`}
-                    >
-                      {p.escalated && (
-                        <div className="flex items-center gap-1 mb-2 text-red-400 text-xs">
-                          <ShieldAlert className="h-3 w-3" /> Escalated
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant={ss.variant}>{ss.label}</Badge>
-                          <HealthDot health={p.health} />
-                        </div>
-                        {p.sub_agency && (
-                          <span className="text-gold-500 text-xs font-medium px-2 py-0.5 rounded bg-gold-500/10">{p.sub_agency}</span>
-                        )}
-                      </div>
-                      <p className="text-white font-medium text-sm mb-2">{p.project_name || '-'}</p>
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="text-gold-500 font-semibold">{fmtCurrency(p.contract_value)}</span>
-                        <span className={p.status === 'Delayed' ? 'text-red-400 font-semibold' : 'text-slate-400'}>{fmtDate(p.project_end_date)}</span>
-                      </div>
-                      {p.start_date && (
-                        <div className="text-[10px] text-navy-600 mb-2">
-                          Start: {fmtDate(p.start_date)}
-                          {p.revised_start_date && p.revised_start_date !== p.start_date && (
-                            <span className="text-gold-500 ml-2">Rev: {fmtDate(p.revised_start_date)}</span>
-                          )}
-                        </div>
-                      )}
-                      <ProgressBar pct={p.completion_pct} />
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          ) : (
-            /* Desktop: Full Table */
-            <div className="card-premium overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm" aria-label="PSIP projects">
-                  <thead>
-                    <tr className="border-b border-navy-800 text-navy-600 text-xs uppercase">
-                      <th scope="col" className="px-3 py-3 text-center font-medium w-10">
-                        <button onClick={toggleSelectAll} className="text-navy-600 hover:text-white" aria-label="Select all">
-                          {selectedIds.size === projects.length && projects.length > 0 ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
-                        </button>
-                      </th>
-                      <th scope="col" className="px-3 py-3 text-left font-medium">Status</th>
-                      <th scope="col" className="px-3 py-3 text-left font-medium">Health</th>
-                      <th scope="col" className="px-4 py-3 text-left font-medium">Project Name</th>
-                      <th scope="col" className="px-3 py-3 text-left font-medium">Agency</th>
-                      <th scope="col" className="px-3 py-3 text-left font-medium">Region</th>
-                      <th scope="col" className="px-3 py-3 text-left font-medium">Contractor</th>
-                      <th scope="col" className="px-3 py-3 text-right font-medium">Value</th>
-                      <th scope="col" className="px-3 py-3 text-left font-medium">Start Date</th>
-                      <th scope="col" className="px-3 py-3 text-left font-medium">End Date</th>
-                      <th scope="col" className="px-3 py-3 text-left font-medium">Completion</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-navy-800/50">
-                    {loadingProjects ? (
-                      Array.from({ length: 8 }).map((_, i) => (
-                        <tr key={i} className="animate-pulse">
-                          {Array.from({ length: 11 }).map((_, j) => (
-                            <td key={j} className="px-3 py-3"><div className="h-5 bg-navy-800 rounded w-full" /></td>
-                          ))}
-                        </tr>
-                      ))
-                    ) : projects.length === 0 ? (
-                      <tr>
-                        <td colSpan={11} className="px-4 py-12 text-center text-navy-600">
-                          {summary && summary.total_projects > 0 ? 'No projects match your filters.' : 'No projects yet. Upload an Excel file to get started.'}
-                        </td>
-                      </tr>
-                    ) : (
-                      projects.map(p => {
-                        const ss = STATUS_STYLES[p.status] || STATUS_STYLES['Unknown'];
-                        const isPastDue = p.status === 'Delayed';
-                        const isSelected = selectedIds.has(p.id);
-
-                        return (
-                          <tr
-                            key={p.id}
-                            className={`hover:bg-navy-900/40 cursor-pointer transition-colors ${p.escalated ? 'bg-red-500/5 border-l-2 border-l-red-500' : ''} ${isSelected ? 'bg-gold-500/5' : ''}`}
-                          >
-                            <td className="px-3 py-3 text-center" onClick={e => e.stopPropagation()}>
-                              <button onClick={() => toggleSelect(p.id)} className="text-navy-600 hover:text-white">
-                                {isSelected ? <CheckSquare className="h-4 w-4 text-gold-500" /> : <Square className="h-4 w-4" />}
-                              </button>
-                            </td>
-                            <td className="px-3 py-3" onClick={() => setSelectedProject(p)}>
-                              <div className="flex items-center gap-1.5">
-                                <Badge variant={ss.variant}>{ss.label}</Badge>
-                                {p.escalated && <ShieldAlert className="h-3.5 w-3.5 text-red-400" />}
-                              </div>
-                            </td>
-                            <td className="px-3 py-3" onClick={() => setSelectedProject(p)}>
-                              <HealthDot health={p.health} />
-                            </td>
-                            <td className="px-4 py-3" onClick={() => setSelectedProject(p)}>
-                              <span className="text-white line-clamp-2 max-w-[350px]" title={p.project_name || ''}>
-                                {p.project_name || '-'}
-                              </span>
-                            </td>
-                            <td className="px-3 py-3" onClick={() => setSelectedProject(p)}>
-                              <span className="text-gold-500 font-medium text-xs">{p.sub_agency || '-'}</span>
-                            </td>
-                            <td className="px-3 py-3 text-slate-400" onClick={() => setSelectedProject(p)}>{fmtRegion(p.region)}</td>
-                            <td className="px-3 py-3" onClick={() => setSelectedProject(p)}>
-                              <span className="text-slate-400 line-clamp-1 max-w-[180px]" title={p.contractor || ''}>{p.contractor || '-'}</span>
-                            </td>
-                            <td className="px-3 py-3 text-right" onClick={() => setSelectedProject(p)}>
-                              <span className="text-gold-500 font-mono text-xs">{fmtCurrency(p.contract_value)}</span>
-                            </td>
-                            <td className="px-3 py-3" onClick={() => setSelectedProject(p)}>
-                              <span className="text-slate-400">{fmtDate(p.start_date)}</span>
-                              {p.revised_start_date && p.revised_start_date !== p.start_date && (
-                                <span className="block text-[10px] text-gold-500">Rev: {fmtDate(p.revised_start_date)}</span>
-                              )}
-                            </td>
-                            <td className="px-3 py-3" onClick={() => setSelectedProject(p)}>
-                              <span className={isPastDue ? 'text-red-400 font-semibold' : 'text-slate-400'}>{fmtDate(p.project_end_date)}</span>
-                            </td>
-                            <td className="px-3 py-3" onClick={() => setSelectedProject(p)}>
-                              <ProgressBar pct={p.completion_pct} />
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+          <ProjectTable
+            projects={projects}
+            loadingProjects={loadingProjects}
+            summary={summary}
+            isMobile={isMobile}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            onToggleSelectAll={toggleSelectAll}
+            onSelectProject={setSelectedProject}
+          />
 
           {/* Pagination */}
           {totalPages > 1 && (
@@ -1938,7 +1487,7 @@ export default function ProjectsPage() {
 
       {/* Bulk Action Bar */}
       {selectedIds.size > 0 && (
-        <BulkActionBar
+        <ProjectBulkActionBar
           count={selectedIds.size}
           onUpdateHealth={h => handleBulkUpdate({ health: h })}
           onExport={handleExport}

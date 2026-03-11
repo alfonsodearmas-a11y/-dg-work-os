@@ -19,17 +19,17 @@ async function handleCron(request: NextRequest) {
   }
 
   try {
-    // Find overdue tasks
+    // Find overdue tasks — PG enum uses 'delayed' (maps to canonical 'blocked')
     const result = await query(
-      `UPDATE tasks SET status = 'blocked'
-       WHERE status NOT IN ('done', 'blocked')
+      `UPDATE tasks SET status = 'delayed'
+       WHERE status NOT IN ('done', 'delayed')
          AND due_date < CURRENT_DATE
        RETURNING *`
     );
 
     let notified = 0;
     for (const task of result.rows) {
-      // Create activity
+      // Create activity — log canonical status names for UI consistency
       await query(
         `INSERT INTO task_activities (task_id, action, from_value, to_value)
          VALUES ($1, 'status_changed', $2, 'blocked')`,

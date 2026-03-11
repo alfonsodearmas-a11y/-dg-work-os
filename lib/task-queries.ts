@@ -5,6 +5,53 @@ import type { TaskStatus, TaskPriority } from './task-types';
 
 export { validateTransition };
 export type { TaskStatus, TaskPriority };
+
+// ── Status mapping between Supabase (canonical) and PostgreSQL (legacy enum) ──
+// Supabase uses: new | active | blocked | done
+// PG enum uses:  new | in_progress | delayed | done  (plus old values that are never written)
+//
+// When writing to PG, convert canonical → PG.
+// When reading from PG, convert PG → canonical.
+
+type PgTaskStatus = 'new' | 'in_progress' | 'delayed' | 'done';
+
+const CANONICAL_TO_PG: Record<TaskStatus, PgTaskStatus> = {
+  new: 'new',
+  active: 'in_progress',
+  blocked: 'delayed',
+  done: 'done',
+};
+
+const PG_TO_CANONICAL: Record<string, TaskStatus> = {
+  new: 'new',
+  in_progress: 'active',
+  delayed: 'blocked',
+  done: 'done',
+  // Legacy PG enum values that might still exist in data
+  assigned: 'new',
+  acknowledged: 'new',
+  submitted: 'active',
+  verified: 'done',
+  rejected: 'active',
+  overdue: 'blocked',
+};
+
+function toPgStatus(status: TaskStatus): PgTaskStatus {
+  return CANONICAL_TO_PG[status] ?? 'new';
+}
+
+function fromPgStatus(status: string): TaskStatus {
+  return PG_TO_CANONICAL[status] ?? 'new';
+}
+
+function normalizeTaskRow(row: any): any {
+  if (!row) return row;
+  return { ...row, status: fromPgStatus(row.status) };
+}
+
+function normalizeTaskRows(rows: any[]): any[] {
+  return rows.map(normalizeTaskRow);
+}
 export type TaskAction =
   | 'created' | 'status_changed' | 'priority_changed' | 'reassigned'
   | 'commented' | 'due_date_changed' | 'extension_requested'
@@ -74,7 +121,7 @@ export async function createTask(data: CreateTaskInput, createdById: string): Pr
   return transaction(async (client: PoolClient) => {
     const result = await client.query(
       `INSERT INTO tasks (title, description, priority, agency, assignee_id, created_by, due_date, tags, status, source_meeting_id, source_recording_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'new', $9, $10)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [
         data.title,
@@ -85,12 +132,13 @@ export async function createTask(data: CreateTaskInput, createdById: string): Pr
         createdById,
         data.due_date || null,
         data.tags || [],
+        toPgStatus('new'),
         data.source_meeting_id || null,
         data.source_recording_id || null,
       ]
     );
 
-    const task = result.rows[0];
+    const task = normalizeTaskRow(result.rows[0]);
 
     await client.query(
       `INSERT INTO task_activities (task_id, user_id, action, to_value)
@@ -113,7 +161,7 @@ export async function getTask(id: string): Promise<TaskRow | null> {
      WHERE t.id = $1`,
     [id]
   );
-  return result.rows[0] || null;
+  return result.rows[0] ? normalizeTaskRow(result.rows[0]) : null;
 }
 
 export async function getTasksList(filters: TaskFilters, userId?: string, userRole?: string): Promise<{ tasks: TaskRow[]; total: number }> {
@@ -130,10 +178,10 @@ export async function getTasksList(filters: TaskFilters, userId?: string, userRo
   if (filters.status) {
     if (Array.isArray(filters.status)) {
       conditions.push(`t.status = ANY($${paramIdx++})`);
-      params.push(filters.status);
+      params.push(filters.status.map(s => toPgStatus(s as TaskStatus)));
     } else {
       conditions.push(`t.status = $${paramIdx++}`);
-      params.push(filters.status);
+      params.push(toPgStatus(filters.status as TaskStatus));
     }
   }
 
@@ -193,7 +241,7 @@ export async function getTasksList(filters: TaskFilters, userId?: string, userRo
   ]);
 
   return {
-    tasks: dataRes.rows,
+    tasks: normalizeTaskRows(dataRes.rows),
     total: parseInt(countRes.rows[0].count),
   };
 }
@@ -208,20 +256,22 @@ export async function updateTaskStatus(
     if (current.rows.length === 0) throw new Error('Task not found');
 
     const task = current.rows[0];
-    const oldStatus = task.status;
+    const oldStatus = fromPgStatus(task.status);
+    const pgStatus = toPgStatus(newStatus);
 
     const result = await client.query(
       `UPDATE tasks SET status = $1 WHERE id = $2 RETURNING *`,
-      [newStatus, id]
+      [pgStatus, id]
     );
 
+    // Store canonical status names in activity log for consistency
     await client.query(
       `INSERT INTO task_activities (task_id, user_id, action, from_value, to_value)
        VALUES ($1, $2, 'status_changed', $3, $4)`,
       [id, userId, oldStatus, newStatus]
     );
 
-    return result.rows[0];
+    return normalizeTaskRow(result.rows[0]);
   });
 }
 
@@ -280,7 +330,7 @@ export async function updateTask(
     }
 
     if (sets.length === 0) {
-      return task;
+      return normalizeTaskRow(task);
     }
 
     params.push(id);
@@ -288,7 +338,7 @@ export async function updateTask(
       `UPDATE tasks SET ${sets.join(', ')} WHERE id = $${idx} RETURNING *`,
       params
     );
-    return result.rows[0];
+    return normalizeTaskRow(result.rows[0]);
   });
 }
 
@@ -446,8 +496,8 @@ export async function getTaskStats(filters?: { agency?: string; assignee_id?: st
     `SELECT
        COUNT(*) FILTER (WHERE status != 'done') AS total_active,
        COUNT(*) FILTER (WHERE status = 'new') AS status_new,
-       COUNT(*) FILTER (WHERE status = 'active') AS active,
-       COUNT(*) FILTER (WHERE status = 'blocked') AS blocked,
+       COUNT(*) FILTER (WHERE status = 'in_progress') AS active,
+       COUNT(*) FILTER (WHERE status = 'delayed') AS blocked,
        COUNT(*) FILTER (WHERE status = 'done') AS done,
        COUNT(*) AS total
      FROM tasks ${where}`,

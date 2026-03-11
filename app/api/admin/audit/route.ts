@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateRequest, authorizeRoles, AuthError } from '@/lib/auth';
+import { requireRole } from '@/lib/auth-helpers';
 import { auditService } from '@/lib/audit';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await authenticateRequest(request);
-    authorizeRoles(user, 'director', 'admin');
+    const authResult = await requireRole(['dg', 'minister']);
+    if (authResult instanceof NextResponse) return authResult;
 
     const { searchParams } = new URL(request.url);
     const logs = await auditService.getAuditLogs({
@@ -20,7 +20,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: logs });
   } catch (error: any) {
-    if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

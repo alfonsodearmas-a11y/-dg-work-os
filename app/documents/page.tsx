@@ -63,6 +63,36 @@ export default function DocumentsPage() {
     setDocuments((prev) => prev.filter((doc) => doc.id !== id));
   };
 
+  const handleUpdate = async (id: string, updates: { doc_type?: string; tags?: string[] }) => {
+    // Optimistic UI: update state immediately
+    setDocuments((prev) =>
+      prev.map((doc) =>
+        doc.id === id
+          ? {
+              ...doc,
+              ...(updates.doc_type !== undefined ? { document_type: updates.doc_type } : {}),
+              ...(updates.tags !== undefined ? { tags: updates.tags } : {}),
+            }
+          : doc
+      )
+    );
+
+    try {
+      const res = await fetch(`/api/documents/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) {
+        // Revert on failure — refetch the list
+        fetchDocuments();
+      }
+    } catch {
+      // Revert on network error
+      fetchDocuments();
+    }
+  };
+
   // Group documents by agency (memoized to avoid recomputing on every render)
   const byAgency = useMemo(() => documents.reduce((acc, doc) => {
     const agency = doc.agency || 'Other';
@@ -97,7 +127,7 @@ export default function DocumentsPage() {
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <h1 className="text-xl md:text-3xl font-bold text-white">Document Vault</h1>
-          <p className="text-[#64748b] mt-1 text-xs md:text-sm">AI-powered document analysis and search</p>
+          <p className="text-navy-600 mt-1 text-xs md:text-sm">AI-powered document analysis and search</p>
         </div>
         <div className="flex items-center gap-2 md:gap-3 shrink-0">
           <button
@@ -117,7 +147,7 @@ export default function DocumentsPage() {
             onClick={() => { setShowQuery(!showQuery); if (showUpload) setShowUpload(false); }}
             className={`flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2 rounded-xl border transition-colors text-sm font-medium ${
               showQuery
-                ? 'bg-[#d4af37]/20 border-[#d4af37]/30 text-[#d4af37]'
+                ? 'bg-gold-500/20 border-gold-500/30 text-gold-500'
                 : 'btn-navy'
             }`}
           >
@@ -138,32 +168,32 @@ export default function DocumentsPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <div className="card-premium p-4 md:p-6">
           <div className="flex items-center justify-between mb-2 md:mb-4">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
-              <FileText className="h-5 w-5 md:h-6 md:w-6 text-[#d4af37]" />
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gold-500/20 flex items-center justify-center">
+              <FileText className="h-5 w-5 md:h-6 md:w-6 text-gold-500" />
             </div>
           </div>
-          <p className="text-xl md:text-[2.5rem] font-semibold text-[#d4af37] leading-none">{documents.length}</p>
-          <p className="text-[#64748b] text-xs md:text-sm mt-1">Total Documents</p>
+          <p className="text-xl md:text-[2.5rem] font-semibold text-gold-500 leading-none">{documents.length}</p>
+          <p className="text-navy-600 text-xs md:text-sm mt-1">Total Documents</p>
         </div>
 
         <div className="card-premium p-4 md:p-6">
           <div className="flex items-center justify-between mb-2 md:mb-4">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
-              <Building2 className="h-5 w-5 md:h-6 md:w-6 text-[#d4af37]" />
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gold-500/20 flex items-center justify-center">
+              <Building2 className="h-5 w-5 md:h-6 md:w-6 text-gold-500" />
             </div>
           </div>
-          <p className="text-xl md:text-[2.5rem] font-semibold text-[#d4af37] leading-none">{Object.keys(byAgency).length}</p>
-          <p className="text-[#64748b] text-xs md:text-sm mt-1">Agencies</p>
+          <p className="text-xl md:text-[2.5rem] font-semibold text-gold-500 leading-none">{Object.keys(byAgency).length}</p>
+          <p className="text-navy-600 text-xs md:text-sm mt-1">Agencies</p>
         </div>
 
         <div className="card-premium p-4 md:p-6">
           <div className="flex items-center justify-between mb-2 md:mb-4">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#d4af37]/20 flex items-center justify-center">
-              <FolderOpen className="h-5 w-5 md:h-6 md:w-6 text-[#d4af37]" />
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gold-500/20 flex items-center justify-center">
+              <FolderOpen className="h-5 w-5 md:h-6 md:w-6 text-gold-500" />
             </div>
           </div>
-          <p className="text-xl md:text-[2.5rem] font-semibold text-[#d4af37] leading-none">{Object.keys(byType).length}</p>
-          <p className="text-[#64748b] text-xs md:text-sm mt-1">Document Types</p>
+          <p className="text-xl md:text-[2.5rem] font-semibold text-gold-500 leading-none">{Object.keys(byType).length}</p>
+          <p className="text-navy-600 text-xs md:text-sm mt-1">Document Types</p>
         </div>
 
         <div className="card-premium p-4 md:p-6">
@@ -173,7 +203,7 @@ export default function DocumentsPage() {
             </div>
           </div>
           <p className="text-xl md:text-[2.5rem] font-semibold text-emerald-400 leading-none">AI</p>
-          <p className="text-[#64748b] text-xs md:text-sm mt-1">Search Enabled</p>
+          <p className="text-navy-600 text-xs md:text-sm mt-1">Search Enabled</p>
         </div>
       </div>
 
@@ -209,18 +239,18 @@ export default function DocumentsPage() {
           {/* Recent Uploads */}
           <div className="card-premium p-4 md:p-6">
             <h2 className="text-lg font-semibold text-white flex items-center mb-4">
-              <FileText className="h-5 w-5 mr-2 text-[#d4af37]" />
+              <FileText className="h-5 w-5 mr-2 text-gold-500" />
               Recent Uploads
             </h2>
             {loading ? (
               <LoadingSkeleton type="documentList" count={5} />
             ) : documents.length === 0 ? (
               <div className="text-center py-12">
-                <div className="w-16 h-16 rounded-2xl bg-[#1a2744] flex items-center justify-center mx-auto mb-4">
-                  <FileText className="h-8 w-8 text-[#64748b]" />
+                <div className="w-16 h-16 rounded-2xl bg-navy-900 flex items-center justify-center mx-auto mb-4">
+                  <FileText className="h-8 w-8 text-navy-600" />
                 </div>
-                <p className="text-[#94a3b8]">No documents yet</p>
-                <p className="text-[#64748b] text-sm mt-1">Upload your first document above</p>
+                <p className="text-slate-400">No documents yet</p>
+                <p className="text-navy-600 text-sm mt-1">Upload your first document above</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -230,6 +260,7 @@ export default function DocumentsPage() {
                     document={doc}
                     expandable
                     onDelete={handleDelete}
+                    onUpdate={handleUpdate}
                   />
                 ))}
               </div>
@@ -250,10 +281,10 @@ export default function DocumentsPage() {
                     <button
                       key={agency}
                       onClick={() => handleSearch('', { agency: agency === 'Other' ? '' : agency })}
-                      className="w-full flex items-center justify-between p-3 rounded-xl bg-[#1a2744]/50 hover:bg-[#1a2744] transition-colors text-left"
+                      className="w-full flex items-center justify-between p-3 rounded-xl bg-navy-900/50 hover:bg-navy-900 transition-colors text-left"
                     >
                       <span className="text-white font-medium">{agency}</span>
-                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#d4af37]/20 text-[#f4d03f]">
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-gold-500/20 text-gold-400">
                         {docs.length}
                       </span>
                     </button>
@@ -273,12 +304,12 @@ export default function DocumentsPage() {
                     <button
                       key={type}
                       onClick={() => handleSearch('', { type })}
-                      className="w-full flex items-center justify-between p-3 rounded-xl bg-[#1a2744]/50 hover:bg-[#1a2744] transition-colors text-left"
+                      className="w-full flex items-center justify-between p-3 rounded-xl bg-navy-900/50 hover:bg-navy-900 transition-colors text-left"
                     >
                       <span className="text-white font-medium capitalize">
                         {typeLabels[type] || type.replace('_', ' ')}
                       </span>
-                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#4a5568]/30 text-[#94a3b8]">
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-navy-700/30 text-slate-400">
                         {docs.length}
                       </span>
                     </button>

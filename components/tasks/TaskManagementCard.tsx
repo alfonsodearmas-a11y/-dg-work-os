@@ -11,7 +11,7 @@ const AGENCY_COLORS: Record<string, string> = {
   heci: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
   ppdi: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
   has: 'bg-red-500/20 text-red-400 border-red-500/30',
-  ministry: 'bg-[#d4af37]/20 text-[#d4af37] border-[#d4af37]/30',
+  ministry: 'bg-gold-500/20 text-gold-500 border-gold-500/30',
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -53,7 +53,7 @@ export function TaskManagementCard({ task, onClick, compact }: TaskCardProps) {
   return (
     <div
       onClick={onClick}
-      className={`card-premium p-3 cursor-pointer hover:ring-1 hover:ring-[#d4af37]/30 transition-all ${isOverdue ? 'ring-1 ring-red-500/40' : ''}`}
+      className={`card-premium p-3 cursor-pointer hover:ring-1 hover:ring-gold-500/30 transition-all ${isOverdue ? 'ring-1 ring-red-500/40' : ''}`}
     >
       <div className="flex items-start gap-2 mb-2">
         <div className={`w-1.5 h-1.5 rounded-full mt-2 shrink-0 ${PRIORITY_COLORS[task.priority] || PRIORITY_COLORS.medium}`} />
@@ -71,7 +71,7 @@ export function TaskManagementCard({ task, onClick, compact }: TaskCardProps) {
         )}
       </div>
 
-      <div className="flex items-center justify-between mt-2 text-xs text-[#64748b]">
+      <div className="flex items-center justify-between mt-2 text-xs text-navy-600">
         {task.assignee_name && (
           <span className="flex items-center gap-1 truncate">
             <User className="h-3 w-3" />

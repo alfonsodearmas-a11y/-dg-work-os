@@ -38,9 +38,9 @@ export function DocumentSearch({ onSearch }: DocumentSearchProps) {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           aria-label="Search documents"
-          className="w-full pl-12 pr-4 py-3 bg-[#1a2744] border border-[#2d3a52] rounded-xl text-white placeholder-[#64748b] focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-colors"
+          className="w-full pl-12 pr-4 py-3 bg-navy-900 border border-navy-800 rounded-xl text-white placeholder-navy-600 focus:ring-2 focus:ring-gold-500 focus:border-gold-500 transition-colors"
         />
-        <Search className="absolute left-4 top-3.5 h-5 w-5 text-[#64748b]" />
+        <Search className="absolute left-4 top-3.5 h-5 w-5 text-navy-600" />
       </div>
 
       <div className="relative">
@@ -48,15 +48,15 @@ export function DocumentSearch({ onSearch }: DocumentSearchProps) {
           value={agency}
           onChange={(e) => setAgency(e.target.value)}
           aria-label="Filter by agency"
-          className="w-full sm:w-auto px-4 py-3 pl-10 bg-[#1a2744] border border-[#2d3a52] rounded-xl text-white focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-colors appearance-none cursor-pointer"
+          className="w-full sm:w-auto px-4 py-3 pl-10 bg-navy-900 border border-navy-800 rounded-xl text-white focus:ring-2 focus:ring-gold-500 focus:border-gold-500 transition-colors appearance-none cursor-pointer"
           style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
         >
-          <option value="" className="bg-[#1a2744]">All Agencies</option>
+          <option value="" className="bg-navy-900">All Agencies</option>
           {agencies.map((a) => (
-            <option key={a} value={a} className="bg-[#1a2744]">{a}</option>
+            <option key={a} value={a} className="bg-navy-900">{a}</option>
           ))}
         </select>
-        <Building2 className="absolute left-3 top-3.5 h-5 w-5 text-[#64748b] pointer-events-none" />
+        <Building2 className="absolute left-3 top-3.5 h-5 w-5 text-navy-600 pointer-events-none" />
       </div>
 
       <div className="relative">
@@ -64,15 +64,15 @@ export function DocumentSearch({ onSearch }: DocumentSearchProps) {
           value={type}
           onChange={(e) => setType(e.target.value)}
           aria-label="Filter by document type"
-          className="w-full sm:w-auto px-4 py-3 pl-10 bg-[#1a2744] border border-[#2d3a52] rounded-xl text-white focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-colors appearance-none cursor-pointer capitalize"
+          className="w-full sm:w-auto px-4 py-3 pl-10 bg-navy-900 border border-navy-800 rounded-xl text-white focus:ring-2 focus:ring-gold-500 focus:border-gold-500 transition-colors appearance-none cursor-pointer capitalize"
           style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
         >
-          <option value="" className="bg-[#1a2744]">All Types</option>
+          <option value="" className="bg-navy-900">All Types</option>
           {types.map((t) => (
-            <option key={t} value={t} className="bg-[#1a2744] capitalize">{t.replace('_', ' ')}</option>
+            <option key={t} value={t} className="bg-navy-900 capitalize">{t.replace('_', ' ')}</option>
           ))}
         </select>
-        <FolderOpen className="absolute left-3 top-3.5 h-5 w-5 text-[#64748b] pointer-events-none" />
+        <FolderOpen className="absolute left-3 top-3.5 h-5 w-5 text-navy-600 pointer-events-none" />
       </div>
 
       <button

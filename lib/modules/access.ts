@@ -99,7 +99,7 @@ export async function canAccessModule(userId: string, userRole: Role, moduleSlug
  * Require module access in an API route. Returns 403 if denied.
  */
 export async function requireModuleAccess(moduleSlug: string) {
-  const session = await auth();
+  const session = await auth(); // TODO: migrate to requireRole()
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });

@@ -4,7 +4,7 @@ import { withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 
 export const POST = withErrorHandler(async (_request: NextRequest) => {
-  const session = await auth();
+  const session = await auth(); // TODO: migrate to requireRole()
   const userId = session?.user?.id || 'system';
   let result;
   try {

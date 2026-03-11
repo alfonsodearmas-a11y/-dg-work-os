@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAgencyDetail } from '@/lib/budget-db';
-import { requireRole } from '@/lib/auth-helpers';
+import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
@@ -10,6 +10,12 @@ export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code');
   if (!code) {
     return NextResponse.json({ error: 'Agency code required' }, { status: 400 });
+  }
+
+  // Agency scoping: non-ministry users can only access their own agency
+  const { session } = authResult;
+  if (!canAccessAgency(session.user.role, session.user.agency ?? null, code)) {
+    return NextResponse.json({ error: 'Access denied for this agency' }, { status: 403 });
   }
 
   try {

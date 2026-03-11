@@ -12,7 +12,7 @@ async function handleGenerate(request: NextRequest) {
   // Auth: either cron secret OR authenticated session
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
-  const session = await auth();
+  const session = await auth(); // TODO: migrate to requireRole()
 
   const isCron = cronSecret && authHeader === `Bearer ${cronSecret}`;
   const isAuthenticated = !!session?.user?.id;

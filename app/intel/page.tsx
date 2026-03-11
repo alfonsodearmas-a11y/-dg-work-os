@@ -16,7 +16,7 @@ import { Loader2 } from 'lucide-react';
 
 const PanelLoader = () => (
   <div className="flex items-center justify-center py-24" role="status" aria-label="Loading">
-    <Loader2 className="h-6 w-6 text-[#d4af37] animate-spin" aria-hidden="true" />
+    <Loader2 className="h-6 w-6 text-gold-500 animate-spin" aria-hidden="true" />
   </div>
 );
 
@@ -53,12 +53,12 @@ export default function IntelPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 md:gap-3 min-w-0">
-          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-[#d4af37]/20 flex items-center justify-center shrink-0">
-            <Radio className="h-4 w-4 md:h-5 md:w-5 text-[#d4af37]" />
+          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gold-500/20 flex items-center justify-center shrink-0">
+            <Radio className="h-4 w-4 md:h-5 md:w-5 text-gold-500" />
           </div>
           <div className="min-w-0">
             <h1 className="text-xl md:text-2xl font-bold text-white">Agency Intel</h1>
-            <p className="text-[#64748b] text-xs md:text-sm truncate">
+            <p className="text-navy-600 text-xs md:text-sm truncate">
               Updated: {lastUpdated.toLocaleTimeString()}
             </p>
           </div>
@@ -66,7 +66,7 @@ export default function IntelPage() {
         <button
           onClick={refresh}
           disabled={isLoading}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] hover:text-white transition-colors disabled:opacity-50 shrink-0 touch-active"
+          className="flex items-center gap-2 px-3 py-2 rounded-xl bg-navy-900 border border-navy-800 hover:border-gold-500 text-slate-400 hover:text-white transition-colors disabled:opacity-50 shrink-0 touch-active"
           aria-label="Refresh"
         >
           <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
@@ -116,13 +116,13 @@ export default function IntelPage() {
 
           {/* Deep Dive Links */}
           <div className="card-premium p-4">
-            <p className="text-[#64748b] text-sm mb-3">Full Agency Reports</p>
+            <p className="text-navy-600 text-sm mb-3">Full Agency Reports</p>
             <div className="flex flex-wrap gap-2">
               {agencies.map(agency => (
                 <Link
                   key={agency.id}
                   href={`/intel/${agency.id}`}
-                  className="px-4 py-2 rounded-xl bg-[#0a1628] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] hover:text-white text-sm transition-colors"
+                  className="px-4 py-2 rounded-xl bg-navy-950 border border-navy-800 hover:border-gold-500 text-slate-400 hover:text-white text-sm transition-colors"
                 >
                   {agency.title} Deep Dive
                 </Link>

@@ -10,6 +10,7 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   Cell, Legend, ComposedChart,
 } from 'recharts';
+import { CHART_THEME } from '@/lib/constants/chart-theme';
 import type {
   EfficiencyMetrics, MonthlyVolume, ServiceConnection,
   StageHistoryEntry, AIInsight,
@@ -146,15 +147,15 @@ function OverviewSection({ metrics }: { metrics: EfficiencyMetrics }) {
           <div className="h-48 md:h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={metrics.stages.map(s => ({ name: s.stage, avgDays: s.avgDays, slaTarget: s.slaTarget }))} margin={{ left: 10, right: 20 }}>
-                <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ background: '#1a2744', border: '1px solid #2d3a52', borderRadius: 8, color: '#fff' }} formatter={(v: number, n: string) => [`${v}d`, n === 'avgDays' ? 'Avg Duration' : 'SLA Target']} />
+                <XAxis dataKey="name" tick={{ fill: CHART_THEME.colors.slate400, fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: CHART_THEME.colors.navy600, fontSize: 12 }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={CHART_THEME.tooltip} formatter={(v: number, n: string) => [`${v}d`, n === 'avgDays' ? 'Avg Duration' : 'SLA Target']} />
                 <Bar dataKey="avgDays" name="Avg Duration" radius={[4, 4, 0, 0]} barSize={24}>
                   {metrics.stages.map((s, i) => (
-                    <Cell key={i} fill={s.avgDays <= s.slaTarget ? '#059669' : s.avgDays <= s.slaTarget * 2 ? '#d4af37' : '#dc2626'} />
+                    <Cell key={i} fill={s.avgDays <= s.slaTarget ? '#059669' : s.avgDays <= s.slaTarget * 2 ? CHART_THEME.colors.gold500 : '#dc2626'} />
                   ))}
                 </Bar>
-                <Bar dataKey="slaTarget" name="SLA Target" fill="#2d3a52" radius={[4, 4, 0, 0]} barSize={24} />
+                <Bar dataKey="slaTarget" name="SLA Target" fill={CHART_THEME.colors.navy800} radius={[4, 4, 0, 0]} barSize={24} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -246,13 +247,13 @@ function StageSection({ metrics }: { metrics: EfficiencyMetrics }) {
           <div className="h-56 md:h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stages.map(s => ({ name: s.stage, avgDays: s.avgDays, slaTarget: s.slaTarget }))} layout="vertical" margin={{ left: 10, right: 30 }}>
-                <XAxis type="number" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="name" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} width={90} />
-                <Tooltip contentStyle={{ background: '#1a2744', border: '1px solid #2d3a52', borderRadius: 8, color: '#fff' }} formatter={(v: number, n: string) => [`${v}d`, n === 'avgDays' ? 'Avg Duration' : 'SLA Target']} />
-                <Bar dataKey="slaTarget" name="SLA Target" fill="#2d3a52" radius={[0, 4, 4, 0]} barSize={14} />
+                <XAxis type="number" tick={{ fill: CHART_THEME.colors.navy600, fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" tick={{ fill: CHART_THEME.colors.slate400, fontSize: 12 }} axisLine={false} tickLine={false} width={90} />
+                <Tooltip contentStyle={CHART_THEME.tooltip} formatter={(v: number, n: string) => [`${v}d`, n === 'avgDays' ? 'Avg Duration' : 'SLA Target']} />
+                <Bar dataKey="slaTarget" name="SLA Target" fill={CHART_THEME.colors.navy800} radius={[0, 4, 4, 0]} barSize={14} />
                 <Bar dataKey="avgDays" name="Avg Duration" radius={[0, 4, 4, 0]} barSize={14}>
                   {stages.map((s, i) => (
-                    <Cell key={i} fill={s.avgDays <= s.slaTarget ? '#059669' : s.avgDays <= s.slaTarget * 2 ? '#d4af37' : '#dc2626'} />
+                    <Cell key={i} fill={s.avgDays <= s.slaTarget ? '#059669' : s.avgDays <= s.slaTarget * 2 ? CHART_THEME.colors.gold500 : '#dc2626'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -367,14 +368,14 @@ function TrendsSection() {
         <div className="h-56 md:h-64">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData} margin={{ left: 0, right: 10 }}>
-              <XAxis dataKey="label" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis yAxisId="left" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: '#1a2744', border: '1px solid #2d3a52', borderRadius: 8, color: '#fff' }} />
-              <Legend wrapperStyle={{ fontSize: 12, color: '#94a3b8' }} />
+              <XAxis dataKey="label" tick={{ fill: CHART_THEME.colors.navy600, fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis yAxisId="left" tick={{ fill: CHART_THEME.colors.navy600, fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis yAxisId="right" orientation="right" tick={{ fill: CHART_THEME.colors.navy600, fontSize: 12 }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={CHART_THEME.tooltip} />
+              <Legend wrapperStyle={{ fontSize: 12, color: CHART_THEME.colors.slate400 }} />
               <Bar yAxisId="left" dataKey="opened" name="Opened" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={16} />
               <Bar yAxisId="left" dataKey="completed" name="Completed" fill="#059669" radius={[4, 4, 0, 0]} barSize={16} />
-              <Line yAxisId="right" type="monotone" dataKey="queueDepth" name="Queue Depth" stroke="#d4af37" strokeWidth={2} dot={{ fill: '#d4af37', r: 3 }} />
+              <Line yAxisId="right" type="monotone" dataKey="queueDepth" name="Queue Depth" stroke={CHART_THEME.colors.gold500} strokeWidth={2} dot={{ fill: CHART_THEME.colors.gold500, r: 3 }} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -385,9 +386,9 @@ function TrendsSection() {
         <div className="h-48 md:h-56">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData.filter(d => d.avgDaysToComplete !== null)} margin={{ left: 0, right: 10 }}>
-              <XAxis dataKey="label" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: '#1a2744', border: '1px solid #2d3a52', borderRadius: 8, color: '#fff' }} formatter={(v: number) => [`${v}d`]} />
+              <XAxis dataKey="label" tick={{ fill: CHART_THEME.colors.navy600, fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: CHART_THEME.colors.navy600, fontSize: 12 }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={CHART_THEME.tooltip} formatter={(v: number) => [`${v}d`]} />
               <Line type="monotone" dataKey="avgDaysToComplete" name="Avg Days" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 3 }} />
             </LineChart>
           </ResponsiveContainer>

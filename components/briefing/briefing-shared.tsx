@@ -3,7 +3,7 @@
 import { AlertTriangle } from 'lucide-react';
 
 export function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse bg-[#1a2744] rounded-lg ${className}`} />;
+  return <div className={`animate-pulse bg-navy-900 rounded-lg ${className}`} />;
 }
 
 export function CardsSkeleton({ count = 3 }: { count?: number }) {
@@ -19,7 +19,7 @@ export function CardsSkeleton({ count = 3 }: { count?: number }) {
 export function AgencyTag({ agency }: { agency: string | null }) {
   if (!agency) return null;
   return (
-    <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-[#1a2744] text-[#94a3b8] border border-[#2d3a52]/50">
+    <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-navy-900 text-slate-400 border border-navy-800/50">
       {agency}
     </span>
   );

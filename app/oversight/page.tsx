@@ -6,10 +6,11 @@ import { useSession } from 'next-auth/react';
 import {
   Eye, RefreshCw, AlertTriangle,
   Building2, ChevronDown,
-  Filter, X,
+  Filter, X, Lightbulb,
   List, GanttChart,
   Download, UserPlus,
 } from 'lucide-react';
+import { Tabs, type Tab } from '@/components/ui/Tabs';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import type { OversightData, Project, PortfolioSummary, SavedFilter, ViewMode, TabMode } from '@/components/oversight/types';
 import { HEALTH_OPTIONS } from '@/components/oversight/types';
@@ -28,23 +29,23 @@ function BulkActionBar({ count, onUpdateHealth, onAssignOfficer, onExport, onCle
   const [showAssign, setShowAssign] = useState(false);
   function closeAll() { setShowHealth(false); setShowAssign(false); }
   return (
-    <div className="fixed bottom-0 left-0 right-0 md:bottom-4 md:left-1/2 md:right-auto md:-translate-x-1/2 z-40 bg-[#1a2744] border-t md:border border-[#d4af37]/40 md:rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-2 md:gap-3 flex-wrap justify-center">
-      <span className="text-[#d4af37] font-semibold text-sm">{count} selected</span>
+    <div className="fixed bottom-0 left-0 right-0 md:bottom-4 md:left-1/2 md:right-auto md:-translate-x-1/2 z-40 bg-navy-900 border-t md:border border-gold-500/40 md:rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-2 md:gap-3 flex-wrap justify-center">
+      <span className="text-gold-500 font-semibold text-sm">{count} selected</span>
       <div className="relative">
         <button onClick={() => { closeAll(); setShowHealth(!showHealth); }} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1">Health <ChevronDown className="h-3 w-3" /></button>
-        {showHealth && <div className="absolute bottom-full left-0 mb-2 bg-[#1a2744] border border-[#2d3a52] rounded-lg shadow-xl min-w-[140px]">
-          {HEALTH_OPTIONS.map(h => <button key={h.value} onClick={() => { onUpdateHealth(h.value); closeAll(); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-white hover:bg-[#0a1628]/60"><span className={`w-2 h-2 rounded-full ${h.color}`} aria-hidden="true" />{h.label}</button>)}
+        {showHealth && <div className="absolute bottom-full left-0 mb-2 bg-navy-900 border border-navy-800 rounded-lg shadow-xl min-w-[140px]">
+          {HEALTH_OPTIONS.map(h => <button key={h.value} onClick={() => { onUpdateHealth(h.value); closeAll(); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-white hover:bg-navy-950/60"><span className={`w-2 h-2 rounded-full ${h.color}`} aria-hidden="true" />{h.label}</button>)}
         </div>}
       </div>
       <div className="relative">
         <button onClick={() => { closeAll(); setShowAssign(!showAssign); }} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1"><UserPlus className="h-3 w-3" /> Assign <ChevronDown className="h-3 w-3" /></button>
-        {showAssign && <div className="absolute bottom-full left-0 mb-2 bg-[#1a2744] border border-[#2d3a52] rounded-lg shadow-xl min-w-[180px] max-h-[200px] overflow-y-auto">
-          <button onClick={() => { onAssignOfficer(null); closeAll(); }} className="block w-full text-left px-3 py-2 text-sm text-[#64748b] hover:bg-[#0a1628]/60 italic">Unassign</button>
-          {officers.map(o => <button key={o.id} onClick={() => { onAssignOfficer(o.id); closeAll(); }} className="block w-full text-left px-3 py-2 text-sm text-white hover:bg-[#0a1628]/60">{o.name}</button>)}
+        {showAssign && <div className="absolute bottom-full left-0 mb-2 bg-navy-900 border border-navy-800 rounded-lg shadow-xl min-w-[180px] max-h-[200px] overflow-y-auto">
+          <button onClick={() => { onAssignOfficer(null); closeAll(); }} className="block w-full text-left px-3 py-2 text-sm text-navy-600 hover:bg-navy-950/60 italic">Unassign</button>
+          {officers.map(o => <button key={o.id} onClick={() => { onAssignOfficer(o.id); closeAll(); }} className="block w-full text-left px-3 py-2 text-sm text-white hover:bg-navy-950/60">{o.name}</button>)}
         </div>}
       </div>
       <button onClick={onExport} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1"><Download className="h-3 w-3" aria-hidden="true" /> CSV</button>
-      <button onClick={onClear} className="text-[#64748b] hover:text-white" aria-label="Clear selection"><X className="h-4 w-4" /></button>
+      <button onClick={onClear} className="text-navy-600 hover:text-white" aria-label="Clear selection"><X className="h-4 w-4" /></button>
     </div>
   );
 }
@@ -109,6 +110,7 @@ export default function OversightPage() {
 
   // UI
   const [showFilters, setShowFilters] = useState(false);
+  const [showFilterTip, setShowFilterTip] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showSaveFilter, setShowSaveFilter] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -186,6 +188,18 @@ export default function OversightPage() {
     fetch('/api/projects/contractors').then(r => r.json()).then(d => { if (Array.isArray(d)) setContractors(d); }).catch(() => {});
     fetch('/api/projects/filters').then(r => r.json()).then(d => { if (Array.isArray(d)) setSavedFilters(d); }).catch(() => {});
     fetch('/api/admin/users').then(r => r.ok ? r.json() : null).then(d => { const users = d?.users; if (Array.isArray(users)) setOfficers(users.filter((u: any) => u.is_active).map((u: any) => ({ id: u.id, name: u.name || u.email }))); }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (window.innerWidth >= 768) {
+      setShowFilters(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!localStorage.getItem('oversight-filter-tip-dismissed')) {
+      setShowFilterTip(true);
+    }
   }, []);
 
   useEffect(() => { if (activeTab === 'projects') fetchProjects(); }, [fetchProjects, activeTab]);
@@ -268,37 +282,41 @@ export default function OversightPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 md:gap-3 min-w-0">
-          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-[#d4af37]/20 flex items-center justify-center shrink-0">
-            <Eye className="h-4 w-4 md:h-5 md:w-5 text-[#d4af37]" />
+          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gold-500/20 flex items-center justify-center shrink-0">
+            <Eye className="h-4 w-4 md:h-5 md:w-5 text-gold-500" />
           </div>
           <div className="min-w-0">
             <h1 className="text-xl md:text-2xl font-bold text-white">Oversight Dashboard</h1>
-            <p className="text-[#64748b] text-xs md:text-sm truncate">Project monitoring &amp; intelligence</p>
+            <p className="text-navy-600 text-xs md:text-sm truncate">Project monitoring &amp; intelligence</p>
           </div>
         </div>
-        <button onClick={handleRefresh} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37] text-[#94a3b8] hover:text-white transition-colors shrink-0" aria-label="Refresh">
+        <button onClick={handleRefresh} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-navy-900 border border-navy-800 hover:border-gold-500 text-slate-400 hover:text-white transition-colors shrink-0" aria-label="Refresh">
           <RefreshCw className={`h-4 w-4 ${oversightLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
           <span className="hidden md:inline text-sm">Refresh</span>
         </button>
       </div>
 
       {/* Tab Switcher */}
-      <div className="flex items-center gap-1 bg-[#1a2744] border border-[#2d3a52] rounded-xl p-1">
-        <button
-          onClick={() => setActiveTab('alerts')}
-          className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === 'alerts' ? 'bg-[#d4af37]/20 text-[#d4af37]' : 'text-[#64748b] hover:text-white'}`}
-        >
-          <AlertTriangle className="h-4 w-4 inline mr-2" />Alerts &amp; Flags
-          {oversightData && <span className="ml-2 bg-[#2d3a52] text-[#94a3b8] text-xs px-1.5 py-0.5 rounded-full">{oversightData.summary.overdue + oversightData.summary.atRisk + oversightData.summary.delayed}</span>}
-        </button>
-        <button
-          onClick={() => setActiveTab('projects')}
-          className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === 'projects' ? 'bg-[#d4af37]/20 text-[#d4af37]' : 'text-[#64748b] hover:text-white'}`}
-        >
-          <Building2 className="h-4 w-4 inline mr-2" />Projects &amp; Filters
-          {psipSummary && <span className="ml-2 bg-[#2d3a52] text-[#94a3b8] text-xs px-1.5 py-0.5 rounded-full">{psipSummary.total_projects}</span>}
-        </button>
-      </div>
+      <Tabs
+        tabs={[
+          {
+            id: 'alerts',
+            label: 'Alerts & Flags',
+            icon: AlertTriangle,
+            badge: oversightData
+              ? oversightData.summary.overdue + oversightData.summary.atRisk + oversightData.summary.delayed
+              : undefined,
+          } satisfies Tab,
+          {
+            id: 'projects',
+            label: 'Projects & Filters',
+            icon: Building2,
+            badge: psipSummary?.total_projects ?? undefined,
+          } satisfies Tab,
+        ]}
+        activeTab={activeTab}
+        onChange={(tabId) => setActiveTab(tabId as TabMode)}
+      />
 
       {/* ════════════════════════════════════════════════════════════════════ */}
       {/* TAB: ALERTS & FLAGS (existing scraped oversight data) */}
@@ -321,6 +339,23 @@ export default function OversightPage() {
       {activeTab === 'projects' && (
         <>
           <PortfolioSummarySection summary={psipSummary} />
+
+          {/* Filter Tip — fades in when no filters are active */}
+          {showFilterTip && !hasActiveFilters && (
+            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gold-500/10 border border-gold-500/20 text-sm animate-[fadeIn_0.5s_ease-in-out]">
+              <Lightbulb className="h-4 w-4 text-gold-500 shrink-0" />
+              <span className="text-slate-400">
+                <span className="text-gold-500 font-medium">Tip:</span> Use filters to narrow results by agency, status, health, or region
+              </span>
+              <button
+                onClick={() => { setShowFilterTip(false); localStorage.setItem('oversight-filter-tip-dismissed', '1'); }}
+                className="ml-auto text-navy-600 hover:text-white shrink-0"
+                aria-label="Dismiss tip"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
 
           {/* Filter Panel */}
           <OversightFilterPanel
@@ -364,17 +399,17 @@ export default function OversightPage() {
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               {hasActiveFilters ? (
-                <div className="inline-flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 text-xs md:text-sm min-w-0">
-                  <Filter className="h-3.5 w-3.5 text-[#d4af37] shrink-0" />
-                  <span className="text-[#d4af37] truncate">{psipSummary?.total_projects || totalCount} projects</span>
-                  <button onClick={clearFilters} className="text-[#d4af37]/60 hover:text-[#d4af37] shrink-0" aria-label="Clear filters"><X className="h-3.5 w-3.5" /></button>
+                <div className="inline-flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 rounded-full bg-gold-500/10 border border-gold-500/30 text-xs md:text-sm min-w-0">
+                  <Filter className="h-3.5 w-3.5 text-gold-500 shrink-0" />
+                  <span className="text-gold-500 truncate">{psipSummary?.total_projects || totalCount} projects</span>
+                  <button onClick={clearFilters} className="text-gold-500/60 hover:text-gold-500 shrink-0" aria-label="Clear filters"><X className="h-3.5 w-3.5" /></button>
                 </div>
-              ) : psipSummary && <span className="text-[#64748b] text-xs md:text-sm">{psipSummary.total_projects} projects</span>}
+              ) : psipSummary && <span className="text-navy-600 text-xs md:text-sm">{psipSummary.total_projects} projects</span>}
             </div>
-            <div className="flex items-center gap-1 bg-[#0a1628] border border-[#2d3a52] rounded-lg p-0.5">
-              <button onClick={() => setViewMode('list')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'list' ? 'bg-[#d4af37]/20 text-[#d4af37]' : 'text-[#64748b] hover:text-white'}`}><List className="h-3.5 w-3.5 inline mr-1" />List</button>
-              <button onClick={() => setViewMode('timeline')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'timeline' ? 'bg-[#d4af37]/20 text-[#d4af37]' : 'text-[#64748b] hover:text-white'}`}><GanttChart className="h-3.5 w-3.5 inline mr-1" />Timeline</button>
-              {viewMode === 'timeline' && <select value={timelineGroupBy} onChange={e => setTimelineGroupBy(e.target.value as 'agency' | 'region')} aria-label="Group timeline by" className="bg-transparent text-xs text-[#94a3b8] ml-2 focus:outline-none"><option value="agency">By Agency</option><option value="region">By Region</option></select>}
+            <div className="flex items-center gap-1 bg-navy-950 border border-navy-800 rounded-lg p-0.5">
+              <button onClick={() => setViewMode('list')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'list' ? 'bg-gold-500/20 text-gold-500' : 'text-navy-600 hover:text-white'}`}><List className="h-3.5 w-3.5 inline mr-1" />List</button>
+              <button onClick={() => setViewMode('timeline')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'timeline' ? 'bg-gold-500/20 text-gold-500' : 'text-navy-600 hover:text-white'}`}><GanttChart className="h-3.5 w-3.5 inline mr-1" />Timeline</button>
+              {viewMode === 'timeline' && <select value={timelineGroupBy} onChange={e => setTimelineGroupBy(e.target.value as 'agency' | 'region')} aria-label="Group timeline by" className="bg-transparent text-xs text-slate-400 ml-2 focus:outline-none"><option value="agency">By Agency</option><option value="region">By Region</option></select>}
             </div>
           </div>
 

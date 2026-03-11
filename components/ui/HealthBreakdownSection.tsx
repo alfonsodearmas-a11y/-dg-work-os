@@ -26,7 +26,7 @@ export function HealthBreakdownSection({ breakdown, score, label, severity }: He
     <div className="mt-2">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 text-[#64748b] hover:text-[#94a3b8] transition-colors text-xs"
+        className="flex items-center gap-1.5 text-navy-600 hover:text-slate-400 transition-colors text-xs"
       >
         <Info size={12} />
         <span>How is this calculated?</span>
@@ -38,9 +38,9 @@ export function HealthBreakdownSection({ breakdown, score, label, severity }: He
 
       <div className={`collapse-grid ${open ? 'open' : ''}`}>
         <div>
-          <div className="mt-2 bg-[#0a1628] rounded-lg border border-[#2d3a52] overflow-hidden">
+          <div className="mt-2 bg-navy-950 rounded-lg border border-navy-800 overflow-hidden">
             {/* Table header */}
-            <div className="grid grid-cols-[1fr_50px_70px_40px] gap-2 px-3 py-2 border-b border-[#2d3a52] text-[10px] uppercase tracking-wider text-[#64748b] font-semibold">
+            <div className="grid grid-cols-[1fr_50px_70px_40px] gap-2 px-3 py-2 border-b border-navy-800 text-[10px] uppercase tracking-wider text-navy-600 font-semibold">
               <span>Factor</span>
               <span className="text-right">Weight</span>
               <span className="text-right">Value</span>
@@ -51,26 +51,26 @@ export function HealthBreakdownSection({ breakdown, score, label, severity }: He
             {breakdown.map((item, i) => (
               <div
                 key={i}
-                className="grid grid-cols-[1fr_50px_70px_40px] gap-2 px-3 py-2 border-b border-[#2d3a52]/50 last:border-b-0"
+                className="grid grid-cols-[1fr_50px_70px_40px] gap-2 px-3 py-2 border-b border-navy-800/50 last:border-b-0"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dotColor(item.score)}`} aria-label={`Score: ${item.score >= 7 ? 'Good' : item.score >= 4 ? 'Warning' : 'Critical'}`} />
-                    <span className="text-[#e2e8f0] text-xs truncate">{item.factor}</span>
+                    <span className="text-slate-200 text-xs truncate">{item.factor}</span>
                   </div>
                   {item.description && (
-                    <p className="text-[#64748b] text-[10px] mt-0.5 ml-3.5 leading-snug">{item.description}</p>
+                    <p className="text-navy-600 text-[10px] mt-0.5 ml-3.5 leading-snug">{item.description}</p>
                   )}
                 </div>
-                <span className="text-[#94a3b8] text-xs text-right self-start pt-0.5">{Math.round(item.weight * 100)}%</span>
-                <span className="text-[#d4af37] text-xs text-right self-start pt-0.5 truncate">{item.actualValue}</span>
+                <span className="text-slate-400 text-xs text-right self-start pt-0.5">{Math.round(item.weight * 100)}%</span>
+                <span className="text-gold-500 text-xs text-right self-start pt-0.5 truncate">{item.actualValue}</span>
                 <span className="text-white text-xs text-right font-medium self-start pt-0.5">{item.score}</span>
               </div>
             ))}
 
             {/* Footer: weighted average */}
-            <div className="grid grid-cols-[1fr_50px_70px_40px] gap-2 px-3 py-2 border-t border-[#2d3a52] bg-[#1a2744]/50">
-              <span className="text-[#94a3b8] text-xs font-medium">Weighted Average</span>
+            <div className="grid grid-cols-[1fr_50px_70px_40px] gap-2 px-3 py-2 border-t border-navy-800 bg-navy-900/50">
+              <span className="text-slate-400 text-xs font-medium">Weighted Average</span>
               <span />
               <span className={`text-xs text-right font-semibold ${
                 severity === 'critical' ? 'text-red-400'

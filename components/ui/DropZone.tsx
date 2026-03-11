@@ -40,13 +40,13 @@ export function DropZone({
         ${className}`}
     >
       <input {...getInputProps()} aria-label="Select file to upload" />
-      <div className="w-16 h-16 rounded-2xl bg-[#d4af37]/20 flex items-center justify-center mx-auto mb-4">
-        <Upload className={`h-8 w-8 ${isDragActive ? 'text-[#d4af37]' : 'text-[#64748b]'}`} />
+      <div className="w-16 h-16 rounded-2xl bg-gold-500/20 flex items-center justify-center mx-auto mb-4">
+        <Upload className={`h-8 w-8 ${isDragActive ? 'text-gold-500' : 'text-navy-600'}`} />
       </div>
       <p className="text-white font-medium">
         {isDragActive ? 'Drop the file here...' : label}
       </p>
-      <p className="text-[#64748b] text-sm mt-2">
+      <p className="text-navy-600 text-sm mt-2">
         Max file size: {Math.round(maxSize / 1024 / 1024)}MB
       </p>
     </div>

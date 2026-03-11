@@ -15,7 +15,7 @@ import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await auth(); // TODO: migrate to requireRole()
     const userId = session?.user?.id;
     if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
@@ -47,7 +47,7 @@ const notificationPatchSchema = z.object({
 );
 
 export const PATCH = withErrorHandler(async (request: NextRequest) => {
-  const session = await auth();
+  const session = await auth(); // TODO: migrate to requireRole()
   const userId = session?.user?.id;
   if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 

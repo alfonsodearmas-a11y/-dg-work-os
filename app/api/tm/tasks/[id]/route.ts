@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { authenticateAny, canAccessTask, AuthError } from '@/lib/auth';
+import { canAccessTask } from '@/lib/auth';
+import { requireRole } from '@/lib/auth-helpers';
 import { getTask, updateTask, updateTaskStatus, validateTransition, deleteTask } from '@/lib/task-queries';
 import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
 
@@ -15,22 +16,27 @@ const patchTmTaskSchema = z.object({
 });
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+  const user = { ...authResult.session.user, fullName: authResult.session.user.name, full_name: authResult.session.user.name };
+
   try {
-    const user = await authenticateAny(request);
     const { id } = await params;
     const task = await getTask(id);
     if (!task) return NextResponse.json({ success: false, error: 'Task not found' }, { status: 404 });
     if (!canAccessTask(user, task)) return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
     return NextResponse.json({ success: true, data: task });
   } catch (error: any) {
-    if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
 export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown) => {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+  const user = { ...authResult.session.user, fullName: authResult.session.user.name, full_name: authResult.session.user.name };
+
   try {
-    const user = await authenticateAny(request);
     const { id } = await (ctx as { params: Promise<{ id: string }> }).params;
     const task = await getTask(id);
     if (!task) return NextResponse.json({ success: false, error: 'Task not found' }, { status: 404 });
@@ -63,14 +69,16 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
     const updated = await updateTask(id, fieldUpdates, user.id);
     return NextResponse.json({ success: true, data: updated });
   } catch (error: any) {
-    if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
     return apiError('INTERNAL_ERROR', error.message, 500);
   }
 });
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+  const user = { ...authResult.session.user, fullName: authResult.session.user.name, full_name: authResult.session.user.name };
+
   try {
-    const user = await authenticateAny(request);
     const { id } = await params;
     const task = await getTask(id);
     if (!task) return NextResponse.json({ success: false, error: 'Task not found' }, { status: 404 });
@@ -79,7 +87,6 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     await deleteTask(id);
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    if (error instanceof AuthError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

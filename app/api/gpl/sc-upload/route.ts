@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireRole, canUploadData } from '@/lib/auth-helpers';
+import { requireUploadRole } from '@/lib/auth-helpers';
 import { processGPLUpload } from '@/lib/gpl/upload-pipeline';
 import { apiError, withErrorHandler } from '@/lib/api-utils';
 
@@ -7,13 +7,9 @@ export const maxDuration = 60;
 const MAX_SIZE = 10 * 1024 * 1024;
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const result = await requireRole(['dg', 'agency_admin', 'officer']);
+  const result = await requireUploadRole('GPL');
   if (result instanceof NextResponse) return result;
   const { session } = result;
-
-  if (!canUploadData(session.user.role, session.user.agency, 'GPL')) {
-    return NextResponse.json({ error: 'Cannot upload GPL data' }, { status: 403 });
-  }
 
   const formData = await request.formData();
   const file = formData.get('file') as File | null;

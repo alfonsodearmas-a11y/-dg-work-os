@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/db';
-import { requireRole, canUploadData } from '@/lib/auth-helpers';
+import { requireUploadRole } from '@/lib/auth-helpers';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
 
 const kpiConfirmSchema = z.object({
@@ -14,10 +14,9 @@ const kpiConfirmSchema = z.object({
 });
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const result = await requireRole(['dg', 'agency_admin', 'officer']);
+  const result = await requireUploadRole('GPL');
   if (result instanceof NextResponse) return result;
   const { session } = result;
-  if (!canUploadData(session.user.role, session.user.agency, 'GPL')) return NextResponse.json({ error: 'Cannot upload GPL data' }, { status: 403 });
 
   const { data: body, error } = await parseBody(request, kpiConfirmSchema);
   if (error) return error;

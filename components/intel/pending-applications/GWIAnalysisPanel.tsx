@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
+import { CHART_THEME } from '@/lib/constants/chart-theme';
 import type { GWIAnalysis, DeepAnalysisResult, PendingApplication } from '@/lib/pending-applications-types';
 
 const SEVERITY_CONFIG: Record<string, { bg: string; text: string; border: string }> = {
@@ -160,10 +161,10 @@ export function GWIAnalysisPanel() {
               layout="vertical"
               margin={{ left: 10, right: 20 }}
             >
-              <XAxis type="number" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} width={120} />
+              <XAxis type="number" tick={{ fill: CHART_THEME.colors.navy600, fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" tick={{ fill: CHART_THEME.colors.slate400, fontSize: 11 }} axisLine={false} tickLine={false} width={120} />
               <Tooltip
-                contentStyle={{ background: '#1a2744', border: '1px solid #2d3a52', borderRadius: 8, color: '#fff' }}
+                contentStyle={CHART_THEME.tooltip}
                 formatter={(value: number, name: string) => [value, name === 'count' ? 'Applications' : 'Avg Wait']}
               />
               <Bar dataKey="count" fill="#06b6d4" radius={[0, 4, 4, 0]} barSize={16} />
@@ -210,15 +211,15 @@ export function GWIAnalysisPanel() {
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={agingData} margin={{ left: 0, right: 10 }}>
-              <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+              <XAxis dataKey="name" tick={{ fill: CHART_THEME.colors.slate400, fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: CHART_THEME.colors.navy600, fontSize: 12 }} axisLine={false} tickLine={false} />
               <Tooltip
-                contentStyle={{ background: '#1a2744', border: '1px solid #2d3a52', borderRadius: 8, color: '#fff' }}
+                contentStyle={CHART_THEME.tooltip}
                 formatter={(value: number, _name: string, props: { payload?: { pct: number } }) => [`${value} (${props.payload?.pct ?? 0}%)`, 'Count']}
               />
               <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={32}>
                 {agingData.map((_entry, i) => (
-                  <Cell key={i} fill={AGING_COLORS[i] || '#64748b'} />
+                  <Cell key={i} fill={AGING_COLORS[i] || CHART_THEME.colors.navy600} />
                 ))}
               </Bar>
             </BarChart>

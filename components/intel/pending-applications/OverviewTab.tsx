@@ -26,6 +26,7 @@ import {
   Cell,
 } from 'recharts';
 import { Spinner } from '@/components/ui/Spinner';
+import { CHART_THEME } from '@/lib/constants/chart-theme';
 import type { PendingApplication, PendingApplicationStats } from '@/lib/pending-applications-types';
 
 type AgencyFilter = 'all' | 'GPL' | 'GWI';
@@ -306,9 +307,9 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
           <div className="h-48 md:h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 20 }}>
-                <XAxis type="number" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="name" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} width={90} />
-                <Tooltip contentStyle={{ background: '#1a2744', border: '1px solid #2d3a52', borderRadius: 8, color: '#fff' }} itemStyle={{ color: '#94a3b8' }} />
+                <XAxis type="number" tick={{ fill: CHART_THEME.colors.navy600, fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" tick={{ fill: CHART_THEME.colors.slate400, fontSize: 12 }} axisLine={false} tickLine={false} width={90} />
+                <Tooltip contentStyle={CHART_THEME.tooltip} itemStyle={{ color: CHART_THEME.colors.slate400 }} />
                 <Legend wrapperStyle={{ fontSize: 12, color: '#94a3b8' }} />
                 {(agencyFilter === 'all' || agencyFilter === 'GPL') && (
                   <Bar dataKey="GPL" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={16}>

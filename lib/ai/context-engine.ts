@@ -827,14 +827,14 @@ export function formatFullContext(raw: RawContextData, currentPage: string): str
   const tasks = raw.tasks;
   if (tasks.length > 0) {
     const now = new Date();
-    const overdue = tasks.filter(t => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)) && t.status !== 'Done');
-    const dueToday = tasks.filter(t => t.due_date && isToday(new Date(t.due_date)) && t.status !== 'Done');
+    const overdue = tasks.filter(t => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)) && t.status !== 'done');
+    const dueToday = tasks.filter(t => t.due_date && isToday(new Date(t.due_date)) && t.status !== 'done');
     const dueThisWeek = tasks.filter(t => {
-      if (!t.due_date || t.status === 'Done') return false;
+      if (!t.due_date || t.status === 'done') return false;
       const d = new Date(t.due_date);
       return !isToday(d) && !isPast(d) && d <= addDays(now, 7);
     });
-    const activeTasks = tasks.filter(t => t.status !== 'Done');
+    const activeTasks = tasks.filter(t => t.status !== 'done');
 
     lines.push(`Total: ${activeTasks.length} active tasks, ${overdue.length} overdue, ${dueToday.length} due today, ${dueThisWeek.length} due this week`);
 

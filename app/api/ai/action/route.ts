@@ -11,7 +11,7 @@ const actionSchema = z.object({
 });
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const session = await auth();
+  const session = await auth(); // TODO: migrate to requireRole()
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

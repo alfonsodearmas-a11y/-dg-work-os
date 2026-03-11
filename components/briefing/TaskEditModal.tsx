@@ -81,14 +81,14 @@ export function TaskEditModal({ task, onClose, onSave }: TaskEditModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end md:items-center justify-center z-50">
-      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="task-edit-modal-title" className="bg-[#0f1d32] border border-[#2d3a52] rounded-t-2xl md:rounded-2xl shadow-2xl w-full max-w-md md:mx-4 overflow-hidden max-h-[90vh] overflow-y-auto animate-slide-up md:animate-fade-in" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="task-edit-modal-title" className="bg-[#0f1d32] border border-navy-800 rounded-t-2xl md:rounded-2xl shadow-2xl w-full max-w-md md:mx-4 overflow-hidden max-h-[90vh] overflow-y-auto animate-slide-up md:animate-fade-in" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-[#2d3a52] bg-gradient-to-r from-[#1a2744] to-[#0f1d32]">
+        <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-navy-800 bg-gradient-to-r from-[#1a2744] to-[#0f1d32]">
           <h2 id="task-edit-modal-title" className="text-lg font-semibold text-white">Edit Task</h2>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#2d3a52] transition-colors"
+            className="p-2 rounded-lg text-navy-600 hover:text-white hover:bg-navy-800 transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -98,18 +98,18 @@ export function TaskEditModal({ task, onClose, onSave }: TaskEditModalProps) {
         <div className="px-4 md:px-6 py-4 md:py-5 space-y-4 md:space-y-5">
           {/* Task Title (read-only) */}
           <div>
-            <label className="block text-sm font-medium text-[#94a3b8] mb-2">
+            <label className="block text-sm font-medium text-slate-400 mb-2">
               Task
             </label>
-            <p className="text-white bg-[#1a2744] p-4 rounded-xl border border-[#2d3a52]">
+            <p className="text-white bg-navy-900 p-4 rounded-xl border border-navy-800">
               {task.title}
             </p>
           </div>
 
           {/* Due Date */}
           <div>
-            <label className="flex items-center text-sm font-medium text-[#94a3b8] mb-2">
-              <Calendar className="h-4 w-4 mr-2 text-[#d4af37]" />
+            <label className="flex items-center text-sm font-medium text-slate-400 mb-2">
+              <Calendar className="h-4 w-4 mr-2 text-gold-500" />
               Due Date
             </label>
             <input
@@ -117,75 +117,75 @@ export function TaskEditModal({ task, onClose, onSave }: TaskEditModalProps) {
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
               aria-label="Due date"
-              className="w-full px-4 py-3 bg-[#1a2744] border border-[#2d3a52] rounded-xl text-white focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-colors [color-scheme:dark]"
+              className="w-full px-4 py-3 bg-navy-900 border border-navy-800 rounded-xl text-white focus:ring-2 focus:ring-gold-500 focus:border-gold-500 transition-colors [color-scheme:dark]"
             />
           </div>
 
           {/* Status */}
           <div>
-            <label className="flex items-center text-sm font-medium text-[#94a3b8] mb-2">
-              <CheckCircle className="h-4 w-4 mr-2 text-[#d4af37]" />
+            <label className="flex items-center text-sm font-medium text-slate-400 mb-2">
+              <CheckCircle className="h-4 w-4 mr-2 text-gold-500" />
               Status
             </label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
               aria-label="Status"
-              className="w-full px-4 py-3 bg-[#1a2744] border border-[#2d3a52] rounded-xl text-white focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-colors appearance-none cursor-pointer"
+              className="w-full px-4 py-3 bg-navy-900 border border-navy-800 rounded-xl text-white focus:ring-2 focus:ring-gold-500 focus:border-gold-500 transition-colors appearance-none cursor-pointer"
               style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em' }}
             >
               {statuses.map((s) => (
-                <option key={s.value} value={s.value} className="bg-[#1a2744]">{s.label}</option>
+                <option key={s.value} value={s.value} className="bg-navy-900">{s.label}</option>
               ))}
             </select>
           </div>
 
           {/* Priority */}
           <div>
-            <label className="flex items-center text-sm font-medium text-[#94a3b8] mb-2">
-              <Flag className="h-4 w-4 mr-2 text-[#d4af37]" />
+            <label className="flex items-center text-sm font-medium text-slate-400 mb-2">
+              <Flag className="h-4 w-4 mr-2 text-gold-500" />
               Priority
             </label>
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value)}
               aria-label="Priority"
-              className="w-full px-4 py-3 bg-[#1a2744] border border-[#2d3a52] rounded-xl text-white focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-colors appearance-none cursor-pointer"
+              className="w-full px-4 py-3 bg-navy-900 border border-navy-800 rounded-xl text-white focus:ring-2 focus:ring-gold-500 focus:border-gold-500 transition-colors appearance-none cursor-pointer"
               style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em' }}
             >
-              <option value="" className="bg-[#1a2744]">None</option>
+              <option value="" className="bg-navy-900">None</option>
               {priorities.map((p) => (
-                <option key={p.value} value={p.value} className="bg-[#1a2744]">{p.label}</option>
+                <option key={p.value} value={p.value} className="bg-navy-900">{p.label}</option>
               ))}
             </select>
           </div>
 
           {/* Agency */}
           <div>
-            <label className="flex items-center text-sm font-medium text-[#94a3b8] mb-2">
-              <Building2 className="h-4 w-4 mr-2 text-[#d4af37]" />
+            <label className="flex items-center text-sm font-medium text-slate-400 mb-2">
+              <Building2 className="h-4 w-4 mr-2 text-gold-500" />
               Agency
             </label>
             <select
               value={agency}
               onChange={(e) => setAgency(e.target.value)}
               aria-label="Agency"
-              className="w-full px-4 py-3 bg-[#1a2744] border border-[#2d3a52] rounded-xl text-white focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-colors appearance-none cursor-pointer"
+              className="w-full px-4 py-3 bg-navy-900 border border-navy-800 rounded-xl text-white focus:ring-2 focus:ring-gold-500 focus:border-gold-500 transition-colors appearance-none cursor-pointer"
               style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em' }}
             >
-              <option value="" className="bg-[#1a2744]">None</option>
+              <option value="" className="bg-navy-900">None</option>
               {agencies.map((a) => (
-                <option key={a} value={a} className="bg-[#1a2744]">{a}</option>
+                <option key={a} value={a} className="bg-navy-900">{a}</option>
               ))}
             </select>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-4 md:px-6 py-3 md:py-4 border-t border-[#2d3a52] bg-[#1a2744]/50">
+        <div className="flex items-center justify-end gap-3 px-4 md:px-6 py-3 md:py-4 border-t border-navy-800 bg-navy-900/50">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 text-sm font-medium text-[#94a3b8] hover:text-white transition-colors rounded-xl hover:bg-[#2d3a52]"
+            className="px-5 py-2.5 text-sm font-medium text-slate-400 hover:text-white transition-colors rounded-xl hover:bg-navy-800"
           >
             Cancel
           </button>

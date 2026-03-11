@@ -180,20 +180,20 @@ export function CalendarView() {
           <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
             <button
               onClick={handlePrevMonth}
-              className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors touch-active"
+              className="p-2 rounded-lg text-navy-600 hover:text-white hover:bg-navy-900 transition-colors touch-active"
               aria-label="Previous month"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
             <button
               onClick={handleToday}
-              className="px-2 md:px-3 py-1.5 rounded-lg text-xs md:text-sm text-[#94a3b8] hover:text-white hover:bg-[#1a2744] transition-colors touch-active"
+              className="px-2 md:px-3 py-1.5 rounded-lg text-xs md:text-sm text-slate-400 hover:text-white hover:bg-navy-900 transition-colors touch-active"
             >
               Today
             </button>
             <button
               onClick={handleNextMonth}
-              className="p-2 rounded-lg text-[#64748b] hover:text-white hover:bg-[#1a2744] transition-colors touch-active"
+              className="p-2 rounded-lg text-navy-600 hover:text-white hover:bg-navy-900 transition-colors touch-active"
               aria-label="Next month"
             >
               <ChevronRight className="h-5 w-5" />
@@ -208,7 +208,7 @@ export function CalendarView() {
               fetchEvents();
             }}
             disabled={syncing}
-            className="flex items-center gap-2 p-2 md:px-3 md:py-2 rounded-lg bg-[#1a2744] border border-[#2d3a52] text-[#94a3b8] hover:border-[#3d4a62] transition-colors disabled:opacity-50 touch-active"
+            className="flex items-center gap-2 p-2 md:px-3 md:py-2 rounded-lg bg-navy-900 border border-navy-800 text-slate-400 hover:border-[#3d4a62] transition-colors disabled:opacity-50 touch-active"
             aria-label="Sync"
           >
             <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} aria-hidden="true" />
@@ -216,7 +216,7 @@ export function CalendarView() {
           </button>
           <button
             onClick={handleNewEvent}
-            className="flex items-center gap-1 md:gap-2 px-3 md:px-4 py-2 rounded-lg bg-[#d4af37] text-[#0a1628] font-medium hover:bg-[#c9a432] transition-colors touch-active"
+            className="flex items-center gap-1 md:gap-2 px-3 md:px-4 py-2 rounded-lg bg-gold-500 text-navy-950 font-medium hover:bg-[#c9a432] transition-colors touch-active"
             aria-label="New Event"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
@@ -227,17 +227,17 @@ export function CalendarView() {
 
       {/* Calendar disconnected banner */}
       {calendarDisconnected && (
-        <div className="p-4 rounded-xl bg-[#0a1628]/60 border border-[#d4af37]/20 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-[#d4af37]/10 flex items-center justify-center flex-shrink-0">
-            <Calendar className="h-5 w-5 text-[#d4af37]" />
+        <div className="p-4 rounded-xl bg-navy-950/60 border border-gold-500/20 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-gold-500/10 flex items-center justify-center flex-shrink-0">
+            <Calendar className="h-5 w-5 text-gold-500" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm text-white font-medium">Calendar disconnected</p>
-            <p className="text-xs text-[#64748b] mt-0.5">Google Calendar needs to be reconnected.</p>
+            <p className="text-xs text-navy-600 mt-0.5">Google Calendar needs to be reconnected.</p>
           </div>
           <button
             onClick={() => window.location.href = '/admin?reconnect=calendar'}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/30 text-[#d4af37] text-xs font-medium hover:bg-[#d4af37]/25 transition-colors flex-shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-500/15 border border-gold-500/30 text-gold-500 text-xs font-medium hover:bg-gold-500/25 transition-colors flex-shrink-0"
           >
             <RefreshCcw className="h-3.5 w-3.5" />
             Reconnect
@@ -257,12 +257,12 @@ export function CalendarView() {
       {/* Calendar Grid */}
       {loading ? (
         <div className="flex items-center justify-center h-96" role="status" aria-label="Loading">
-          <Loader2 className="h-8 w-8 text-[#d4af37] animate-spin" aria-hidden="true" />
+          <Loader2 className="h-8 w-8 text-gold-500 animate-spin" aria-hidden="true" />
         </div>
       ) : (
-        <div className="rounded-xl border border-[#2d3a52] overflow-hidden">
+        <div className="rounded-xl border border-navy-800 overflow-hidden">
           {/* Weekday Headers */}
-          <div className="grid grid-cols-7 bg-[#1a2744]">
+          <div className="grid grid-cols-7 bg-navy-900">
             {[
               { short: 'S', full: 'Sun' },
               { short: 'M', full: 'Mon' },
@@ -274,7 +274,7 @@ export function CalendarView() {
             ].map((day, i) => (
               <div
                 key={i}
-                className="px-1 md:px-2 py-2 md:py-3 text-center text-xs md:text-sm font-medium text-[#64748b] border-b border-[#2d3a52]"
+                className="px-1 md:px-2 py-2 md:py-3 text-center text-xs md:text-sm font-medium text-navy-600 border-b border-navy-800"
               >
                 <span className="md:hidden">{day.short}</span>
                 <span className="hidden md:inline">{day.full}</span>
@@ -293,8 +293,8 @@ export function CalendarView() {
                 <div
                   key={day.toISOString()}
                   onClick={() => handleDayClick(day)}
-                  className={`min-h-[72px] md:min-h-[120px] p-1 md:p-2 border-b border-r border-[#2d3a52] cursor-pointer transition-colors hover:bg-[#1a2744]/50 touch-active ${
-                    !isCurrentMonth ? 'bg-[#0a1628]/50' : 'bg-[#0f1d32]'
+                  className={`min-h-[72px] md:min-h-[120px] p-1 md:p-2 border-b border-r border-navy-800 cursor-pointer transition-colors hover:bg-navy-900/50 touch-active ${
+                    !isCurrentMonth ? 'bg-navy-950/50' : 'bg-[#0f1d32]'
                   } ${index % 7 === 6 ? 'border-r-0' : ''}`}
                 >
                   {/* Day Number */}
@@ -302,10 +302,10 @@ export function CalendarView() {
                     <span
                       className={`w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full text-xs md:text-sm ${
                         isCurrentDay
-                          ? 'bg-[#d4af37] text-[#0a1628] font-bold'
+                          ? 'bg-gold-500 text-navy-950 font-bold'
                           : isCurrentMonth
                           ? 'text-white'
-                          : 'text-[#64748b]'
+                          : 'text-navy-600'
                       }`}
                     >
                       {format(day, 'd')}
@@ -318,7 +318,7 @@ export function CalendarView() {
                       <div
                         key={event.google_id}
                         onClick={(e) => handleEventClick(event, e)}
-                        className="group px-1 md:px-2 py-0.5 md:py-1 rounded text-[10px] md:text-xs truncate bg-[#d4af37]/20 text-[#d4af37] hover:bg-[#d4af37]/30 transition-colors cursor-pointer"
+                        className="group px-1 md:px-2 py-0.5 md:py-1 rounded text-[10px] md:text-xs truncate bg-gold-500/20 text-gold-500 hover:bg-gold-500/30 transition-colors cursor-pointer"
                       >
                         <span className="font-medium hidden md:inline">{formatEventTime(event)}</span>
                         <span className="md:ml-1">{event.title}</span>
@@ -331,17 +331,17 @@ export function CalendarView() {
                           <div
                             key={dayEvents[2].google_id}
                             onClick={(e) => handleEventClick(dayEvents[2], e)}
-                            className="hidden md:block group px-2 py-1 rounded text-xs truncate bg-[#d4af37]/20 text-[#d4af37] hover:bg-[#d4af37]/30 transition-colors cursor-pointer"
+                            className="hidden md:block group px-2 py-1 rounded text-xs truncate bg-gold-500/20 text-gold-500 hover:bg-gold-500/30 transition-colors cursor-pointer"
                           >
                             <span className="font-medium">{formatEventTime(dayEvents[2])}</span>
                             <span className="ml-1">{dayEvents[2].title}</span>
                           </div>
                         )}
-                        <div className={`px-1 md:px-2 text-[10px] md:text-xs text-[#64748b] ${dayEvents.length > 3 ? '' : 'md:hidden'}`}>
+                        <div className={`px-1 md:px-2 text-[10px] md:text-xs text-navy-600 ${dayEvents.length > 3 ? '' : 'md:hidden'}`}>
                           +{dayEvents.length - 2} more
                         </div>
                         {dayEvents.length > 3 && (
-                          <div className="hidden md:block px-2 text-xs text-[#64748b]">
+                          <div className="hidden md:block px-2 text-xs text-navy-600">
                             +{dayEvents.length - 3} more
                           </div>
                         )}
@@ -366,12 +366,12 @@ export function CalendarView() {
               <div
                 key={event.google_id}
                 onClick={(e) => handleEventClick(event, e)}
-                className="p-3 rounded-xl bg-[#1a2744] border border-[#2d3a52] hover:border-[#d4af37]/50 cursor-pointer transition-colors"
+                className="p-3 rounded-xl bg-navy-900 border border-navy-800 hover:border-gold-500/50 cursor-pointer transition-colors"
               >
                 <div className="flex items-start justify-between">
                   <div>
                     <h4 className="text-white font-medium">{event.title}</h4>
-                    <div className="flex items-center gap-3 mt-1 text-sm text-[#64748b]">
+                    <div className="flex items-center gap-3 mt-1 text-sm text-navy-600">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3.5 w-3.5" />
                         {event.start_time &&
@@ -390,7 +390,7 @@ export function CalendarView() {
             ))}
           {events.filter((e) => e.start_time && parseISO(e.start_time) >= new Date())
             .length === 0 && (
-            <p className="text-[#64748b] text-sm">No upcoming events</p>
+            <p className="text-navy-600 text-sm">No upcoming events</p>
           )}
         </div>
       </div>

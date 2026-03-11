@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/db';
 import { auditService } from '@/lib/audit';
 import { generateGPLBriefing } from '@/lib/ai-analysis';
-import { requireRole, canUploadData } from '@/lib/auth-helpers';
+import { requireUploadRole } from '@/lib/auth-helpers';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 
@@ -13,10 +13,9 @@ const confirmSchema = z.object({
 });
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const result = await requireRole(['dg', 'agency_admin', 'officer']);
+  const result = await requireUploadRole('GPL');
   if (result instanceof NextResponse) return result;
   const { session } = result;
-  if (!canUploadData(session.user.role, session.user.agency, 'GPL')) return NextResponse.json({ error: 'Cannot upload GPL data' }, { status: 403 });
 
   const { data: body, error } = await parseBody(request, confirmSchema);
   if (error) return error;

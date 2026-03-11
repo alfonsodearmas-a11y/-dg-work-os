@@ -102,7 +102,7 @@ export function ActivityPanel() {
   if (pathname === '/login' || pathname.startsWith('/upload')) return null;
 
   return (
-    <aside className="hidden xl:flex flex-col w-[272px] shrink-0 border-l border-[#2d3a52]/50 bg-[#0d1a2d] overflow-y-auto max-h-screen sticky top-0">
+    <aside className="hidden xl:flex flex-col w-[272px] shrink-0 border-l border-navy-800/50 bg-[#0d1a2d] overflow-y-auto max-h-screen sticky top-0">
       <div className="p-4 space-y-4">
         {/* Today's Schedule */}
         <PanelSection
@@ -120,20 +120,20 @@ export function ActivityPanel() {
                   href="/"
                   className="flex gap-2 p-1.5 -mx-1.5 rounded-md hover:bg-white/[0.06] active:bg-white/[0.1] transition-colors cursor-pointer"
                 >
-                  <div className="text-[10px] text-[#64748b] w-[52px] shrink-0 pt-0.5 font-mono">
+                  <div className="text-[10px] text-navy-600 w-[52px] shrink-0 pt-0.5 font-mono">
                     {formatTime(event.start)}
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-white font-medium truncate">{event.title}</p>
                     {event.location && (
-                      <p className="text-[10px] text-[#64748b] truncate">{event.location}</p>
+                      <p className="text-[10px] text-navy-600 truncate">{event.location}</p>
                     )}
                   </div>
                 </Link>
               ))}
             </div>
           ) : (
-            <p className="text-xs text-[#64748b] italic">No events today.</p>
+            <p className="text-xs text-navy-600 italic">No events today.</p>
           )}
         </PanelSection>
 
@@ -168,10 +168,10 @@ export function ActivityPanel() {
                       <p className="text-xs text-white truncate">{task.title}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         {task.agency && (
-                          <span className="text-[10px] text-[#64748b]">{task.agency}</span>
+                          <span className="text-[10px] text-navy-600">{task.agency}</span>
                         )}
                         {dueLabel && (
-                          <span className={`text-[10px] flex items-center gap-0.5 ${overdue ? 'text-red-400' : 'text-[#64748b]'}`}>
+                          <span className={`text-[10px] flex items-center gap-0.5 ${overdue ? 'text-red-400' : 'text-navy-600'}`}>
                             <Clock size={8} />
                             {dueLabel}
                           </span>
@@ -183,7 +183,7 @@ export function ActivityPanel() {
               })}
             </div>
           ) : (
-            <p className="text-xs text-[#64748b] italic">No open tasks.</p>
+            <p className="text-xs text-navy-600 italic">No open tasks.</p>
           )}
         </PanelSection>
 
@@ -209,7 +209,7 @@ export function ActivityPanel() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-[11px] text-white truncate">{n.title}</p>
-                      <p className="text-[10px] text-[#64748b]">{timeAgo(n.created_at)}</p>
+                      <p className="text-[10px] text-navy-600">{timeAgo(n.created_at)}</p>
                     </div>
                   </>
                 );
@@ -222,7 +222,7 @@ export function ActivityPanel() {
               })}
             </div>
           ) : (
-            <p className="text-xs text-[#64748b] italic">All caught up.</p>
+            <p className="text-xs text-navy-600 italic">All caught up.</p>
           )}
         </PanelSection>
       </div>
@@ -239,10 +239,10 @@ function PanelSection({ label, icon, href, children }: {
   return (
     <div className="glass-card p-3.5">
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-[#64748b]">{icon}</span>
-        <span className="text-[10px] uppercase tracking-wider text-[#64748b] font-semibold">{label}</span>
+        <span className="text-navy-600">{icon}</span>
+        <span className="text-[10px] uppercase tracking-wider text-navy-600 font-semibold">{label}</span>
         {href && (
-          <Link href={href} className="ml-auto text-[#64748b] hover:text-[#d4af37] transition-colors">
+          <Link href={href} className="ml-auto text-navy-600 hover:text-gold-500 transition-colors">
             <ExternalLink size={11} />
           </Link>
         )}
@@ -257,8 +257,8 @@ function SkeletonLines({ count }: { count: number }) {
     <div className="space-y-2.5">
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex gap-2 animate-pulse">
-          <div className="w-10 h-3 bg-[#2d3a52] rounded" />
-          <div className="flex-1 h-3 bg-[#2d3a52] rounded" />
+          <div className="w-10 h-3 bg-navy-800 rounded" />
+          <div className="flex-1 h-3 bg-navy-800 rounded" />
         </div>
       ))}
     </div>

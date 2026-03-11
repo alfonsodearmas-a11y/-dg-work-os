@@ -61,13 +61,13 @@ export function ProjectAISummary({ projectId }: ProjectAISummaryProps) {
     <div className="card-premium p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-[#d4af37]" />
+          <Sparkles className="h-4 w-4 text-gold-500" />
           <h4 className="text-white font-semibold text-sm">AI Summary</h4>
         </div>
         <button
           onClick={() => generate(!!summary)}
           disabled={loading}
-          className="text-[#d4af37] text-xs hover:text-[#e5c04b] flex items-center gap-1"
+          className="text-gold-500 text-xs hover:text-[#e5c04b] flex items-center gap-1"
         >
           {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
           {summary ? 'Regenerate' : 'Generate'}
@@ -75,25 +75,25 @@ export function ProjectAISummary({ projectId }: ProjectAISummaryProps) {
       </div>
       {loading ? (
         <div className="space-y-3 animate-pulse">
-          {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-4 bg-[#2d3a52] rounded w-full" />)}
+          {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-4 bg-navy-800 rounded w-full" />)}
         </div>
       ) : summary?.summary ? (
         <div className="space-y-3 text-sm">
           <div>
-            <span className="text-[#64748b] text-xs uppercase tracking-wider">Status Snapshot</span>
-            <p className="text-[#94a3b8] mt-0.5">{summary.summary.status_snapshot}</p>
+            <span className="text-navy-600 text-xs uppercase tracking-wider">Status Snapshot</span>
+            <p className="text-slate-400 mt-0.5">{summary.summary.status_snapshot}</p>
           </div>
           <div>
-            <span className="text-[#64748b] text-xs uppercase tracking-wider">Timeline</span>
-            <p className="text-[#94a3b8] mt-0.5">{summary.summary.timeline_assessment}</p>
+            <span className="text-navy-600 text-xs uppercase tracking-wider">Timeline</span>
+            <p className="text-slate-400 mt-0.5">{summary.summary.timeline_assessment}</p>
           </div>
           <div>
-            <span className="text-[#64748b] text-xs uppercase tracking-wider">Budget Position</span>
-            <p className="text-[#94a3b8] mt-0.5">{summary.summary.budget_position}</p>
+            <span className="text-navy-600 text-xs uppercase tracking-wider">Budget Position</span>
+            <p className="text-slate-400 mt-0.5">{summary.summary.budget_position}</p>
           </div>
           {summary.summary.key_risks?.length > 0 && (
             <div>
-              <span className="text-[#64748b] text-xs uppercase tracking-wider">Key Risks</span>
+              <span className="text-navy-600 text-xs uppercase tracking-wider">Key Risks</span>
               <ul className="mt-1 space-y-1">
                 {summary.summary.key_risks.map((r, i) => (
                   <li key={i} className="text-red-400/80 text-xs flex items-start gap-1.5">
@@ -105,7 +105,7 @@ export function ProjectAISummary({ projectId }: ProjectAISummaryProps) {
           )}
           {summary.summary.recommended_actions?.length > 0 && (
             <div>
-              <span className="text-[#64748b] text-xs uppercase tracking-wider">Recommended Actions</span>
+              <span className="text-navy-600 text-xs uppercase tracking-wider">Recommended Actions</span>
               <ul className="mt-1 space-y-1">
                 {summary.summary.recommended_actions.map((a, i) => (
                   <li key={i} className="text-emerald-400/80 text-xs flex items-start gap-1.5">
@@ -115,12 +115,12 @@ export function ProjectAISummary({ projectId }: ProjectAISummaryProps) {
               </ul>
             </div>
           )}
-          <p className="text-[#4a5568] text-[10px] mt-2">
+          <p className="text-navy-700 text-[10px] mt-2">
             Generated {summary.generated_at ? timeAgo(summary.generated_at) : ''}
           </p>
         </div>
       ) : (
-        <p className="text-[#64748b] text-sm">Click &quot;Generate&quot; to create an AI summary.</p>
+        <p className="text-navy-600 text-sm">Click &quot;Generate&quot; to create an AI summary.</p>
       )}
     </div>
   );

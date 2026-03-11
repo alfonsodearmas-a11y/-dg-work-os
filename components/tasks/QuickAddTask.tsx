@@ -20,7 +20,7 @@ interface QuickAddTaskProps {
 }
 
 const PRIORITIES = [
-  { value: 'low', label: 'Low', dot: 'bg-[#64748b]' },
+  { value: 'low', label: 'Low', dot: 'bg-navy-600' },
   { value: 'medium', label: 'Med', dot: 'bg-amber-500' },
   { value: 'high', label: 'High', dot: 'bg-red-400' },
   { value: 'critical', label: 'Crit', dot: 'bg-red-500' },
@@ -52,7 +52,7 @@ export function QuickAddTask({ status, isMobile, users, onAdd, onCancel }: Quick
   const inputStyle: React.CSSProperties = isMobile ? { minHeight: 44, fontSize: 16 } : {};
 
   return (
-    <div className="rounded-xl border border-[#d4af37]/50 bg-gradient-to-b from-[#1a2744] to-[#0f1d32] p-3 space-y-2">
+    <div className="rounded-xl border border-gold-500/50 bg-gradient-to-b from-[#1a2744] to-[#0f1d32] p-3 space-y-2">
       <input
         type="text"
         placeholder="Task title..."
@@ -65,7 +65,7 @@ export function QuickAddTask({ status, isMobile, users, onAdd, onCancel }: Quick
         autoFocus
         aria-label="Task title"
         aria-required="true"
-        className="w-full px-3 py-2 rounded-lg bg-[#0a1628] border border-[#2d3a52] text-white text-sm placeholder-[#64748b] focus:outline-none focus:border-[#d4af37]"
+        className="w-full px-3 py-2 rounded-lg bg-navy-950 border border-navy-800 text-white text-sm placeholder-navy-600 focus:outline-none focus:border-gold-500"
         style={inputStyle}
       />
 
@@ -78,8 +78,8 @@ export function QuickAddTask({ status, isMobile, users, onAdd, onCancel }: Quick
               onClick={() => setPriority(p.value)}
               className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
                 priority === p.value
-                  ? 'bg-[#2d3a52] text-white'
-                  : 'text-[#64748b] hover:text-[#94a3b8]'
+                  ? 'bg-navy-800 text-white'
+                  : 'text-navy-600 hover:text-slate-400'
               }`}
               style={{ touchAction: 'manipulation' }}
             >
@@ -96,7 +96,7 @@ export function QuickAddTask({ status, isMobile, users, onAdd, onCancel }: Quick
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
             aria-label="Due date"
-            className="w-[120px] px-2 py-1 rounded text-xs bg-[#0a1628] border border-[#2d3a52] text-[#94a3b8] focus:outline-none focus:border-[#d4af37]"
+            className="w-[120px] px-2 py-1 rounded text-xs bg-navy-950 border border-navy-800 text-slate-400 focus:outline-none focus:border-gold-500"
             style={{ minHeight: isMobile ? 36 : undefined }}
           />
         </div>
@@ -107,7 +107,7 @@ export function QuickAddTask({ status, isMobile, users, onAdd, onCancel }: Quick
             value={assignee}
             onChange={(e) => setAssignee(e.target.value)}
             aria-label="Assignee"
-            className="px-2 py-1 rounded text-xs bg-[#0a1628] border border-[#2d3a52] text-[#94a3b8] focus:outline-none focus:border-[#d4af37]"
+            className="px-2 py-1 rounded text-xs bg-navy-950 border border-navy-800 text-slate-400 focus:outline-none focus:border-gold-500"
             style={{ maxWidth: 120, minHeight: isMobile ? 36 : undefined }}
           >
             <option value="">Me</option>
@@ -122,7 +122,7 @@ export function QuickAddTask({ status, isMobile, users, onAdd, onCancel }: Quick
         <button
           onClick={handleSubmit}
           disabled={!title.trim() || creating}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#d4af37] text-[#0a1628] text-xs font-medium hover:bg-[#c9a432] disabled:opacity-50 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gold-500 text-navy-950 text-xs font-medium hover:bg-[#c9a432] disabled:opacity-50 transition-colors"
           style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
         >
           {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
@@ -130,7 +130,7 @@ export function QuickAddTask({ status, isMobile, users, onAdd, onCancel }: Quick
         </button>
         <button
           onClick={onCancel}
-          className="px-3 py-2 rounded-lg text-xs text-[#94a3b8] hover:text-white hover:bg-[#2d3a52] transition-colors"
+          className="px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-navy-800 transition-colors"
           style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
         >
           Cancel
