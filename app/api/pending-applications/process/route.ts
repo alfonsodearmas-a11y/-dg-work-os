@@ -60,56 +60,87 @@ function classifyTrackFromRecord(rec: PendingRecord): 'A' | 'B' | 'Design' | 'un
   return 'unknown';
 }
 
-/** Insert completed records directly into service_connections */
+/** Race a promise against a timeout — returns null if the operation exceeds the limit */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T | null> {
+  return Promise.race([
+    promise,
+    new Promise<null>((resolve) =>
+      setTimeout(() => {
+        logger.warn({ label, timeoutMs: ms }, 'Operation timed out');
+        resolve(null);
+      }, ms)
+    ),
+  ]);
+}
+
+/** Map a PendingRecord to a service_connections row */
+function mapCompletedRecord(rec: PendingRecord, dataAsOf: string) {
+  const track = classifyTrackFromRecord(rec);
+  return {
+    customer_reference: rec.customer_reference,
+    service_order_number: rec.service_order_number,
+    first_name: rec.first_name,
+    last_name: rec.last_name,
+    telephone: rec.telephone,
+    region: rec.region,
+    district: rec.district,
+    village_ward: rec.village_ward,
+    street: rec.street,
+    lot: rec.lot,
+    account_type: rec.account_type,
+    service_order_type: rec.service_order_type,
+    division_code: rec.division_code,
+    cycle: rec.cycle,
+    application_date: rec.application_date || null,
+    track,
+    status: 'completed' as const,
+    current_stage: rec.pipeline_stage,
+    stage_history: rec.pipeline_stage
+      ? [{ stage: rec.pipeline_stage, entered: rec.application_date || dataAsOf, exited: rec.date_work_completed || dataAsOf, days: rec.days_taken ?? null }]
+      : [],
+    first_seen_date: dataAsOf,
+    last_seen_date: dataAsOf,
+    disappeared_date: rec.date_work_completed || dataAsOf,
+    energisation_date: rec.date_work_completed || dataAsOf,
+    total_days_to_complete: rec.days_taken ?? null,
+    is_legacy: false,
+    raw_data: rec.raw_data,
+  };
+}
+
+/**
+ * Insert completed records into service_connections.
+ * The table has a PARTIAL unique index (WHERE both keys NOT NULL),
+ * so we split records by null-key status to avoid upsert failures
+ * that previously triggered a slow individual-insert fallback.
+ */
 async function insertCompletedConnections(records: PendingRecord[], dataAsOf: string) {
   const batchSize = 200;
 
-  for (let i = 0; i < records.length; i += batchSize) {
-    const batch = records.slice(i, i + batchSize).map(rec => {
-      const track = classifyTrackFromRecord(rec);
-      return {
-        customer_reference: rec.customer_reference,
-        service_order_number: rec.service_order_number,
-        first_name: rec.first_name,
-        last_name: rec.last_name,
-        telephone: rec.telephone,
-        region: rec.region,
-        district: rec.district,
-        village_ward: rec.village_ward,
-        street: rec.street,
-        lot: rec.lot,
-        account_type: rec.account_type,
-        service_order_type: rec.service_order_type,
-        division_code: rec.division_code,
-        cycle: rec.cycle,
-        application_date: rec.application_date || null,
-        track,
-        status: 'completed',
-        current_stage: rec.pipeline_stage,
-        stage_history: rec.pipeline_stage
-          ? [{ stage: rec.pipeline_stage, entered: rec.application_date || dataAsOf, exited: rec.date_work_completed || dataAsOf, days: rec.days_taken ?? null }]
-          : [],
-        first_seen_date: dataAsOf,
-        last_seen_date: dataAsOf,
-        disappeared_date: rec.date_work_completed || dataAsOf,
-        energisation_date: rec.date_work_completed || dataAsOf,
-        total_days_to_complete: rec.days_taken ?? null,
-        is_legacy: false,
-        raw_data: rec.raw_data,
-      };
-    });
+  // Split: records with both keys can use upsert; null-key records use plain insert
+  const upsertable = records.filter(r => r.customer_reference && r.service_order_number);
+  const insertOnly = records.filter(r => !r.customer_reference || !r.service_order_number);
 
+  for (let i = 0; i < upsertable.length; i += batchSize) {
+    const batch = upsertable.slice(i, i + batchSize).map(r => mapCompletedRecord(r, dataAsOf));
     const { error } = await supabaseAdmin
       .from('service_connections')
       .upsert(batch, {
         onConflict: 'customer_reference,service_order_number',
         ignoreDuplicates: false,
       });
-
     if (error) {
-      for (const row of batch) {
-        await supabaseAdmin.from('service_connections').insert(row).select('id');
-      }
+      logger.warn({ err: error, batchOffset: i, count: batch.length }, 'Completed connections upsert failed (skipping batch)');
+    }
+  }
+
+  for (let i = 0; i < insertOnly.length; i += batchSize) {
+    const batch = insertOnly.slice(i, i + batchSize).map(r => mapCompletedRecord(r, dataAsOf));
+    const { error } = await supabaseAdmin
+      .from('service_connections')
+      .insert(batch);
+    if (error) {
+      logger.warn({ err: error, batchOffset: i, count: batch.length }, 'Completed connections insert failed (skipping batch)');
     }
   }
 }
@@ -152,6 +183,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   const buffer = Buffer.from(await fileData.arrayBuffer());
 
   // Parse Excel
+  logger.info({ agency, storagePath }, '[Process] Parsing Excel');
   const result = agency === 'GPL' ? parseGPLBuffer(buffer) : parseGWIBuffer(buffer);
   if (!result.success || result.records.length === 0) {
     await supabaseAdmin.storage.from(BUCKET).remove([storagePath]).catch(() => {});
@@ -164,27 +196,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   // Separate outstanding vs completed records
   const outstandingRecords = result.records.filter(r => !r.is_completed);
   const completedRecords = result.records.filter(r => r.is_completed);
+  logger.info({ agency, total: result.records.length, outstanding: outstandingRecords.length, completed: completedRecords.length }, '[Process] Records parsed');
 
-  // Run diff engine for GPL outstanding records
-  let diffResult = null;
-  if (agency === 'GPL') {
-    try {
-      diffResult = await processUploadDiff(outstandingRecords, result.dataAsOf);
-    } catch (diffErr) {
-      logger.error({ err: diffErr, agency }, 'Diff engine error (non-fatal)');
-    }
+  // ── Critical path: pending_applications refresh + snapshot (must succeed) ──
 
-    // Insert completed records into service_connections
-    if (completedRecords.length > 0) {
-      try {
-        await insertCompletedConnections(completedRecords, result.dataAsOf);
-      } catch (compErr) {
-        logger.error({ err: compErr, agency, count: completedRecords.length }, 'Completed records insert error (non-fatal)');
-      }
-    }
-  }
-
-  // Full-refresh upsert of outstanding records into pending_applications
   const { error: deleteError } = await supabaseAdmin
     .from('pending_applications')
     .delete()
@@ -217,9 +232,42 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       insertedCount += data?.length || 0;
     }
   }
+  logger.info({ agency, insertedCount }, '[Process] Pending applications inserted');
 
   // Create snapshot (outstanding only)
   await createSnapshot(agency, outstandingRecords, result.dataAsOf);
+  logger.info({ agency }, '[Process] Snapshot created');
+
+  // ── Optional heavy operations (non-fatal, with timeout) ──
+
+  let diffResult = null;
+  if (agency === 'GPL') {
+    // Diff engine: compare upload against existing service_connections (60s timeout)
+    try {
+      diffResult = await withTimeout(
+        processUploadDiff(outstandingRecords, result.dataAsOf),
+        60_000,
+        'processUploadDiff'
+      );
+      logger.info({ agency, completed: !!diffResult }, '[Process] Diff engine done');
+    } catch (diffErr) {
+      logger.error({ err: diffErr, agency }, 'Diff engine error (non-fatal)');
+    }
+
+    // Insert completed records into service_connections (30s timeout)
+    if (completedRecords.length > 0) {
+      try {
+        await withTimeout(
+          insertCompletedConnections(completedRecords, result.dataAsOf),
+          30_000,
+          'insertCompletedConnections'
+        );
+        logger.info({ agency, count: completedRecords.length }, '[Process] Completed connections done');
+      } catch (compErr) {
+        logger.error({ err: compErr, agency, count: completedRecords.length }, 'Completed records insert error (non-fatal)');
+      }
+    }
+  }
 
   // Clean up stored file
   await supabaseAdmin.storage.from(BUCKET).remove([storagePath]).catch(() => {});
@@ -237,6 +285,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       breakdown[region] = (breakdown[region] || 0) + 1;
     }
   }
+
+  logger.info({ agency, insertedCount, warnings: result.warnings.length }, '[Process] Upload complete');
 
   return NextResponse.json({
     success: true,

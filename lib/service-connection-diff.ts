@@ -50,11 +50,12 @@ export async function processUploadDiff(
 ): Promise<DiffResult> {
   const supabase = getSupabase();
 
-  // Fetch all existing open connections
+  // Fetch all existing open connections (override Supabase default 1000-row limit)
   const { data: existing, error } = await supabase
     .from('service_connections')
     .select('*')
-    .eq('status', 'open');
+    .eq('status', 'open')
+    .limit(10000);
 
   if (error) {
     logger.error({ err: error }, 'service-connection-diff: error fetching existing');
@@ -346,7 +347,8 @@ async function linkRelatedOrders(
     .from('service_connections')
     .select('id, customer_reference, service_order_number, current_stage')
     .eq('status', 'open')
-    .not('customer_reference', 'is', null);
+    .not('customer_reference', 'is', null)
+    .limit(10000);
 
   if (error || !openOrders) return;
 
