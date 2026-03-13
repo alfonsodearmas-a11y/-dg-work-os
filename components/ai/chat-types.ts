@@ -159,7 +159,7 @@ export const PAGE_NAMES: Record<string, string> = {
   '/budget': 'Budget 2026',
   '/oversight': 'Oversight',
   '/admin': 'Admin',
-  '/admin/tasks': 'Command Centre',
+  '/admin/tasks': 'War Room',
   '/admin/people': 'People',
   '/tasks': 'Task Board',
 };
