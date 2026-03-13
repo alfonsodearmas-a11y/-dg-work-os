@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "source", "app/sw.ts"]
+  "exclude": ["node_modules", "source", "s3-video", "app/sw.ts"]
 }
