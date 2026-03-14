@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowRight, Clock, Info } from 'lucide-react';
+import { ArrowRight, Clock, Info, TrendingDown, TrendingUp } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -9,20 +9,21 @@ import {
 import { CHART_THEME } from '@/lib/constants/chart-theme';
 import type { GPLMetricsRow, GPLOutstandingRow, AgeingBucket } from '@/lib/gpl/types';
 
+interface PipelineStage {
+  outstanding: number;
+  completed: number;
+  metrics: { outstanding: GPLMetricsRow | null; completed: GPLMetricsRow | null };
+}
+
+interface PipelineSnapshot {
+  snapshotDate: string;
+  design: PipelineStage;
+  execution: PipelineStage;
+}
+
 interface PipelineData {
-  pipeline: {
-    snapshotDate: string;
-    design: {
-      outstanding: number;
-      completed: number;
-      metrics: { outstanding: GPLMetricsRow | null; completed: GPLMetricsRow | null };
-    };
-    execution: {
-      outstanding: number;
-      completed: number;
-      metrics: { outstanding: GPLMetricsRow | null; completed: GPLMetricsRow | null };
-    };
-  } | null;
+  pipeline: PipelineSnapshot | null;
+  previousPipeline: PipelineSnapshot | null;
 }
 
 const AGEING_COLORS = ['#059669', '#10b981', '#d4af37', '#f97316', '#dc2626', '#991b1b'];
@@ -83,11 +84,16 @@ export function TrackBPipeline() {
     );
   }
 
-  const { pipeline } = data;
+  const { pipeline, previousPipeline } = data;
+  const prevDate = previousPipeline?.snapshotDate;
 
   const fmtDate = (s: string) => {
     const d = new Date(s + 'T00:00:00');
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+  const fmtDateShort = (s: string) => {
+    const d = new Date(s + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   const dOut = pipeline.design.metrics.outstanding;
@@ -118,10 +124,12 @@ export function TrackBPipeline() {
               <div>
                 <div className="text-lg font-bold text-white">{pipeline.design.outstanding}</div>
                 <div className="text-[9px] text-navy-600">waiting</div>
+                <InlineDelta current={pipeline.design.outstanding} previous={previousPipeline?.design.outstanding} dateLabel={prevDate ? fmtDateShort(prevDate) : undefined} />
               </div>
               <div>
                 <div className="text-lg font-bold text-emerald-400">{pipeline.design.completed}</div>
                 <div className="text-[9px] text-navy-600">completed</div>
+                <InlineDelta current={pipeline.design.completed} previous={previousPipeline?.design.completed} dateLabel={prevDate ? fmtDateShort(prevDate) : undefined} invert />
               </div>
             </div>
             <div className="mt-2 pt-2 border-t border-navy-800 text-[10px] text-navy-600">
@@ -146,10 +154,12 @@ export function TrackBPipeline() {
               <div>
                 <div className="text-lg font-bold text-white">{pipeline.execution.outstanding}</div>
                 <div className="text-[9px] text-navy-600">waiting</div>
+                <InlineDelta current={pipeline.execution.outstanding} previous={previousPipeline?.execution.outstanding} dateLabel={prevDate ? fmtDateShort(prevDate) : undefined} />
               </div>
               <div>
                 <div className="text-lg font-bold text-emerald-400">{pipeline.execution.completed}</div>
                 <div className="text-[9px] text-navy-600">completed</div>
+                <InlineDelta current={pipeline.execution.completed} previous={previousPipeline?.execution.completed} dateLabel={prevDate ? fmtDateShort(prevDate) : undefined} invert />
               </div>
             </div>
             <div className="mt-2 pt-2 border-t border-navy-800 text-[10px] text-navy-600">
@@ -178,6 +188,8 @@ export function TrackBPipeline() {
           title="Estimates & Designs"
           outMetrics={dOut}
           compMetrics={dComp}
+          prevOutMetrics={previousPipeline?.design.metrics.outstanding ?? null}
+          prevCompMetrics={previousPipeline?.design.metrics.completed ?? null}
           slaTarget={12}
           color="#8b5cf6"
         />
@@ -185,6 +197,8 @@ export function TrackBPipeline() {
           title="Capital Works (Construction)"
           outMetrics={eOut}
           compMetrics={eComp}
+          prevOutMetrics={previousPipeline?.execution.metrics.outstanding ?? null}
+          prevCompMetrics={previousPipeline?.execution.metrics.completed ?? null}
           slaTarget={30}
           color="#f59e0b"
         />
@@ -280,10 +294,33 @@ export function TrackBPipeline() {
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
-function StageComparisonCard({ title, outMetrics, compMetrics, slaTarget, color }: {
-  title: string; outMetrics: GPLMetricsRow | null; compMetrics: GPLMetricsRow | null;
-  slaTarget: number; color: string;
+/** Compact delta shown below a number in the pipeline cards */
+function InlineDelta({ current, previous, dateLabel, invert }: {
+  current: number; previous: number | undefined; dateLabel?: string; invert?: boolean;
 }) {
+  if (previous === undefined) return null;
+  const delta = current - previous;
+  if (delta === 0) return null;
+  // For "waiting" counts, going down is good. For "completed", going up is good (invert).
+  const isGood = invert ? delta > 0 : delta < 0;
+  return (
+    <div className={`flex items-center justify-center gap-0.5 text-[9px] mt-0.5 ${isGood ? 'text-emerald-400' : 'text-red-400'}`}>
+      {isGood ? <TrendingDown className="h-2.5 w-2.5" /> : <TrendingUp className="h-2.5 w-2.5" />}
+      {delta > 0 ? '+' : ''}{delta}{dateLabel ? ` from ${dateLabel}` : ''}
+    </div>
+  );
+}
+
+function StageComparisonCard({ title, outMetrics, compMetrics, prevOutMetrics, prevCompMetrics, slaTarget, color }: {
+  title: string;
+  outMetrics: GPLMetricsRow | null;
+  compMetrics: GPLMetricsRow | null;
+  prevOutMetrics: GPLMetricsRow | null;
+  prevCompMetrics: GPLMetricsRow | null;
+  slaTarget: number;
+  color: string;
+}) {
+  const hasPrev = prevOutMetrics !== null || prevCompMetrics !== null;
   return (
     <div className="card-premium p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -296,16 +333,18 @@ function StageComparisonCard({ title, outMetrics, compMetrics, slaTarget, color 
             <tr className="border-b border-navy-800">
               <th scope="col" className="text-left py-1.5 text-navy-600">Metric</th>
               <th scope="col" className="text-right py-1.5 text-navy-600">Waiting</th>
+              {hasPrev && <th scope="col" className="text-right py-1.5 text-navy-600 w-12">Δ</th>}
               <th scope="col" className="text-right py-1.5 text-navy-600">Completed</th>
+              {hasPrev && <th scope="col" className="text-right py-1.5 text-navy-600 w-12">Δ</th>}
             </tr>
           </thead>
           <tbody>
-            <MetricRow label="Count" out={outMetrics?.total_count} comp={compMetrics?.total_count} />
-            <MetricRow label={`Within ${slaTarget}-day standard`} out={outMetrics?.sla_compliance_pct} comp={compMetrics?.sla_compliance_pct} suffix="%" />
-            <MetricRow label="Average" out={outMetrics?.mean_days} comp={compMetrics?.mean_days} suffix="d" />
-            <MetricRow label="Typical time" out={outMetrics?.median_days} comp={compMetrics?.median_days} suffix="d" />
-            <MetricRow label="90th percentile" out={outMetrics?.p90} comp={compMetrics?.p90} suffix="d" />
-            <MetricRow label="Maximum" out={outMetrics?.max_days} comp={compMetrics?.max_days} suffix="d" />
+            <MetricRow label="Count" out={outMetrics?.total_count} comp={compMetrics?.total_count} prevOut={prevOutMetrics?.total_count} prevComp={prevCompMetrics?.total_count} hasPrev={hasPrev} />
+            <MetricRow label={`Within ${slaTarget}-day standard`} out={outMetrics?.sla_compliance_pct} comp={compMetrics?.sla_compliance_pct} prevOut={prevOutMetrics?.sla_compliance_pct} prevComp={prevCompMetrics?.sla_compliance_pct} suffix="%" hasPrev={hasPrev} invertDelta />
+            <MetricRow label="Average" out={outMetrics?.mean_days} comp={compMetrics?.mean_days} prevOut={prevOutMetrics?.mean_days} prevComp={prevCompMetrics?.mean_days} suffix="d" hasPrev={hasPrev} />
+            <MetricRow label="Typical time" out={outMetrics?.median_days} comp={compMetrics?.median_days} prevOut={prevOutMetrics?.median_days} prevComp={prevCompMetrics?.median_days} suffix="d" hasPrev={hasPrev} />
+            <MetricRow label="90th percentile" out={outMetrics?.p90} comp={compMetrics?.p90} prevOut={prevOutMetrics?.p90} prevComp={prevCompMetrics?.p90} suffix="d" hasPrev={hasPrev} />
+            <MetricRow label="Maximum" out={outMetrics?.max_days} comp={compMetrics?.max_days} prevOut={prevOutMetrics?.max_days} prevComp={prevCompMetrics?.max_days} suffix="d" hasPrev={hasPrev} slaTarget={slaTarget} />
           </tbody>
         </table>
       </div>
@@ -313,14 +352,48 @@ function StageComparisonCard({ title, outMetrics, compMetrics, slaTarget, color 
   );
 }
 
-function MetricRow({ label, out, comp, suffix = '' }: {
-  label: string; out: number | null | undefined; comp: number | null | undefined; suffix?: string;
+/** Format a delta value for the Δ column */
+function DeltaCell({ current, previous, suffix = '', invertDelta }: {
+  current: number | null | undefined;
+  previous: number | null | undefined;
+  suffix?: string;
+  invertDelta?: boolean;
 }) {
+  if (current == null || previous == null) return <td className="py-1.5 text-right text-navy-600">--</td>;
+  const delta = Math.round((current - previous) * 10) / 10;
+  if (delta === 0) return <td className="py-1.5 text-right text-navy-600">—</td>;
+  // For SLA % (invertDelta), going up is good. For days/counts, going down is good.
+  const isGood = invertDelta ? delta > 0 : delta < 0;
+  return (
+    <td className={`py-1.5 text-right text-[10px] ${isGood ? 'text-emerald-400' : 'text-red-400'}`}>
+      {delta > 0 ? '+' : ''}{delta}{suffix}
+    </td>
+  );
+}
+
+function MetricRow({ label, out, comp, prevOut, prevComp, suffix = '', hasPrev, invertDelta, slaTarget }: {
+  label: string;
+  out: number | null | undefined;
+  comp: number | null | undefined;
+  prevOut?: number | null | undefined;
+  prevComp?: number | null | undefined;
+  suffix?: string;
+  hasPrev?: boolean;
+  invertDelta?: boolean;
+  slaTarget?: number;
+}) {
+  // Highlight extreme maximums (> 3x SLA target) in red
+  const isMaxRow = slaTarget !== undefined;
+  const outColor = isMaxRow && out != null && out > slaTarget * 3 ? 'text-red-400' : 'text-white';
+  const compColor = isMaxRow && comp != null && comp > slaTarget * 3 ? 'text-red-400' : 'text-white';
+
   return (
     <tr className="border-b border-navy-800/30">
       <td className="py-1.5 text-slate-400">{label}</td>
-      <td className="py-1.5 text-right text-white">{out != null ? `${out}${suffix}` : '--'}</td>
-      <td className="py-1.5 text-right text-white">{comp != null ? `${comp}${suffix}` : '--'}</td>
+      <td className={`py-1.5 text-right ${outColor}`}>{out != null ? `${out}${suffix}` : '--'}</td>
+      {hasPrev && <DeltaCell current={out} previous={prevOut} suffix={suffix} invertDelta={invertDelta} />}
+      <td className={`py-1.5 text-right ${compColor}`}>{comp != null ? `${comp}${suffix}` : '--'}</td>
+      {hasPrev && <DeltaCell current={comp} previous={prevComp} suffix={suffix} invertDelta={invertDelta} />}
     </tr>
   );
 }

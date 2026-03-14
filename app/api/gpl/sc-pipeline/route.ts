@@ -19,7 +19,7 @@ export async function GET() {
       .single();
 
     if (!snapshot) {
-      return NextResponse.json({ pipeline: null });
+      return NextResponse.json({ pipeline: null, previousPipeline: null });
     }
 
     // Get Track B metrics for this snapshot
@@ -32,6 +32,49 @@ export async function GET() {
     const metricsByKey = new Map<string, Record<string, unknown>>();
     for (const m of metrics ?? []) {
       metricsByKey.set(`${m.stage}:${m.category}`, m);
+    }
+
+    // Get previous snapshot for delta comparison
+    const { data: prevSnapshots } = await supabaseAdmin
+      .from('gpl_snapshots')
+      .select('id, snapshot_date, track_b_design_outstanding, track_b_execution_outstanding, track_b_design_completed, track_b_execution_completed')
+      .lt('snapshot_date', snapshot.snapshot_date)
+      .order('snapshot_date', { ascending: false })
+      .limit(1);
+
+    let previousPipeline = null;
+    const prevSnapshot = prevSnapshots?.[0];
+    if (prevSnapshot) {
+      const { data: prevMetrics } = await supabaseAdmin
+        .from('gpl_snapshot_metrics')
+        .select(METRIC_COLUMNS)
+        .eq('snapshot_id', prevSnapshot.id)
+        .eq('track', 'B');
+
+      const prevMetricsByKey = new Map<string, Record<string, unknown>>();
+      for (const m of prevMetrics ?? []) {
+        prevMetricsByKey.set(`${m.stage}:${m.category}`, m);
+      }
+
+      previousPipeline = {
+        snapshotDate: prevSnapshot.snapshot_date,
+        design: {
+          outstanding: prevSnapshot.track_b_design_outstanding,
+          completed: prevSnapshot.track_b_design_completed,
+          metrics: {
+            outstanding: prevMetricsByKey.get('design:outstanding') ?? null,
+            completed: prevMetricsByKey.get('design:completed') ?? null,
+          },
+        },
+        execution: {
+          outstanding: prevSnapshot.track_b_execution_outstanding,
+          completed: prevSnapshot.track_b_execution_completed,
+          metrics: {
+            outstanding: prevMetricsByKey.get('execution:outstanding') ?? null,
+            completed: prevMetricsByKey.get('execution:completed') ?? null,
+          },
+        },
+      };
     }
 
     return NextResponse.json({
@@ -54,6 +97,7 @@ export async function GET() {
           },
         },
       },
+      previousPipeline,
     });
   } catch (err) {
     logger.error({ err }, 'Failed to fetch SC pipeline data');
