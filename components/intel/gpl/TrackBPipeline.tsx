@@ -300,13 +300,19 @@ function InlineDelta({ current, previous, dateLabel, invert }: {
 }) {
   if (previous === undefined) return null;
   const delta = current - previous;
-  if (delta === 0) return null;
+  if (delta === 0) {
+    return (
+      <div className="text-[9px] mt-0.5 text-navy-600">
+        = from {dateLabel || 'previous'}
+      </div>
+    );
+  }
   // For "waiting" counts, going down is good. For "completed", going up is good (invert).
   const isGood = invert ? delta > 0 : delta < 0;
   return (
     <div className={`flex items-center justify-center gap-0.5 text-[9px] mt-0.5 ${isGood ? 'text-emerald-400' : 'text-red-400'}`}>
       {isGood ? <TrendingDown className="h-2.5 w-2.5" /> : <TrendingUp className="h-2.5 w-2.5" />}
-      {delta > 0 ? '+' : ''}{delta}{dateLabel ? ` from ${dateLabel}` : ''}
+      {delta > 0 ? '+' : ''}{delta} from {dateLabel || 'previous'}
     </div>
   );
 }
@@ -359,7 +365,9 @@ function DeltaCell({ current, previous, suffix = '', invertDelta }: {
   suffix?: string;
   invertDelta?: boolean;
 }) {
-  if (current == null || previous == null) return <td className="py-1.5 text-right text-navy-600">--</td>;
+  if (current == null && previous == null) return <td className="py-1.5 text-right text-navy-600">--</td>;
+  if (previous == null) return <td className="py-1.5 text-right text-[10px] text-navy-600 italic">new</td>;
+  if (current == null) return <td className="py-1.5 text-right text-navy-600">--</td>;
   const delta = Math.round((current - previous) * 10) / 10;
   if (delta === 0) return <td className="py-1.5 text-right text-navy-600">—</td>;
   // For SLA % (invertDelta), going up is good. For days/counts, going down is good.
