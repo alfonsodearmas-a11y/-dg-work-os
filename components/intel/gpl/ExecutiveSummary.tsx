@@ -98,6 +98,12 @@ export function ExecutiveSummary() {
 
   return (
     <div className="space-y-6">
+      {/* Data freshness */}
+      <div className="flex items-center gap-2 text-xs text-navy-600">
+        <Clock className="h-3.5 w-3.5" />
+        <span>Data as of <span className="text-slate-400">{fmtDate(snapshot.snapshot_date)}</span></span>
+      </div>
+
       {/* Top Row: 4 Headline Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Card 1: Simple Connections */}
@@ -197,6 +203,7 @@ export function ExecutiveSummary() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <TrendChart
             title="Waiting by Category"
+            subtitle={`${fmtDate(trend.snapshots[0].snapshot_date)} – ${fmtDate(trend.snapshots[trend.snapshots.length - 1].snapshot_date)}`}
             data={trend.snapshots.map(s => ({
               date: fmtDate(s.snapshot_date),
               simple: s.track_a_outstanding,
@@ -209,8 +216,17 @@ export function ExecutiveSummary() {
               { key: 'capitalWorks', color: '#f59e0b', label: 'Capital Works' },
             ]}
           />
-          <SLATrendChart title="On-time Rate %" snapshots={trend.snapshots} metrics={trend.metrics} />
-          <CompletionChart title="Completions" snapshots={trend.snapshots} />
+          <SLATrendChart
+            title="On-time Rate %"
+            subtitle={`${fmtDate(trend.snapshots[0].snapshot_date)} – ${fmtDate(trend.snapshots[trend.snapshots.length - 1].snapshot_date)}`}
+            snapshots={trend.snapshots}
+            metrics={trend.metrics}
+          />
+          <CompletionChart
+            title="Completions"
+            subtitle={`${fmtDate(trend.snapshots[0].snapshot_date)} – ${fmtDate(trend.snapshots[trend.snapshots.length - 1].snapshot_date)}`}
+            snapshots={trend.snapshots}
+          />
         </div>
       )}
 
@@ -354,14 +370,16 @@ function OutlierCard({ outliers }: { outliers: GPLChronicOutlierRow[] }) {
   );
 }
 
-function TrendChart({ title, data, lines }: {
+function TrendChart({ title, subtitle, data, lines }: {
   title: string;
+  subtitle?: string;
   data: Record<string, unknown>[];
   lines: { key: string; color: string; label: string }[];
 }) {
   return (
     <div className="card-premium p-4">
-      <h4 className="text-xs font-semibold text-white mb-3">{title}</h4>
+      <h4 className="text-xs font-semibold text-white mb-1">{title}</h4>
+      {subtitle && <div className="text-[10px] text-navy-600 mb-3">{subtitle}</div>}
       <div className="h-36">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
@@ -386,8 +404,8 @@ function TrendChart({ title, data, lines }: {
   );
 }
 
-function SLATrendChart({ title, snapshots, metrics }: {
-  title: string; snapshots: GPLSnapshotRow[]; metrics: GPLMetricsRow[];
+function SLATrendChart({ title, subtitle, snapshots, metrics }: {
+  title: string; subtitle?: string; snapshots: GPLSnapshotRow[]; metrics: GPLMetricsRow[];
 }) {
   const metricMap = new Map<string, GPLMetricsRow[]>();
   for (const m of metrics) {
@@ -410,6 +428,7 @@ function SLATrendChart({ title, snapshots, metrics }: {
   return (
     <TrendChart
       title={title}
+      subtitle={subtitle}
       data={data}
       lines={[
         { key: 'simple', color: '#10b981', label: 'Simple' },
@@ -420,7 +439,7 @@ function SLATrendChart({ title, snapshots, metrics }: {
   );
 }
 
-function CompletionChart({ title, snapshots }: { title: string; snapshots: GPLSnapshotRow[] }) {
+function CompletionChart({ title, subtitle, snapshots }: { title: string; subtitle?: string; snapshots: GPLSnapshotRow[] }) {
   const data = snapshots.map(s => ({
     date: fmtDate(s.snapshot_date),
     simple: s.track_a_completed,
@@ -430,7 +449,8 @@ function CompletionChart({ title, snapshots }: { title: string; snapshots: GPLSn
 
   return (
     <div className="card-premium p-4">
-      <h4 className="text-xs font-semibold text-white mb-3">{title}</h4>
+      <h4 className="text-xs font-semibold text-white mb-1">{title}</h4>
+      {subtitle && <div className="text-[10px] text-navy-600 mb-3">{subtitle}</div>}
       <div className="h-36">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>

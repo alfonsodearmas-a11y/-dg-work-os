@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, CheckCircle, AlertTriangle, AlertCircle, Info } from 'lucide-react';
+import { ChevronDown, ChevronRight, Clock, CheckCircle, AlertTriangle, AlertCircle, Info } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -198,6 +198,14 @@ export function DataQuality() {
 
   return (
     <div className="space-y-6">
+      {/* Data freshness */}
+      {latest && (
+        <div className="flex items-center gap-2 text-xs text-navy-600">
+          <Clock className="h-3.5 w-3.5" />
+          <span>Data as of <span className="text-slate-400">{fmtDate(latest.snapshot_date)}</span></span>
+        </div>
+      )}
+
       {/* Section 1: Upload Summary Card */}
       <div className="card-premium p-4 md:p-6">
         <h3 className="text-sm font-semibold text-white mb-4">Upload Summary</h3>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Info } from 'lucide-react';
+import { Clock, Info } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -57,6 +57,7 @@ function InfoTip({ text }: { text: string }) {
 
 export function EfficiencyStaff() {
   const [metrics, setMetrics] = useState<GPLMetricsRow[]>([]);
+  const [snapshotDate, setSnapshotDate] = useState<string | null>(null);
   const [staff, setStaff] = useState<StaffEntry[]>([]);
   const [breaches, setBreaches] = useState<CompletedRecord[]>([]);
   const [trendSnapshots, setTrendSnapshots] = useState<GPLSnapshotRow[]>([]);
@@ -74,6 +75,7 @@ export function EfficiencyStaff() {
       if (latestRes.ok) {
         const d = await latestRes.json();
         setMetrics(d.metrics ?? []);
+        if (d.snapshot?.snapshot_date) setSnapshotDate(d.snapshot.snapshot_date);
       }
       if (staffRes.ok) {
         const d = await staffRes.json();
@@ -103,8 +105,21 @@ export function EfficiencyStaff() {
 
   const completedMetrics = metrics.filter(m => m.category === 'completed');
 
+  const fmtDateFull = (s: string) => {
+    const d = new Date(s + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
   return (
     <div className="space-y-6">
+      {/* Data freshness */}
+      {snapshotDate && (
+        <div className="flex items-center gap-2 text-xs text-navy-600">
+          <Clock className="h-3.5 w-3.5" />
+          <span>Data as of <span className="text-slate-400">{fmtDateFull(snapshotDate)}</span></span>
+        </div>
+      )}
+
       {/* Section 1: Completion Efficiency Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {completedMetrics.map(m => (

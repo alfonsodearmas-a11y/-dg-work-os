@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowRight, Info } from 'lucide-react';
+import { ArrowRight, Clock, Info } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -84,6 +84,12 @@ export function TrackBPipeline() {
   }
 
   const { pipeline } = data;
+
+  const fmtDate = (s: string) => {
+    const d = new Date(s + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
   const dOut = pipeline.design.metrics.outstanding;
   const dComp = pipeline.design.metrics.completed;
   const eOut = pipeline.execution.metrics.outstanding;
@@ -91,6 +97,14 @@ export function TrackBPipeline() {
 
   return (
     <div className="space-y-6">
+      {/* Data freshness */}
+      {pipeline.snapshotDate && (
+        <div className="flex items-center gap-2 text-xs text-navy-600">
+          <Clock className="h-3.5 w-3.5" />
+          <span>Data as of <span className="text-slate-400">{fmtDate(pipeline.snapshotDate)}</span></span>
+        </div>
+      )}
+
       {/* Section 1: Pipeline Funnel */}
       <div className="card-premium p-4 md:p-6">
         <h3 className="text-sm font-semibold text-white mb-4">Capital Works Pipeline</h3>
