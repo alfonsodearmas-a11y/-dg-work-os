@@ -116,7 +116,7 @@ export function ExecutiveSummary() {
           <div className="text-[10px] text-navy-600 mb-3">No capital works required | 3-day standard</div>
           <div className="text-2xl font-bold text-white">{snapshot.track_a_outstanding}</div>
           <div className="text-[10px] text-navy-600 mb-2">waiting</div>
-          <DeltaIndicator current={snapshot.track_a_outstanding} previous={previousSnapshot?.track_a_outstanding ?? null} />
+          <DeltaIndicator current={snapshot.track_a_outstanding} previous={previousSnapshot?.track_a_outstanding ?? null} previousDate={previousSnapshot?.snapshot_date} />
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-navy-800">
             <div>
               <div className="text-xs font-medium text-slate-400">{snapshot.track_a_completed}</div>
@@ -151,6 +151,7 @@ export function ExecutiveSummary() {
           <DeltaIndicator
             current={snapshot.track_b_total_outstanding}
             previous={previousSnapshot ? (previousSnapshot.track_b_design_outstanding + previousSnapshot.track_b_execution_outstanding) : null}
+            previousDate={previousSnapshot?.snapshot_date}
           />
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-navy-800">
             <div>
@@ -178,7 +179,7 @@ export function ExecutiveSummary() {
           <div className="text-[10px] text-navy-600 mb-3">Awaiting GPL to produce quotation | 12-day standard</div>
           <div className="text-2xl font-bold text-white">{snapshot.track_b_design_outstanding}</div>
           <div className="text-[10px] text-amber-400/70 mb-2">customers waiting for estimate</div>
-          <DeltaIndicator current={snapshot.track_b_design_outstanding} previous={previousSnapshot?.track_b_design_outstanding ?? null} />
+          <DeltaIndicator current={snapshot.track_b_design_outstanding} previous={previousSnapshot?.track_b_design_outstanding ?? null} previousDate={previousSnapshot?.snapshot_date} />
           <div className="pt-2 border-t border-navy-800 space-y-1">
             <div className="text-[10px] text-slate-400">{snapshot.track_b_design_completed} estimates completed</div>
             {designOut?.sla_compliance_pct != null && (
@@ -322,14 +323,15 @@ function ChronicDelaysTable({ outliers }: { outliers: GPLChronicOutlierRow[] }) 
   );
 }
 
-function DeltaIndicator({ current, previous }: { current: number; previous: number | null }) {
+function DeltaIndicator({ current, previous, previousDate }: { current: number; previous: number | null; previousDate?: string }) {
   if (previous === null) return null;
   const delta = current - previous;
   if (delta === 0) return null;
+  const dateLabel = previousDate ? fmtDate(previousDate) : 'previous';
   return (
     <div className={`flex items-center gap-1 text-[10px] mb-2 ${delta <= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
       {delta <= 0 ? <TrendingDown className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
-      {delta > 0 ? '+' : ''}{delta} from previous
+      {delta > 0 ? '+' : ''}{delta} from {dateLabel}
     </div>
   );
 }
