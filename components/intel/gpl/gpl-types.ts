@@ -9,7 +9,10 @@ export interface EnrichedStation {
   units: number;
   derated: number;
   available: number;
+  /** Clamped to [0, 100] for display. Use `overCapacity` to detect anomalies. */
   availability: number;
+  /** True when raw available MW exceeds derated capacity (data anomaly). */
+  overCapacity: boolean;
   status: 'operational' | 'degraded' | 'critical' | 'offline';
 }
 
@@ -71,6 +74,20 @@ export interface GPLHealthResult {
 // ---------------------------------------------------------------------------
 // Shared utility functions
 // ---------------------------------------------------------------------------
+
+/** Enrich a raw station (derated + available) into display-ready form. */
+export function enrichStation(s: { name: string; units: number; derated: number; available: number }): EnrichedStation {
+  const ratio = s.derated > 0 ? s.available / s.derated : 0;
+  return {
+    ...s,
+    availability: Math.min(ratio * 100, 100),
+    overCapacity: s.available > s.derated && s.derated > 0,
+    status: s.available === 0 ? 'offline'
+      : ratio < 0.5 ? 'critical'
+      : ratio < 0.7 ? 'degraded'
+      : 'operational',
+  };
+}
 
 export function getStatusColor(status: string): string {
   return ({

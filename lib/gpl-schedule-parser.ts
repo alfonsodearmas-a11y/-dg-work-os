@@ -208,7 +208,7 @@ function parseUnits(sheetData: ExcelSheetData, dataColIdx: number): ScheduleUnit
 
     let utilizationPct: number | null = null;
     if (availableMW !== null && deratedMW && deratedMW > 0) {
-      utilizationPct = Math.round((availableMW / deratedMW) * 10000) / 100;
+      utilizationPct = Math.min(Math.round((availableMW / deratedMW) * 10000) / 100, 100);
     }
 
     units.push({
@@ -247,11 +247,14 @@ function aggregateStations(units: ScheduleUnit[]): StationAggregate[] {
   }
 
   for (const station of Object.values(stations)) {
-    if (station.totalDeratedCapacityMw > 0) {
-      station.stationUtilizationPct = Math.round((station.totalAvailableMw / station.totalDeratedCapacityMw) * 10000) / 100;
-    }
     station.totalDeratedCapacityMw = Math.round(station.totalDeratedCapacityMw * 10000) / 10000;
     station.totalAvailableMw = Math.round(station.totalAvailableMw * 10000) / 10000;
+    if (station.totalDeratedCapacityMw > 0) {
+      station.stationUtilizationPct = Math.min(
+        Math.round((station.totalAvailableMw / station.totalDeratedCapacityMw) * 10000) / 100,
+        100
+      );
+    }
   }
   return Object.values(stations);
 }
@@ -338,11 +341,25 @@ export function parseScheduleSheet(buffer: Buffer) {
     }
 
     const stations = aggregateStations(units);
+
+    // Flag stations where available MW exceeds derated capacity (data anomaly)
+    for (const station of stations) {
+      if (station.totalAvailableMw > station.totalDeratedCapacityMw && station.totalDeratedCapacityMw > 0) {
+        warnings.push({
+          type: 'OVER_CAPACITY',
+          message: `${station.station}: available ${station.totalAvailableMw} MW exceeds derated capacity ${station.totalDeratedCapacityMw} MW`,
+          station: station.station,
+          available: station.totalAvailableMw,
+          derated: station.totalDeratedCapacityMw,
+        });
+      }
+    }
+
     const summary = parseSummary(sheetData, dataColIdx);
 
     const totalAvailable = stations.reduce((sum, s) => sum + s.totalAvailableMw, 0);
     const totalDerated = stations.reduce((sum, s) => sum + s.totalDeratedCapacityMw, 0);
-    const systemUtilizationPct = totalDerated > 0 ? Math.round((totalAvailable / totalDerated) * 10000) / 100 : null;
+    const systemUtilizationPct = totalDerated > 0 ? Math.min(Math.round((totalAvailable / totalDerated) * 10000) / 100, 100) : null;
     const reserveMarginPct = summary.eveningPeakOnBarsMw && summary.eveningPeakOnBarsMw > 0
       ? Math.round(((totalAvailable - summary.eveningPeakOnBarsMw) / summary.eveningPeakOnBarsMw) * 10000) / 100
       : null;

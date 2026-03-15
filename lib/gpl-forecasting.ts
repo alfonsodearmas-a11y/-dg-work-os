@@ -603,7 +603,7 @@ export async function computeStationReliability(periodDays: number = 90): Promis
       .map(d => {
         const available = parseFloat(d.total_available_mw!);
         const derated = parseFloat(d.total_derated_capacity_mw!);
-        return derated > 0 ? (available / derated) * 100 : 0;
+        return derated > 0 ? Math.min((available / derated) * 100, 100) : 0;
       });
     const avgUtilization = utilizations.length > 0
       ? utilizations.reduce((a, b) => a + b, 0) / utilizations.length

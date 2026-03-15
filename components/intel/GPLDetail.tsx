@@ -7,7 +7,8 @@ import { Upload } from 'lucide-react';
 import type { GPLData } from '@/data/mockData';
 import { computeGPLHealth } from '@/lib/agency-health';
 import { GPLExcelUpload } from './GPLExcelUpload';
-import type { GPLSummary, EnrichedStation, KpiState, ConsolidatedAlert, GPLHealthResult } from './gpl/gpl-types';
+import type { GPLSummary, KpiState, ConsolidatedAlert, GPLHealthResult } from './gpl/gpl-types';
+import { enrichStation } from './gpl/gpl-types';
 
 // Tab components
 import { GPLSummaryCard } from './gpl/GPLSummaryCard';
@@ -271,14 +272,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
     const totalAvailable = stations.reduce((sum, s) => sum + s.available, 0);
     const totalUnits = stations.reduce((sum, s) => sum + s.units, 0);
 
-    const enrichedStations: EnrichedStation[] = stations.map(s => ({
-      ...s,
-      availability: s.derated > 0 ? (s.available / s.derated) * 100 : 0,
-      status: s.available === 0 ? 'offline' as const
-            : s.available / s.derated < 0.5 ? 'critical' as const
-            : s.available / s.derated < 0.7 ? 'degraded' as const
-            : 'operational' as const,
-    }));
+    const enrichedStations = stations.map(enrichStation);
 
     const totalSolar = data.solarStations?.reduce((sum, s) => sum + s.capacity, 0) || data.totalRenewableCapacity || 0;
     const totalDBIS = totalAvailable + totalSolar;
@@ -287,7 +281,7 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
       totalDerated: Math.round(totalDerated * 10) / 10,
       totalAvailable: Math.round(totalAvailable * 10) / 10,
       totalOffline: Math.round((totalDerated - totalAvailable) * 10) / 10,
-      availability: totalDerated > 0 ? Math.round((totalAvailable / totalDerated) * 1000) / 10 : 0,
+      availability: totalDerated > 0 ? Math.min(Math.round((totalAvailable / totalDerated) * 1000) / 10, 100) : 0,
       totalUnits,
       totalSolar,
       totalDBIS: Math.round(totalDBIS * 10) / 10,

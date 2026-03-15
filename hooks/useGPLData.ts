@@ -115,7 +115,7 @@ export const computeGPLSummary = (data: GPLData | null) => {
   const stationStatuses = stations.map(s => {
     if (s.available === 0) return 'offline';
     if (s.available / s.derated < 0.5) return 'critical';
-    if (s.available / s.derated < 0.8) return 'degraded';
+    if (s.available / s.derated < 0.7) return 'degraded';
     return 'operational';
   });
 
@@ -136,7 +136,7 @@ export const computeGPLSummary = (data: GPLData | null) => {
   return {
     derated: Math.round(totalDerated * 10) / 10,
     available: Math.round(totalAvailable * 10) / 10,
-    availability: Math.round((totalAvailable / totalDerated) * 1000) / 10,
+    availability: Math.min(Math.round((totalAvailable / totalDerated) * 1000) / 10, 100),
     solar: totalSolar,
     totalDBIS: Math.round(totalDBIS * 10) / 10,
     actualPeak: Math.round(actualPeak * 10) / 10,

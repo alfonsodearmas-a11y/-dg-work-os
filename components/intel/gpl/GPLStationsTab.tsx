@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Factory, Ship } from 'lucide-react';
+import { Factory, Ship, AlertTriangle } from 'lucide-react';
 import type { GPLSummary } from './gpl-types';
 import { getStatusColor, getStatusBg } from './gpl-types';
 
@@ -86,6 +86,11 @@ export function GPLStationsTab({ summary }: GPLStationsTabProps) {
               <div className="flex items-baseline gap-1 mb-3">
                 <span className="text-2xl md:text-3xl font-bold text-slate-100">{station.available}</span>
                 <span className="text-navy-600 text-base">/ {station.derated} MW</span>
+                {station.overCapacity && (
+                  <span className="ml-1.5" title="Available MW exceeds derated capacity — data anomaly">
+                    <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  </span>
+                )}
               </div>
 
               {/* Progress bar -- always visible */}
@@ -93,7 +98,7 @@ export function GPLStationsTab({ summary }: GPLStationsTabProps) {
                 <div
                   className="h-full rounded-full transition-all"
                   style={{
-                    width: `${station.availability}%`,
+                    width: `${Math.min(station.availability, 100)}%`,
                     backgroundColor: getStatusColor(station.status)
                   }}
                 />
@@ -102,7 +107,7 @@ export function GPLStationsTab({ summary }: GPLStationsTabProps) {
               {/* Units + % -- always visible */}
               <div className="flex items-center justify-between text-[15px] text-navy-600">
                 <span>{station.units} units</span>
-                <span>{(station.availability ?? 0).toFixed(0)}% available</span>
+                <span>{Math.min(station.availability ?? 0, 100).toFixed(0)}% available</span>
               </div>
             </div>
           );

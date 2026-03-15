@@ -95,7 +95,7 @@ export function SubmissionStep({
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
               {displayStations.map((station: any) => {
                 const stationUtil = parseFloat(station.total_derated_capacity_mw || 0) > 0
-                  ? (parseFloat(station.total_available_mw || 0) / parseFloat(station.total_derated_capacity_mw)) * 100
+                  ? Math.min((parseFloat(station.total_available_mw || 0) / parseFloat(station.total_derated_capacity_mw)) * 100, 100)
                   : 0;
                 return (
                   <div key={station.station} className="p-2 bg-navy-800/50 rounded flex items-center justify-between">

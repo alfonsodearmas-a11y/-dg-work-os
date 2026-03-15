@@ -64,7 +64,7 @@ export function computeGPLHealth(data: GPLData | null | undefined, kpiData?: Rec
   const lossScore = losses === null ? 6 : losses < 20 ? 10 : losses < 25 ? 7 : losses < 30 ? 4 : 2;
 
   // Station Availability (20%)
-  const stationAvailPct = totalDerated > 0 ? (totalAvailable / totalDerated) * 100 : 0;
+  const stationAvailPct = totalDerated > 0 ? Math.min((totalAvailable / totalDerated) * 100, 100) : 0;
   const availScore = stationAvailPct > 80 ? 10 : stationAvailPct > 60 ? 6 : 3;
 
   // Collection Rate (15%)

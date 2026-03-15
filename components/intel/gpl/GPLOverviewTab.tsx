@@ -130,7 +130,7 @@ export function GPLOverviewTab({
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
-                        width: `${station.availability}%`,
+                        width: `${Math.min(station.availability, 100)}%`,
                         backgroundColor: getStatusColor(station.status)
                       }}
                     />
