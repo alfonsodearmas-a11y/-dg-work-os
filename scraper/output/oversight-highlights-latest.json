@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "generatedAt": "2026-03-14T06:32:11.215Z",
+    "generatedAt": "2026-03-15T06:42:44.711Z",
     "totalProjects": 400,
-    "analysisDate": "2026-03-14"
+    "analysisDate": "2026-03-15"
   },
   "dashboard": {
     "kpis": {
@@ -56,7 +56,7 @@
       "6…": null,
       "17% ( 8 )": null
     },
-    "scrapedAt": "2026-03-14T06:31:22.017Z"
+    "scrapedAt": "2026-03-15T06:41:55.378Z"
   },
   "summary": {
     "delayed": 0,
@@ -83,8 +83,8 @@
       "endDate": "2026-01-24",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 49,
-      "daysOverdueDisplay": "49 days overdue"
+      "daysOverdue": 50,
+      "daysOverdueDisplay": "50 days overdue"
     },
     {
       "id": "27715",
@@ -102,8 +102,8 @@
       "endDate": "2026-02-27",
       "hasImages": 3,
       "status": "Overdue",
-      "daysOverdue": 15,
-      "daysOverdueDisplay": "15 days overdue"
+      "daysOverdue": 16,
+      "daysOverdueDisplay": "16 days overdue"
     },
     {
       "id": "27349",
@@ -121,8 +121,8 @@
       "endDate": "2026-02-25",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 17,
-      "daysOverdueDisplay": "17 days overdue"
+      "daysOverdue": 18,
+      "daysOverdueDisplay": "18 days overdue"
     },
     {
       "id": "27359",
@@ -140,8 +140,8 @@
       "endDate": "2025-12-11",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 93,
-      "daysOverdueDisplay": "93 days overdue"
+      "daysOverdue": 94,
+      "daysOverdueDisplay": "94 days overdue"
     },
     {
       "id": "27605",
@@ -159,8 +159,8 @@
       "endDate": "2025-12-31",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 73,
-      "daysOverdueDisplay": "73 days overdue"
+      "daysOverdue": 74,
+      "daysOverdueDisplay": "74 days overdue"
     },
     {
       "id": "27608",
@@ -178,8 +178,8 @@
       "endDate": "2025-10-03",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 162,
-      "daysOverdueDisplay": "162 days overdue"
+      "daysOverdue": 163,
+      "daysOverdueDisplay": "163 days overdue"
     },
     {
       "id": "27522",
@@ -197,8 +197,8 @@
       "endDate": "2025-06-15",
       "hasImages": 3,
       "status": "Overdue",
-      "daysOverdue": 272,
-      "daysOverdueDisplay": "272 days overdue"
+      "daysOverdue": 273,
+      "daysOverdueDisplay": "273 days overdue"
     },
     {
       "id": "27615",
@@ -216,8 +216,8 @@
       "endDate": "2025-05-10",
       "hasImages": 16,
       "status": "Overdue",
-      "daysOverdue": 308,
-      "daysOverdueDisplay": "308 days overdue"
+      "daysOverdue": 309,
+      "daysOverdueDisplay": "309 days overdue"
     },
     {
       "id": "27614",
@@ -235,8 +235,8 @@
       "endDate": "2025-05-24",
       "hasImages": 5,
       "status": "Overdue",
-      "daysOverdue": 294,
-      "daysOverdueDisplay": "294 days overdue"
+      "daysOverdue": 295,
+      "daysOverdueDisplay": "295 days overdue"
     },
     {
       "id": "27364",
@@ -254,8 +254,8 @@
       "endDate": "2026-03-12",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 2,
-      "daysOverdueDisplay": "2 days overdue"
+      "daysOverdue": 3,
+      "daysOverdueDisplay": "3 days overdue"
     },
     {
       "id": "27616",
@@ -273,8 +273,8 @@
       "endDate": "2025-05-10",
       "hasImages": 18,
       "status": "Overdue",
-      "daysOverdue": 308,
-      "daysOverdueDisplay": "308 days overdue"
+      "daysOverdue": 309,
+      "daysOverdueDisplay": "309 days overdue"
     },
     {
       "id": "27617",
@@ -292,8 +292,8 @@
       "endDate": "2025-05-10",
       "hasImages": 14,
       "status": "Overdue",
-      "daysOverdue": 308,
-      "daysOverdueDisplay": "308 days overdue"
+      "daysOverdue": 309,
+      "daysOverdueDisplay": "309 days overdue"
     },
     {
       "id": "27656",
@@ -311,8 +311,8 @@
       "endDate": "2023-10-05",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 891,
-      "daysOverdueDisplay": "891 days overdue"
+      "daysOverdue": 892,
+      "daysOverdueDisplay": "892 days overdue"
     },
     {
       "id": "27657",
@@ -330,8 +330,8 @@
       "endDate": "2024-05-23",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 660,
-      "daysOverdueDisplay": "660 days overdue"
+      "daysOverdue": 661,
+      "daysOverdueDisplay": "661 days overdue"
     },
     {
       "id": "27406",
@@ -349,8 +349,8 @@
       "endDate": "2025-10-12",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 153,
-      "daysOverdueDisplay": "153 days overdue"
+      "daysOverdue": 154,
+      "daysOverdueDisplay": "154 days overdue"
     },
     {
       "id": "27407",
@@ -368,8 +368,8 @@
       "endDate": "2025-10-12",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 153,
-      "daysOverdueDisplay": "153 days overdue"
+      "daysOverdue": 154,
+      "daysOverdueDisplay": "154 days overdue"
     },
     {
       "id": "27420",
@@ -387,8 +387,8 @@
       "endDate": "2026-01-27",
       "hasImages": 20,
       "status": "Overdue",
-      "daysOverdue": 46,
-      "daysOverdueDisplay": "46 days overdue"
+      "daysOverdue": 47,
+      "daysOverdueDisplay": "47 days overdue"
     },
     {
       "id": "27692",
@@ -406,8 +406,8 @@
       "endDate": "2023-10-05",
       "hasImages": 5,
       "status": "Overdue",
-      "daysOverdue": 891,
-      "daysOverdueDisplay": "891 days overdue"
+      "daysOverdue": 892,
+      "daysOverdueDisplay": "892 days overdue"
     },
     {
       "id": "27693",
@@ -425,8 +425,8 @@
       "endDate": "2024-05-23",
       "hasImages": 6,
       "status": "Overdue",
-      "daysOverdue": 660,
-      "daysOverdueDisplay": "660 days overdue"
+      "daysOverdue": 661,
+      "daysOverdueDisplay": "661 days overdue"
     },
     {
       "id": "27426",
@@ -444,8 +444,8 @@
       "endDate": "2025-08-14",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 212,
-      "daysOverdueDisplay": "212 days overdue"
+      "daysOverdue": 213,
+      "daysOverdueDisplay": "213 days overdue"
     },
     {
       "id": "27447",
@@ -463,8 +463,8 @@
       "endDate": "2026-02-28",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 14,
-      "daysOverdueDisplay": "14 days overdue"
+      "daysOverdue": 15,
+      "daysOverdueDisplay": "15 days overdue"
     },
     {
       "id": "27469",
@@ -482,8 +482,8 @@
       "endDate": "2024-11-24",
       "hasImages": 6,
       "status": "Overdue",
-      "daysOverdue": 475,
-      "daysOverdueDisplay": "475 days overdue"
+      "daysOverdue": 476,
+      "daysOverdueDisplay": "476 days overdue"
     },
     {
       "id": "27398",
@@ -501,8 +501,8 @@
       "endDate": "2025-08-09",
       "hasImages": 1,
       "status": "Overdue",
-      "daysOverdue": 217,
-      "daysOverdueDisplay": "217 days overdue"
+      "daysOverdue": 218,
+      "daysOverdueDisplay": "218 days overdue"
     },
     {
       "id": "27331",
@@ -520,8 +520,8 @@
       "endDate": "2025-12-27",
       "hasImages": 6,
       "status": "Overdue",
-      "daysOverdue": 77,
-      "daysOverdueDisplay": "77 days overdue"
+      "daysOverdue": 78,
+      "daysOverdueDisplay": "78 days overdue"
     },
     {
       "id": "27348",
@@ -539,8 +539,8 @@
       "endDate": "2025-04-30",
       "hasImages": 1,
       "status": "Overdue",
-      "daysOverdue": 318,
-      "daysOverdueDisplay": "318 days overdue"
+      "daysOverdue": 319,
+      "daysOverdueDisplay": "319 days overdue"
     },
     {
       "id": "27531",
@@ -558,8 +558,8 @@
       "endDate": "2025-08-19",
       "hasImages": 4,
       "status": "Overdue",
-      "daysOverdue": 207,
-      "daysOverdueDisplay": "207 days overdue"
+      "daysOverdue": 208,
+      "daysOverdueDisplay": "208 days overdue"
     },
     {
       "id": "27534",
@@ -577,8 +577,8 @@
       "endDate": "2024-06-06",
       "hasImages": 1,
       "status": "Overdue",
-      "daysOverdue": 646,
-      "daysOverdueDisplay": "646 days overdue"
+      "daysOverdue": 647,
+      "daysOverdueDisplay": "647 days overdue"
     },
     {
       "id": "27535",
@@ -596,8 +596,8 @@
       "endDate": "2024-04-23",
       "hasImages": 61,
       "status": "Overdue",
-      "daysOverdue": 690,
-      "daysOverdueDisplay": "690 days overdue"
+      "daysOverdue": 691,
+      "daysOverdueDisplay": "691 days overdue"
     },
     {
       "id": "27577",
@@ -615,8 +615,8 @@
       "endDate": "2025-11-18",
       "hasImages": 0,
       "status": "Overdue",
-      "daysOverdue": 116,
-      "daysOverdueDisplay": "116 days overdue"
+      "daysOverdue": 117,
+      "daysOverdueDisplay": "117 days overdue"
     },
     {
       "id": "27515",
@@ -634,8 +634,8 @@
       "endDate": "2025-04-11",
       "hasImages": 4,
       "status": "Overdue",
-      "daysOverdue": 337,
-      "daysOverdueDisplay": "337 days overdue"
+      "daysOverdue": 338,
+      "daysOverdueDisplay": "338 days overdue"
     }
   ],
   "endingSoon": [
@@ -655,8 +655,8 @@
       "endDate": "2026-03-26",
       "hasImages": 14,
       "status": "Ending Soon",
-      "daysRemaining": 12,
-      "daysRemainingDisplay": "12 days remaining"
+      "daysRemaining": 11,
+      "daysRemainingDisplay": "11 days remaining"
     },
     {
       "id": "27463",
@@ -674,8 +674,8 @@
       "endDate": "2026-04-03",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 20,
-      "daysRemainingDisplay": "20 days remaining"
+      "daysRemaining": 19,
+      "daysRemainingDisplay": "19 days remaining"
     },
     {
       "id": "417",
@@ -693,8 +693,8 @@
       "endDate": "2026-03-31",
       "hasImages": 12,
       "status": "Ending Soon",
-      "daysRemaining": 17,
-      "daysRemainingDisplay": "17 days remaining"
+      "daysRemaining": 16,
+      "daysRemainingDisplay": "16 days remaining"
     },
     {
       "id": "27740",
@@ -712,8 +712,8 @@
       "endDate": "2026-03-28",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 14,
-      "daysRemainingDisplay": "14 days remaining"
+      "daysRemaining": 13,
+      "daysRemainingDisplay": "13 days remaining"
     },
     {
       "id": "27347",
@@ -731,8 +731,8 @@
       "endDate": "2026-03-31",
       "hasImages": 1,
       "status": "Ending Soon",
-      "daysRemaining": 17,
-      "daysRemainingDisplay": "17 days remaining"
+      "daysRemaining": 16,
+      "daysRemainingDisplay": "16 days remaining"
     },
     {
       "id": "27353",
@@ -750,8 +750,8 @@
       "endDate": "2026-03-31",
       "hasImages": 2,
       "status": "Ending Soon",
-      "daysRemaining": 17,
-      "daysRemainingDisplay": "17 days remaining"
+      "daysRemaining": 16,
+      "daysRemainingDisplay": "16 days remaining"
     },
     {
       "id": "27360",
@@ -769,8 +769,8 @@
       "endDate": "2026-03-31",
       "hasImages": 1,
       "status": "Ending Soon",
-      "daysRemaining": 17,
-      "daysRemainingDisplay": "17 days remaining"
+      "daysRemaining": 16,
+      "daysRemainingDisplay": "16 days remaining"
     },
     {
       "id": "27367",
@@ -788,8 +788,8 @@
       "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 17,
-      "daysRemainingDisplay": "17 days remaining"
+      "daysRemaining": 16,
+      "daysRemainingDisplay": "16 days remaining"
     },
     {
       "id": "27376",
@@ -807,8 +807,8 @@
       "endDate": "2026-03-31",
       "hasImages": 1,
       "status": "Ending Soon",
-      "daysRemaining": 17,
-      "daysRemainingDisplay": "17 days remaining"
+      "daysRemaining": 16,
+      "daysRemainingDisplay": "16 days remaining"
     },
     {
       "id": "27382",
@@ -826,8 +826,8 @@
       "endDate": "2026-04-10",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 27,
-      "daysRemainingDisplay": "27 days remaining"
+      "daysRemaining": 26,
+      "daysRemainingDisplay": "26 days remaining"
     },
     {
       "id": "27424",
@@ -845,8 +845,8 @@
       "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 17,
-      "daysRemainingDisplay": "17 days remaining"
+      "daysRemaining": 16,
+      "daysRemainingDisplay": "16 days remaining"
     },
     {
       "id": "27429",
@@ -864,8 +864,8 @@
       "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 17,
-      "daysRemainingDisplay": "17 days remaining"
+      "daysRemaining": 16,
+      "daysRemainingDisplay": "16 days remaining"
     },
     {
       "id": "27442",
@@ -883,8 +883,8 @@
       "endDate": "2026-03-28",
       "hasImages": 5,
       "status": "Ending Soon",
-      "daysRemaining": 14,
-      "daysRemainingDisplay": "14 days remaining"
+      "daysRemaining": 13,
+      "daysRemainingDisplay": "13 days remaining"
     },
     {
       "id": "27456",
@@ -902,8 +902,8 @@
       "endDate": "2026-04-09",
       "hasImages": 5,
       "status": "Ending Soon",
-      "daysRemaining": 26,
-      "daysRemainingDisplay": "26 days remaining"
+      "daysRemaining": 25,
+      "daysRemainingDisplay": "25 days remaining"
     },
     {
       "id": "27926",
@@ -921,8 +921,8 @@
       "endDate": "2026-04-10",
       "hasImages": 2,
       "status": "Ending Soon",
-      "daysRemaining": 27,
-      "daysRemainingDisplay": "27 days remaining"
+      "daysRemaining": 26,
+      "daysRemainingDisplay": "26 days remaining"
     },
     {
       "id": "27169",
@@ -940,8 +940,8 @@
       "endDate": "2026-03-30",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 16,
-      "daysRemainingDisplay": "16 days remaining"
+      "daysRemaining": 15,
+      "daysRemainingDisplay": "15 days remaining"
     },
     {
       "id": "27814",
@@ -959,8 +959,8 @@
       "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "Ending Soon",
-      "daysRemaining": 17,
-      "daysRemainingDisplay": "17 days remaining"
+      "daysRemaining": 16,
+      "daysRemainingDisplay": "16 days remaining"
     },
     {
       "id": "27822",
@@ -978,8 +978,8 @@
       "endDate": "2026-03-30",
       "hasImages": 3,
       "status": "Ending Soon",
-      "daysRemaining": 16,
-      "daysRemainingDisplay": "16 days remaining"
+      "daysRemaining": 15,
+      "daysRemainingDisplay": "15 days remaining"
     }
   ],
   "atRisk": [
@@ -999,8 +999,8 @@
       "endDate": "2026-06-10",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 88,
-      "daysRemainingDisplay": "88 days remaining",
+      "daysRemaining": 87,
+      "daysRemainingDisplay": "87 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1019,8 +1019,8 @@
       "endDate": "2026-03-28",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 14,
-      "daysRemainingDisplay": "14 days remaining",
+      "daysRemaining": 13,
+      "daysRemainingDisplay": "13 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1039,8 +1039,8 @@
       "endDate": "2026-06-10",
       "hasImages": 26,
       "status": "At Risk",
-      "daysRemaining": 88,
-      "daysRemainingDisplay": "88 days remaining",
+      "daysRemaining": 87,
+      "daysRemainingDisplay": "87 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1059,8 +1059,8 @@
       "endDate": "2026-04-30",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 47,
-      "daysRemainingDisplay": "47 days remaining",
+      "daysRemaining": 46,
+      "daysRemainingDisplay": "46 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1079,8 +1079,8 @@
       "endDate": "2026-03-31",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 17,
-      "daysRemainingDisplay": "17 days remaining",
+      "daysRemaining": 16,
+      "daysRemainingDisplay": "16 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1099,8 +1099,8 @@
       "endDate": "2026-04-30",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 47,
-      "daysRemainingDisplay": "47 days remaining",
+      "daysRemaining": 46,
+      "daysRemainingDisplay": "46 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1119,8 +1119,8 @@
       "endDate": "2026-05-12",
       "hasImages": 2,
       "status": "At Risk",
-      "daysRemaining": 59,
-      "daysRemainingDisplay": "59 days remaining",
+      "daysRemaining": 58,
+      "daysRemainingDisplay": "58 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1139,8 +1139,8 @@
       "endDate": "2026-05-12",
       "hasImages": 4,
       "status": "At Risk",
-      "daysRemaining": 59,
-      "daysRemainingDisplay": "59 days remaining",
+      "daysRemaining": 58,
+      "daysRemainingDisplay": "58 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1159,8 +1159,8 @@
       "endDate": "2026-05-01",
       "hasImages": 7,
       "status": "At Risk",
-      "daysRemaining": 48,
-      "daysRemainingDisplay": "48 days remaining",
+      "daysRemaining": 47,
+      "daysRemainingDisplay": "47 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1179,8 +1179,8 @@
       "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 17,
-      "daysRemainingDisplay": "17 days remaining",
+      "daysRemaining": 16,
+      "daysRemainingDisplay": "16 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1199,8 +1199,8 @@
       "endDate": "2026-04-10",
       "hasImages": 2,
       "status": "At Risk",
-      "daysRemaining": 27,
-      "daysRemainingDisplay": "27 days remaining",
+      "daysRemaining": 26,
+      "daysRemainingDisplay": "26 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1219,8 +1219,8 @@
       "endDate": "2026-04-23",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 40,
-      "daysRemainingDisplay": "40 days remaining",
+      "daysRemaining": 39,
+      "daysRemainingDisplay": "39 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1239,8 +1239,8 @@
       "endDate": "2026-03-31",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 17,
-      "daysRemainingDisplay": "17 days remaining",
+      "daysRemaining": 16,
+      "daysRemainingDisplay": "16 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1259,8 +1259,8 @@
       "endDate": "2026-04-26",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 43,
-      "daysRemainingDisplay": "43 days remaining",
+      "daysRemaining": 42,
+      "daysRemainingDisplay": "42 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1279,8 +1279,8 @@
       "endDate": "2026-04-30",
       "hasImages": 1,
       "status": "At Risk",
-      "daysRemaining": 47,
-      "daysRemainingDisplay": "47 days remaining",
+      "daysRemaining": 46,
+      "daysRemainingDisplay": "46 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1299,8 +1299,8 @@
       "endDate": "2026-03-30",
       "hasImages": 3,
       "status": "At Risk",
-      "daysRemaining": 16,
-      "daysRemainingDisplay": "16 days remaining",
+      "daysRemaining": 15,
+      "daysRemainingDisplay": "15 days remaining",
       "riskReason": "Low completion with approaching deadline"
     },
     {
@@ -1319,8 +1319,8 @@
       "endDate": "2026-05-30",
       "hasImages": 0,
       "status": "At Risk",
-      "daysRemaining": 77,
-      "daysRemainingDisplay": "77 days remaining",
+      "daysRemaining": 76,
+      "daysRemainingDisplay": "76 days remaining",
       "riskReason": "Low completion with approaching deadline"
     }
   ],
