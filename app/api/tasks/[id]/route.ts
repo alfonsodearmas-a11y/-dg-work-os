@@ -14,6 +14,7 @@ const patchTaskSchema = z.object({
   agency: z.string().optional(),
   role: z.string().optional(),
   blocked_reason: z.string().nullable().optional(),
+  owner_user_id: z.string().uuid().optional(),
 });
 
 export const PATCH = withErrorHandler(async (
@@ -55,6 +56,10 @@ export const PATCH = withErrorHandler(async (
   if (data.agency !== undefined) updates.agency = data.agency;
   if (data.role !== undefined) updates.role = data.role;
   if (data.blocked_reason !== undefined) updates.blocked_reason = data.blocked_reason;
+  if (data.owner_user_id !== undefined) {
+    updates.owner_user_id = data.owner_user_id;
+    updates.assigned_by_user_id = session.user.id;
+  }
 
   if (data.status === 'done' && task.status !== 'done') {
     updates.completed_at = new Date().toISOString();
@@ -99,6 +104,15 @@ export const PATCH = withErrorHandler(async (
       action: 'due_date_changed',
       old_value: null,
       new_value: data.due_date || 'cleared',
+    });
+  }
+  if (data.owner_user_id !== undefined && data.owner_user_id !== task.owner_user_id) {
+    activityEntries.push({
+      task_id: id,
+      user_id: session.user.id,
+      action: 'assignee_changed',
+      old_value: task.owner_user_id,
+      new_value: owner?.name || data.owner_user_id,
     });
   }
 

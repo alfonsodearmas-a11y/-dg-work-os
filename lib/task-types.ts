@@ -31,6 +31,8 @@ export interface TaskUpdate {
   agency?: string | null;
   role?: string | null;
   blocked_reason?: string | null;
+  owner_user_id?: string;
+  owner_name?: string | null;
 }
 
 export type TasksByStatus = {

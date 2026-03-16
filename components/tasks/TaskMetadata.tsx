@@ -129,8 +129,13 @@ export function TaskMetadata({
                 {users.map(u => (
                   <button
                     key={u.id}
-                    onClick={() => { onOpenDropdownChange(null); /* can't change assignee via TaskUpdate currently, but show for display */ }}
-                    className="w-full px-3 py-2 text-sm text-left text-slate-200 hover:bg-navy-900 transition-colors"
+                    onClick={() => {
+                      onOpenDropdownChange(null);
+                      if (u.id !== task.owner_user_id) {
+                        onInlineUpdate({ owner_user_id: u.id, owner_name: u.name }, 'assignee');
+                      }
+                    }}
+                    className={`w-full px-3 py-2 text-sm text-left hover:bg-navy-900 transition-colors ${u.id === task.owner_user_id ? 'text-gold-500' : 'text-slate-200'}`}
                     style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
                   >
                     {u.name}
