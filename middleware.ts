@@ -8,6 +8,7 @@ export default auth((req) => {
   if (
     pathname === '/login' ||
     pathname === '/403' ||
+    pathname === '/set-password' ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/push/') ||
     pathname.startsWith('/api/notifications/generate') ||

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { sendInviteEmail } from '@/lib/invite-email';
@@ -94,19 +95,30 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
       return NextResponse.json({ error: 'User has already signed in' }, { status: 400 });
     }
 
+    // Generate a fresh invite token
+    const inviteToken = crypto.randomBytes(32).toString('hex');
+    const tokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Persist token BEFORE sending email — if email fails, token is harmless; if DB fails, no email sent
+    await supabaseAdmin.from('users').update({
+      invited_at: new Date().toISOString(),
+      invite_token: inviteToken,
+      invite_token_expires_at: tokenExpiry,
+    }).eq('id', id);
+
     const emailResult = await sendInviteEmail({
       to: user.email,
       name: user.name || user.email,
       role: user.role,
       agency: user.agency,
       inviterName: session.user.name || 'The Director General',
+      inviteToken,
     });
 
     if (!emailResult.success) {
       return NextResponse.json({ error: emailResult.error || 'Failed to send email' }, { status: 500 });
     }
 
-    await supabaseAdmin.from('users').update({ invited_at: new Date().toISOString() }).eq('id', id);
     await logAudit(session.user.id, id, 'resend_invite', { email: user.email });
     return NextResponse.json({ success: true, message: `Invite email resent to ${user.email}` });
   }

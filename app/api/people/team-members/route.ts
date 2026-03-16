@@ -110,6 +110,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     role: newUser.role,
     agency: newUser.agency,
     inviterName: session.user.name || 'The Director General',
+    inviteToken: null,
   }).catch(() => {});
 
   await logActivity({

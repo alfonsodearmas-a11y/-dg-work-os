@@ -876,7 +876,7 @@ function InviteModal({
         </div>
 
         <p className="text-xs text-navy-600">
-          The user will appear as &quot;pending&quot; until they sign in with their Google account.
+          The user will receive an invite email and appear as &quot;pending&quot; until they sign in.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -952,6 +952,14 @@ function InviteModal({
               </select>
             </div>
           )}
+
+          {/* Password info */}
+          <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-navy-950 border border-navy-800">
+            <Lock className="h-3.5 w-3.5 text-gold-500 mt-0.5 shrink-0" />
+            <p className="text-[11px] text-navy-600 leading-relaxed">
+              A secure link will be emailed so the user can set their own password. They can also sign in with Google.
+            </p>
+          </div>
 
           {/* Module Access */}
           {nonDefaultModules.length > 0 && (

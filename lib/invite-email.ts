@@ -7,15 +7,44 @@ interface SendInviteParams {
   role: string;
   agency: string | null;
   inviterName: string;
+  /** If provided, email includes a "Set Your Password" link. Otherwise, Google sign-in only. */
+  inviteToken: string | null;
 }
 
-export async function sendInviteEmail({ to, name, role, agency, inviterName }: SendInviteParams) {
+export async function sendInviteEmail({ to, name, role, agency, inviterName, inviteToken }: SendInviteParams) {
   const baseUrl = process.env.NEXTAUTH_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
     : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
   const loginUrl = `${baseUrl}/login`;
   const roleLabel = ROLE_LABELS[role as keyof typeof ROLE_LABELS] || role;
   const agencyLabel = agency ? ` (${agency.toUpperCase()})` : '';
+
+  const setPasswordUrl = inviteToken ? `${baseUrl}/set-password?token=${inviteToken}` : null;
+
+  const ctaSection = setPasswordUrl
+    ? `
+        <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
+          Set up your password to get started. You can also sign in with Google.
+        </p>
+        <div style="text-align: center; margin: 0 0 16px;">
+          <a href="${setPasswordUrl}" style="display: inline-block; padding: 12px 32px; background: #d4af37; color: #0a1628; font-weight: 600; font-size: 14px; text-decoration: none; border-radius: 8px;">
+            Set Your Password
+          </a>
+        </div>
+        <div style="text-align: center; margin: 0 0 24px;">
+          <a href="${loginUrl}" style="color: #64748b; font-size: 12px; text-decoration: underline;">
+            Or sign in with Google
+          </a>
+        </div>`
+    : `
+        <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
+          Sign in with your Google Workspace account to get started.
+        </p>
+        <div style="text-align: center; margin: 0 0 24px;">
+          <a href="${loginUrl}" style="display: inline-block; padding: 12px 32px; background: #d4af37; color: #0a1628; font-weight: 600; font-size: 14px; text-decoration: none; border-radius: 8px;">
+            Sign In to DG Work OS
+          </a>
+        </div>`;
 
   const html = `
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #0a1628; border: 1px solid #2d3a52; border-radius: 12px; overflow: hidden;">
@@ -29,23 +58,19 @@ export async function sendInviteEmail({ to, name, role, agency, inviterName }: S
           ${inviterName} has invited you to join <strong style="color: #e2e8f0;">DG Work OS</strong> as
           <strong style="color: #d4af37;">${roleLabel}${agencyLabel}</strong>.
         </p>
-        <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
-          Sign in with your Google Workspace account to get started.
-        </p>
-        <div style="text-align: center; margin: 0 0 24px;">
-          <a href="${loginUrl}" style="display: inline-block; padding: 12px 32px; background: #d4af37; color: #0a1628; font-weight: 600; font-size: 14px; text-decoration: none; border-radius: 8px;">
-            Sign In to DG Work OS
-          </a>
-        </div>
+        ${ctaSection}
         <p style="color: #4a5568; font-size: 12px; line-height: 1.5; margin: 0; border-top: 1px solid #2d3a52; padding-top: 16px;">
-          Use the same Google account associated with <strong>${to}</strong>.
-          If you did not expect this invite, you can safely ignore this email.
+          ${setPasswordUrl ? 'This link expires in 7 days. ' : ''}If you did not expect this invite, you can safely ignore this email.
         </p>
       </div>
     </div>
   `;
 
-  const text = `Hello ${name},\n\n${inviterName} has invited you to DG Work OS as ${roleLabel}${agencyLabel}.\n\nSign in at: ${loginUrl}\n\nUse your Google Workspace account (${to}).`;
+  const textCta = setPasswordUrl
+    ? `Set your password at: ${setPasswordUrl}\n\nOr sign in with Google at: ${loginUrl}`
+    : `Sign in at: ${loginUrl}\n\nUse your Google Workspace account (${to}).`;
+
+  const text = `Hello ${name},\n\n${inviterName} has invited you to DG Work OS as ${roleLabel}${agencyLabel}.\n\n${textCta}`;
 
   return sendEmail({
     to,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { insertNotification } from '@/lib/notifications';
@@ -35,7 +35,6 @@ const inviteSchema = z.object({
   name: z.string().min(1),
   role: z.enum(ALL_INVITE_ROLES),
   agency: z.enum(VALID_AGENCIES).nullable().optional(),
-  password: z.string().min(8).optional(),
 }).refine(
   (d) => d.role !== 'agency_admin' || !!d.agency,
   { message: 'Agency is required for Agency Manager role', path: ['agency'] },
@@ -52,7 +51,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
   }
 
-  const { email, name, role, agency, password } = parsed.data;
+  const { email, name, role, agency } = parsed.data;
   const moduleGrants: string[] = Array.isArray(body.moduleGrants) ? body.moduleGrants : [];
 
   // Only DG (super admin) can invite senior roles (minister, ps, dg)
@@ -73,8 +72,9 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   // Derive formal_title from role, or use custom title if provided
   const formalTitle: string = body.formal_title?.trim() || ROLE_LABELS[role as Role] || role;
 
-  // Hash password if provided (enables email/password login)
-  const passwordHash = password ? await bcrypt.hash(password, 12) : null;
+  // Generate secure invite token for self-service password setup (7-day expiry)
+  const inviteToken = crypto.randomBytes(32).toString('hex');
+  const tokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const { data: newUser, error: dbError } = await supabaseAdmin
     .from('users')
@@ -88,7 +88,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       status: 'pending',
       invited_by: session.user.id,
       invited_at: new Date().toISOString(),
-      ...(passwordHash && { password_hash: passwordHash }),
+      invite_token: inviteToken,
+      invite_token_expires_at: tokenExpiry,
     })
     .select('id, email, name, role, formal_title, agency, status')
     .single();
@@ -97,13 +98,14 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     return NextResponse.json({ error: dbError.message }, { status: 500 });
   }
 
-  await sendInviteEmail({
+  const emailResult = await sendInviteEmail({
     to: newUser.email,
     name: newUser.name,
     role: newUser.role,
     agency: newUser.agency,
     inviterName: session.user.name || 'The Director General',
-  }).catch(() => {});
+    inviteToken,
+  }).catch(() => ({ success: false, error: 'Email send failed' }));
 
   // Grant explicit module access
   if (moduleGrants.length > 0) {
@@ -127,5 +129,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     source_module: 'admin',
   });
 
-  return NextResponse.json({ user: newUser }, { status: 201 });
+  return NextResponse.json({
+    user: newUser,
+    ...(!emailResult.success && { warning: 'User created but invite email failed to send' }),
+  }, { status: 201 });
 });
