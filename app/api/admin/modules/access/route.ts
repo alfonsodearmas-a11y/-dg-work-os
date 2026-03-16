@@ -3,10 +3,10 @@ import { requireRole } from '@/lib/auth-helpers';
 import {
   grantModuleAccess,
   revokeModuleAccess,
-  getUserModuleGrants,
+  getUserModuleOverrides,
 } from '@/lib/modules/access';
 
-// GET /api/admin/modules/access?userId=xxx — get a user's explicit module grants
+// GET /api/admin/modules/access?userId=xxx — get a user's module overrides
 export async function GET(req: NextRequest) {
   const result = await requireRole(['dg', 'minister', 'ps']);
   if (result instanceof NextResponse) return result;
@@ -16,8 +16,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'userId is required' }, { status: 400 });
   }
 
-  const grants = await getUserModuleGrants(userId);
-  return NextResponse.json({ grants });
+  const overrides = await getUserModuleOverrides(userId);
+  const grants = overrides.filter(o => o.access_type === 'grant').map(o => o.slug);
+
+  return NextResponse.json({ grants, overrides });
 }
 
 // POST /api/admin/modules/access — grant module access (DG only)
@@ -35,7 +37,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to grant access' }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true });
+  const overrides = await getUserModuleOverrides(userId);
+  return NextResponse.json({ success: true, overrides });
 }
 
 // DELETE /api/admin/modules/access — revoke module access (DG only)
@@ -53,5 +56,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to revoke access' }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true });
+  const overrides = await getUserModuleOverrides(userId);
+  return NextResponse.json({ success: true, overrides });
 }

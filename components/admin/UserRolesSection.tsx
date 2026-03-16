@@ -1,16 +1,12 @@
 'use client';
 
 import { Spinner } from '@/components/ui/Spinner';
+import { RotateCcw } from 'lucide-react';
 import { ROLE_LABELS, ROLE_COLORS, ROLE_OPTIONS, MINISTRY_ROLES } from '@/lib/people-types';
+import type { ModuleRecord, ModuleOverride } from '@/lib/module-types';
 
-export interface ModuleInfo {
-  id: string;
-  slug: string;
-  name: string;
-  icon: string | null;
-  default_roles: string[];
-  is_active: boolean;
-}
+export type ModuleInfo = Pick<ModuleRecord, 'id' | 'slug' | 'name' | 'icon' | 'default_roles' | 'is_active'>;
+export type { ModuleOverride as ModuleOverrideInfo };
 
 export interface UserRolesUser {
   id: string;
@@ -97,19 +93,23 @@ export function UserRolesSection({
 interface ModuleAccessSectionProps {
   user: UserRolesUser;
   allModules: ModuleInfo[];
-  userModuleGrants: string[];
+  moduleOverrides: ModuleOverride[];
   modulesLoading: boolean;
   moduleToggling: string | null;
+  resettingDefaults: boolean;
   onToggleModuleAccess: (moduleSlug: string, currentlyHasAccess: boolean) => void;
+  onResetToDefaults: () => void;
 }
 
 export function ModuleAccessSection({
   user,
   allModules,
-  userModuleGrants,
+  moduleOverrides,
   modulesLoading,
   moduleToggling,
+  resettingDefaults,
   onToggleModuleAccess,
+  onResetToDefaults,
 }: ModuleAccessSectionProps) {
   if (modulesLoading) {
     return (
@@ -119,51 +119,86 @@ export function ModuleAccessSection({
     );
   }
 
-  return (
-    <div className="space-y-1">
-      {allModules
-        .filter(m => m.is_active)
-        .map(mod => {
-          const isDefaultForRole = mod.default_roles.includes(user.role);
-          const hasExplicitGrant = userModuleGrants.includes(mod.slug);
-          const hasAccess = isDefaultForRole || hasExplicitGrant;
-          const isToggling = moduleToggling === mod.slug;
+  const overrideMap = new Map(moduleOverrides.map(o => [o.slug, o.access_type]));
+  const hasAnyOverrides = moduleOverrides.length > 0;
 
-          return (
-            <label
-              key={mod.slug}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                hasAccess ? 'bg-gold-500/5' : 'hover:bg-navy-800/30'
-              } ${isToggling ? 'opacity-50' : ''}`}
-            >
-              <input
-                type="checkbox"
-                checked={hasAccess}
-                onChange={() => {
-                  if (isDefaultForRole && !hasExplicitGrant) {
-                    // Can't revoke default role access via this UI
-                    return;
-                  }
-                  onToggleModuleAccess(mod.slug, hasExplicitGrant);
-                }}
-                disabled={isToggling || (isDefaultForRole && !hasExplicitGrant)}
-                className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer disabled:cursor-not-allowed"
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-white">{mod.name}</p>
-                {isDefaultForRole && (
-                  <p className="text-[10px] text-gold-500">Default for {ROLE_LABELS[user.role as keyof typeof ROLE_LABELS] || user.role}</p>
+  return (
+    <div className="space-y-2">
+      {/* Reset to Defaults button */}
+      {hasAnyOverrides && (
+        <button
+          onClick={onResetToDefaults}
+          disabled={resettingDefaults}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-amber-400 hover:bg-amber-500/10 transition-colors disabled:opacity-50"
+        >
+          {resettingDefaults ? (
+            <Spinner size="sm" className="border-amber-400 shrink-0" />
+          ) : (
+            <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+          )}
+          Reset to Role Defaults
+        </button>
+      )}
+
+      <div className="space-y-1">
+        {allModules
+          .filter(m => m.is_active)
+          .map(mod => {
+            const isDefaultForRole = mod.default_roles.includes(user.role);
+            const override = overrideMap.get(mod.slug);
+            const hasExplicitGrant = override === 'grant';
+            const hasExplicitDeny = override === 'deny';
+            const hasAccess = hasExplicitDeny ? false : (hasExplicitGrant || isDefaultForRole);
+            const isToggling = moduleToggling === mod.slug;
+
+            // Determine label and color
+            let labelText = '';
+            let labelColor = '';
+            if (hasExplicitDeny && isDefaultForRole) {
+              labelText = 'Access revoked (override)';
+              labelColor = 'text-red-400';
+            } else if (hasExplicitGrant && !isDefaultForRole) {
+              labelText = 'Access granted (override)';
+              labelColor = 'text-emerald-400';
+            } else if (hasExplicitGrant && isDefaultForRole) {
+              // Redundant grant on a default module — treat as override
+              labelText = 'Explicitly granted';
+              labelColor = 'text-emerald-400';
+            } else if (isDefaultForRole) {
+              labelText = `Default for ${ROLE_LABELS[user.role as keyof typeof ROLE_LABELS] || user.role}`;
+              labelColor = 'text-gold-500';
+            }
+            // Non-default, no override = no label, no access
+
+            return (
+              <label
+                key={mod.slug}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                  hasAccess ? 'bg-gold-500/5' : hasExplicitDeny ? 'bg-red-500/5' : 'hover:bg-navy-800/30'
+                } ${isToggling ? 'opacity-50' : ''}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={hasAccess}
+                  onChange={() => onToggleModuleAccess(mod.slug, hasAccess)}
+                  disabled={isToggling}
+                  className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer disabled:cursor-not-allowed"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm ${hasAccess ? 'text-white' : hasExplicitDeny ? 'text-slate-500 line-through' : 'text-slate-400'}`}>
+                    {mod.name}
+                  </p>
+                  {labelText && (
+                    <p className={`text-[10px] ${labelColor}`}>{labelText}</p>
+                  )}
+                </div>
+                {isToggling && (
+                  <Spinner size="sm" className="shrink-0" />
                 )}
-                {hasExplicitGrant && !isDefaultForRole && (
-                  <p className="text-[10px] text-green-400">Explicitly granted</p>
-                )}
-              </div>
-              {isToggling && (
-                <Spinner size="sm" className="shrink-0" />
-              )}
-            </label>
-          );
-        })}
+              </label>
+            );
+          })}
+      </div>
     </div>
   );
 }

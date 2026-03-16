@@ -10,6 +10,7 @@ import { UserProfileSection } from './UserProfileSection';
 import { UserRolesSection, ModuleAccessSection } from './UserRolesSection';
 import { UserActivitySection } from './UserActivitySection';
 import type { ModuleInfo } from './UserRolesSection';
+import type { ModuleOverride } from '@/lib/module-types';
 import type { AuditEntry } from './UserActivitySection';
 import { UserCheck, UserX, Clock } from 'lucide-react';
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/people-types';
@@ -68,9 +69,10 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
 
   // Module access state
   const [allModules, setAllModules] = useState<ModuleInfo[]>([]);
-  const [userModuleGrants, setUserModuleGrants] = useState<string[]>([]);
+  const [moduleOverrides, setModuleOverrides] = useState<ModuleOverride[]>([]);
   const [modulesLoading, setModulesLoading] = useState(false);
   const [moduleToggling, setModuleToggling] = useState<string | null>(null);
+  const [resettingDefaults, setResettingDefaults] = useState(false);
 
   const isSelf = user?.id === currentUserId;
   const status = user?.status || (user?.is_active ? 'active' : 'inactive');
@@ -94,12 +96,12 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
     }
   }, [user]);
 
-  // Fetch modules + user grants
+  // Fetch modules + user overrides
   const fetchModuleAccess = useCallback(async () => {
     if (!user || !isDG) return;
     setModulesLoading(true);
     try {
-      const [modulesRes, grantsRes] = await Promise.all([
+      const [modulesRes, overridesRes] = await Promise.all([
         fetch('/api/admin/modules'),
         fetch(`/api/admin/modules/access?userId=${user.id}`),
       ]);
@@ -107,9 +109,9 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
         const data = await modulesRes.json();
         setAllModules(data.modules || []);
       }
-      if (grantsRes.ok) {
-        const data = await grantsRes.json();
-        setUserModuleGrants(data.grants || []);
+      if (overridesRes.ok) {
+        const data = await overridesRes.json();
+        setModuleOverrides(data.overrides || []);
       }
     } catch {}
     setModulesLoading(false);
@@ -129,11 +131,8 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
         body: JSON.stringify({ userId: user.id, moduleSlug }),
       });
       if (res.ok) {
-        if (currentlyHasAccess) {
-          setUserModuleGrants(prev => prev.filter(s => s !== moduleSlug));
-        } else {
-          setUserModuleGrants(prev => [...prev, moduleSlug]);
-        }
+        const data = await res.json();
+        setModuleOverrides(data.overrides || []);
         showToast(
           currentlyHasAccess ? `Revoked access to ${moduleSlug}` : `Granted access to ${moduleSlug}`,
           'success'
@@ -145,6 +144,27 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
       showToast('Failed to update module access', 'error');
     }
     setModuleToggling(null);
+  };
+
+  const resetToDefaults = async () => {
+    if (!user) return;
+    setResettingDefaults(true);
+    try {
+      const res = await fetch('/api/admin/modules/access/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      if (res.ok) {
+        setModuleOverrides([]);
+        showToast('Module access reset to role defaults', 'success');
+      } else {
+        showToast('Failed to reset module access', 'error');
+      }
+    } catch {
+      showToast('Failed to reset module access', 'error');
+    }
+    setResettingDefaults(false);
   };
 
   // Fetch audit log
@@ -375,10 +395,12 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
               <ModuleAccessSection
                 user={user}
                 allModules={allModules}
-                userModuleGrants={userModuleGrants}
+                moduleOverrides={moduleOverrides}
                 modulesLoading={modulesLoading}
                 moduleToggling={moduleToggling}
+                resettingDefaults={resettingDefaults}
                 onToggleModuleAccess={toggleModuleAccess}
+                onResetToDefaults={resetToDefaults}
               />
             </Section>
           )}

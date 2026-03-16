@@ -1,24 +1,43 @@
 import { supabaseAdmin } from '@/lib/db';
 import { auth, type Role } from '@/lib/auth';
 import { NextResponse } from 'next/server';
+import type { ModuleRecord, ModuleOverride } from '@/lib/module-types';
 
-export interface ModuleRecord {
-  id: string;
-  slug: string;
-  name: string;
-  description: string | null;
-  icon: string | null;
-  default_roles: string[];
-  is_active: boolean;
-  sort_order: number;
-}
+export type { ModuleRecord, ModuleOverride };
 
 const FULL_ACCESS_ROLES: Role[] = ['dg', 'minister', 'ps'];
 
 /**
+ * Look up a module by slug and determine if it's a role default for the given user.
+ * Shared by grantModuleAccess and revokeModuleAccess.
+ */
+async function resolveModuleAndRole(userId: string, moduleSlug: string) {
+  const { data: mod } = await supabaseAdmin
+    .from('modules')
+    .select('id, default_roles')
+    .eq('slug', moduleSlug)
+    .single();
+
+  if (!mod) return null;
+
+  const { data: user } = await supabaseAdmin
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .single();
+
+  const role = (user as { role: string } | null)?.role;
+  const isDefault = !!role && (mod.default_roles as string[]).includes(role);
+
+  return { mod: mod as { id: string; default_roles: string[] }, isDefault };
+}
+
+/**
  * Get all modules the user can access.
  * Ministry roles (DG, Minister, PS) always get ALL active modules.
- * Others get modules where their role is in default_roles OR there's an explicit grant.
+ * Others get modules where:
+ *   - their role is in default_roles AND there is no 'deny' override, OR
+ *   - there is an explicit 'grant' override
  */
 export async function getUserModules(userId: string, userRole: Role): Promise<string[]> {
   // Ministry roles see everything active
@@ -40,21 +59,24 @@ export async function getUserModules(userId: string, userRole: Role): Promise<st
 
   if (!allModules || allModules.length === 0) return [];
 
-  // Fetch explicit grants for this user
-  const { data: grants } = await supabaseAdmin
+  // Fetch all overrides for this user (grants AND denials)
+  const { data: overrides } = await supabaseAdmin
     .from('user_module_access')
-    .select('module_id')
+    .select('module_id, access_type')
     .eq('user_id', userId);
 
-  const grantedModuleIds = new Set((grants || []).map((g: { module_id: string }) => g.module_id));
+  const overrideMap = new Map<string, string>();
+  for (const o of (overrides || []) as { module_id: string; access_type: string }[]) {
+    overrideMap.set(o.module_id, o.access_type);
+  }
 
-  // A user can access a module if:
-  // (a) their role is in the module's default_roles, OR
-  // (b) they have an explicit grant in user_module_access
   return allModules
-    .filter((m: { id: string; slug: string; default_roles: string[] }) =>
-      m.default_roles.includes(userRole) || grantedModuleIds.has(m.id)
-    )
+    .filter((m: { id: string; slug: string; default_roles: string[] }) => {
+      const override = overrideMap.get(m.id);
+      if (override === 'deny') return false;
+      if (override === 'grant') return true;
+      return m.default_roles.includes(userRole);
+    })
     .map((m: { slug: string }) => m.slug);
 }
 
@@ -63,7 +85,6 @@ export async function getUserModules(userId: string, userRole: Role): Promise<st
  */
 export async function canAccessModule(userId: string, userRole: Role, moduleSlug: string): Promise<boolean> {
   if (FULL_ACCESS_ROLES.includes(userRole)) {
-    // Ministry roles can access any active module
     const { data } = await supabaseAdmin
       .from('modules')
       .select('id')
@@ -73,7 +94,6 @@ export async function canAccessModule(userId: string, userRole: Role, moduleSlug
     return !!data;
   }
 
-  // Check if module exists and is active
   const { data: mod } = await supabaseAdmin
     .from('modules')
     .select('id, default_roles')
@@ -83,25 +103,25 @@ export async function canAccessModule(userId: string, userRole: Role, moduleSlug
 
   if (!mod) return false;
 
-  // Check default role access
-  if ((mod.default_roles as string[]).includes(userRole)) return true;
-
-  // Check explicit grant
-  const { data: grant } = await supabaseAdmin
+  const { data: override } = await supabaseAdmin
     .from('user_module_access')
-    .select('id')
+    .select('access_type')
     .eq('user_id', userId)
     .eq('module_id', mod.id)
     .single();
 
-  return !!grant;
+  if (override) {
+    return (override as { access_type: string }).access_type === 'grant';
+  }
+
+  return (mod.default_roles as string[]).includes(userRole);
 }
 
 /**
  * Require module access in an API route. Returns 403 if denied.
  */
 export async function requireModuleAccess(moduleSlug: string) {
-  const session = await auth(); // TODO: migrate to requireRole()
+  const session = await auth();
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
@@ -127,84 +147,126 @@ export async function getAllModules(): Promise<ModuleRecord[]> {
 }
 
 /**
- * Get module access grants for a specific user.
+ * Get all module overrides for a user (both grants and denials).
  */
-export async function getUserModuleGrants(userId: string): Promise<string[]> {
-  const { data: grants } = await supabaseAdmin
+export async function getUserModuleOverrides(userId: string): Promise<ModuleOverride[]> {
+  const { data } = await supabaseAdmin
     .from('user_module_access')
-    .select('module_id, modules!inner(slug)')
+    .select('access_type, modules!inner(slug)')
     .eq('user_id', userId);
 
-  return (grants || []).map((g: Record<string, unknown>) => {
-    const mod = g.modules as { slug: string } | { slug: string }[];
-    return Array.isArray(mod) ? mod[0]?.slug : mod?.slug;
-  }).filter(Boolean) as string[];
+  return (data || []).map((row: Record<string, unknown>) => {
+    const mod = row.modules as { slug: string } | { slug: string }[];
+    const slug = Array.isArray(mod) ? mod[0]?.slug : mod?.slug;
+    return { slug, access_type: row.access_type as 'grant' | 'deny' };
+  }).filter((o: ModuleOverride) => o.slug) as ModuleOverride[];
 }
 
 /**
  * Grant module access to a user.
+ * - If the module is a role default and has a 'deny' override, removes the denial.
+ * - If the module is not a role default, upserts a 'grant' override.
  */
 export async function grantModuleAccess(userId: string, moduleSlug: string, grantedBy: string): Promise<boolean> {
-  // Get module ID
-  const { data: mod } = await supabaseAdmin
-    .from('modules')
-    .select('id')
-    .eq('slug', moduleSlug)
-    .single();
+  const result = await resolveModuleAndRole(userId, moduleSlug);
+  if (!result) return false;
+  const { mod, isDefault } = result;
 
-  if (!mod) return false;
+  if (isDefault) {
+    await supabaseAdmin
+      .from('user_module_access')
+      .delete()
+      .eq('user_id', userId)
+      .eq('module_id', mod.id)
+      .eq('access_type', 'deny');
+  } else {
+    const { error } = await supabaseAdmin
+      .from('user_module_access')
+      .upsert({
+        user_id: userId,
+        module_id: mod.id,
+        granted_by: grantedBy,
+        granted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        access_type: 'grant',
+      }, { onConflict: 'user_id,module_id' });
 
-  const { error } = await supabaseAdmin
-    .from('user_module_access')
-    .upsert({
-      user_id: userId,
-      module_id: mod.id,
-      granted_by: grantedBy,
-      granted_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,module_id' });
-
-  if (!error) {
-    // Log to activity_logs
-    await supabaseAdmin.from('activity_logs').insert({
-      user_id: grantedBy,
-      action: 'module_access_granted',
-      object_type: 'module',
-      object_id: mod.id,
-      object_name: moduleSlug,
-      changes: { user_id: userId, module: moduleSlug },
-      result: 'success',
-    });
+    if (error) return false;
   }
 
-  return !error;
+  await supabaseAdmin.from('activity_logs').insert({
+    user_id: grantedBy,
+    action: 'module_access_granted',
+    object_type: 'module',
+    object_id: mod.id,
+    object_name: moduleSlug,
+    changes: { user_id: userId, module: moduleSlug },
+    result: 'success',
+  });
+
+  return true;
 }
 
 /**
  * Revoke module access from a user.
+ * - If the module is a role default, inserts a 'deny' override.
+ * - If the module is not a role default, deletes any 'grant' override.
  */
 export async function revokeModuleAccess(userId: string, moduleSlug: string, revokedBy: string): Promise<boolean> {
-  const { data: mod } = await supabaseAdmin
-    .from('modules')
-    .select('id')
-    .eq('slug', moduleSlug)
-    .single();
+  const result = await resolveModuleAndRole(userId, moduleSlug);
+  if (!result) return false;
+  const { mod, isDefault } = result;
 
-  if (!mod) return false;
+  if (isDefault) {
+    const { error } = await supabaseAdmin
+      .from('user_module_access')
+      .upsert({
+        user_id: userId,
+        module_id: mod.id,
+        granted_by: revokedBy,
+        granted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        access_type: 'deny',
+      }, { onConflict: 'user_id,module_id' });
 
+    if (error) return false;
+  } else {
+    await supabaseAdmin
+      .from('user_module_access')
+      .delete()
+      .eq('user_id', userId)
+      .eq('module_id', mod.id);
+  }
+
+  await supabaseAdmin.from('activity_logs').insert({
+    user_id: revokedBy,
+    action: 'module_access_revoked',
+    object_type: 'module',
+    object_id: mod.id,
+    object_name: moduleSlug,
+    changes: { user_id: userId, module: moduleSlug },
+    result: 'success',
+  });
+
+  return true;
+}
+
+/**
+ * Reset all module overrides for a user back to role defaults.
+ */
+export async function resetUserModuleOverrides(userId: string, resetBy: string): Promise<boolean> {
   const { error } = await supabaseAdmin
     .from('user_module_access')
     .delete()
-    .eq('user_id', userId)
-    .eq('module_id', mod.id);
+    .eq('user_id', userId);
 
   if (!error) {
     await supabaseAdmin.from('activity_logs').insert({
-      user_id: revokedBy,
-      action: 'module_access_revoked',
-      object_type: 'module',
-      object_id: mod.id,
-      object_name: moduleSlug,
-      changes: { user_id: userId, module: moduleSlug },
+      user_id: resetBy,
+      action: 'module_access_reset',
+      object_type: 'user',
+      object_id: userId,
+      changes: { user_id: userId, action: 'reset_to_role_defaults' },
       result: 'success',
     });
   }
