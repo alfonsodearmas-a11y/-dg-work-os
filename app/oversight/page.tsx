@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import {
   Eye, RefreshCw, AlertTriangle,
   Building2, ChevronDown,
@@ -58,8 +58,8 @@ export default function OversightPage() {
   const isMobile = useIsMobile();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
-  const userRole = session?.user?.role || 'officer';
+  const { effectiveUser } = useEffectiveUser();
+  const userRole = effectiveUser.role;
 
   // ── Tab state ──
   const [activeTab, setActiveTab] = useState<TabMode>(() => (searchParams.get('tab') as TabMode) || 'alerts');

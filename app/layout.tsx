@@ -4,6 +4,8 @@ import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
 import { PWAWrapper } from "@/components/pwa/PWAWrapper";
 import { AuthSessionProvider } from "@/components/providers/SessionProvider";
+import { ViewAsProvider } from "@/components/providers/ViewAsProvider";
+import { ViewAsBanner } from "@/components/layout/ViewAsBanner";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -51,9 +53,12 @@ export default function RootLayout({
       <body suppressHydrationWarning className={`${outfit.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-white focus:text-black">Skip to main content</a>
         <AuthSessionProvider>
-          <PWAWrapper>
-            <AppShell>{children}</AppShell>
-          </PWAWrapper>
+          <ViewAsProvider>
+            <ViewAsBanner />
+            <PWAWrapper>
+              <AppShell>{children}</AppShell>
+            </PWAWrapper>
+          </ViewAsProvider>
         </AuthSessionProvider>
       </body>
     </html>

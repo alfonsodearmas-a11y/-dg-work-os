@@ -12,6 +12,7 @@ import {
   Upload,
   ShieldAlert,
 } from 'lucide-react';
+import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import { OverviewTab } from '@/components/intel/pending-applications/OverviewTab';
 import { UploadPanel } from '@/components/intel/pending-applications/UploadPanel';
 
@@ -39,12 +40,16 @@ const ALL_TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
 ];
 
 interface Props {
-  isDG: boolean;
-  userAgency: string | null;
+  isDG?: boolean;
+  userAgency?: string | null;
   refreshKey?: number;
 }
 
-export default function PendingApplicationsClient({ isDG, userAgency }: Props) {
+export default function PendingApplicationsClient(_props: Props) {
+  const { effectiveUser } = useEffectiveUser();
+  const isDG = ['dg', 'minister', 'ps'].includes(effectiveUser.role);
+  const userAgency = effectiveUser.agency;
+
   // GPL-only users see restricted tabs
   const allowedTabs = isDG
     ? ALL_TABS

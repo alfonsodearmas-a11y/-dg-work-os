@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import {
   Upload, AlertTriangle, Building2, DollarSign, CheckCircle,
   ChevronDown, RefreshCw, Loader2, Search,
@@ -829,8 +829,8 @@ export default function ProjectsPage() {
   const isMobile = useIsMobile();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
-  const userRole = session?.user?.role || 'officer';
+  const { effectiveUser } = useEffectiveUser();
+  const userRole = effectiveUser.role;
 
   // Data
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);

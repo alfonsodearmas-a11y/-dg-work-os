@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db-pg';
 import { requireRole } from '@/lib/auth-helpers';
-import { getAgencyScope } from '@/lib/scoped-query';
+import { getViewAsAgencyScope } from '@/lib/scoped-query';
 import { logger } from '@/lib/logger';
 
 // Safe query that returns empty rows on table-not-found or connection errors
@@ -21,13 +21,16 @@ const AGENCY_METRIC_MAP: Record<string, string[]> = {
   gcaa: ['gcaa'],
 };
 
-export async function GET() {
+export async function GET(request: Request) {
   const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
   try {
-    const scope = getAgencyScope(session);
+    const { searchParams } = new URL(request.url);
+    const viewAsRole = session.user.role === 'dg' ? searchParams.get('viewAsRole') : null;
+    const viewAsAgency = session.user.role === 'dg' ? searchParams.get('viewAsAgency') : null;
+    const scope = getViewAsAgencyScope(session, viewAsRole, viewAsAgency);
     const allowedAgencies = scope
       ? AGENCY_METRIC_MAP[scope.toLowerCase()] || []
       : ['cjia', 'gwi', 'gpl', 'gpl_dbis', 'gcaa']; // ministry sees all

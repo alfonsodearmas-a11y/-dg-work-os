@@ -3,9 +3,9 @@
 import { useEffect } from 'react';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { Sidebar } from './Sidebar';
 import { SidebarProvider, useSidebar } from './SidebarContext';
+import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import { MobileMenuButton } from './MobileMenuButton';
 import { BottomNav } from './BottomNav';
 import { HeaderDate } from './HeaderDate';
@@ -26,13 +26,13 @@ import { ROLE_LABELS } from '@/lib/people-types';
 // Inner component that can use useSidebar (needs to be inside SidebarProvider)
 function AppShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { effectiveUser, isViewingAs } = useEffectiveUser();
   const { toggleCollapse, toggleRightCollapse, toggleFocusMode, focusMode } = useSidebar();
   const isBareLayout = pathname === '/login' || pathname.startsWith('/upload');
 
-  const userName = session?.user?.name || 'User';
-  const userRole = (session?.user as { role?: string })?.role || 'officer';
-  const userAgency = (session?.user as { agency?: string | null })?.agency || null;
+  const userName = effectiveUser.name;
+  const userRole = effectiveUser.role;
+  const userAgency = effectiveUser.agency;
   const roleLabel = ROLE_LABELS[userRole as keyof typeof ROLE_LABELS] || userRole;
   const initials = userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
@@ -68,7 +68,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   return (
     <NotificationProvider>
     <ToastProvider>
-      <div className="min-h-screen flex">
+      <div className={`min-h-screen flex ${isViewingAs ? 'pt-10' : ''}`}>
         {/* Sidebar */}
         <Sidebar />
 

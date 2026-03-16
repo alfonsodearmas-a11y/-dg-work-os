@@ -190,19 +190,40 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   const body = await request.json().catch(() => ({}));
 
   // Require email confirmation for hard delete
-  const { data: user } = await supabaseAdmin.from('users').select('email, name').eq('id', id).single();
+  const { data: user } = await supabaseAdmin.from('users').select('email, name, role, agency').eq('id', id).single();
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
   if (body.confirmEmail !== user.email) {
     return NextResponse.json({ error: 'Email confirmation does not match' }, { status: 400 });
   }
 
-  await logAudit(session.user.id, id, 'deleted_permanently', { email: user.email, name: user.name });
-
+  // Delete user profile — FK constraints handle cleanup via ON DELETE SET NULL/CASCADE
   const { error } = await supabaseAdmin.from('users').delete().eq('id', id);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Delete the Supabase auth user so they can't log in
+  try {
+    await supabaseAdmin.auth.admin.deleteUser(id);
+  } catch (authErr) {
+    // Profile is gone; orphaned auth user is harmless (no matching profile = no access)
+    console.error('Failed to delete auth user (orphaned):', authErr);
+  }
+
+  // Audit log (after deletion, user details preserved in metadata)
+  await supabaseAdmin.from('admin_audit_log').insert({
+    actor_id: session.user.id,
+    target_user_id: null,
+    action: 'deleted_permanently',
+    metadata: {
+      deleted_user_id: id,
+      deleted_user_email: user.email,
+      deleted_user_name: user.name,
+      deleted_user_role: user.role,
+      deleted_user_agency: user.agency,
+    },
+  });
 
   return NextResponse.json({ success: true, message: 'User permanently deleted' });
 }

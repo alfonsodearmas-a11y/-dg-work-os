@@ -12,8 +12,9 @@ import { TaskListView } from './TaskListView';
 import { QuickAddTask } from './QuickAddTask';
 import { NewTaskModal } from './NewTaskModal';
 import { CreateEventModal } from '@/components/calendar/CreateEventModal';
-import { useSession } from 'next-auth/react';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
+import { useViewAsFetch } from '@/hooks/useViewAsFetch';
 import { useBoardReducer, COLUMNS } from '@/hooks/useBoardReducer';
 import { BoardSelectionProvider, useSelection } from './BoardSelectionContext';
 import {
@@ -82,7 +83,8 @@ function isOverdueDate(dateStr: string): boolean {
 // ---------------------------------------------------------------------------
 
 function KanbanBoardInner() {
-  const { data: session } = useSession();
+  const { effectiveUser } = useEffectiveUser();
+  const { withViewAs } = useViewAsFetch();
   const isMobile = useIsMobile();
   const { state, dispatch } = useBoardReducer();
   const { selectedIds, selectionMode, toggleSelect, clearSelection } = useSelection();
@@ -100,7 +102,7 @@ function KanbanBoardInner() {
 
   const fetchTasks = useCallback(async () => {
     try {
-      const res = await fetch('/api/tasks');
+      const res = await fetch(withViewAs('/api/tasks'));
       const data = await res.json();
       if (data.tasks) {
         dispatch({ type: 'FETCH_SUCCESS', tasks: data.tasks, lastSync: data.lastSync });
@@ -109,7 +111,7 @@ function KanbanBoardInner() {
       console.error('Failed to fetch tasks:', error);
       dispatch({ type: 'FETCH_ERROR', error: error instanceof Error ? error.message : 'Failed to load tasks' });
     }
-  }, [dispatch]);
+  }, [dispatch, withViewAs]);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -423,7 +425,7 @@ function KanbanBoardInner() {
         task.title.toLowerCase().includes(state.searchQuery.toLowerCase());
       const matchesAgency = state.agencyFilter.length === 0 || (task.agency && state.agencyFilter.includes(task.agency));
       const matchesPriority = state.priorityFilter.length === 0 || (task.priority && state.priorityFilter.includes(task.priority));
-      const matchesMy = !state.myTasksOnly || task.owner_user_id === session?.user?.id;
+      const matchesMy = !state.myTasksOnly || task.owner_user_id === effectiveUser.id;
       const matchesAssignee = !state.assigneeFilter || task.owner_user_id === state.assigneeFilter;
 
       let matchesDueDate = true;
@@ -442,7 +444,7 @@ function KanbanBoardInner() {
 
       return matchesSearch && matchesAgency && matchesPriority && matchesMy && matchesAssignee && matchesDueDate && matchesStatus;
     });
-  }, [state.searchQuery, state.agencyFilter, state.priorityFilter, state.myTasksOnly, state.assigneeFilter, state.dueDateFilter, state.statusFilter, session?.user?.id]);
+  }, [state.searchQuery, state.agencyFilter, state.priorityFilter, state.myTasksOnly, state.assigneeFilter, state.dueDateFilter, state.statusFilter, effectiveUser.id]);
 
   // All tasks flat
   const allTasks = useMemo(() => {

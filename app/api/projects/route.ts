@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProjectsList } from '@/lib/project-queries';
 import { requireRole } from '@/lib/auth-helpers';
-import { getAgencyScope } from '@/lib/scoped-query';
+import { getViewAsAgencyScope } from '@/lib/scoped-query';
 import { logger } from '@/lib/logger';
 
 // Backwards-compatible route — redirects to /api/projects/list logic
@@ -14,7 +14,9 @@ export async function GET(request: NextRequest) {
     const p = request.nextUrl.searchParams;
 
     // Agency scoping: non-ministry users are locked to their agency's projects
-    const scope = getAgencyScope(session);
+    const viewAsRole = session.user.role === 'dg' ? p.get('viewAsRole') : null;
+    const viewAsAgency = session.user.role === 'dg' ? p.get('viewAsAgency') : null;
+    const scope = getViewAsAgencyScope(session, viewAsRole, viewAsAgency);
     const agency = scope?.toUpperCase() || p.get('agency') || undefined;
 
     const { projects } = await getProjectsList({

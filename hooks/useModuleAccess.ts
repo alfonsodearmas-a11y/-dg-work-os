@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
+import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 
 interface ModuleAccessState {
   modules: string[];
@@ -11,12 +12,13 @@ interface ModuleAccessState {
 }
 
 export function useModuleAccess(): ModuleAccessState {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
+  const { effectiveUser } = useEffectiveUser();
   const [modules, setModules] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const fetchedRef = useRef(false);
 
-  const userRole = (session?.user as { role?: string })?.role;
+  const userRole = effectiveUser.role;
 
   const fetchModules = useCallback(async () => {
     if (status !== 'authenticated') return;

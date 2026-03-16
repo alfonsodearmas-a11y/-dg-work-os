@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import {
   Search, Users, UserCheck, UserX, UserPlus, Shield, ShieldOff,
   CheckCircle, AlertTriangle, X, Clock, Archive, ChevronDown,
@@ -74,7 +74,7 @@ const FILTER_STATUS_OPTIONS = [
 ];
 
 export default function PeoplePage() {
-  const { data: session } = useSession();
+  const { realUser } = useEffectiveUser();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -109,8 +109,9 @@ export default function PeoplePage() {
   // Detail drawer
   const [drawerUser, setDrawerUser] = useState<User | null>(null);
 
-  const isDG = session?.user?.role === 'dg';
-  const currentUserId = session?.user?.id || '';
+  // Admin page deliberately uses realUser — DG keeps admin powers even when viewing as another user
+  const isDG = realUser.role === 'dg';
+  const currentUserId = realUser.id;
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -345,7 +346,7 @@ export default function PeoplePage() {
           roles={rolesData}
           allPermissions={allPermsData}
           myPermissions={myPermissions}
-          myRole={session?.user?.role || 'officer'}
+          myRole={realUser.role || 'officer'}
           loading={permsLoading}
         />
       )}
@@ -764,8 +765,8 @@ function InviteModal({
   onSuccess: () => void;
   onError: (msg: string) => void;
 }) {
-  const { data: session } = useSession();
-  const isDG = session?.user?.role === 'dg';
+  const { realUser } = useEffectiveUser();
+  const isDG = realUser.role === 'dg';
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');

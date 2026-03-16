@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useSession } from 'next-auth/react';
+import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import Link from 'next/link';
 import {
   ArrowLeft, Plus, Search, Filter, Clock, CheckCircle, XCircle,
@@ -72,7 +72,7 @@ const PRIORITY_OPTIONS = [
 ];
 
 export default function ApplicationsPage() {
-  const { data: session } = useSession();
+  const { effectiveUser } = useEffectiveUser();
   const [applications, setApplications] = useState<Application[]>([]);
   const [stats, setStats] = useState<Stats>({ pending: 0, under_review: 0, approved_30d: 0, rejected_30d: 0 });
   const [loading, setLoading] = useState(true);

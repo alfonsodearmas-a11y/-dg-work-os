@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import Link from 'next/link';
 import { ArrowLeft, AlertTriangle, CheckCircle } from 'lucide-react';
 
@@ -30,7 +30,7 @@ const AGENCY_OPTIONS = [
 ];
 
 export default function NewApplicationPage() {
-  const { data: session } = useSession();
+  const { effectiveUser } = useEffectiveUser();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -44,8 +44,8 @@ export default function NewApplicationPage() {
     agency: '',
   });
 
-  const userRole = (session?.user as { role?: string })?.role || 'officer';
-  const userAgency = (session?.user as { agency?: string | null })?.agency;
+  const userRole = effectiveUser.role;
+  const userAgency = effectiveUser.agency;
   const isDG = userRole === 'dg';
 
   const showToast = (message: string, type: 'success' | 'error') => {

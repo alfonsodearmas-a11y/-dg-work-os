@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
-import { getAgencyScope } from '@/lib/scoped-query';
+import { getViewAsAgencyScope } from '@/lib/scoped-query';
 import { logger } from '@/lib/logger';
 import { sanitizeSearchInput } from '@/lib/parse-utils';
 
@@ -24,7 +24,9 @@ export async function GET(request: NextRequest) {
       .in('processing_status', ['completed', 'processing', 'failed']);
 
     // Agency scoping: non-ministry users see only their agency's docs + untagged
-    const scope = getAgencyScope(session);
+    const viewAsRole = session.user.role === 'dg' ? searchParams.get('viewAsRole') : null;
+    const viewAsAgency = session.user.role === 'dg' ? searchParams.get('viewAsAgency') : null;
+    const scope = getViewAsAgencyScope(session, viewAsRole, viewAsAgency);
     if (scope) {
       query = query.or(`agency.ilike.${scope},agency.is.null`);
     } else if (agency) {

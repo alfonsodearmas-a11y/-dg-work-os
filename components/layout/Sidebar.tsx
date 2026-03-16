@@ -26,9 +26,11 @@ import {
 } from 'lucide-react';
 import { useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useSession, signOut } from 'next-auth/react';
+import { signOut } from 'next-auth/react';
 import { useSidebar } from './SidebarContext';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
+import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
+import { ViewAsSelector } from './ViewAsSelector';
 
 import { ROLE_LABELS } from '@/lib/people-types';
 
@@ -100,19 +102,24 @@ const MINISTRY_ROLES = ['dg', 'minister', 'ps'];
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { realUser, effectiveUser, isViewingAs } = useEffectiveUser();
   const [agenciesOpen, setAgenciesOpen] = useState(true);
+  const [viewAsSelectorOpen, setViewAsSelectorOpen] = useState(false);
   const { mobileOpen, setMobileOpen, collapsed, toggleCollapse } = useSidebar();
   const { canAccess } = useModuleAccess();
   const { tooltip, onEnter, onLeave } = useTooltip();
 
-  const userRole = (session?.user as { role?: string })?.role || 'officer';
-  const userAgency = (session?.user as { agency?: string | null })?.agency || null;
-  const userName = session?.user?.name || 'User';
+  // Use effective user for rendering decisions
+  const userRole = effectiveUser.role;
+  const userAgency = effectiveUser.agency;
+  const userName = effectiveUser.name;
   const roleLabel = ROLE_LABELS[userRole as keyof typeof ROLE_LABELS] || userRole;
 
-  const showAdmin = ADMIN_ROLES.includes(userRole);
+  // Admin section: show if real user is admin OR effective user is admin
+  // (DG always keeps admin access even when viewing as)
+  const showAdmin = ADMIN_ROLES.includes(realUser.role) || ADMIN_ROLES.includes(userRole);
   const isMinistry = MINISTRY_ROLES.includes(userRole);
+  const canViewAs = realUser.role === 'dg';
 
   // Agency users only see their own agency in the sidebar
   const visibleAgencies = isMinistry
@@ -306,9 +313,19 @@ export function Sidebar() {
         <div className={`${collapsed ? 'p-2' : 'p-4'} border-t border-navy-800/50 space-y-3 transition-all duration-300`}>
           {collapsed ? (
             <div className="flex flex-col items-center gap-2">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center shrink-0" title={userName}>
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${isViewingAs ? 'bg-gradient-to-br from-amber-500 to-amber-600 ring-2 ring-amber-400/50' : 'bg-gradient-to-br from-[#d4af37] to-[#b8860b]'}`} title={userName}>
                 <span className="text-navy-950 font-bold text-xs">{userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
               </div>
+              {canViewAs && (
+                <button
+                  onClick={() => setViewAsSelectorOpen(true)}
+                  className="p-2 rounded-lg text-navy-600 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
+                  title="View As"
+                  aria-label="View As another user"
+                >
+                  <Eye className="h-4 w-4" aria-hidden="true" />
+                </button>
+              )}
               <button
                 onClick={handleSignOut}
                 className="p-2 rounded-lg text-navy-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
@@ -320,13 +337,27 @@ export function Sidebar() {
             </div>
           ) : (
             <>
-              <div className="glass-card p-4">
+              <div className={`glass-card p-4 ${isViewingAs ? 'ring-1 ring-amber-500/40' : ''}`}>
                 <p className="text-sm font-medium text-white truncate">{userName}</p>
-                <p className="text-xs text-gold-500 mt-0.5">{roleLabel}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <p className={`text-xs ${isViewingAs ? 'text-amber-400' : 'text-gold-500'}`}>{roleLabel}</p>
+                  {isViewingAs && (
+                    <span className="text-[9px] font-semibold text-amber-400/80 uppercase">(View As)</span>
+                  )}
+                </div>
                 {userAgency && (
-                  <p className="text-xs text-navy-600 mt-0.5">{userAgency}</p>
+                  <p className="text-xs text-navy-600 mt-0.5">{userAgency.toUpperCase()}</p>
                 )}
               </div>
+              {canViewAs && (
+                <button
+                  onClick={() => setViewAsSelectorOpen(true)}
+                  className="flex items-center gap-2 w-full px-4 py-2.5 rounded-lg text-navy-600 hover:text-amber-400 hover:bg-amber-500/10 transition-colors text-sm"
+                >
+                  <Eye className="h-4 w-4" aria-hidden="true" />
+                  {isViewingAs ? 'Switch User' : 'View As'}
+                </button>
+              )}
               <button
                 onClick={handleSignOut}
                 className="flex items-center gap-2 w-full px-4 py-2.5 rounded-lg text-navy-600 hover:text-red-400 hover:bg-red-500/10 transition-colors text-sm"
@@ -338,6 +369,11 @@ export function Sidebar() {
           )}
         </div>
       </aside>
+
+      {/* View As selector modal */}
+      {canViewAs && (
+        <ViewAsSelector isOpen={viewAsSelectorOpen} onClose={() => setViewAsSelectorOpen(false)} />
+      )}
 
       {/* Tooltip portal for collapsed state */}
       {collapsed && tooltip && (

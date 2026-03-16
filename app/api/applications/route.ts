@@ -29,7 +29,11 @@ export async function GET(req: NextRequest) {
     .select('*, customer_application_documents(id), customer_application_notes(id)', { count: 'exact' });
 
   // Agency scoping: DG sees all, others see only their agency
-  if (session.user.role !== 'dg') {
+  // View As support: DG can scope to a specific agency
+  const viewAsAgency = session.user.role === 'dg' ? url.searchParams.get('viewAsAgency') : null;
+  if (viewAsAgency) {
+    query = query.eq('agency', viewAsAgency);
+  } else if (session.user.role !== 'dg') {
     query = query.eq('agency', session.user.agency || '');
   }
 

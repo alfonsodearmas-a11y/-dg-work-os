@@ -33,6 +33,12 @@ export async function GET(request: NextRequest) {
   const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
   const limit = Math.min(200, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
 
+  // View As support: DG can pass viewAsRole/viewAsAgency to see data as another role
+  const viewAsRole = session.user.role === 'dg' ? searchParams.get('viewAsRole') : null;
+  const viewAsAgency = session.user.role === 'dg' ? searchParams.get('viewAsAgency') : null;
+  const effectiveRole = viewAsRole || session.user.role;
+  const effectiveAgency = viewAsAgency || session.user.agency;
+
   let query = supabaseAdmin
     .from('tasks')
     .select(`${TASK_COLUMNS}, owner:users!owner_user_id(id, name)`, { count: 'exact' })
@@ -40,10 +46,10 @@ export async function GET(request: NextRequest) {
     .order('due_date', { ascending: true, nullsFirst: false });
 
   // Scope by role
-  if (session.user.role === 'officer') {
+  if (effectiveRole === 'officer') {
     query = query.eq('owner_user_id', session.user.id);
-  } else if (session.user.role === 'agency_admin' && session.user.agency) {
-    query = query.ilike('agency', session.user.agency);
+  } else if (effectiveRole === 'agency_admin' && effectiveAgency) {
+    query = query.ilike('agency', effectiveAgency);
   }
 
   if (status) query = query.eq('status', status);
