@@ -34,7 +34,7 @@ const inviteSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
   role: z.enum(ALL_INVITE_ROLES),
-  agency: z.enum(VALID_AGENCIES).optional(),
+  agency: z.enum(VALID_AGENCIES).nullable().optional(),
   password: z.string().min(8).optional(),
 }).refine(
   (d) => d.role !== 'agency_admin' || !!d.agency,
