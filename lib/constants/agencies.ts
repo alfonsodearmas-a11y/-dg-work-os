@@ -1,3 +1,6 @@
+/** Canonical list of agency codes — single source of truth for all filters and dropdowns */
+export const AGENCY_CODES = ['GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'HAS', 'MOPUA'] as const;
+
 /** Agency code → full display name mapping */
 export const AGENCY_NAMES: Record<string, string> = {
   GPL: 'Guyana Power & Light',

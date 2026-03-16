@@ -10,7 +10,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const briefing = await generateBriefing(session.user.id, session.user.role);
+    const briefing = await generateBriefing(session.user.id, session.user.role, session.user.agency);
     return NextResponse.json(briefing);
   } catch (error) {
     logger.error({ err: error }, 'Briefing generation failed');

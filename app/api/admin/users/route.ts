@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import bcrypt from 'bcryptjs';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { insertNotification } from '@/lib/notifications';
@@ -34,6 +35,7 @@ const inviteSchema = z.object({
   name: z.string().min(1),
   role: z.enum(ALL_INVITE_ROLES),
   agency: z.enum(VALID_AGENCIES).optional(),
+  password: z.string().min(8).optional(),
 }).refine(
   (d) => d.role !== 'agency_admin' || !!d.agency,
   { message: 'Agency is required for Agency Manager role', path: ['agency'] },
@@ -50,7 +52,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
   }
 
-  const { email, name, role, agency } = parsed.data;
+  const { email, name, role, agency, password } = parsed.data;
   const moduleGrants: string[] = Array.isArray(body.moduleGrants) ? body.moduleGrants : [];
 
   // Only DG (super admin) can invite senior roles (minister, ps, dg)
@@ -71,6 +73,9 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   // Derive formal_title from role, or use custom title if provided
   const formalTitle: string = body.formal_title?.trim() || ROLE_LABELS[role as Role] || role;
 
+  // Hash password if provided (enables email/password login)
+  const passwordHash = password ? await bcrypt.hash(password, 12) : null;
+
   const { data: newUser, error: dbError } = await supabaseAdmin
     .from('users')
     .insert({
@@ -83,6 +88,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       status: 'pending',
       invited_by: session.user.id,
       invited_at: new Date().toISOString(),
+      ...(passwordHash && { password_hash: passwordHash }),
     })
     .select('id, email, name, role, formal_title, agency, status')
     .single();

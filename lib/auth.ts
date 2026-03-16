@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
+import Credentials from 'next-auth/providers/credentials';
+import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from './db';
 
 // ── Auth Migration Guide ──────────────────────────────────────────────
@@ -59,12 +61,66 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
       },
     }),
+    Credentials({
+      name: 'Email & Password',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        const email = credentials?.email as string | undefined;
+        const password = credentials?.password as string | undefined;
+        if (!email || !password) return null;
+
+        const { data: user } = await supabaseAdmin
+          .from('users')
+          .select('id, email, name, avatar_url, role, agency, is_active, status, password_hash, login_count')
+          .eq('email', email.toLowerCase().trim())
+          .single();
+
+        if (!user) return null;
+        if (!user.is_active && user.status !== 'pending') return null;
+        if (!user.password_hash) return null;
+
+        const valid = await bcrypt.compare(password, user.password_hash);
+        if (!valid) return null;
+
+        // Update login stats
+        const now = new Date().toISOString();
+        await supabaseAdmin
+          .from('users')
+          .update({
+            is_active: true,
+            status: 'active',
+            last_login: now,
+            last_seen_at: now,
+            first_login_at: user.status === 'pending' ? now : undefined,
+            login_count: (user.login_count ?? 0) + 1,
+          })
+          .eq('id', user.id);
+
+        // Return user object — NextAuth uses `id` to populate the token
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.avatar_url,
+        };
+      },
+    }),
   ],
+  session: { strategy: 'jwt' },
   pages: {
     signIn: '/login',
   },
   callbacks: {
-    async signIn({ profile, account }) {
+    async signIn({ user, profile, account }) {
+      // Credentials provider: user was already validated in authorize()
+      if (account?.provider === 'credentials') {
+        return true;
+      }
+
+      // Google OAuth flow below
       if (!profile?.email) return false;
 
       // Domain check
@@ -159,38 +215,49 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return true;
     },
 
-    async jwt({ token, account, profile }) {
-      // On initial sign-in, load user from DB
+    async jwt({ token, user, account, profile }) {
+      // Credentials provider: user.id is the DB UUID set in authorize()
+      if (account?.provider === 'credentials' && user?.id) {
+        const { data: dbUser } = await supabaseAdmin
+          .from('users')
+          .select('id, role, agency')
+          .eq('id', user.id)
+          .single();
+
+        if (dbUser) {
+          token.userId = dbUser.id;
+          token.role = dbUser.role as Role;
+          token.agency = dbUser.agency;
+        }
+        return token;
+      }
+
+      // Google OAuth: on initial sign-in, load user from DB
       if (account && profile?.sub) {
-        const { data: user } = await supabaseAdmin
+        const { data: dbUser } = await supabaseAdmin
           .from('users')
           .select('id, role, agency')
           .eq('google_sub', profile.sub)
           .single();
 
-        if (user) {
-          token.userId = user.id;
-          token.role = user.role as Role;
-          token.agency = user.agency;
+        if (dbUser) {
+          token.userId = dbUser.id;
+          token.role = dbUser.role as Role;
+          token.agency = dbUser.agency;
         }
       }
 
       // Refresh role/agency on every token refresh (catches admin changes).
-      // NOTE: NextAuth's JWT is cached client-side until it expires (~30 days).
-      // Role changes made by an admin take effect on the next token refresh,
-      // but in practice users may need to sign out and sign back in for
-      // changes to take effect immediately.
-      // TODO: Add role-version check against DB to invalidate cached JWT when role changes
       if (token.userId && !account) {
-        const { data: user } = await supabaseAdmin
+        const { data: dbUser } = await supabaseAdmin
           .from('users')
           .select('role, agency, is_active')
           .eq('id', token.userId)
           .single();
 
-        if (user && user.is_active) {
-          token.role = user.role as Role;
-          token.agency = user.agency;
+        if (dbUser && dbUser.is_active) {
+          token.role = dbUser.role as Role;
+          token.agency = dbUser.agency;
         } else {
           // User was deactivated — clear token so middleware redirects to /403
           token.userId = '';

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { generateGPLBriefing } from '@/lib/ai-analysis';
-import { requireRole } from '@/lib/auth-helpers';
+import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
 import { withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 
@@ -18,6 +18,10 @@ export async function GET(
 ) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
+  const { session } = authResult;
+  if (!canAccessAgency(session.user.role, session.user.agency, 'gpl')) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  }
 
   try {
     const { id } = await params;
@@ -173,6 +177,10 @@ export const POST = withErrorHandler(async (
 ) => {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
+  const { session: postSession } = authResult;
+  if (!canAccessAgency(postSession.user.role, postSession.user.agency, 'gpl')) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  }
 
   const { id } = await (ctx as { params: Promise<{ id: string }> }).params;
 

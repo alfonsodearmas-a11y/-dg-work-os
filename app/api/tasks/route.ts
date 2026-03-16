@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
   // Scope by role
   if (session.user.role === 'officer') {
     query = query.eq('owner_user_id', session.user.id);
-  } else if (session.user.role === 'agency_admin') {
-    query = query.eq('agency', session.user.agency);
+  } else if (session.user.role === 'agency_admin' && session.user.agency) {
+    query = query.ilike('agency', session.user.agency);
   }
 
   if (status) query = query.eq('status', status);

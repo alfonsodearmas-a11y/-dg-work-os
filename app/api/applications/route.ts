@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseAdmin
     .from('customer_applications')
-    .select('*, customer_application_documents(id)', { count: 'exact' });
+    .select('*, customer_application_documents(id), customer_application_notes(id)', { count: 'exact' });
 
   // Agency scoping: DG sees all, others see only their agency
   if (session.user.role !== 'dg') {
@@ -93,7 +93,9 @@ export async function GET(req: NextRequest) {
   const applications = (data || []).map((app: Record<string, unknown>) => ({
     ...app,
     docs_count: Array.isArray(app.customer_application_documents) ? app.customer_application_documents.length : 0,
+    notes_count: Array.isArray(app.customer_application_notes) ? app.customer_application_notes.length : 0,
     customer_application_documents: undefined,
+    customer_application_notes: undefined,
   }));
 
   return NextResponse.json({

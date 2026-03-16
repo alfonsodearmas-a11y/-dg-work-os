@@ -6,10 +6,11 @@ import Link from 'next/link';
 import {
   ArrowLeft, Plus, Search, Filter, Clock, CheckCircle, XCircle,
   Eye, FileText, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, X,
-  AlertTriangle, Download,
+  AlertTriangle, Download, MessageSquare,
 } from 'lucide-react';
 import { exportToCsv } from '@/lib/export-csv';
 import { Spinner } from '@/components/ui/Spinner';
+import { ApplicationDetailDrawer } from '@/components/applications/ApplicationDetailDrawer';
 
 interface Application {
   id: string;
@@ -22,6 +23,7 @@ interface Application {
   submitted_at: string;
   notes: string | null;
   docs_count: number;
+  notes_count: number;
   created_at: string;
 }
 
@@ -77,6 +79,10 @@ export default function ApplicationsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+
+  // Drawer
+  const [drawerAppId, setDrawerAppId] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -319,6 +325,7 @@ export default function ApplicationsPage() {
                       { field: 'priority', label: 'Priority' },
                       { field: 'status', label: 'Status' },
                       { field: 'submitted_at', label: 'Submitted' },
+                      { field: 'notes_count', label: 'Notes' },
                       { field: 'docs_count', label: 'Docs' },
                     ] as const).map(col => (
                       <th
@@ -341,11 +348,15 @@ export default function ApplicationsPage() {
                   {sortedApplications.map(app => (
                     <tr
                       key={app.id}
-                      onClick={() => window.location.href = `/applications/${app.id}`}
+                      onClick={() => { setDrawerAppId(app.id); setDrawerOpen(true); }}
                       className="border-b border-navy-800/50 cursor-pointer hover:bg-navy-800/10 transition-colors"
                     >
                       <td className="px-4 py-3 font-mono text-xs text-gold-500">{app.reference_number || '\u2014'}</td>
-                      <td className="px-4 py-3 text-white">{app.applicant_name}</td>
+                      <td className="px-4 py-3">
+                        <span className="text-white hover:text-gold-500 hover:underline underline-offset-2 transition-colors">
+                          {app.applicant_name}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-slate-400">{app.application_type}</td>
                       <td className="px-4 py-3">
                         <span className={`text-xs px-2 py-0.5 rounded ${PRIORITY_STYLES[app.priority] || PRIORITY_STYLES.normal}`}>
@@ -358,6 +369,16 @@ export default function ApplicationsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-xs text-navy-600">{formatDate(app.submitted_at)}</td>
+                      <td className="px-4 py-3 text-xs text-navy-600">
+                        {app.notes_count > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-gold-500">
+                            <MessageSquare className="h-3 w-3" />
+                            {app.notes_count}
+                          </span>
+                        ) : (
+                          <span className="text-navy-700">&mdash;</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-xs text-navy-600">{app.docs_count}</td>
                     </tr>
                   ))}
@@ -368,10 +389,10 @@ export default function ApplicationsPage() {
             {/* Mobile cards */}
             <div className="md:hidden divide-y divide-navy-800/50">
               {sortedApplications.map(app => (
-                <Link
+                <button
                   key={app.id}
-                  href={`/applications/${app.id}`}
-                  className="block p-4 hover:bg-navy-800/10 transition-colors"
+                  onClick={() => { setDrawerAppId(app.id); setDrawerOpen(true); }}
+                  className="block w-full text-left p-4 hover:bg-navy-800/10 transition-colors"
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>
@@ -390,11 +411,14 @@ export default function ApplicationsPage() {
                       {app.priority}
                     </span>
                     <span>{formatDate(app.submitted_at)}</span>
+                    {app.notes_count > 0 && (
+                      <span className="flex items-center gap-0.5 text-gold-500"><MessageSquare className="h-3 w-3" />{app.notes_count}</span>
+                    )}
                     {app.docs_count > 0 && (
                       <span className="flex items-center gap-0.5"><FileText className="h-3 w-3" />{app.docs_count}</span>
                     )}
                   </div>
-                </Link>
+                </button>
               ))}
             </div>
           </>
@@ -427,6 +451,14 @@ export default function ApplicationsPage() {
           </div>
         </div>
       )}
+
+      {/* Application Detail Drawer */}
+      <ApplicationDetailDrawer
+        applicationId={drawerAppId}
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onStatusChange={fetchApplications}
+      />
     </div>
   );
 }

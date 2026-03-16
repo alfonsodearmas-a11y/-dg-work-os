@@ -32,6 +32,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
   const userName = session?.user?.name || 'User';
   const userRole = (session?.user as { role?: string })?.role || 'officer';
+  const userAgency = (session?.user as { agency?: string | null })?.agency || null;
   const roleLabel = ROLE_LABELS[userRole as keyof typeof ROLE_LABELS] || userRole;
   const initials = userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
@@ -88,7 +89,14 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                 {/* Desktop: full greeting */}
                 <div className="hidden md:block">
                   <h2 className="text-white/80 text-sm font-light tracking-wide">Welcome back,</h2>
-                  <p className="text-gold-500 font-semibold tracking-tight">{roleLabel}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-gold-500 font-semibold tracking-tight">{roleLabel}</p>
+                    {userAgency && (
+                      <span className="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
+                        {userAgency.toUpperCase()}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {/* Mobile: compact title */}
                 <span className="md:hidden text-gold-500 font-semibold text-sm truncate">DG Work OS</span>

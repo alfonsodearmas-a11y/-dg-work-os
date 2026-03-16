@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
-import { requireRole } from '@/lib/auth-helpers';
+import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 
 const METRIC_COLUMNS = 'id, snapshot_id, track, stage, category, total_count, valid_count, error_count, sla_target_days, within_sla_count, sla_compliance_pct, mean_days, median_days, trimmed_mean_days, mode_days, std_dev, min_days, max_days, q1, q3, p90, p95, ageing_buckets, staff_breakdown';
@@ -8,6 +8,10 @@ const METRIC_COLUMNS = 'id, snapshot_id, track, stage, category, total_count, va
 export async function GET(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
+  const { session } = authResult;
+  if (!canAccessAgency(session.user.role, session.user.agency, 'gpl')) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  }
 
   try {
     const { searchParams } = new URL(request.url);

@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
-import { auth } from '@/lib/auth';
+import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
 import { withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+// auth import removed — now using requireRole()
 
 export async function GET() {
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+  const { session } = authResult;
+  if (!canAccessAgency(session.user.role, session.user.agency, 'gpl')) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  }
+
   try {
     const { data, error } = await supabaseAdmin
       .from('gpl_multivariate_forecasts')
@@ -53,8 +61,13 @@ export async function GET() {
 }
 
 export const POST = withErrorHandler(async (_request: NextRequest) => {
-  const session = await auth(); // TODO: migrate to requireRole()
-  const userId = session?.user?.id || 'system';
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  if (authResult instanceof NextResponse) return authResult;
+  const { session } = authResult;
+  if (!canAccessAgency(session.user.role, session.user.agency, 'gpl')) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  }
+  const userId = session.user.id;
   let forecastResult;
   try {
     const { generateForecast } = await import('@/lib/gpl-multivariate-forecast');

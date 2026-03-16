@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getEnhancedForecast, getLatestCachedForecast } from '@/lib/gpl-enhanced-forecast';
-import { requireRole } from '@/lib/auth-helpers';
+import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
 import { withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 
@@ -11,6 +11,10 @@ import { logger } from '@/lib/logger';
 export async function GET(_request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
+  const { session } = authResult;
+  if (!canAccessAgency(session.user.role, session.user.agency, 'gpl')) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  }
 
   try {
     // Try to get forecast (uses cache if data hasn't changed)
@@ -51,6 +55,10 @@ export async function GET(_request: NextRequest) {
 export const POST = withErrorHandler(async (_request: NextRequest) => {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
+  const { session: postSession } = authResult;
+  if (!canAccessAgency(postSession.user.role, postSession.user.agency, 'gpl')) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  }
 
   const result = await getEnhancedForecast(true);
 

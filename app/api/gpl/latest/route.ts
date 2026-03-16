@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
-import { requireRole } from '@/lib/auth-helpers';
+import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 
 export async function GET(_request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
+  const { session } = authResult;
+
+  // Agency scoping: only GPL staff or ministry users can view GPL data
+  if (!canAccessAgency(session.user.role, session.user.agency, 'gpl')) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  }
 
   try {
     // Get the latest confirmed upload

@@ -36,26 +36,24 @@ export async function GET(
     return NextResponse.json({ error: 'Access denied' }, { status: 403 });
   }
 
-  // Fetch documents
-  const { data: documents } = await supabaseAdmin
-    .from('customer_application_documents')
-    .select('*, users:uploaded_by(name)')
-    .eq('application_id', id)
-    .order('uploaded_at', { ascending: false });
-
-  // Fetch activity log
-  const { data: activity } = await supabaseAdmin
-    .from('customer_application_activity_log')
-    .select('*, users:performed_by(name)')
-    .eq('application_id', id)
-    .order('performed_at', { ascending: false });
-
-  // Fetch creator name
-  const { data: creator } = await supabaseAdmin
-    .from('users')
-    .select('name')
-    .eq('id', app.created_by)
-    .single();
+  // Fetch documents, activity, and creator in parallel (all depend only on id/app.created_by)
+  const [{ data: documents }, { data: activity }, { data: creator }] = await Promise.all([
+    supabaseAdmin
+      .from('customer_application_documents')
+      .select('*, users:uploaded_by(name)')
+      .eq('application_id', id)
+      .order('uploaded_at', { ascending: false }),
+    supabaseAdmin
+      .from('customer_application_activity_log')
+      .select('*, users:performed_by(name)')
+      .eq('application_id', id)
+      .order('performed_at', { ascending: false }),
+    supabaseAdmin
+      .from('users')
+      .select('name')
+      .eq('id', app.created_by)
+      .single(),
+  ]);
 
   return NextResponse.json({
     application: { ...app, creator_name: creator?.name || null },

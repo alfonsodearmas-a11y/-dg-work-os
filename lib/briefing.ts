@@ -47,7 +47,7 @@ interface Briefing {
   generated_at: string;
 }
 
-async function fetchTasks(userId: string, role: Role): Promise<Task[]> {
+async function fetchTasks(userId: string, role: Role, agency?: string | null): Promise<Task[]> {
   let query = supabaseAdmin
     .from('tasks')
     .select('id, title, status, due_date, agency, role, priority, created_at')
@@ -55,18 +55,23 @@ async function fetchTasks(userId: string, role: Role): Promise<Task[]> {
     .order('due_date', { ascending: true });
 
   // Scope by role
-  if (role === 'agency_admin' || role === 'officer') {
+  if (role === 'officer') {
+    // Officers see only their own tasks
     query = query.eq('owner_user_id', userId);
+  } else if (role === 'agency_admin' && agency) {
+    // Agency admins see all tasks tagged with their agency
+    query = query.ilike('agency', agency);
   }
+  // Ministry roles (dg, minister, ps) see all tasks
 
   const { data, error } = await query;
   if (error) throw error;
   return (data || []) as Task[];
 }
 
-export async function generateBriefing(userId: string, role: Role): Promise<Briefing> {
+export async function generateBriefing(userId: string, role: Role, agency?: string | null): Promise<Briefing> {
   const [tasksResult, todayResult, weekResult, tomorrowResult] = await Promise.allSettled([
-    fetchTasks(userId, role),
+    fetchTasks(userId, role, agency),
     fetchTodayEvents(userId),
     fetchWeekEvents(userId),
     fetchTomorrowEvents(userId)

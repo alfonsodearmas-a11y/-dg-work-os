@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
-import { requireRole } from '@/lib/auth-helpers';
+import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 
 const SNAPSHOT_COLUMNS = 'id, snapshot_date, track_a_outstanding, track_a_completed, track_b_design_outstanding, track_b_execution_outstanding, track_b_design_completed, track_b_execution_completed, track_b_total_outstanding, warning_count, uploaded_at';
@@ -9,6 +9,10 @@ const METRIC_COLUMNS = 'id, snapshot_id, track, stage, category, total_count, va
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
+  const { session } = authResult;
+  if (!canAccessAgency(session.user.role, session.user.agency, 'gpl')) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  }
 
   try {
     // Get latest snapshot

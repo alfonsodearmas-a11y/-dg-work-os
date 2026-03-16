@@ -1,9 +1,27 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
-import { useMemo } from 'react';
+import { Suspense, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/';
+  const errorParam = searchParams.get('error');
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(errorParam === 'CredentialsSignin' ? 'Invalid email or password' : '');
+
   const particles = useMemo(() =>
     Array.from({ length: 50 }, () => ({
       left: Math.random() * 100,
@@ -12,6 +30,29 @@ export default function LoginPage() {
       size: Math.random() < 0.15 ? 3 : Math.random() < 0.4 ? 2 : 1,
       opacity: 0.1 + Math.random() * 0.2,
     })), []);
+
+  async function handleCredentialsLogin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email || !password) return;
+    setLoading(true);
+    setError('');
+
+    const result = await signIn('credentials', {
+      email,
+      password,
+      callbackUrl,
+      redirect: false,
+    });
+
+    if (result?.error) {
+      setError('Invalid email or password');
+      setLoading(false);
+    } else if (result?.url) {
+      window.location.href = result.url;
+    } else {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="login-page">
@@ -72,9 +113,65 @@ export default function LoginPage() {
         <p className="login-subtitle">Ministry of Public Utilities & Aviation</p>
         <div className="login-divider" />
 
+        {/* Email/Password Form */}
+        <form onSubmit={handleCredentialsLogin} className="w-full space-y-3 mb-4">
+          <div>
+            <input
+              type="email"
+              placeholder="Email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+              className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/25 transition-colors"
+            />
+          </div>
+          <div>
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+              minLength={8}
+              className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/25 transition-colors"
+            />
+          </div>
+          {error && (
+            <p className="text-red-400 text-xs text-center">{error}</p>
+          )}
+          <button
+            type="submit"
+            disabled={loading || !email || !password}
+            className="login-btn w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-25" />
+                <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-75" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13.8 12H3" />
+              </svg>
+            )}
+            Sign in
+          </button>
+        </form>
+
+        {/* Divider */}
+        <div className="w-full flex items-center gap-3 mb-4">
+          <div className="flex-1 h-px bg-white/10" />
+          <span className="text-white/30 text-xs uppercase tracking-wider">or</span>
+          <div className="flex-1 h-px bg-white/10" />
+        </div>
+
+        {/* Google Sign In */}
         <button
-          onClick={() => signIn('google', { callbackUrl: '/' })}
+          onClick={() => signIn('google', { callbackUrl })}
           className="login-btn flex items-center justify-center gap-3 w-full"
+          style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.15)' }}
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
@@ -101,7 +198,7 @@ export default function LoginPage() {
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           </svg>
-          <span>Google Workspace Authentication</span>
+          <span>Secure Authentication</span>
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import Anthropic from '@anthropic-ai/sdk';
-import { requireRole } from '@/lib/auth-helpers';
+import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
 import { withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 
@@ -12,6 +12,10 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 export async function GET() {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
+  const { session } = authResult;
+  if (!canAccessAgency(session.user.role, session.user.agency, 'gpl')) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  }
 
   try {
     // Fetch all KPI data from Supabase
@@ -174,6 +178,10 @@ Respond in JSON format:
 export const POST = withErrorHandler(async () => {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
+  const { session: postSession } = authResult;
+  if (!canAccessAgency(postSession.user.role, postSession.user.agency, 'gpl')) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  }
 
   cachedAnalysis = null;
   return GET();

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
+import { getAgencyScope } from '@/lib/scoped-query';
 import { logger } from '@/lib/logger';
 import { sanitizeSearchInput } from '@/lib/parse-utils';
 
@@ -9,6 +10,7 @@ const DOC_LIST_COLUMNS = 'id, filename, original_filename, title, summary, docum
 export async function GET(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
+  const { session } = authResult;
 
   try {
     const { searchParams } = new URL(request.url);
@@ -21,9 +23,15 @@ export async function GET(request: NextRequest) {
       .select(DOC_LIST_COLUMNS)
       .in('processing_status', ['completed', 'processing', 'failed']);
 
-    if (agency) {
+    // Agency scoping: non-ministry users see only their agency's docs + untagged
+    const scope = getAgencyScope(session);
+    if (scope) {
+      query = query.or(`agency.ilike.${scope},agency.is.null`);
+    } else if (agency) {
+      // Ministry users can optionally filter by agency
       query = query.eq('agency', agency);
     }
+
     if (type) {
       query = query.eq('document_type', type);
     }
