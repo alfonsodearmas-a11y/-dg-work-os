@@ -82,8 +82,8 @@ const PATTERNS: Array<{ re: RegExp; handler: PatternHandler }> = [
       return {
         text: s.gpl.suppressed_mw === 0
           ? '**No suppressed demand currently.** All load is being served.'
-          : `**Suppressed demand: ${s.gpl.suppressed_mw.toFixed(1)} MW**\n\nThis means some areas may be experiencing load shedding.`,
-        suggestions: ['What is causing load shedding?', 'Which stations are offline?', 'GPL health score'],
+          : `**Suppressed demand: ${s.gpl.suppressed_mw.toFixed(1)} MW**\n\nThis indicates unmet demand — the gap between what the grid can serve and estimated total demand.`,
+        suggestions: ['What is the demand gap?', 'Which stations are offline?', 'GPL health score'],
       };
     },
   },

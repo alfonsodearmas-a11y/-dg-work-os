@@ -322,9 +322,12 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
     const critAlerts = data.aiAnalysis?.criticalAlerts || data.aiAnalysis?.critical_alerts;
     if (critAlerts) {
       critAlerts.forEach((alert: any, i: number) => {
+        const sev = (alert.severity || 'INFO').toUpperCase();
+        const mapped: 'critical' | 'high' | 'medium' | 'low' =
+          sev === 'CRITICAL' ? 'critical' : sev === 'WARNING' ? 'high' : 'medium';
         alerts.push({
-          id: `critical-${i}`,
-          severity: 'critical',
+          id: `alert-${i}`,
+          severity: mapped,
           title: alert.title,
           station: null,
           detail: alert.description

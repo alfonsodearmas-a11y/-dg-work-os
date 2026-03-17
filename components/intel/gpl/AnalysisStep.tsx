@@ -104,21 +104,36 @@ export function AnalysisStep({ aiAnalysis, loadingAnalysis, onRetry }: AnalysisS
           </div>
         )}
 
-        {/* CRITICAL ALERTS — collapsed */}
+        {/* ALERTS — collapsed */}
         {aiAnalysis.criticalAlerts && aiAnalysis.criticalAlerts.length > 0 && (
           <CollapsibleSection
-            title={`Critical Alerts (${aiAnalysis.criticalAlerts.length})`}
+            title={`Alerts (${aiAnalysis.criticalAlerts.length})`}
             icon={AlertTriangle}
             badge={{ text: `${aiAnalysis.criticalAlerts.length}`, variant: 'danger' }}
             defaultOpen={false}
           >
             <div className="space-y-2">
-              {aiAnalysis.criticalAlerts.map((alert: any, i: number) => (
-                <div key={i} className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-                  <span className="text-sm font-semibold text-red-300">{alert.title}</span>
-                  <p className="text-slate-400 text-sm mt-1">{alert.description}</p>
-                </div>
-              ))}
+              {aiAnalysis.criticalAlerts.map((alert: any, i: number) => {
+                const sev = (alert.severity || 'INFO').toUpperCase();
+                const alertStyle = sev === 'CRITICAL'
+                  ? 'bg-red-500/15 border-red-500/30 text-red-300'
+                  : sev === 'WARNING'
+                    ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+                    : 'bg-blue-500/15 border-blue-500/30 text-blue-300';
+                return (
+                  <div key={i} className={`p-3 border rounded-lg ${alertStyle}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold">{alert.title}</span>
+                      <span className={`text-[10px] uppercase px-1.5 py-0.5 rounded font-medium ${
+                        sev === 'CRITICAL' ? 'bg-red-500/15 text-red-400'
+                        : sev === 'WARNING' ? 'bg-amber-500/15 text-amber-400'
+                        : 'bg-blue-500/15 text-blue-400'
+                      }`}>{sev}</span>
+                    </div>
+                    <p className="text-slate-400 text-sm mt-1">{alert.description}</p>
+                  </div>
+                );
+              })}
             </div>
           </CollapsibleSection>
         )}

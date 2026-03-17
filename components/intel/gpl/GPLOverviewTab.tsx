@@ -303,22 +303,25 @@ function AIBriefingSection({ data, summary }: { data: GPLData; summary: GPLSumma
         ))}
       </div>
 
-      {/* CRITICAL ALERTS -- each as a mini-card with severity left border */}
+      {/* ALERTS -- each as a mini-card with severity left border */}
       {critAlerts.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-2 px-1">
-            <AlertTriangle className="w-4 h-4 text-red-400" />
-            <span className="text-[15px] font-semibold text-slate-100">Critical Alerts</span>
-            <span className="bg-red-500/20 text-red-400 text-xs px-2 py-0.5 rounded-full font-medium">{critAlerts.length}</span>
+            <AlertTriangle className="w-4 h-4 text-amber-400" />
+            <span className="text-[15px] font-semibold text-slate-100">Alerts</span>
+            <span className="bg-amber-500/20 text-amber-400 text-xs px-2 py-0.5 rounded-full font-medium">{critAlerts.length}</span>
           </div>
           {critAlerts.map((alert: any, i: number) => {
-            const alertSev = (alert.severity || 'CRITICAL').toUpperCase();
-            const borderColor = alertSev === 'CRITICAL' ? 'border-l-red-500' : alertSev === 'HIGH' ? 'border-l-orange-500' : 'border-l-amber-500';
+            const alertSev = (alert.severity || 'INFO').toUpperCase();
+            const borderColor = alertSev === 'CRITICAL' ? 'border-l-red-500' : alertSev === 'WARNING' ? 'border-l-amber-500' : 'border-l-blue-500';
+            const badgeStyle = alertSev === 'CRITICAL' ? 'bg-red-500/15 text-red-400'
+              : alertSev === 'WARNING' ? 'bg-amber-500/15 text-amber-400'
+              : 'bg-blue-500/15 text-blue-400';
             return (
               <div key={i} className={`bg-navy-900 rounded-lg border border-navy-800 border-l-4 ${borderColor} p-4`}>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-[15px] font-semibold text-slate-100">{alert.title}</span>
-                  <span className="text-[10px] uppercase px-1.5 py-0.5 bg-red-500/15 text-red-400 rounded font-medium">
+                  <span className={`text-[10px] uppercase px-1.5 py-0.5 rounded font-medium ${badgeStyle}`}>
                     {alertSev}
                   </span>
                 </div>

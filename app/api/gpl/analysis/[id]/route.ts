@@ -107,6 +107,7 @@ export async function GET(
         availableCapacityMw: schedule?.stats?.totalAvailableMw ?? null,
         expectedPeakMw: scheduleSummary.expectedPeakDemandMw ?? summaries.expectedPeakDemand,
         reserveCapacityMw: scheduleSummary.reserveCapacityMw ?? summaries.reserveCapacity,
+        expectedReserveMw: scheduleSummary.expectedReserveMw ?? null,
         systemUtilizationPct: scheduleSummary.systemUtilizationPct ?? null,
         reserveMarginPct: scheduleSummary.reserveMarginPct ?? null,
         eveningPeak: {

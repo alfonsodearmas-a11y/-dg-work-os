@@ -111,26 +111,66 @@ interface GPLBriefingContext {
 }
 
 function buildGPLPrompt(context: GPLBriefingContext): string {
-  const { reportDate, systemOverview, renewables, unitStats, stations, criticalStations, outages } = context;
-  const stationLines = stations.map(s =>
-    `  - ${s.name}: ${s.online}/${s.units} units online, ${s.availableMw?.toFixed(1) || 0}/${s.capacityMw?.toFixed(1) || 0} MW (${s.utilizationPct?.toFixed(1) || 0}%)`
-  ).join('\n');
+  const { reportDate, systemOverview, renewables, stations, outages } = context;
+
+  // Pre-compute derived metrics so the AI never does its own math
+  const eveningOnBars = systemOverview.eveningPeak?.onBars ?? null;
+  const eveningSuppressed = systemOverview.eveningPeak?.suppressed ?? null;
+  const eveningDemandGapMw = (eveningOnBars != null && eveningSuppressed != null)
+    ? Math.round((eveningSuppressed - eveningOnBars) * 100) / 100
+    : null;
+  const eveningDemandGapPct = (eveningDemandGapMw != null && eveningSuppressed != null && eveningSuppressed > 0)
+    ? Math.round((eveningDemandGapMw / eveningSuppressed) * 10000) / 100
+    : null;
+
+  const totalAvailableMw: number | null = systemOverview.availableCapacityMw
+    ?? stations.reduce((sum: number, s: any) => sum + (s.availableMw || 0), 0);
+  const expectedPeakMw: number | null = systemOverview.expectedPeakMw ?? null;
+  const reserveMarginPct = (totalAvailableMw != null && expectedPeakMw != null && totalAvailableMw > 0)
+    ? Math.round(((totalAvailableMw - expectedPeakMw) / totalAvailableMw) * 10000) / 100
+    : null;
+
+  const expectedReserveMw: number | null = systemOverview.expectedReserveMw ?? null;
+
+  // Per-station lines and offline detection
+  const stationLines = stations.map((s: any) => {
+    const availPct = s.capacityMw > 0 ? Math.round((s.availableMw / s.capacityMw) * 10000) / 100 : 0;
+    return `  - ${s.name}: ${s.availableMw?.toFixed(1) || 0} MW avail / ${s.capacityMw?.toFixed(1) || 0} MW derated, ${s.online || 0}/${s.units || 0} units online, ${availPct}% availability`;
+  }).join('\n');
+
+  const stationsFullyOffline = stations
+    .filter((s: any) => (s.availableMw === 0 || s.availableMw == null) && (s.units || 0) > 0)
+    .map((s: any) => `${s.name} (${s.capacityMw?.toFixed(1) || 0} MW derated, ${s.units} units)`);
+
+  const totalUnitsOnline = stations.reduce((sum: number, s: any) => sum + (s.online || 0), 0);
+  const totalUnitsAll = stations.reduce((sum: number, s: any) => sum + (s.units || 0), 0);
+
   const outageLines = outages.length > 0
-    ? outages.map(o => `  - ${o.station} ${o.unit || ''}: ${o.reason || 'Unknown'}${o.expectedCompletion ? ` (ETA: ${o.expectedCompletion})` : ''}`).join('\n')
+    ? outages.map((o: any) => `  - ${o.station} ${o.unit || ''}: ${o.reason || 'Unknown'}${o.expectedCompletion ? ` (ETA: ${o.expectedCompletion})` : ''}`).join('\n')
     : '  None reported';
 
-  return `You are the AI briefing system for the Ministry of Public Utilities in Guyana, analyzing daily power generation data from GPL (Guyana Power & Light) on the DBIS (Demerara-Berbice Interconnected System).
+  return `You are a power grid data analyst for the Demerara-Berbice Interconnected System (DBIS) in Guyana. You produce a concise executive briefing for the Director General of the Ministry of Public Utilities.
+
+YOUR ROLE IS STRICTLY DATA ANALYSIS. You report facts and flag threshold breaches. You do NOT:
+- Make recommendations or suggest actions
+- Use the phrase "load shedding"
+- Flag Onverwagt station for having zero capacity (this is deliberate and permanent; exclude it from offline counts, concern flags, and capacity loss calculations entirely)
+- Suggest maintenance, investigations, emergency protocols, or operational changes
+- Use alarmist language ("severe", "critical failure", "emergency")
 
 ## Report Date: ${reportDate}
 
-## SYSTEM OVERVIEW
-- Total Fossil Fuel Capacity: ${systemOverview.totalCapacityMw?.toFixed(2) || 'N/A'} MW
-- Available Capacity: ${systemOverview.availableCapacityMw?.toFixed(2) || 'N/A'} MW
-- Expected Peak Demand: ${systemOverview.expectedPeakMw?.toFixed(2) || 'N/A'} MW
+## PRE-COMPUTED METRICS (use these directly, do NOT recompute)
+- Total Available Capacity: ${totalAvailableMw != null ? totalAvailableMw.toFixed(2) : 'N/A'} MW
+- Expected Peak Demand: ${expectedPeakMw != null ? expectedPeakMw.toFixed(2) : 'N/A'} MW
 - Reserve Capacity: ${systemOverview.reserveCapacityMw?.toFixed(2) || 'N/A'} MW
-- System Utilization: ${systemOverview.systemUtilizationPct?.toFixed(1) || 'N/A'}%
-- Reserve Margin: ${systemOverview.reserveMarginPct?.toFixed(1) || 'N/A'}%
-- Evening Peak: ${systemOverview.eveningPeak?.onBars?.toFixed(2) || 'N/A'} MW on bars${systemOverview.eveningPeak?.suppressed ? ` (${systemOverview.eveningPeak.suppressed.toFixed(2)} MW suppressed/true demand)` : ''}
+- Reserve Margin: ${reserveMarginPct != null ? reserveMarginPct.toFixed(1) + '%' : 'N/A'}
+- Expected Reserve (after FOR): ${expectedReserveMw != null ? expectedReserveMw.toFixed(2) : 'N/A'} MW
+- Units Online: ${totalUnitsOnline} / ${totalUnitsAll} (Onverwagt excluded)
+- Evening Peak On-Bars: ${eveningOnBars != null ? eveningOnBars.toFixed(2) : 'N/A'} MW
+- Evening Peak Suppressed: ${eveningSuppressed != null ? eveningSuppressed.toFixed(2) : 'N/A'} MW
+- Evening Demand Gap: ${eveningDemandGapMw != null ? eveningDemandGapMw.toFixed(2) + ' MW' : 'N/A'}${eveningDemandGapPct != null ? ` (${eveningDemandGapPct.toFixed(1)}% of suppressed demand)` : ''}
+- Stations Fully Offline (excl. Onverwagt): ${stationsFullyOffline.length > 0 ? stationsFullyOffline.join('; ') : 'None'}
 
 ## RENEWABLES
 - Hampshire Solar: ${renewables.hampshireMwp || 0} MWp
@@ -138,47 +178,56 @@ function buildGPLPrompt(context: GPLBriefingContext): string {
 - Trafalgar Solar: ${renewables.trafalgarMwp || 0} MWp
 - Total Renewable: ${renewables.totalMwp || 0} MWp
 
-## UNIT STATUS
-- Total: ${unitStats.total}, Online: ${unitStats.online}, Offline: ${unitStats.offline}, No Data: ${unitStats.noData}
-
-## STATION BREAKDOWN
+## FLEET STATUS (per station, Onverwagt excluded)
 ${stationLines}
-
-## STATIONS BELOW 50% UTILIZATION
-${criticalStations.length > 0 ? criticalStations.join(', ') : 'None'}
 
 ## CURRENT OUTAGES (from Generation Status sheet)
 ${outageLines}
 
-## ALERT THRESHOLDS
-- CRITICAL: Expected reserve < 0 MW (demand exceeds expected available capacity)
-- WARNING: Reserve margin < 10%
-- INFO: Suppressed demand significantly exceeds on-bars demand (gap indicates unmet demand)
+UNDERSTANDING THE PEAK DEMAND DATA:
+- on_bars = what was actually served on the grid
+- suppressed = estimated total demand if no supply constraints
+- demand_gap = suppressed minus on_bars (the unmet demand)
+- These are NOT additive. The suppressed number INCLUDES the on_bars number.
+- NEVER add on_bars + suppressed together.
 
 Respond in JSON format:
 {
   "executiveBriefing": {
-    "headline": "1-2 sentence newspaper-style summary with key numbers (MW values, unit counts, percentages). Example: 'GPL operating at 221.2 MW / 340.6 MW (65% capacity). 37 of 63 units online. Evening peak 200.4 MW on bars (220.2 MW suppressed).'",
+    "headline": "1-2 sentences: total available capacity, units online/total, reserve position vs expected peak, evening peak with demand gap if applicable",
     "sections": [
-      { "title": "System Status", "severity": "critical|warning|stable|positive", "summary": "one-line summary with numbers", "detail": "full paragraph with factual analysis" },
-      { "title": "Critical Issues", "severity": "critical|warning|stable|positive", "summary": "one-line: count of issues observed", "detail": "full paragraph listing each issue with MW impact" },
-      { "title": "Positive Performance", "severity": "positive", "summary": "one-line: best-performing stations/metrics", "detail": "full paragraph with details" },
-      { "title": "Outage Summary", "severity": "critical|warning|stable|positive", "summary": "one-line: count of offline units and total MW offline", "detail": "full paragraph listing offline units with outage reasons and expected completion dates" }
+      {
+        "title": "System Status",
+        "severity": "positive (reserve margin > 20% AND demand gap < 5%) | warning (reserve margin 10-20% OR demand gap 5-15%) | critical (reserve margin < 10% OR demand gap > 15% OR expected reserve negative)",
+        "summary": "Good / Watch / Warning — one sentence with the driving metric",
+        "detail": "which threshold drove the status determination"
+      },
+      {
+        "title": "Fleet Snapshot",
+        "severity": "stable",
+        "summary": "one-line station count and availability summary",
+        "detail": "Per station (excluding Onverwagt): available MW / derated MW, units online / total, availability %. Flag stations below 50%."
+      }
     ]
   },
-  "criticalAlerts": [{ "severity": "CRITICAL|WARNING|INFO", "title": "string", "description": "string" }]
+  "criticalAlerts": [
+    { "severity": "CRITICAL | WARNING | INFO", "title": "short factual title", "description": "factual statement with numbers, no recommendations" }
+  ]
 }
 
-CONSTRAINTS — you MUST follow these:
-- Report ONLY observed facts from the data above. Do not speculate or extrapolate.
-- Do NOT suggest maintenance actions, operational changes, or policy recommendations.
-- Do NOT mention "load shedding" — the spreadsheet does not track load shedding directly.
-- Do NOT use words like "recommend", "should", "consider", "suggest", "advise".
-- Do NOT mention Onverwagt station (it is deliberately empty, not a concern).
-- Alerts must describe WHAT is happening, not what to do about it.
-- Each section "summary" must be exactly ONE line with specific numbers.
-- Each section "detail" is the full analysis paragraph.
-- severity values: "critical" (red), "warning" (amber), "stable" (blue), "positive" (green).`;
+ALERT RULES (generate an alert ONLY if the condition is met):
+- Expected reserve < 0 MW → CRITICAL: "Negative expected reserve: X MW. Available capacity may be insufficient to meet demand with forced outage contingency."
+- Demand gap > 10 MW → WARNING if gap > 15% of suppressed, else INFO: "Evening demand gap: X MW (Y% of suppressed demand). On-bars: A MW, Suppressed: B MW."
+- Any station at 0 MW across all units → WARNING: "[Station] fully offline: X MW derated capacity, N units."
+- Reserve margin < 10% → WARNING: "Reserve margin at X%. Total available: Y MW, Expected peak: Z MW."
+
+Alert severity assignment:
+- CRITICAL: only if expected reserve < 0
+- WARNING: reserve margin < 10% OR demand gap > 15% of suppressed demand
+- INFO: everything else
+
+Each alert is a factual statement. No arrows, no action text, no recommendations.
+Severity values for sections: "critical" (red), "warning" (amber), "stable" (blue), "positive" (green).`;
 }
 
 export async function generateGPLBriefing(context: GPLBriefingContext) {
