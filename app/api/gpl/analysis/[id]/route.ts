@@ -4,13 +4,12 @@ import { generateGPLBriefing } from '@/lib/ai-analysis';
 import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
 import { withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+import { GPL_EXCLUDED_STATIONS } from '@/lib/gpl-constants';
 
 function safeJsonParse<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback;
   try { return JSON.parse(raw); } catch { return fallback; }
 }
-
-const EXCLUDED_STATIONS = ['onverwagt'];
 
 export async function GET(
   _request: NextRequest,
@@ -87,10 +86,10 @@ export async function GET(
     const summaries = rawData.generationStatus?.summaries || {};
     const scheduleSummary = schedule?.summary || {};
     const stations = (schedule?.stations || []).filter(
-      (s: any) => !EXCLUDED_STATIONS.includes((s.station || '').toLowerCase())
+      (s: any) => !GPL_EXCLUDED_STATIONS.includes((s.station || '').toLowerCase())
     );
     const units = (schedule?.units || []).filter(
-      (u: any) => !EXCLUDED_STATIONS.includes((u.station || '').toLowerCase())
+      (u: any) => !GPL_EXCLUDED_STATIONS.includes((u.station || '').toLowerCase())
     );
 
     const onlineCount = units.filter((u: any) => u.status === 'online').length;
@@ -108,6 +107,8 @@ export async function GET(
         availableCapacityMw: schedule?.stats?.totalAvailableMw ?? null,
         expectedPeakMw: scheduleSummary.expectedPeakDemandMw ?? summaries.expectedPeakDemand,
         reserveCapacityMw: scheduleSummary.reserveCapacityMw ?? summaries.reserveCapacity,
+        systemUtilizationPct: scheduleSummary.systemUtilizationPct ?? null,
+        reserveMarginPct: scheduleSummary.reserveMarginPct ?? null,
         eveningPeak: {
           onBars: scheduleSummary.eveningPeakOnBarsMw ?? null,
           suppressed: scheduleSummary.eveningPeakSuppressedMw ?? null,
@@ -214,10 +215,10 @@ export const POST = withErrorHandler(async (
   const summaries = rawData.generationStatus?.summaries || {};
   const scheduleSummary = schedule?.summary || {};
   const stations = (schedule?.stations || []).filter(
-    (s: any) => !EXCLUDED_STATIONS.includes((s.station || '').toLowerCase())
+    (s: any) => !GPL_EXCLUDED_STATIONS.includes((s.station || '').toLowerCase())
   );
   const units = (schedule?.units || []).filter(
-    (u: any) => !EXCLUDED_STATIONS.includes((u.station || '').toLowerCase())
+    (u: any) => !GPL_EXCLUDED_STATIONS.includes((u.station || '').toLowerCase())
   );
 
   const onlineCount = units.filter((u: any) => u.status === 'online').length;
@@ -235,6 +236,8 @@ export const POST = withErrorHandler(async (
       availableCapacityMw: schedule?.stats?.totalAvailableMw ?? null,
       expectedPeakMw: scheduleSummary.expectedPeakDemandMw ?? summaries.expectedPeakDemand,
       reserveCapacityMw: scheduleSummary.reserveCapacityMw ?? summaries.reserveCapacity,
+      systemUtilizationPct: scheduleSummary.systemUtilizationPct ?? null,
+      reserveMarginPct: scheduleSummary.reserveMarginPct ?? null,
       eveningPeak: {
         onBars: scheduleSummary.eveningPeakOnBarsMw ?? null,
         suppressed: scheduleSummary.eveningPeakSuppressedMw ?? null,

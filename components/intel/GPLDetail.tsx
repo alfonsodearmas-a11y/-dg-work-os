@@ -327,39 +327,8 @@ export function GPLDetail({ data, onLoadDate }: GPLDetailProps) {
           severity: 'critical',
           title: alert.title,
           station: null,
-          detail: alert.description,
-          recommendation: alert.recommendation
+          detail: alert.description
         });
-      });
-    }
-
-    const concerns = data.aiAnalysis?.stationConcerns || data.aiAnalysis?.station_concerns;
-    if (concerns) {
-      concerns.forEach((concern: any, i: number) => {
-        alerts.push({
-          id: `station-${i}`,
-          severity: concern.priority === 'HIGH' ? 'high' : concern.priority === 'MEDIUM' ? 'medium' : 'low',
-          title: concern.issue,
-          station: concern.station,
-          detail: concern.impact || '',
-          recommendation: null
-        });
-      });
-    }
-
-    if (data.aiAnalysis?.recommendations) {
-      data.aiAnalysis.recommendations.forEach((rec: any, i: number) => {
-        if (rec.urgency === 'Immediate') {
-          alerts.push({
-            id: `rec-${i}`,
-            severity: 'medium',
-            title: rec.recommendation,
-            station: null,
-            detail: null,
-            recommendation: null,
-            category: rec.category
-          });
-        }
       });
     }
 

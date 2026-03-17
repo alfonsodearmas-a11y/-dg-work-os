@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
+import { GPL_SUMMARY_SELECT } from '@/lib/gpl-constants';
 
 export async function GET(_request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -37,7 +38,7 @@ export async function GET(_request: NextRequest) {
     const { data: summaryRows, error: summaryError } = await supabaseAdmin
       .from('gpl_daily_summary')
       .select(
-        'report_date, total_fossil_capacity_mw, expected_peak_demand_mw, reserve_capacity_mw, average_for, hampshire_solar_mwp, prospect_solar_mwp, trafalgar_solar_mwp, total_renewable_mwp, total_dbis_capacity_mw, evening_peak_on_bars_mw, evening_peak_suppressed_mw, day_peak_on_bars_mw, day_peak_suppressed_mw'
+        GPL_SUMMARY_SELECT
       )
       .eq('upload_id', upload.id);
 

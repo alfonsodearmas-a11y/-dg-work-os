@@ -217,7 +217,7 @@ function AIBriefingSection({ data, summary }: { data: GPLData; summary: GPLSumma
       if (key.includes('system') || key.includes('status')) aiSections['system'] = s;
       else if (key.includes('critical') || key.includes('issue')) aiSections['issues'] = s;
       else if (key.includes('positive') || key.includes('strong') || key.includes('performer')) aiSections['performers'] = s;
-      else if (key.includes('action') || key.includes('required')) aiSections['actions'] = s;
+      else if (key.includes('outage')) aiSections['outage'] = s;
     }
   }
 
@@ -240,9 +240,6 @@ function AIBriefingSection({ data, summary }: { data: GPLData; summary: GPLSumma
   const topBaseload = topPerformers.reduce((sum, s) => sum + s.available, 0);
 
   const critAlerts = data.aiAnalysis?.criticalAlerts || data.aiAnalysis?.critical_alerts || [];
-  const recommendations = data.aiAnalysis?.recommendations || [];
-  const urgentRecs = recommendations.filter((r: any) => r.urgency === 'Immediate' || r.urgency === 'Short-term');
-  const actionCount = urgentRecs.length + critAlerts.length;
 
   // Build 4 insight cards
   const insightCards: InsightCardData[] = [
@@ -272,16 +269,13 @@ function AIBriefingSection({ data, summary }: { data: GPLData; summary: GPLSumma
       detail: aiSections['performers']?.detail || null,
     },
     {
-      emoji: '\uD83D\uDCCB',
-      title: 'Action Required',
-      severity: actionCount > 3 ? 'warning' : actionCount > 0 ? 'stable' : 'positive',
-      summary: actionCount > 0
-        ? `${actionCount} priority action${actionCount !== 1 ? 's' : ''} for DG attention`
-        : 'No urgent actions required',
-      detail: aiSections['actions']?.detail
-        || (urgentRecs.length > 0
-          ? urgentRecs.map((r: any) => `\u2022 ${r.recommendation}`).join('\n')
-          : null),
+      emoji: '\uD83D\uDD27',
+      title: 'Outage Summary',
+      severity: critAlerts.length > 3 ? 'warning' : critAlerts.length > 0 ? 'stable' : 'positive',
+      summary: critAlerts.length > 0
+        ? `${critAlerts.length} alert${critAlerts.length !== 1 ? 's' : ''} flagged by analysis`
+        : 'No alerts flagged',
+      detail: aiSections['outage']?.detail || null,
     },
   ];
 
@@ -329,9 +323,6 @@ function AIBriefingSection({ data, summary }: { data: GPLData; summary: GPLSumma
                   </span>
                 </div>
                 <p className="text-slate-400 text-sm leading-relaxed">{alert.description}</p>
-                {alert.recommendation && (
-                  <p className="text-blue-400 text-sm mt-1.5">{'\u2192'} {alert.recommendation}</p>
-                )}
               </div>
             );
           })}

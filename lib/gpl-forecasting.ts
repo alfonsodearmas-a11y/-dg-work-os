@@ -7,12 +7,7 @@
 
 import { supabaseAdmin } from './db';
 import { logger } from '@/lib/logger';
-
-// ---------------------------------------------------------------------------
-// Excluded stations (permanently decommissioned)
-// ---------------------------------------------------------------------------
-
-const EXCLUDED_STATIONS = ['onverwagt'];
+import { GPL_EXCLUDED_STATIONS } from './gpl-constants';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -277,7 +272,7 @@ async function getStationData(daysBack: number = 90): Promise<StationRow[]> {
 
   if (error) throw error;
   return (data as StationRow[]).filter(
-    row => !EXCLUDED_STATIONS.includes(row.station.toLowerCase())
+    row => !GPL_EXCLUDED_STATIONS.includes(row.station.toLowerCase())
   );
 }
 
@@ -309,7 +304,7 @@ async function getUnitData(daysBack: number = 90): Promise<UnitRow[]> {
 
   if (error) throw error;
   return (data as UnitRow[]).filter(
-    row => !EXCLUDED_STATIONS.includes(row.station.toLowerCase())
+    row => !GPL_EXCLUDED_STATIONS.includes(row.station.toLowerCase())
   );
 }
 

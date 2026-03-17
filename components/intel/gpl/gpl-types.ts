@@ -37,7 +37,6 @@ export interface ConsolidatedAlert {
   title: string;
   station: string | null;
   detail: string | null;
-  recommendation: string | null;
   category?: string;
 }
 

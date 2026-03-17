@@ -8,7 +8,7 @@ interface ParseWarning { type: string; message: string; [key: string]: unknown; 
 const CONFIG = {
   DATE_HEADER_ROW: 4,
   UNIT_START_ROW: 5,
-  UNIT_END_ROW: 68,
+  UNIT_END_ROW: 67,
   SUMMARY_START_ROW: 69,
   SUMMARY_END_ROW: 83,
   SUMMARY_ROWS: {
@@ -33,6 +33,7 @@ const CONFIG = {
   STATIONS: [
     { name: 'SEI', startRow: 5, endRow: 7 },
     { name: 'Canefield', startRow: 8, endRow: 13 },
+    { name: 'Onverwagt', startRow: 14, endRow: 23 },
     { name: 'GOE', startRow: 24, endRow: 24 },
     { name: 'DP1', startRow: 25, endRow: 28 },
     { name: 'DP2', startRow: 29, endRow: 32 },
@@ -41,7 +42,7 @@ const CONFIG = {
     { name: 'DP5', startRow: 41, endRow: 45 },
     { name: 'COL', startRow: 46, endRow: 62 },
     { name: 'Power Ship 1', startRow: 63, endRow: 64 },
-    { name: 'Power Ship 2', startRow: 65, endRow: 68 },
+    { name: 'Power Ship 2', startRow: 65, endRow: 67 },
   ],
 };
 

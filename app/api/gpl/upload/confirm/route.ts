@@ -6,6 +6,7 @@ import { generateGPLBriefing } from '@/lib/ai-analysis';
 import { requireUploadRole } from '@/lib/auth-helpers';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+import { GPL_EXCLUDED_STATIONS } from '@/lib/gpl-constants';
 
 const confirmSchema = z.object({
   uploadData: z.record(z.string(), z.any()),
@@ -50,6 +51,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     const expectedPeakDemandMw = scheduleSummary.expectedPeakDemandMw ?? summaries.expectedPeakDemand ?? null;
     const reserveCapacityMw = scheduleSummary.reserveCapacityMw ?? summaries.reserveCapacity ?? null;
     const averageFor = scheduleSummary.averageFor ?? null;
+    const expectedCapacityMw = scheduleSummary.expectedCapacityMw ?? null;
+    const expectedReserveMw = scheduleSummary.expectedReserveMw ?? null;
     const hampshireSolarMwp = scheduleSummary.solarHampshireMwp ?? summaries.hampshireSolarMwp ?? 0;
     const prospectSolarMwp = scheduleSummary.solarProspectMwp ?? summaries.prospectSolarMwp ?? 0;
     const trafalgarSolarMwp = scheduleSummary.solarTrafalgarMwp ?? summaries.trafalgarSolarMwp ?? 0;
@@ -59,6 +62,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     const eveningPeakSuppressedMw = scheduleSummary.eveningPeakSuppressedMw ?? null;
     const dayPeakOnBarsMw = scheduleSummary.dayPeakOnBarsMw ?? null;
     const dayPeakSuppressedMw = scheduleSummary.dayPeakSuppressedMw ?? null;
+    const genAvailabilityAtSuppressedPeak = scheduleSummary.genAvailabilityAtSuppressedPeak ?? null;
+    const approxSuppressedPeak = scheduleSummary.approxSuppressedPeak ?? null;
+    const systemUtilizationPct = scheduleSummary.systemUtilizationPct ?? null;
+    const reserveMarginPct = scheduleSummary.reserveMarginPct ?? null;
 
     // Remove any previous data for this date (allows re-uploads)
     await supabaseAdmin.from('gpl_daily_units').delete().eq('report_date', reportDate);
@@ -84,6 +91,12 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         evening_peak_suppressed_mw: eveningPeakSuppressedMw,
         day_peak_on_bars_mw: dayPeakOnBarsMw,
         day_peak_suppressed_mw: dayPeakSuppressedMw,
+        expected_capacity_mw: expectedCapacityMw,
+        expected_reserve_mw: expectedReserveMw,
+        gen_availability_at_suppressed_peak: genAvailabilityAtSuppressedPeak,
+        approx_suppressed_peak: approxSuppressedPeak,
+        system_utilization_pct: systemUtilizationPct,
+        reserve_margin_pct: reserveMarginPct,
       });
 
     if (summaryError) throw summaryError;
@@ -142,11 +155,19 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     });
 
     // Trigger async AI analysis (non-blocking)
-    const onlineCount = units.filter((u: any) => u.status === 'online').length;
-    const offlineCount = units.filter((u: any) => u.status === 'offline').length;
-    const noDataCount = units.filter((u: any) => u.status === 'no_data').length;
+    // Exclude Onverwagt from AI context (deliberately empty station, not a concern)
+    const filteredStations = stations.filter(
+      (s: any) => !GPL_EXCLUDED_STATIONS.includes((s.station || '').toLowerCase())
+    );
+    const filteredUnits = units.filter(
+      (u: any) => !GPL_EXCLUDED_STATIONS.includes((u.station || '').toLowerCase())
+    );
 
-    const criticalStations = stations
+    const onlineCount = filteredUnits.filter((u: any) => u.status === 'online').length;
+    const offlineCount = filteredUnits.filter((u: any) => u.status === 'offline').length;
+    const noDataCount = filteredUnits.filter((u: any) => u.status === 'no_data').length;
+
+    const criticalStations = filteredStations
       .filter((s: any) => s.stationUtilizationPct !== null && s.stationUtilizationPct < 50)
       .map((s: any) => s.station);
 
@@ -157,6 +178,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         availableCapacityMw: schedule?.stats?.totalAvailableMw ?? null,
         expectedPeakMw: scheduleSummary.expectedPeakDemandMw ?? summaries.expectedPeakDemand,
         reserveCapacityMw: scheduleSummary.reserveCapacityMw ?? summaries.reserveCapacity,
+        systemUtilizationPct: scheduleSummary.systemUtilizationPct ?? null,
+        reserveMarginPct: scheduleSummary.reserveMarginPct ?? null,
         eveningPeak: {
           onBars: scheduleSummary.eveningPeakOnBarsMw ?? null,
           suppressed: scheduleSummary.eveningPeakSuppressedMw ?? null,
@@ -169,12 +192,12 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         totalMwp: summaries.totalRenewableCapacity || 0,
       },
       unitStats: {
-        total: units.length,
+        total: filteredUnits.length,
         online: onlineCount,
         offline: offlineCount,
         noData: noDataCount,
       },
-      stations: stations.map((s: any) => ({
+      stations: filteredStations.map((s: any) => ({
         name: s.station,
         units: s.totalUnits,
         online: s.unitsOnline,

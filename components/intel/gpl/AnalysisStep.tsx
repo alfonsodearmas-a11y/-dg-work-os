@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Activity, AlertCircle, AlertTriangle, Brain, ChevronDown, Loader2, RefreshCw, TrendingUp } from 'lucide-react';
+import { Activity, AlertCircle, AlertTriangle, Brain, ChevronDown, Loader2, RefreshCw } from 'lucide-react';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 
 interface AnalysisStepProps {
@@ -117,33 +117,12 @@ export function AnalysisStep({ aiAnalysis, loadingAnalysis, onRetry }: AnalysisS
                 <div key={i} className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
                   <span className="text-sm font-semibold text-red-300">{alert.title}</span>
                   <p className="text-slate-400 text-sm mt-1">{alert.description}</p>
-                  {alert.recommendation && (
-                    <p className="text-blue-400 text-sm mt-1.5">&rarr; {alert.recommendation}</p>
-                  )}
                 </div>
               ))}
             </div>
           </CollapsibleSection>
         )}
 
-        {/* RECOMMENDATIONS — collapsed */}
-        {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
-          <CollapsibleSection
-            title={`Recommendations (${aiAnalysis.recommendations.length})`}
-            icon={TrendingUp}
-            badge={{ text: `${aiAnalysis.recommendations.length}`, variant: 'info' }}
-            defaultOpen={false}
-          >
-            <ul className="space-y-2 text-sm text-slate-400">
-              {aiAnalysis.recommendations.map((rec: any, i: number) => (
-                <li key={i} className="flex items-start gap-2">
-                  <TrendingUp className="w-3.5 h-3.5 text-blue-400 mt-0.5 flex-shrink-0" />
-                  <span>{rec.recommendation}</span>
-                </li>
-              ))}
-            </ul>
-          </CollapsibleSection>
-        )}
       </div>
     );
   }
