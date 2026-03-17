@@ -27,9 +27,10 @@ export function SubmissionStep({
   // Compute derived metrics
   const fossilMw = parseFloat(displaySummary?.total_fossil_capacity_mw || 0);
   const eveningPeakMw = parseFloat(displaySummary?.evening_peak_on_bars_mw || 0);
-  const reserveMw = parseFloat(displaySummary?.reserve_capacity_mw || 0);
+  const expectedPeakMw = parseFloat(displaySummary?.expected_peak_demand_mw || 0);
+  const peakMw = eveningPeakMw > 0 ? eveningPeakMw : expectedPeakMw;
   const dbisMw = parseFloat(displaySummary?.total_dbis_capacity_mw || 0);
-  const reserveMarginPct = eveningPeakMw > 0 ? ((fossilMw - eveningPeakMw) / fossilMw) * 100 : 0;
+  const reserveMarginPct = peakMw > 0 ? ((fossilMw - peakMw) / peakMw) * 100 : 0;
 
   return (
     <>

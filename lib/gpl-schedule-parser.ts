@@ -107,12 +107,11 @@ interface DateColumnResult {
   scannedColumns?: number;
 }
 
-function findYesterdayColumn(sheetData: ExcelSheetData): DateColumnResult {
+function findLatestDateColumn(sheetData: ExcelSheetData): DateColumnResult {
   const yesterday = getYesterdayGuyana();
   const dateRow = sheetData[CONFIG.DATE_HEADER_ROW - 1];
   if (!dateRow) return { error: 'Date header row (row 4) not found' };
 
-  let yesterdayCol: number | null = null;
   let lastPopulatedCol: number | null = null;
   let lastPopulatedDate: string | null = null;
   let scannedCount = 0;
@@ -125,16 +124,19 @@ function findYesterdayColumn(sheetData: ExcelSheetData): DateColumnResult {
         lastPopulatedCol = colIdx;
         lastPopulatedDate = parsedDate;
         scannedCount++;
-        if (parsedDate === yesterday) { yesterdayCol = colIdx; break; }
       }
     }
   }
 
-  if (yesterdayCol !== null) {
-    return { column: yesterdayCol, columnLetter: indexToCol(yesterdayCol), date: yesterday, exactMatch: true, scannedColumns: scannedCount };
-  }
   if (lastPopulatedCol !== null) {
-    return { column: lastPopulatedCol, columnLetter: indexToCol(lastPopulatedCol), date: lastPopulatedDate!, exactMatch: false, expectedDate: yesterday, scannedColumns: scannedCount };
+    return {
+      column: lastPopulatedCol,
+      columnLetter: indexToCol(lastPopulatedCol),
+      date: lastPopulatedDate!,
+      exactMatch: lastPopulatedDate === yesterday,
+      expectedDate: lastPopulatedDate !== yesterday ? yesterday : undefined,
+      scannedColumns: scannedCount,
+    };
   }
   return { error: 'No date columns found in row 4' };
 }
@@ -261,13 +263,15 @@ function aggregateStations(units: ScheduleUnit[]): StationAggregate[] {
 }
 
 function parseSummary(sheetData: ExcelSheetData, dataColIdx: number) {
+  // Scan backwards from the latest date column to find the most recent non-null value.
+  // Planning metrics (expected peak, reserve, FOR) are in the latest column while
+  // actual metrics (evening/day peak) may be one column back (yesterday).
+  const minCol = Math.max(CONFIG.COLS.DATA_START, dataColIdx - 14);
+
   const getValue = (rowNum: number): number | null => {
     const row = sheetData[rowNum - 1];
     if (!row) return null;
-    // Try the per-date column first; fall back to the fixed MW_DERATED column (5).
-    // Some summary fields (expected peak, reserve, FOR, etc.) are in a fixed column,
-    // not repeated in every date column.
-    for (const col of [dataColIdx, CONFIG.COLS.MW_DERATED]) {
+    for (let col = dataColIdx; col >= minCol; col--) {
       const val = row[col];
       if (val === null || val === undefined || val === '' || val === '-') continue;
       const num = parseFloat(String(val));
@@ -279,7 +283,11 @@ function parseSummary(sheetData: ExcelSheetData, dataColIdx: number) {
   const getStringValue = (rowNum: number) => {
     const row = sheetData[rowNum - 1];
     if (!row) return null;
-    return row[dataColIdx];
+    for (let col = dataColIdx; col >= minCol; col--) {
+      const val = row[col];
+      if (val !== null && val !== undefined && val !== '' && String(val).trim() !== '-') return val;
+    }
+    return null;
   };
 
   const eveningPeak = parsePeakDemandFormat(getStringValue(CONFIG.SUMMARY_ROWS.EVENING_PEAK));
@@ -324,7 +332,7 @@ export function parseScheduleSheet(buffer: Buffer) {
 
     const sheetData = XLSX.utils.sheet_to_json(scheduleSheet, { header: 1, defval: null, raw: true }) as ExcelSheetData;
 
-    const dateResult = findYesterdayColumn(sheetData);
+    const dateResult = findLatestDateColumn(sheetData);
     if (dateResult.error) return { success: false, error: dateResult.error };
 
     if (!dateResult.exactMatch) {
@@ -367,8 +375,9 @@ export function parseScheduleSheet(buffer: Buffer) {
     const totalAvailable = stations.reduce((sum, s) => sum + s.totalAvailableMw, 0);
     const totalDerated = stations.reduce((sum, s) => sum + s.totalDeratedCapacityMw, 0);
     const systemUtilizationPct = totalDerated > 0 ? Math.min(Math.round((totalAvailable / totalDerated) * 10000) / 100, 100) : null;
-    const reserveMarginPct = summary.eveningPeakOnBarsMw && summary.eveningPeakOnBarsMw > 0
-      ? Math.round(((totalAvailable - summary.eveningPeakOnBarsMw) / summary.eveningPeakOnBarsMw) * 10000) / 100
+    const peakForReserve = summary.eveningPeakOnBarsMw ?? summary.expectedPeakDemandMw;
+    const reserveMarginPct = peakForReserve && peakForReserve > 0
+      ? Math.round(((totalAvailable - peakForReserve) / peakForReserve) * 10000) / 100
       : null;
 
     return {

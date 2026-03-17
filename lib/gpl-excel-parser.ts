@@ -86,27 +86,10 @@ export function parseGPLExcel(buffer: Buffer): ParseResult {
       }
     }
 
-    // Parse summary rows (41-47)
+    // Summary metrics are parsed from the Schedule sheet (not Generation Status).
+    // Generation Status summary rows (41-47) use generator-column headers for summary
+    // data, producing misleading values. Only outage data (cols 7-10) is reliable here.
     const summaries: Record<string, any> = {};
-    const summaryMap: Record<number, string> = {
-      41: 'totalCapacity',
-      42: 'expectedPeakDemand',
-      43: 'reserveCapacity',
-      44: 'averageFOR',
-      45: 'expectedCapacity',
-      46: 'expectedReserve',
-      47: 'actualPeakDemand',
-    };
-
-    for (const [rowIdx, key] of Object.entries(summaryMap)) {
-      const row = genData[parseInt(rowIdx)];
-      if (row) {
-        const value = parseFloat(row[5]) || parseFloat(row[6]) || null;
-        if (value !== null && !isNaN(value)) {
-          summaries[key] = Math.round(value * 100) / 100;
-        }
-      }
-    }
 
     // Get report date from row 49
     let reportDate: string | null = null;
@@ -201,7 +184,10 @@ export function parseGPLExcel(buffer: Buffer): ParseResult {
     }
     totalFossilCapacity = Math.round(totalFossilCapacity * 100) / 100;
 
-    const totalSolarMwp = (summaries.hampshireSolarMwp || 0) + (summaries.prospectSolarMwp || 0) + (summaries.trafalgarSolarMwp || 0);
+    const hampshireSolarMwp = summaries.hampshireSolarMwp || 0;
+    const prospectSolarMwp = summaries.prospectSolarMwp || 0;
+    const trafalgarSolarMwp = summaries.trafalgarSolarMwp || 0;
+    const totalSolarMwp = hampshireSolarMwp + prospectSolarMwp + trafalgarSolarMwp;
 
     return {
       success: true,
@@ -209,15 +195,12 @@ export function parseGPLExcel(buffer: Buffer): ParseResult {
         reportDate,
         stationData,
         summaries: {
-          totalFossilCapacity: summaries.totalCapacity || totalFossilCapacity,
-          expectedPeakDemand: summaries.expectedPeakDemand,
-          reserveCapacity: summaries.reserveCapacity,
-          actualPeakDemand: summaries.actualPeakDemand,
-          hampshireSolarMwp: summaries.hampshireSolarMwp || 0,
-          prospectSolarMwp: summaries.prospectSolarMwp || 0,
-          trafalgarSolarMwp: summaries.trafalgarSolarMwp || 0,
+          totalFossilCapacity: totalFossilCapacity,
+          hampshireSolarMwp,
+          prospectSolarMwp,
+          trafalgarSolarMwp,
           totalRenewableCapacity: totalSolarMwp,
-          totalDBISCapacity: (summaries.totalCapacity || totalFossilCapacity) + totalSolarMwp,
+          totalDBISCapacity: totalFossilCapacity + totalSolarMwp,
         },
         apiPayload: {
           reportDate,
@@ -227,20 +210,18 @@ export function parseGPLExcel(buffer: Buffer): ParseResult {
               { units: data.units, derated_mw: data.derated_mw, available_mw: data.available_mw },
             ])
           ),
-          eveningPeakOnbars: summaries.expectedPeakDemand,
-          generationAvailability: summaries.totalCapacity || totalFossilCapacity,
-          hampshireSolarMwp: summaries.hampshireSolarMwp || 0,
-          prospectSolarMwp: summaries.prospectSolarMwp || 0,
-          trafalgarSolarMwp: summaries.trafalgarSolarMwp || 0,
+          generationAvailability: totalFossilCapacity,
+          hampshireSolarMwp,
+          prospectSolarMwp,
+          trafalgarSolarMwp,
         },
         meta: {
           sheetName: 'Generation Status + Schedule',
           stationCount: Object.keys(stationData).length,
           totalUnits: Object.values(stationData).reduce((sum, s) => sum + s.units, 0),
           calculatedTotalMW: totalFossilCapacity,
-          totalFromSheet: summaries.totalCapacity,
           totalSolarMwp,
-          totalDBISCapacity: (summaries.totalCapacity || totalFossilCapacity) + totalSolarMwp,
+          totalDBISCapacity: totalFossilCapacity + totalSolarMwp,
         },
       },
     };
