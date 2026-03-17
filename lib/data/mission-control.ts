@@ -51,7 +51,20 @@ export interface MCNotification {
 
 // ── Fetcher ──────────────────────────────────────────────────────────────────
 
-export async function getMissionControlData(userId: string): Promise<MissionControlData> {
+import { MINISTRY_ROLES } from '@/lib/people-types';
+
+/**
+ * Get mission control data scoped by the user's role and agency.
+ * Ministry roles see all agencies; agency roles see only their own.
+ */
+export async function getMissionControlData(
+  userId: string,
+  role: string = 'dg',
+  agency: string | null = null,
+): Promise<MissionControlData> {
+  // Agency scope: null = see all, string = filter to that agency
+  const agencyScope = MINISTRY_ROLES.includes(role) ? null : agency;
+
   const [
     agenciesResult,
     openTasksResult,
@@ -63,12 +76,12 @@ export async function getMissionControlData(userId: string): Promise<MissionCont
     myTasksResult,
     notificationsResult,
   ] = await Promise.allSettled([
-    fetchLatestSnapshots(),
-    fetchOpenTaskCount(),
-    fetchOverdueTaskCount(),
-    fetchActiveAlertCount(),
-    fetchPendingApplicationCount('GPL'),
-    fetchPendingApplicationCount('GWI'),
+    fetchLatestSnapshots(agencyScope),
+    fetchOpenTaskCount(agencyScope),
+    fetchOverdueTaskCount(agencyScope),
+    fetchActiveAlertCount(agencyScope),
+    fetchPendingApplicationCount('GPL', agencyScope),
+    fetchPendingApplicationCount('GWI', agencyScope),
     fetchTodayCalendarEvents(userId),
     fetchMyTasks(userId),
     fetchRecentNotifications(userId),
@@ -89,12 +102,18 @@ export async function getMissionControlData(userId: string): Promise<MissionCont
 
 // ── Individual Queries ───────────────────────────────────────────────────────
 
-async function fetchLatestSnapshots(): Promise<AgencySnapshot[]> {
+async function fetchLatestSnapshots(agencyScope: string | null): Promise<AgencySnapshot[]> {
   // Get the latest snapshot per agency using distinct on agency_slug ordered by computed_at desc
-  const { data, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from('agency_health_snapshots')
     .select('agency_slug, health_score, status, kpi_snapshot, computed_at')
     .order('computed_at', { ascending: false });
+
+  if (agencyScope) {
+    query = query.eq('agency_slug', agencyScope.toLowerCase());
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   if (!data) return [];
@@ -111,39 +130,59 @@ async function fetchLatestSnapshots(): Promise<AgencySnapshot[]> {
   return latest;
 }
 
-async function fetchOpenTaskCount(): Promise<number> {
-  const { count, error } = await supabaseAdmin
+async function fetchOpenTaskCount(agencyScope: string | null): Promise<number> {
+  let query = supabaseAdmin
     .from('tasks')
     .select('id', { count: 'exact', head: true })
     .neq('status', 'done');
 
+  if (agencyScope) {
+    query = query.eq('agency', agencyScope.toLowerCase());
+  }
+
+  const { count, error } = await query;
   if (error) throw error;
   return count ?? 0;
 }
 
-async function fetchOverdueTaskCount(): Promise<number> {
+async function fetchOverdueTaskCount(agencyScope: string | null): Promise<number> {
   const today = new Date().toISOString().split('T')[0];
-  const { count, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from('tasks')
     .select('id', { count: 'exact', head: true })
     .lt('due_date', today)
     .neq('status', 'done');
 
+  if (agencyScope) {
+    query = query.eq('agency', agencyScope.toLowerCase());
+  }
+
+  const { count, error } = await query;
   if (error) throw error;
   return count ?? 0;
 }
 
-async function fetchActiveAlertCount(): Promise<number> {
-  const { count, error } = await supabaseAdmin
+async function fetchActiveAlertCount(agencyScope: string | null): Promise<number> {
+  let query = supabaseAdmin
     .from('kpi_alerts')
     .select('id', { count: 'exact', head: true })
     .eq('resolved', false);
 
+  if (agencyScope) {
+    query = query.eq('agency_slug', agencyScope.toLowerCase());
+  }
+
+  const { count, error } = await query;
   if (error) throw error;
   return count ?? 0;
 }
 
-async function fetchPendingApplicationCount(agency: 'GPL' | 'GWI'): Promise<number> {
+async function fetchPendingApplicationCount(agency: 'GPL' | 'GWI', agencyScope: string | null): Promise<number> {
+  // If scoped to a different agency, don't fetch this agency's pending count
+  if (agencyScope && agencyScope.toLowerCase() !== agency.toLowerCase()) {
+    return 0;
+  }
+
   const { count, error } = await supabaseAdmin
     .from('pending_applications')
     .select('id', { count: 'exact', head: true })

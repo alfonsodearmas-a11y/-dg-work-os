@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Building2,
@@ -12,6 +12,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { RefreshButton } from './RefreshButton';
+import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
+import { MINISTRY_ROLES } from '@/lib/people-types';
 import type { MissionControlData } from '@/lib/data/mission-control';
 
 // ── Agency Config ────────────────────────────────────────────────────────────
@@ -60,15 +62,34 @@ interface Props {
 export function MissionControlView({ data, briefing, userName }: Props) {
   const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'alerts'>('overview');
 
-  const agencyMap = new Map(data.agencies.map(a => [a.agency_slug, a]));
-  const liveCount = data.agencies.filter(a => a.status === 'live').length;
-  const liveAgencies = data.agencies.filter(a => a.status === 'live' && a.health_score !== null);
+  // Use effectiveUser for View As support (role/agency reflect impersonation)
+  const { effectiveUser } = useEffectiveUser();
+  const isMinistry = MINISTRY_ROLES.includes(effectiveUser.role);
+  const agency = effectiveUser.agency;
+
+  // Filter agencies client-side for defensive rendering when View As changes role
+  const visibleAgencies = useMemo(() => {
+    if (isMinistry) return data.agencies;
+    if (!agency) return [];
+    return data.agencies.filter(a => a.agency_slug.toLowerCase() === agency.toLowerCase());
+  }, [data.agencies, isMinistry, agency]);
+
+  // Filter agency order for the grid
+  const visibleAgencyOrder = useMemo(() => {
+    if (isMinistry) return AGENCY_ORDER;
+    if (!agency) return [];
+    return AGENCY_ORDER.filter(slug => slug.toLowerCase() === agency.toLowerCase());
+  }, [isMinistry, agency]);
+
+  const agencyMap = new Map(visibleAgencies.map(a => [a.agency_slug, a]));
+  const liveCount = visibleAgencies.filter(a => a.status === 'live').length;
+  const liveAgencies = visibleAgencies.filter(a => a.status === 'live' && a.health_score !== null);
   const avgHealth = liveAgencies.length > 0
     ? Math.round(liveAgencies.reduce((s, a) => s + (a.health_score ?? 0), 0) / liveAgencies.length)
     : 0;
 
-  const lastSynced = data.agencies.length > 0
-    ? new Date(Math.max(...data.agencies.map(a => new Date(a.computed_at).getTime()))).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const lastSynced = visibleAgencies.length > 0
+    ? new Date(Math.max(...visibleAgencies.map(a => new Date(a.computed_at).getTime()))).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : 'N/A';
 
   const now = new Date();
@@ -82,7 +103,10 @@ export function MissionControlView({ data, briefing, userName }: Props) {
             <div>
               <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">Mission Control</h1>
               <p className="text-navy-600 text-xs md:text-sm mt-0.5">
-                {data.agencies.length} agencies &middot; last synced {lastSynced}
+                {isMinistry
+                  ? `${visibleAgencies.length} agencies`
+                  : agency?.toUpperCase()
+                } &middot; last synced {lastSynced}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -120,8 +144,8 @@ export function MissionControlView({ data, briefing, userName }: Props) {
             {/* KPI Stat Row */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               <StatCard
-                label="Agencies live"
-                value={liveCount}
+                label={isMinistry ? 'Agencies live' : 'Agency status'}
+                value={isMinistry ? liveCount : (liveCount > 0 ? 'Live' : 'Offline')}
                 icon={<Building2 size={16} />}
                 accent="#4a82f5"
               />
@@ -154,7 +178,7 @@ export function MissionControlView({ data, briefing, userName }: Props) {
 
             {/* Agency Grid */}
             <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))' }}>
-              {AGENCY_ORDER.map(slug => {
+              {visibleAgencyOrder.map(slug => {
                 const snapshot = agencyMap.get(slug);
                 const config = AGENCY_CONFIG[slug];
                 if (!config) return null;
