@@ -264,10 +264,16 @@ function parseSummary(sheetData: ExcelSheetData, dataColIdx: number) {
   const getValue = (rowNum: number): number | null => {
     const row = sheetData[rowNum - 1];
     if (!row) return null;
-    const val = row[dataColIdx];
-    if (val === null || val === undefined || val === '' || val === '-') return null;
-    const num = parseFloat(String(val));
-    return isNaN(num) ? null : num;
+    // Try the per-date column first; fall back to the fixed MW_DERATED column (5).
+    // Some summary fields (expected peak, reserve, FOR, etc.) are in a fixed column,
+    // not repeated in every date column.
+    for (const col of [dataColIdx, CONFIG.COLS.MW_DERATED]) {
+      const val = row[col];
+      if (val === null || val === undefined || val === '' || val === '-') continue;
+      const num = parseFloat(String(val));
+      if (!isNaN(num)) return num;
+    }
+    return null;
   };
 
   const getStringValue = (rowNum: number) => {
