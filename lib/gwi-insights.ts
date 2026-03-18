@@ -9,16 +9,18 @@ import crypto from 'crypto';
 import { supabaseAdmin } from './db';
 import { logger } from '@/lib/logger';
 import { parseAIJson } from '@/lib/parse-utils';
-import { groupAndMerge } from '@/lib/gwi-report-merge';
+import { groupAndMerge, GWI_REPORT_COLUMNS } from '@/lib/gwi-report-merge';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
 interface GWIMonthlyData {
+  id: string;
   report_month: string;
   financial_data: Record<string, unknown>;
   collections_data: Record<string, unknown>;
   customer_service_data: Record<string, unknown>;
   procurement_data: Record<string, unknown>;
+  created_at: string;
 }
 
 interface InsightSection {
@@ -74,10 +76,10 @@ export async function assembleGWIData(month: string): Promise<GWIMonthlyData[]> 
   // Fetch enough rows to cover 3 months × 3 report types
   const { data, error } = await supabaseAdmin
     .from('gwi_monthly_reports')
-    .select('id, report_month, report_type, financial_data, collections_data, customer_service_data, procurement_data, created_at')
+    .select(GWI_REPORT_COLUMNS)
     .lte('report_month', month)
     .order('report_month', { ascending: false })
-    .limit(12);
+    .limit(9);
 
   if (error) {
     logger.error({ err: error }, 'gwi-insights: failed to fetch monthly data');
@@ -86,7 +88,7 @@ export async function assembleGWIData(month: string): Promise<GWIMonthlyData[]> 
 
   // Merge report types per month and take the 3 most recent months
   const merged = groupAndMerge(data || []);
-  return merged.slice(0, 3) as unknown as GWIMonthlyData[];
+  return merged.slice(0, 3);
 }
 
 /**
