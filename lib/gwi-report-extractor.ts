@@ -1,14 +1,14 @@
 /**
  * GWI Report Extractor
  *
- * Uses Claude Sonnet to extract structured data from raw report text.
+ * Uses Claude Opus to extract structured data from raw report text.
  * One function per report type.
  */
 
 import Anthropic from '@anthropic-ai/sdk';
 import { parseAIJson } from '@/lib/parse-utils';
 
-const MODEL = 'claude-sonnet-4-5-20250929';
+const MODEL = 'claude-opus-4-6';
 const MAX_TOKENS = 4096;
 const TEMPERATURE = 0.2;
 
