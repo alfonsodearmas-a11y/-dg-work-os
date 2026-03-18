@@ -145,7 +145,7 @@ export function GWIDocUpload({ reportPeriod, onClose, onSaved }: GWIDocUploadPro
       // Build the save payload based on report type
       const saveBody: Record<string, unknown> = {
         report_month: `${reportPeriod}-01`,
-        report_type: 'management',
+        report_type: key,
       };
 
       if (key === 'management') {

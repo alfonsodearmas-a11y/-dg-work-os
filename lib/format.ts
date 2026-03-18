@@ -40,6 +40,11 @@ export function fmtDate(iso: string | null, format: 'long' | 'short' = 'short'):
   });
 }
 
+/** Parse a date-only string (YYYY-MM-DD) safely in local timezone. */
+export function safeDateParse(dateString: string): Date {
+  return new Date(dateString + (dateString.includes('T') ? '' : 'T00:00:00'));
+}
+
 /** Format a number with locale-aware thousands separators, or '-' if falsy. */
 export function fmtNumber(value: number | null | undefined): string {
   if (value === null || value === undefined) return '-';

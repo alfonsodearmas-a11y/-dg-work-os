@@ -7,6 +7,7 @@ import {
   Upload, RefreshCw, Calendar, AlertTriangle, Loader2,
 } from 'lucide-react';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
+import { safeDateParse } from '@/lib/format';
 import { HealthScoreTooltip } from '@/components/ui/HealthScoreTooltip';
 import { HealthBreakdownSection } from '@/components/ui/HealthBreakdownSection';
 import { computeGWIHealth } from '@/lib/agency-health';
@@ -24,6 +25,7 @@ import type { GWIInsights } from '@/lib/gwi-insights';
 interface MonthlyReport {
   id: string;
   report_month: string;
+  created_at: string;
   financial_data: FinancialData;
   collections_data: CollectionsData;
   customer_service_data: CustomerServiceData;
@@ -44,6 +46,7 @@ export function GWIDetail() {
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [regenerating, setRegenerating] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Compute health score with breakdown
   const gwiHealth = useMemo(
@@ -70,6 +73,10 @@ export function GWIDetail() {
           if (!selectedMonth && json.data.report_month) {
             setSelectedMonth(json.data.report_month);
           }
+          // Update available months from latest endpoint
+          if (json.availableMonths) {
+            setAvailableMonths(json.availableMonths);
+          }
         } else {
           setReport(null);
         }
@@ -83,7 +90,7 @@ export function GWIDetail() {
     }
     fetchReport();
     return () => { cancelled = true; };
-  }, [selectedMonth]);
+  }, [selectedMonth, refreshKey]);
 
   // Fetch insights
   useEffect(() => {
@@ -113,23 +120,6 @@ export function GWIDetail() {
     fetchInsights();
     return () => { cancelled = true; };
   }, [selectedMonth]);
-
-  // Fetch available months (all distinct report_month values)
-  useEffect(() => {
-    async function fetchMonths() {
-      try {
-        const res = await fetch('/api/gwi/report/latest');
-        if (!res.ok) return;
-        const json = await res.json();
-        if (json.success && json.data?.report_month) {
-          setAvailableMonths([json.data.report_month]);
-        }
-      } catch {
-        // ignore
-      }
-    }
-    fetchMonths();
-  }, []);
 
   // Regenerate AI insights
   const handleRegenerate = useCallback(async () => {
@@ -257,7 +247,7 @@ export function GWIDetail() {
           <GWIDocUpload
             reportPeriod={new Date().toISOString().slice(0, 7)}
             onClose={() => setShowUpload(false)}
-            onSaved={() => setSelectedMonth('')}
+            onSaved={() => { setSelectedMonth(''); setRefreshKey(k => k + 1); }}
           />
         )}
       </div>
@@ -265,7 +255,7 @@ export function GWIDetail() {
   }
 
   const reportMonthStr = report.report_month
-    ? new Date(report.report_month + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    ? safeDateParse(report.report_month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     : '';
 
   return (
@@ -320,7 +310,7 @@ export function GWIDetail() {
                 >
                   {availableMonths.map(m => (
                     <option key={m} value={m}>
-                      {new Date(m + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                      {safeDateParse(m).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                     </option>
                   ))}
                 </select>
@@ -419,6 +409,7 @@ export function GWIDetail() {
             fin={fin}
             insights={insights}
             reportMonth={report.report_month}
+            createdAt={report.created_at}
           />
         )}
 
@@ -447,12 +438,9 @@ export function GWIDetail() {
           reportPeriod={selectedMonth ? selectedMonth.slice(0, 7) : new Date().toISOString().slice(0, 7)}
           onClose={() => setShowUpload(false)}
           onSaved={() => {
-            // Refresh data after save
-            setSelectedMonth(prev => {
-              // Force re-fetch by toggling
-              setTimeout(() => setSelectedMonth(prev), 100);
-              return '';
-            });
+            // Reset to latest so availableMonths is refreshed from the latest endpoint
+            setSelectedMonth('');
+            setRefreshKey(k => k + 1);
           }}
         />
       )}
