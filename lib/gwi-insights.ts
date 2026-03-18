@@ -9,6 +9,7 @@ import crypto from 'crypto';
 import { supabaseAdmin } from './db';
 import { logger } from '@/lib/logger';
 import { parseAIJson } from '@/lib/parse-utils';
+import { groupAndMerge } from '@/lib/gwi-report-merge';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -57,7 +58,7 @@ export interface GWIInsights {
 // ── Config ──────────────────────────────────────────────────────────────────
 
 const AI_CONFIG = {
-  MODEL: 'claude-sonnet-4-5-20250929',
+  MODEL: 'claude-opus-4-6',
   MAX_TOKENS: 8000,
   TEMPERATURE: 0.3,
 } as const;
@@ -65,22 +66,27 @@ const AI_CONFIG = {
 // ── Data Assembly ───────────────────────────────────────────────────────────
 
 /**
- * Fetch current + prior 2 months of GWI data
+ * Fetch current + prior 2 months of GWI data.
+ * Merges management/cscr/procurement rows per month so each entry
+ * has the complete financial picture.
  */
 export async function assembleGWIData(month: string): Promise<GWIMonthlyData[]> {
+  // Fetch enough rows to cover 3 months × 3 report types
   const { data, error } = await supabaseAdmin
     .from('gwi_monthly_reports')
-    .select('report_month, financial_data, collections_data, customer_service_data, procurement_data')
+    .select('id, report_month, report_type, financial_data, collections_data, customer_service_data, procurement_data, created_at')
     .lte('report_month', month)
     .order('report_month', { ascending: false })
-    .limit(3);
+    .limit(12);
 
   if (error) {
     logger.error({ err: error }, 'gwi-insights: failed to fetch monthly data');
     return [];
   }
 
-  return (data || []) as GWIMonthlyData[];
+  // Merge report types per month and take the 3 most recent months
+  const merged = groupAndMerge(data || []);
+  return merged.slice(0, 3) as unknown as GWIMonthlyData[];
 }
 
 /**
@@ -129,8 +135,25 @@ function buildInsightsPrompt(data: GWIMonthlyData[]): string {
 
   return `You are a senior utility analyst advising the Director General of Guyana's Ministry of Public Utilities and Aviation. You have deep expertise in water utility operations, public finance, and infrastructure management.
 
-Analyze the following GWI (Guyana Water Inc) monthly data and produce a comprehensive executive briefing.
+## CRITICAL CONTEXT — Subsidized Public Utility Model
+GWI (Guyana Water Incorporated) is a STATE-OWNED public water utility that operates under a **subsidized model**. This means:
+- GWI does NOT generate sufficient tariff revenue to cover operating costs. This is BY DESIGN — water tariffs are kept affordable as public policy.
+- The Government of Guyana bridges the funding gap through **subventions (warrants)**. Net losses are STRUCTURAL and EXPECTED.
+- Net losses do NOT indicate "financial distress" or "crisis" — they indicate the normal operating model of a subsidized utility. Do NOT use alarmist language like "catastrophic", "severe distress", "unsustainable losses", etc.
+- Budget variances (actual vs. budget) ARE meaningful and should be noted, but frame them as "budget variance" not "financial crisis".
 
+## What Matters for GWI's Health
+Weight your analysis and health_score toward these OPERATIONAL indicators (in order of importance):
+1. **Collections efficiency** — Are customers paying? What's the collection rate vs. billings?
+2. **Billing accuracy** — % of actual meter readings vs. estimated bills
+3. **Accounts receivable trends** — Is the A/R balance growing or shrinking month-over-month?
+4. **Customer service** — Complaint resolution rate, response times, PUC complaints
+5. **Non-revenue water (NRW)** — System losses (if data available)
+6. **Procurement execution** — Contract completion, inventory management
+7. **Cash position adequacy** — Is cash at bank sufficient for near-term operations?
+8. **Budget discipline** — Revenue and cost variances against budget (note them, don't catastrophize)
+
+## Data
 ${dataText}
 
 All monetary values are in GYD (Guyanese dollars). Format large numbers as millions (M) or billions (B) in your analysis.
@@ -139,16 +162,16 @@ Return a JSON object with exactly this structure:
 \`\`\`json
 {
   "overall": {
-    "headline": "One-sentence executive summary of GWI's current state",
-    "health_score": <number 1-10>,
+    "headline": "One-sentence executive summary focused on operational performance, NOT profit/loss",
+    "health_score": <number 1-10, weighted toward operational delivery not profitability>,
     "severity": "<critical|warning|stable|positive>",
-    "summary": "2-3 sentence overview"
+    "summary": "2-3 sentence overview. Lead with operational performance. Mention budget variances factually without alarmism."
   },
   "financial": {
-    "headline": "Financial performance headline",
+    "headline": "Budget performance headline (NOT 'financial distress')",
     "score": <number 1-10>,
     "severity": "<critical|warning|stable|positive>",
-    "summary": "2-3 sentence financial summary with specific GYD figures",
+    "summary": "2-3 sentences. Note revenue/cost variances vs budget. Mention subvention. Do NOT frame net loss as crisis.",
     "key_metrics": ["metric 1 with value", "metric 2 with value"],
     "recommendations": ["recommendation 1", "recommendation 2"]
   },
@@ -156,7 +179,7 @@ Return a JSON object with exactly this structure:
     "headline": "Collections & billing headline",
     "score": <number 1-10>,
     "severity": "<critical|warning|stable|positive>",
-    "summary": "2-3 sentence collections/billing summary",
+    "summary": "2-3 sentence collections/billing summary with specific figures",
     "key_metrics": ["metric 1", "metric 2"],
     "recommendations": ["recommendation 1"]
   },
@@ -183,7 +206,7 @@ Return a JSON object with exactly this structure:
 }
 \`\`\`
 
-Be direct, specific, and use exact figures. This goes to the Director General for ministerial decisions. Flag any concerning trends between months.`;
+Be direct, specific, and use exact figures. This goes to the Director General for ministerial decisions. Flag genuinely concerning operational trends between months. Be concise and Board-ready — no filler, no alarmism.`;
 }
 
 // ── Main Functions ──────────────────────────────────────────────────────────

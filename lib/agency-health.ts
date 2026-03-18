@@ -121,10 +121,10 @@ export function computeGWIHealth(
   const withinTimeline = cs?.within_timeline_pct ?? null;
   const timelineScore = withinTimeline === null ? 6 : withinTimeline > 85 ? 10 : withinTimeline > 70 ? 6 : 3;
 
-  // Financial Health (15%)
+  // Financial Health (15%) — GWI is a subsidized utility; losses are structural
   const netProfit = fin?.net_profit ?? fin?.net_profit_loss ?? null;
   const govtSubvention = fin?.govt_subvention ?? 0;
-  const finScore = netProfit === null ? 6 : netProfit > 0 ? 8 : govtSubvention > 0 ? 5 : 3;
+  const finScore = netProfit === null ? 6 : netProfit > 0 ? 9 : govtSubvention > 0 ? 6 : 3;
 
   // AR Trend (15%) — use a neutral default since we'd need prior month to detect trend
   const arScore = 6;
