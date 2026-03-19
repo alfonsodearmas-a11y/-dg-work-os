@@ -17,19 +17,14 @@ import { fmtCurrency } from '@/lib/format';
 import { useToast } from '@/components/ui/Toast';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { AGENCY_CODES } from '@/lib/constants/agencies';
-
-// ---------------------------------------------------------------------------
-// Agency filter chips
-// ---------------------------------------------------------------------------
-
-const FILTER_AGENCIES = AGENCY_CODES.filter(c => c !== 'MOPUA');
+import { SELECTABLE_AGENCIES } from '@/lib/constants/agencies';
+import type { Role } from '@/lib/auth';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function canDrag(role: string | undefined): boolean {
+function canDrag(role: Role | undefined): boolean {
   return role === 'agency_admin' || role === 'dg';
 }
 
@@ -319,7 +314,7 @@ export function ProcurementKanban() {
           >
             All
           </button>
-          {FILTER_AGENCIES.map((agency) => (
+          {SELECTABLE_AGENCIES.map((agency) => (
             <button
               key={agency}
               onClick={() => setAgencyFilter(agencyFilter === agency ? '' : agency)}
@@ -474,7 +469,7 @@ interface ProcurementColumnProps {
   isMobile: boolean;
   draggingId: string | null;
   isDraggable: boolean;
-  userRole: string | undefined;
+  userRole: Role | undefined;
   userAgency: string | null | undefined;
   onDrop: (e: React.DragEvent<HTMLDivElement>, stage: ProcurementStage) => void;
   onCardClick: (id: string) => void;

@@ -3,6 +3,7 @@ import { requireRole } from '@/lib/auth-helpers';
 import { getAllPackages, getPackagesByAgency, getPipelineStats, createPackage } from '@/lib/procurement-queries';
 import { MINISTRY_ROLES } from '@/lib/people-types';
 import { METHOD_CONFIG, type ProcurementMethod } from '@/lib/procurement-types';
+import { AGENCY_CODES } from '@/lib/constants/agencies';
 
 export async function GET() {
   const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -60,10 +61,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid procurement method' }, { status: 400 });
     }
 
-    // DG must provide agency; agency_admin uses their own
+    // DG must provide a valid agency; agency_admin uses their own
     const packageAgency = session.user.role === 'dg' ? agency : session.user.agency;
-    if (!packageAgency) {
-      return NextResponse.json({ error: 'Agency is required' }, { status: 400 });
+    if (!packageAgency || !AGENCY_CODES.includes(packageAgency as typeof AGENCY_CODES[number])) {
+      return NextResponse.json({ error: 'A valid agency is required' }, { status: 400 });
     }
 
     const pkg = await createPackage({

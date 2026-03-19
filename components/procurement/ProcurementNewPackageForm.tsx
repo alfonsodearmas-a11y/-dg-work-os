@@ -8,7 +8,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/components/ui/Toast';
 import { METHOD_CONFIG, ProcurementMethod } from '@/lib/procurement-types';
 import { fmtFileSize } from '@/lib/format';
-import { AGENCY_CODES } from '@/lib/constants/agencies';
+import { SELECTABLE_AGENCIES } from '@/lib/constants/agencies';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -19,7 +19,6 @@ interface ProcurementNewPackageFormProps {
 }
 
 const METHODS = Object.entries(METHOD_CONFIG) as [ProcurementMethod, { label: string }][];
-const FORM_AGENCIES = AGENCY_CODES.filter(c => c !== 'MOPUA');
 
 // ── Component ─────────────────────────────────────────────────────────────
 
@@ -275,7 +274,7 @@ export function ProcurementNewPackageForm({
               className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
             >
               <option value="">Select agency</option>
-              {FORM_AGENCIES.map((code) => (
+              {SELECTABLE_AGENCIES.map((code) => (
                 <option key={code} value={code}>
                   {code}
                 </option>
