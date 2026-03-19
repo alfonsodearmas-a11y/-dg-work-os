@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { createNotification } from '@/lib/notifications/notification-service';
 import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+import { TASK_COLUMNS, flattenTaskOwner } from '@/lib/task-types';
 
 const patchTaskSchema = z.object({
   title: z.string().min(1).optional(),
@@ -73,7 +74,6 @@ export const PATCH = withErrorHandler(async (
     updates.blocked_reason = null;
   }
 
-  const TASK_COLUMNS = 'id, title, description, status, priority, due_date, agency, role, owner_user_id, assigned_by_user_id, source_meeting_id, blocked_reason, completed_at, created_at, updated_at';
   const { data: updated, error } = await supabaseAdmin
     .from('tasks')
     .update(updates)
@@ -85,9 +85,7 @@ export const PATCH = withErrorHandler(async (
     return apiError('DB_ERROR', error.message, 500);
   }
 
-  const ownerRaw = updated.owner as unknown;
-  const owner = (Array.isArray(ownerRaw) ? ownerRaw[0] : ownerRaw) as { id: string; name: string } | null;
-  const flatTask = { ...updated, owner_name: owner?.name || null, owner: undefined };
+  const flatTask = flattenTaskOwner(updated);
 
   const activityEntries: Array<{ task_id: string; user_id: string; action: string; old_value: string | null; new_value: string | null }> = [];
 
@@ -115,7 +113,7 @@ export const PATCH = withErrorHandler(async (
       user_id: session.user.id,
       action: 'assignee_changed',
       old_value: task.owner_user_id,
-      new_value: owner?.name || data.owner_user_id,
+      new_value: flatTask.owner_name || data.owner_user_id,
     });
   }
 

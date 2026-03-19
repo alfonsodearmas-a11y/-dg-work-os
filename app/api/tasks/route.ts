@@ -4,6 +4,7 @@ import { requireRole, canAssignTasks } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { insertNotification } from '@/lib/notifications';
 import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
+import { TASK_COLUMNS, flattenTaskOwner } from '@/lib/task-types';
 
 const createTaskSchema = z.object({
   title: z.string().min(1),
@@ -18,8 +19,6 @@ const createTaskSchema = z.object({
 });
 
 export const dynamic = 'force-dynamic';
-
-const TASK_COLUMNS = 'id, title, description, status, priority, due_date, agency, role, owner_user_id, assigned_by_user_id, source_meeting_id, blocked_reason, completed_at, created_at, updated_at';
 
 export async function GET(request: NextRequest) {
   const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -77,9 +76,7 @@ export async function GET(request: NextRequest) {
   };
 
   for (const t of data || []) {
-    const ownerRaw = t.owner as unknown;
-    const owner = (Array.isArray(ownerRaw) ? ownerRaw[0] : ownerRaw) as { id: string; name: string } | null;
-    const task: TaskRow = { ...t, owner_name: owner?.name || null, owner: undefined };
+    const task = flattenTaskOwner(t) as TaskRow;
     const col = grouped[task.status];
     if (col) col.push(task);
     else grouped.new.push(task);
@@ -128,9 +125,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     return apiError('DB_ERROR', error.message, 500);
   }
 
-  const ownerRaw = task.owner as unknown;
-  const owner = (Array.isArray(ownerRaw) ? ownerRaw[0] : ownerRaw) as { id: string; name: string } | null;
-  const flatTask = { ...task, owner_name: owner?.name || null, owner: undefined };
+  const flatTask = flattenTaskOwner(task);
 
   await supabaseAdmin.from('task_activity').insert({
     task_id: task.id,

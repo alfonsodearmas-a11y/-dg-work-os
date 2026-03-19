@@ -1,5 +1,14 @@
 // Shared task types for the native tasks system
 
+export const TASK_COLUMNS = 'id, title, description, status, priority, due_date, agency, role, owner_user_id, assigned_by_user_id, source_meeting_id, blocked_reason, completed_at, created_at, updated_at';
+
+/** Flatten the Supabase owner join (may be array or object) into owner_name. */
+export function flattenTaskOwner<T extends Record<string, unknown>>(row: T): T & { owner_name: string | null } {
+  const ownerRaw = row.owner as unknown;
+  const owner = (Array.isArray(ownerRaw) ? ownerRaw[0] : ownerRaw) as { id: string; name: string } | null;
+  return { ...row, owner_name: owner?.name || null, owner: undefined } as T & { owner_name: string | null };
+}
+
 export type TaskStatus = 'new' | 'active' | 'blocked' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
 

@@ -92,7 +92,7 @@ export interface BoardState {
   // Pagination
   listPage: number;
   listPageSize: number;
-  columnShowCount: Record<string, number>;
+  columnShowCount: Record<keyof TasksByStatus, number>;
 }
 
 // ---------------------------------------------------------------------------
@@ -172,7 +172,7 @@ export type BoardAction =
   // Pagination
   | { type: 'SET_LIST_PAGE'; page: number }
   | { type: 'SET_LIST_PAGE_SIZE'; size: number }
-  | { type: 'SHOW_MORE_COLUMN'; column: string }
+  | { type: 'SHOW_MORE_COLUMN'; column: keyof TasksByStatus }
 
   // Task mutations (optimistic)
   | { type: 'UPDATE_TASK_OPTIMISTIC'; taskId: string; updates: Partial<Task> }
@@ -189,7 +189,7 @@ export type BoardAction =
 export const COLUMNS: (keyof TasksByStatus)[] = ['new', 'active', 'blocked', 'done'];
 
 const DEFAULT_COLUMN_SHOW = 10;
-const DEFAULT_COLUMN_SHOW_COUNT: Record<string, number> = { new: DEFAULT_COLUMN_SHOW, active: DEFAULT_COLUMN_SHOW, blocked: DEFAULT_COLUMN_SHOW, done: DEFAULT_COLUMN_SHOW };
+const DEFAULT_COLUMN_SHOW_COUNT = Object.fromEntries(COLUMNS.map(c => [c, DEFAULT_COLUMN_SHOW])) as Record<keyof TasksByStatus, number>;
 const PAGINATION_RESET = { listPage: 1, columnShowCount: { ...DEFAULT_COLUMN_SHOW_COUNT } };
 
 // ---------------------------------------------------------------------------
