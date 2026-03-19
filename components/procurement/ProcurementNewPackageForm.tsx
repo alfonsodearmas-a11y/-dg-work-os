@@ -8,6 +8,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/components/ui/Toast';
 import { METHOD_CONFIG, ProcurementMethod } from '@/lib/procurement-types';
 import { fmtFileSize } from '@/lib/format';
+import { AGENCY_CODES } from '@/lib/constants/agencies';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -18,6 +19,7 @@ interface ProcurementNewPackageFormProps {
 }
 
 const METHODS = Object.entries(METHOD_CONFIG) as [ProcurementMethod, { label: string }][];
+const FORM_AGENCIES = AGENCY_CODES.filter(c => c !== 'MOPUA');
 
 // ── Component ─────────────────────────────────────────────────────────────
 
@@ -30,11 +32,16 @@ export function ProcurementNewPackageForm({
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const userRole = session?.user?.role;
+  const userAgency = session?.user?.agency;
+  const isDG = userRole === 'dg';
+
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [estimatedValue, setEstimatedValue] = useState('');
   const [procurementMethod, setProcurementMethod] = useState<ProcurementMethod | ''>('');
+  const [agency, setAgency] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -48,6 +55,7 @@ export function ProcurementNewPackageForm({
     setDescription('');
     setEstimatedValue('');
     setProcurementMethod('');
+    setAgency('');
     setFiles([]);
     setErrors({});
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -72,6 +80,10 @@ export function ProcurementNewPackageForm({
 
     if (!procurementMethod) {
       newErrors.procurementMethod = 'Procurement method is required';
+    }
+
+    if (isDG && !agency) {
+      newErrors.agency = 'Agency is required';
     }
 
     setErrors(newErrors);
@@ -110,6 +122,7 @@ export function ProcurementNewPackageForm({
           description: description.trim() || undefined,
           estimated_value: parseFloat(estimatedValue),
           procurement_method: procurementMethod,
+          ...(isDG && { agency }),
         }),
       });
 
@@ -161,14 +174,12 @@ export function ProcurementNewPackageForm({
 
   // ── Render ────────────────────────────────────────────────────────────
 
-  const userAgency = session?.user?.agency;
-
   return (
     <SlidePanel
       isOpen={isOpen}
       onClose={handleClose}
       title="New Procurement Package"
-      subtitle={userAgency?.toUpperCase()}
+      subtitle={isDG ? 'Director General' : userAgency?.toUpperCase()}
       icon={Package}
       accentColor="from-gold-600 to-gold-500"
     >
@@ -250,6 +261,30 @@ export function ProcurementNewPackageForm({
           )}
         </div>
 
+        {/* Agency (DG only — agency_admin auto-assigned) */}
+        {isDG && (
+          <div>
+            <label htmlFor="pkg-agency" className="block text-xs text-slate-400 mb-1.5">
+              Agency *
+            </label>
+            <select
+              id="pkg-agency"
+              value={agency}
+              onChange={(e) => setAgency(e.target.value)}
+              required
+              className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
+            >
+              <option value="">Select agency</option>
+              {FORM_AGENCIES.map((code) => (
+                <option key={code} value={code}>
+                  {code}
+                </option>
+              ))}
+            </select>
+            {errors.agency && <p className="text-xs text-red-400 mt-1">{errors.agency}</p>}
+          </div>
+        )}
+
         {/* Supporting Documents */}
         <div>
           <label className="block text-xs text-slate-400 mb-1.5">
@@ -303,7 +338,7 @@ export function ProcurementNewPackageForm({
         {/* Submit */}
         <button
           type="submit"
-          disabled={submitting || !title.trim() || !estimatedValue || !procurementMethod}
+          disabled={submitting || !title.trim() || !estimatedValue || !procurementMethod || (isDG && !agency)}
           className="w-full py-2.5 rounded-lg bg-gold-500 text-navy-950 font-semibold text-sm hover:bg-[#e5c348] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
         >
           {submitting ? (

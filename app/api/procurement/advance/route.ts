@@ -4,7 +4,7 @@ import { getPackageSummary, updatePackageStage } from '@/lib/procurement-queries
 import { PROCUREMENT_STAGES, ProcurementStage } from '@/lib/procurement-types';
 
 export async function POST(request: NextRequest) {
-  const result = await requireRole(['agency_admin']);
+  const result = await requireRole(['dg', 'agency_admin']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Package not found' }, { status: 404 });
     }
 
-    // Verify the package belongs to user's agency
-    if (pkg.agency.toLowerCase() !== session.user.agency?.toLowerCase()) {
+    // Verify the package belongs to user's agency (DG can advance any)
+    if (session.user.role !== 'dg' && pkg.agency.toLowerCase() !== session.user.agency?.toLowerCase()) {
       return NextResponse.json({ error: 'Cannot advance packages from another agency' }, { status: 403 });
     }
 

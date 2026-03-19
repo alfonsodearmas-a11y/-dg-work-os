@@ -17,7 +17,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const result = await requireRole(['agency_admin']);
+  const result = await requireRole(['dg', 'agency_admin']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
@@ -30,7 +30,7 @@ export async function POST(
       return NextResponse.json({ error: 'Package not found' }, { status: 404 });
     }
 
-    if (pkg.agency.toLowerCase() !== session.user.agency?.toLowerCase()) {
+    if (session.user.role !== 'dg' && pkg.agency.toLowerCase() !== session.user.agency?.toLowerCase()) {
       return NextResponse.json({ error: 'Cannot upload documents to another agency\'s package' }, { status: 403 });
     }
 

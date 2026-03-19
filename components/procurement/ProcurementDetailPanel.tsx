@@ -111,10 +111,11 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose }: Procureme
 
   const userRole = session?.user?.role;
   const userAgency = session?.user?.agency;
+  const isDG = userRole === 'dg';
   const isAgencyAdmin = userRole === 'agency_admin';
   const isOwnAgency = pkg && userAgency?.toLowerCase() === pkg.agency.toLowerCase();
-  const canAdvance = isAgencyAdmin && isOwnAgency;
-  const canUploadDocs = isAgencyAdmin && isOwnAgency;
+  const canAdvance = isDG || (isAgencyAdmin && isOwnAgency);
+  const canUploadDocs = isDG || (isAgencyAdmin && isOwnAgency);
   const nextStage = pkg ? getNextStage(pkg.current_stage) : null;
   const isComplete = pkg?.current_stage === 'awarded';
 

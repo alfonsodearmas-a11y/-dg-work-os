@@ -36,17 +36,18 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const result = await requireRole(['agency_admin']);
+  const result = await requireRole(['dg', 'agency_admin']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
   try {
     const body = await request.json();
-    const { title, description, estimated_value, procurement_method } = body as {
+    const { title, description, estimated_value, procurement_method, agency } = body as {
       title: string;
       description?: string;
       estimated_value: number;
       procurement_method: string;
+      agency?: string;
     };
 
     if (!title?.trim()) {
@@ -59,12 +60,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid procurement method' }, { status: 400 });
     }
 
+    // DG must provide agency; agency_admin uses their own
+    const packageAgency = session.user.role === 'dg' ? agency : session.user.agency;
+    if (!packageAgency) {
+      return NextResponse.json({ error: 'Agency is required' }, { status: 400 });
+    }
+
     const pkg = await createPackage({
       title: title.trim(),
       description: description?.trim(),
       estimated_value,
       procurement_method: procurement_method as ProcurementMethod,
-      agency: session.user.agency!,
+      agency: packageAgency,
       submitted_by: session.user.id,
     });
 

@@ -30,7 +30,7 @@ const FILTER_AGENCIES = AGENCY_CODES.filter(c => c !== 'MOPUA');
 // ---------------------------------------------------------------------------
 
 function canDrag(role: string | undefined): boolean {
-  return role === 'agency_admin';
+  return role === 'agency_admin' || role === 'dg';
 }
 
 function sortPackages(packages: ProcurementPackage[]): ProcurementPackage[] {
@@ -153,14 +153,14 @@ export function ProcurementKanban() {
       const userRole = session?.user?.role;
       const userAgency = session?.user?.agency;
 
-      // Rule: only agency_admin can advance
+      // Rule: only agency_admin or DG can advance
       if (!canDrag(userRole)) {
         toast.error('Only agency admins can advance packages');
         return;
       }
 
-      // Rule: package must belong to user's agency
-      if (pkg.agency.toLowerCase() !== userAgency?.toLowerCase()) {
+      // Rule: package must belong to user's agency (DG can advance any)
+      if (userRole !== 'dg' && pkg.agency.toLowerCase() !== userAgency?.toLowerCase()) {
         toast.error('Cannot advance packages from another agency');
         return;
       }
@@ -333,7 +333,7 @@ export function ProcurementKanban() {
             </button>
           ))}
         </div>
-        {userRole === 'agency_admin' && (
+        {(userRole === 'agency_admin' || userRole === 'dg') && (
           <button
             onClick={() => setShowNewForm(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gold-500 text-navy-950 hover:bg-[#e5c348] transition-colors"
@@ -418,6 +418,7 @@ export function ProcurementKanban() {
             isMobile={true}
             draggingId={null}
             isDraggable={false}
+            userRole={userRole}
             userAgency={userAgency}
             onDrop={() => {}}
             onCardClick={setSelectedPackageId}
@@ -435,6 +436,7 @@ export function ProcurementKanban() {
                 isMobile={false}
                 draggingId={draggingId}
                 isDraggable={isDraggable}
+                userRole={userRole}
                 userAgency={userAgency}
                 onDrop={handleDrop}
                 onCardClick={setSelectedPackageId}
@@ -472,6 +474,7 @@ interface ProcurementColumnProps {
   isMobile: boolean;
   draggingId: string | null;
   isDraggable: boolean;
+  userRole: string | undefined;
   userAgency: string | null | undefined;
   onDrop: (e: React.DragEvent<HTMLDivElement>, stage: ProcurementStage) => void;
   onCardClick: (id: string) => void;
@@ -484,6 +487,7 @@ function ProcurementColumn({
   isMobile,
   draggingId,
   isDraggable,
+  userRole,
   userAgency,
   onDrop,
   onCardClick,
@@ -552,7 +556,7 @@ function ProcurementColumn({
       >
         {pkgs.map((pkg) => {
           const cardDraggable =
-            isDraggable && !isMobile && pkg.agency.toLowerCase() === userAgency?.toLowerCase();
+            isDraggable && !isMobile && (userRole === 'dg' || pkg.agency.toLowerCase() === userAgency?.toLowerCase());
 
           return (
             <ProcurementCard
