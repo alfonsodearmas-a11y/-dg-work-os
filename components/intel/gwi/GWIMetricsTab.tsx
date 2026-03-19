@@ -22,10 +22,24 @@ export interface CollectionsData {
   region_3_collections?: number;
   region_4_collections?: number;
   region_5_collections?: number;
+  regional_collections_total?: number;
+  key_accounts_collections?: number;
   billing_efficiency_pct?: number;
+  arrears_debt_reduction?: number;
+  arrears_debt_reduction_pct?: number;
   arrears_30_days?: number;
   arrears_60_days?: number;
   arrears_90_plus_days?: number;
+  region_2_billings?: number;
+  region_3_billings?: number;
+  region_4_billings?: number;
+  region_5_billings?: number;
+  region_6_billings?: number;
+  region_7_billings?: number;
+  region_8_billings?: number;
+  region_9_billings?: number;
+  region_10_billings?: number;
+  hinterland_billings?: number;
 }
 
 export interface CustomerServiceData {
@@ -40,6 +54,8 @@ export interface CustomerServiceData {
   reconnection_payments?: number;
   legal_actions?: number;
   enforcement_actions?: number;
+  legal_actions_amount?: number;
+  enforcement_actions_amount?: number;
   puc_complaints?: number;
   puc_resolved?: number;
 }
@@ -165,19 +181,30 @@ function CollectionsTab({ coll, insights, reportMonth }: {
         />
       </div>
 
-      {/* Regional Collections */}
+      {/* Regional Billings (from parseable Table 0 in CSCR) */}
       <CollapsibleSection
-        title="Regional Collections"
+        title="Regional Billings"
         icon={DollarSign}
         defaultOpen={false}
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        {coll.regional_collections_total != null && (
+          <div className="mb-3 px-1">
+            <span className="text-slate-400 text-sm">Total Regional Collections: </span>
+            <span className="text-slate-100 text-sm font-semibold">{formatGYD(coll.regional_collections_total)}</span>
+          </div>
+        )}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           {[
-            { label: 'Region 1', value: coll.region_1_collections },
-            { label: 'Region 2', value: coll.region_2_collections },
-            { label: 'Region 3', value: coll.region_3_collections },
-            { label: 'Region 4', value: coll.region_4_collections },
-            { label: 'Region 5', value: coll.region_5_collections },
+            { label: 'Region 2', value: coll.region_2_billings },
+            { label: 'Region 3', value: coll.region_3_billings },
+            { label: 'Region 4', value: coll.region_4_billings },
+            { label: 'Region 5', value: coll.region_5_billings },
+            { label: 'Region 6', value: coll.region_6_billings },
+            { label: 'Region 7', value: coll.region_7_billings },
+            { label: 'Region 8', value: coll.region_8_billings },
+            { label: 'Region 9', value: coll.region_9_billings },
+            { label: 'Region 10', value: coll.region_10_billings },
+            { label: 'Hinterland', value: coll.hinterland_billings },
           ].map(item => (
             <div key={item.label} className="bg-navy-950 rounded-lg p-3 border border-navy-800">
               <p className="text-navy-600 text-xs mb-1">{item.label}</p>
@@ -217,19 +244,22 @@ function CollectionsTab({ coll, insights, reportMonth }: {
         icon={AlertTriangle}
         defaultOpen={false}
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="bg-navy-950 rounded-lg p-3 border border-navy-800">
-            <p className="text-navy-600 text-xs mb-1">30-Day Arrears</p>
-            <p className="text-lg font-bold text-amber-400">{formatGYD(coll.arrears_30_days)}</p>
-          </div>
-          <div className="bg-navy-950 rounded-lg p-3 border border-navy-800">
-            <p className="text-navy-600 text-xs mb-1">60-Day Arrears</p>
-            <p className="text-lg font-bold text-amber-400">{formatGYD(coll.arrears_60_days)}</p>
-          </div>
-          <div className="bg-navy-950 rounded-lg p-3 border border-navy-800">
-            <p className="text-navy-600 text-xs mb-1">90+ Day Arrears</p>
-            <p className="text-lg font-bold text-red-400">{formatGYD(coll.arrears_90_plus_days)}</p>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          {typeof coll.arrears_debt_reduction === 'number' && (
+            <div className="bg-navy-950 rounded-lg p-3 border border-navy-800">
+              <p className="text-navy-600 text-xs mb-1">Debt Reduction</p>
+              <p className="text-lg font-bold text-emerald-400">{formatGYD(coll.arrears_debt_reduction)}</p>
+              {typeof coll.arrears_debt_reduction_pct === 'number' && (
+                <p className="text-emerald-400/70 text-xs mt-0.5">{coll.arrears_debt_reduction_pct.toFixed(1)}% reduction</p>
+              )}
+            </div>
+          )}
+          {['30-Day Arrears', '60-Day Arrears', '90+ Day Arrears'].map(label => (
+            <div key={label} className="bg-navy-950 rounded-lg p-3 border border-navy-800">
+              <p className="text-navy-600 text-xs mb-1">{label}</p>
+              <p className="text-lg font-bold text-navy-600" title="Not reported in CSCR">N/R</p>
+            </div>
+          ))}
         </div>
       </CollapsibleSection>
 
@@ -312,7 +342,7 @@ function CustomerServiceTab({ cs, insights, reportMonth }: {
           </div>
           <div className="bg-navy-950 rounded-lg p-3 border border-navy-800">
             <p className="text-navy-600 text-xs mb-1">Avg Resolution Time</p>
-            <p className="text-lg font-bold text-slate-100">{cs.avg_resolution_days ?? '--'} days</p>
+            <p className="text-lg font-bold text-navy-600" title="Not reported in CSCR">N/R</p>
           </div>
         </div>
       </CollapsibleSection>
@@ -329,12 +359,12 @@ function CustomerServiceTab({ cs, insights, reportMonth }: {
             <p className="text-lg font-bold text-slate-100">{formatGYD(cs.reconnection_payments)}</p>
           </div>
           <div className="bg-navy-950 rounded-lg p-3 border border-navy-800">
-            <p className="text-navy-600 text-xs mb-1">Legal Actions</p>
-            <p className="text-lg font-bold text-amber-400">{cs.legal_actions ?? '--'}</p>
+            <p className="text-navy-600 text-xs mb-1">Legal Collections</p>
+            <p className="text-lg font-bold text-amber-400">{formatGYD(cs.legal_actions_amount ?? cs.legal_actions)}</p>
           </div>
           <div className="bg-navy-950 rounded-lg p-3 border border-navy-800">
-            <p className="text-navy-600 text-xs mb-1">Enforcement Actions</p>
-            <p className="text-lg font-bold text-amber-400">{cs.enforcement_actions ?? '--'}</p>
+            <p className="text-navy-600 text-xs mb-1">Enforcement Collections</p>
+            <p className="text-lg font-bold text-amber-400">{formatGYD(cs.enforcement_actions_amount ?? cs.enforcement_actions)}</p>
           </div>
           <div className="bg-navy-950 rounded-lg p-3 border border-navy-800">
             <p className="text-navy-600 text-xs mb-1">Disconnections</p>

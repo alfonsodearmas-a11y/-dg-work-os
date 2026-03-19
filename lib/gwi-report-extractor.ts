@@ -140,11 +140,58 @@ export async function extractCSCRReport(text: string): Promise<{
   const prompt = `You are a data extraction specialist for Guyana Water Inc (GWI).
 Extract collections/billing and customer service metrics from this CSCR Board Report.
 
-All monetary values must be returned as raw GYD numbers (no currency symbols, no commas, no abbreviations).
-- Strip "$" or "G$" prefixes and all commas: "$515,497,590" → 515497590
-- Handle abbreviations: "$129.8 m" → 129800000, "G$19.3 b" → 19300000000
+## CRITICAL: Data Source Priority
+GWI's CSCR Board Report pastes most data tables as EMF/PNG IMAGES inside the Word document. These images are NOT extractable as text. However, nearly all key metrics ARE stated in the report's **prose paragraphs**. You MUST:
+1. **PRIMARY: Extract from prose/narrative text** — scan every paragraph for the patterns below
+2. **SECONDARY: Extract from any parseable tables** — some tables survive as actual Word XML tables
+
+## GYD Currency Format Patterns
+All monetary values must be returned as raw GYD numbers (no symbols, no commas):
+- "$" and "G$" both mean GYD — treat identically
+- "$515,497,590" → 515497590 | "$129.8 m" → 129800000 | "G$19.3 b" → 19300000000
 - Parentheses mean negative: "($50.2 m)" → -50200000
-- Look for billing totals labeled "TOTAL", "Total Billings", or similar — extract as total_billings
+- "m" / "million" → ×1,000,000 | "b" / "billion" → ×1,000,000,000
+
+## Prose Extraction Patterns
+These are the EXACT sentence patterns that appear in CSCR reports. Search for these:
+
+**Collections:**
+- "The Total Revenue collected in {MONTH} {YEAR} is \${AMOUNT}" → total_collections
+- "The Regional Collections for {MONTH} {YEAR} amount to \${AMOUNT}" → regional_collections_total
+- "Key Accounts Collection in {MONTH}{YEAR} is \${AMOUNT}" → key_accounts_collections
+- "Total Regional Billings for {MONTH} {YEAR} amounted to \${AMOUNT}" → total_billings
+
+**Billing & Accounts:**
+- "{PERCENT}% of metered billings were based on actual readings" → billing_efficiency_pct
+- "active accounts on the database as of {MONTH} {YEAR} was {COUNT}" → active_accounts
+- "accounts receivable balance was \${AMOUNT}" → accounts_receivable
+- "In {MONTH} {YEAR}, {PERCENT}% of the payments received were made on or before the due dates" → on_time_payment_pct
+
+**Arrears:**
+- "the debt for {YEAR} and prior was reduced by \${AMOUNT} or {PERCENT}%" → arrears_debt_reduction + arrears_debt_reduction_pct
+- NOTE: 30/60/90-day arrears aging buckets are NOT reported in CSCR reports. Set those to null.
+
+**Disconnections & Reconnections:**
+- "{COUNT}, disconnections were done, and {RECONNECTED_IN_MONTH} or {PERCENT}% of those customers paid a total of \${AMOUNT} and were reconnected within the month and an additional {PRIOR_RECONNECTED} customers were reconnected from the previous months, bring the total reconnection to {TOTAL_RECONNECTIONS} and total payment of \${TOTAL_PAYMENT}"
+  → disconnections, reconnections (use TOTAL_RECONNECTIONS), reconnection_payments (use TOTAL_PAYMENT)
+
+**Customer Service:**
+- "{COUNT}, complaints were received and logged into the Hi Affinity system. Of those, {RESOLVED} ({PERCENT}%) were resolved and {UNRESOLVED} ({PERCENT}%) were unresolved"
+  → total_complaints, resolved_complaints, resolution_rate_pct, unresolved_complaints
+- "{PERCENT}% or {COUNT} of all complaints were cleared within the stipulated timelines" → within_timeline_pct
+- NOTE: Average resolution time in days is NOT reported. Set avg_resolution_days to null.
+
+**PUC:**
+- "There were {COUNT} PUC letters in {MONTH} {YEAR}" → puc_complaints
+- Handle word-to-number: "two (2)" → 2, "one (1)" → 1
+
+**Legal & Enforcement (DOLLAR VALUES, not counts):**
+- "Issuance of Legal Correspondences\\t\\t\${AMOUNT}" → legal_actions_amount (this is a GYD dollar value)
+- "Enforcement Officers\\t\\t\\t\\t\${AMOUNT}" → enforcement_actions_amount (this is a GYD dollar value)
+- NOTE: These are dollar values of collections through legal/enforcement channels, NOT counts of actions.
+
+**Regional Billings (from parseable Table 0 if available):**
+If you find a table with regions (Region 2 through Region 10, Hinterland) and columns (Fixed Charge, Metered, Unmetered, Sewerage, Ancillary, TOTAL), extract the TOTAL column per region as region_X_billings.
 
 Return a JSON object with exactly this structure:
 {
@@ -155,15 +202,24 @@ Return a JSON object with exactly this structure:
     "active_accounts": number,
     "accounts_receivable": number,
     "on_time_payment_pct": number,
-    "region_1_collections": number,
-    "region_2_collections": number,
-    "region_3_collections": number,
-    "region_4_collections": number,
-    "region_5_collections": number,
+    "regional_collections_total": number,
+    "key_accounts_collections": number,
     "billing_efficiency_pct": number,
+    "arrears_debt_reduction": number,
+    "arrears_debt_reduction_pct": number,
     "arrears_30_days": number,
     "arrears_60_days": number,
-    "arrears_90_plus_days": number
+    "arrears_90_plus_days": number,
+    "region_2_billings": number,
+    "region_3_billings": number,
+    "region_4_billings": number,
+    "region_5_billings": number,
+    "region_6_billings": number,
+    "region_7_billings": number,
+    "region_8_billings": number,
+    "region_9_billings": number,
+    "region_10_billings": number,
+    "hinterland_billings": number
   },
   "customerService": {
     "total_complaints": number,
@@ -175,14 +231,14 @@ Return a JSON object with exactly this structure:
     "disconnections": number,
     "reconnections": number,
     "reconnection_payments": number,
-    "legal_actions": number,
-    "enforcement_actions": number,
+    "legal_actions_amount": number,
+    "enforcement_actions_amount": number,
     "puc_complaints": number,
     "puc_resolved": number
   }
 }
 
-If a value cannot be found, set it to null.
+If a value cannot be found in the text, set it to null.
 Return ONLY the JSON object, wrapped in \`\`\`json code blocks.`;
 
   const result = await callClaude(prompt, text);
