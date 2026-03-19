@@ -24,9 +24,9 @@ export async function GET() {
     return NextResponse.json({ packages, stats });
   } catch (err: unknown) {
     // Table doesn't exist yet (migration not applied) — return empty data gracefully
-    const code = (err as { code?: string })?.code;
+    const code = (err as { code?: string })?.code ?? '';
     const msg = (err as { message?: string })?.message ?? '';
-    if (code === '42P01' || msg.includes('schema cache') || msg.includes('does not exist')) {
+    if (code === '42P01' || code === 'PGRST205' || msg.includes('schema cache') || msg.includes('does not exist')) {
       console.warn('Procurement tables not found — migration 052 likely not applied yet');
       return NextResponse.json({ packages: [], stats: null });
     }
