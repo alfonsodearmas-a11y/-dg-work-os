@@ -21,6 +21,7 @@ import {
   DollarSign,
   Eye,
   CheckSquare,
+  ShoppingCart,
   CalendarDays,
   ChevronsLeft,
 } from 'lucide-react';
@@ -76,6 +77,7 @@ const mainNavItems = [
   { href: '/', label: 'Mission Control', icon: LayoutDashboard, moduleSlug: 'briefing' },
   { href: '/intel', label: 'Agency Intel', icon: Activity, moduleSlug: 'agency-intel' },
   { href: '/tasks', label: 'Tasks', icon: CheckSquare, moduleSlug: 'tasks' },
+  { href: '/procurement', label: 'Procurement', icon: ShoppingCart, moduleSlug: 'procurement' },
   { href: '/oversight', label: 'Oversight', icon: Eye, moduleSlug: 'oversight' },
   { href: '/budget', label: 'Budget 2026', icon: DollarSign, moduleSlug: 'budget' },
   { href: '/meetings', label: 'Meetings', icon: Mic, moduleSlug: 'meetings' },

@@ -1,0 +1,59 @@
+import { NextResponse, NextRequest } from 'next/server';
+import { requireRole } from '@/lib/auth-helpers';
+import { getPackageSummary, updatePackageStage } from '@/lib/procurement-queries';
+import { PROCUREMENT_STAGES, ProcurementStage } from '@/lib/procurement-types';
+
+export async function POST(request: NextRequest) {
+  const result = await requireRole(['agency_admin']);
+  if (result instanceof NextResponse) return result;
+  const { session } = result;
+
+  try {
+    const body = await request.json();
+    const { packageId, newStage, notes } = body as {
+      packageId: string;
+      newStage: ProcurementStage;
+      notes?: string;
+    };
+
+    if (!packageId || !newStage) {
+      return NextResponse.json({ error: 'packageId and newStage are required' }, { status: 400 });
+    }
+
+    // Validate newStage is a valid procurement stage
+    if (!PROCUREMENT_STAGES.includes(newStage)) {
+      return NextResponse.json({ error: 'Invalid stage' }, { status: 400 });
+    }
+
+    // Lightweight fetch to verify ownership and current stage
+    const pkg = await getPackageSummary(packageId);
+    if (!pkg) {
+      return NextResponse.json({ error: 'Package not found' }, { status: 404 });
+    }
+
+    // Verify the package belongs to user's agency
+    if (pkg.agency.toLowerCase() !== session.user.agency?.toLowerCase()) {
+      return NextResponse.json({ error: 'Cannot advance packages from another agency' }, { status: 403 });
+    }
+
+    // Validate forward-only movement
+    const currentIdx = PROCUREMENT_STAGES.indexOf(pkg.current_stage);
+    const newIdx = PROCUREMENT_STAGES.indexOf(newStage);
+
+    if (newIdx <= currentIdx) {
+      return NextResponse.json({ error: 'Can only advance to a later stage' }, { status: 400 });
+    }
+
+    // Validate exactly one stage forward (no skipping)
+    if (newIdx !== currentIdx + 1) {
+      return NextResponse.json({ error: 'Cannot skip stages' }, { status: 400 });
+    }
+
+    const updated = await updatePackageStage(packageId, newStage, session.user.id, notes);
+
+    return NextResponse.json({ package: updated });
+  } catch (err) {
+    console.error('Error advancing procurement package:', err);
+    return NextResponse.json({ error: 'Failed to advance package' }, { status: 500 });
+  }
+}

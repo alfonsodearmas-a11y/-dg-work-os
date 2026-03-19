@@ -49,6 +49,18 @@ export const PROJECT_STATUS_STYLES: Record<string, { bg: string; text: string }>
   Unknown: { bg: 'bg-navy-600/20', text: 'text-slate-400' },
 };
 
+/** Agency code → hex color for charts and badges */
+export const AGENCY_HEX_COLORS: Record<string, string> = {
+  GPL:   '#d4af37',
+  GWI:   '#60a5fa',
+  CJIA:  '#38bdf8',
+  GCAA:  '#94a3b8',
+  MARAD: '#2dd4bf',
+  HECI:  '#fbbf24',
+  HAS:   '#a78bfa',
+  MOPUA: '#34d399',
+};
+
 /** Project health indicator dot classes */
 export const HEALTH_DOT: Record<string, string> = {
   green: 'bg-emerald-400',

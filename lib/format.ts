@@ -50,3 +50,11 @@ export function fmtNumber(value: number | null | undefined): string {
   if (value === null || value === undefined) return '-';
   return value.toLocaleString();
 }
+
+/** Format a file size in bytes to a human-readable string (B / KB / MB). */
+export function fmtFileSize(bytes: number | null | undefined): string {
+  if (bytes === null || bytes === undefined) return '-';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
