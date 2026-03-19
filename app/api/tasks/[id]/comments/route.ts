@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
+import { createNotification } from '@/lib/notifications/notification-service';
+import { cleanMentionBody } from '@/lib/notifications/mention-utils';
 import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 
@@ -94,7 +96,69 @@ export const POST = withErrorHandler(async (
     }).then(({ error: actErr }) => {
       if (actErr) logger.warn({ err: actErr }, '[task-comments] Activity log failed');
     })
-  ).catch((err: unknown) => logger.error({ err }, 'Failed to create notification'));
+  ).catch((err: unknown) => logger.error({ err }, 'Failed to log activity'));
+
+  // Create notifications for @mentions and replies (fire-and-forget)
+  Promise.resolve((async () => {
+    try {
+      // Fetch task status for tier context
+      const { data: taskRow } = await supabaseAdmin
+        .from('tasks')
+        .select('status')
+        .eq('id', id)
+        .single();
+      const taskStatus = taskRow?.status || undefined;
+
+      // Extract mentions and build clean body text
+      const { mentionedUserIds, cleanBody } = await cleanMentionBody(data.body);
+
+      // Notify each mentioned user
+      for (const mentionedId of mentionedUserIds) {
+        createNotification({
+          recipientId: mentionedId,
+          actorId: session.user.id,
+          eventType: 'comment_mention',
+          entityType: 'comment',
+          entityId: comment.id,
+          parentEntityType: 'task',
+          parentEntityId: id,
+          title: `${session.user.name || 'Someone'} mentioned you`,
+          body: cleanBody,
+          referenceUrl: '/tasks',
+          metadata: { taskId: id },
+          tierContext: { taskStatus },
+        }).catch((err: unknown) => logger.error({ err }, '[task-comments] Mention notification failed'));
+      }
+
+      // If this is a reply, notify the parent comment author
+      if (data.parent_id) {
+        const { data: parentComment } = await supabaseAdmin
+          .from('task_comments')
+          .select('user_id')
+          .eq('id', data.parent_id)
+          .single();
+
+        if (parentComment && parentComment.user_id !== session.user.id && !mentionedUserIds.includes(parentComment.user_id)) {
+          createNotification({
+            recipientId: parentComment.user_id,
+            actorId: session.user.id,
+            eventType: 'comment_reply',
+            entityType: 'comment',
+            entityId: comment.id,
+            parentEntityType: 'task',
+            parentEntityId: id,
+            title: `${session.user.name || 'Someone'} replied to your comment`,
+            body: cleanBody,
+            referenceUrl: '/tasks',
+            metadata: { taskId: id },
+            tierContext: { taskStatus },
+          }).catch((err: unknown) => logger.error({ err }, '[task-comments] Reply notification failed'));
+        }
+      }
+    } catch (err) {
+      logger.error({ err }, '[task-comments] Notification creation failed');
+    }
+  })()).catch((err: unknown) => logger.error({ err }, '[task-comments] Notification block failed'));
 
   const flatComment = {
     ...comment,

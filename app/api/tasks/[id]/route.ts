@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
-import { insertNotification } from '@/lib/notifications';
+import { createNotification } from '@/lib/notifications/notification-service';
 import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 const patchTaskSchema = z.object({
   title: z.string().min(1).optional(),
@@ -31,7 +32,7 @@ export const PATCH = withErrorHandler(async (
 
   const { data: task } = await supabaseAdmin
     .from('tasks')
-    .select('owner_user_id, assigned_by_user_id, status')
+    .select('owner_user_id, assigned_by_user_id, status, title, due_date')
     .eq('id', id)
     .single();
 
@@ -120,34 +121,109 @@ export const PATCH = withErrorHandler(async (
     await supabaseAdmin.from('task_activity').insert(activityEntries);
   }
 
-  if (data.status === 'blocked' && task.status !== 'blocked') {
-    const { data: dgUsers } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .eq('role', 'dg')
-      .eq('is_active', true);
+  // --- Notifications (fire-and-forget) ---
+  Promise.resolve((async () => {
+    try {
+      const statusChanged = data.status !== undefined && data.status !== task.status;
+      const isOverdue = updated.due_date ? new Date(updated.due_date) < new Date() : false;
 
-    for (const dg of dgUsers || []) {
-      if (dg.id !== session.user.id) {
-        await insertNotification({
-          user_id: dg.id,
-          type: 'task_blocked',
-          title: `Task blocked: ${updated.title}`,
-          body: data.blocked_reason || 'No reason provided',
-          icon: 'task',
-          priority: 'high',
-          reference_type: 'task',
-          reference_id: id,
-          reference_url: '/tasks',
-          scheduled_for: new Date().toISOString(),
-          category: 'tasks',
-          source_module: 'tasks',
-          action_required: true,
-          action_type: 'review',
-        });
+      // Task assignment notification
+      if (data.owner_user_id !== undefined && data.owner_user_id !== task.owner_user_id) {
+        createNotification({
+          recipientId: data.owner_user_id,
+          actorId: session.user.id,
+          eventType: 'task_assigned',
+          entityType: 'task',
+          entityId: id,
+          title: `You were assigned: ${updated.title}`,
+          body: updated.description?.substring(0, 120) || '',
+          referenceUrl: '/tasks',
+          metadata: { taskId: id },
+          tierContext: {
+            taskPriority: updated.priority,
+            taskStatus: updated.status,
+            isOverdue,
+          },
+        }).catch((err: unknown) => logger.error({ err }, '[task-patch] Assignment notification failed'));
       }
+
+      // Task blocked notification — notify all DG users + task owner (dedup if owner is a DG)
+      if (data.status === 'blocked' && task.status !== 'blocked') {
+        const { data: dgUsers } = await supabaseAdmin
+          .from('users')
+          .select('id')
+          .eq('role', 'dg')
+          .eq('is_active', true);
+
+        const notifiedIds = new Set<string>();
+        for (const dg of dgUsers || []) {
+          notifiedIds.add(dg.id);
+          createNotification({
+            recipientId: dg.id,
+            actorId: session.user.id,
+            eventType: 'task_blocked',
+            entityType: 'task',
+            entityId: id,
+            title: `Task blocked: ${updated.title}`,
+            body: data.blocked_reason || 'No reason provided',
+            referenceUrl: '/tasks',
+            metadata: { taskId: id },
+            tierContext: { taskStatus: 'blocked' },
+          }).catch((err: unknown) => logger.error({ err }, '[task-patch] Blocked notification (DG) failed'));
+        }
+
+        // Also notify the task owner if not already notified as a DG user
+        if (task.owner_user_id && !notifiedIds.has(task.owner_user_id)) {
+          createNotification({
+            recipientId: task.owner_user_id,
+            actorId: session.user.id,
+            eventType: 'task_blocked',
+            entityType: 'task',
+            entityId: id,
+            title: `Task blocked: ${updated.title}`,
+            body: data.blocked_reason || 'No reason provided',
+            referenceUrl: '/tasks',
+            metadata: { taskId: id },
+            tierContext: { taskStatus: 'blocked' },
+          }).catch((err: unknown) => logger.error({ err }, '[task-patch] Blocked notification (owner) failed'));
+        }
+      }
+
+      // Task status change notification (non-blocked, non-done) — notify task owner
+      if (statusChanged && data.status !== 'blocked' && data.status !== 'done' && task.owner_user_id) {
+        createNotification({
+          recipientId: task.owner_user_id,
+          actorId: session.user.id,
+          eventType: 'task_status_change',
+          entityType: 'task',
+          entityId: id,
+          title: `Task moved to ${data.status}: ${updated.title}`,
+          body: '',
+          referenceUrl: '/tasks',
+          metadata: { taskId: id },
+          tierContext: { taskStatus: data.status },
+        }).catch((err: unknown) => logger.error({ err }, '[task-patch] Status change notification failed'));
+      }
+
+      // Task completed notification — notify the assigner
+      if (data.status === 'done' && task.status !== 'done' && task.assigned_by_user_id) {
+        createNotification({
+          recipientId: task.assigned_by_user_id,
+          actorId: session.user.id,
+          eventType: 'task_completed',
+          entityType: 'task',
+          entityId: id,
+          title: `Task completed: ${updated.title}`,
+          body: '',
+          referenceUrl: '/tasks',
+          metadata: { taskId: id },
+          tierContext: { taskStatus: 'done' },
+        }).catch((err: unknown) => logger.error({ err }, '[task-patch] Completed notification failed'));
+      }
+    } catch (err) {
+      logger.error({ err }, '[task-patch] Notification block failed');
     }
-  }
+  })()).catch((err: unknown) => logger.error({ err }, '[task-patch] Notification block uncaught'));
 
   return NextResponse.json({ task: flatTask });
 });

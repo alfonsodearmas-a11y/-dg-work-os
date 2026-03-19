@@ -31,7 +31,40 @@ export interface Notification {
   expires_at: string | null;
   metadata: Record<string, unknown>;
   updated_at: string | null;
+  // Tier system columns (migration 051) — optional for backward compat
+  actor_id?: string | null;
+  event_type?: string | null;
+  importance_tier?: 'critical' | 'important' | 'informational' | null;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  parent_entity_type?: string | null;
+  parent_entity_id?: string | null;
+  seen_at?: string | null;
+  email_sent_at?: string | null;
+  email_queued_at?: string | null;
+  digest_eligible?: boolean;
+  digest_batch_id?: string | null;
 }
+
+export type EventEmailPref = 'instant' | 'digest' | 'off';
+
+export interface EventPrefEntry {
+  in_app: boolean;
+  email: EventEmailPref;
+}
+
+export type EventPreferencesMap = {
+  comment_mention: EventPrefEntry;
+  comment_reply: EventPrefEntry;
+  task_assigned: EventPrefEntry;
+  task_blocked: EventPrefEntry;
+  task_due_soon: EventPrefEntry;
+  task_status_change: EventPrefEntry;
+  task_completed: EventPrefEntry;
+  subtask_completed: EventPrefEntry;
+};
+
+export type DigestFrequency = 'daily' | 'weekly' | 'off';
 
 export interface NotificationPrefs {
   meeting_reminder_24h: boolean;
@@ -46,6 +79,9 @@ export interface NotificationPrefs {
   do_not_disturb: boolean;
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
+  event_preferences: EventPreferencesMap;
+  digest_frequency: DigestFrequency;
+  digest_time: string;
 }
 
 // --- CRUD ---
@@ -59,7 +95,7 @@ export async function getNotifications(
 
   let query = supabaseAdmin
     .from('notifications')
-    .select('id, user_id, type, title, body, icon, priority, reference_type, reference_id, reference_url, scheduled_for, delivered_at, read_at, dismissed_at, push_sent, created_at, category, source_module, action_required, action_type, expires_at, metadata, updated_at')
+    .select('id, user_id, type, title, body, icon, priority, reference_type, reference_id, reference_url, scheduled_for, delivered_at, read_at, dismissed_at, push_sent, created_at, category, source_module, action_required, action_type, expires_at, metadata, updated_at, actor_id, event_type, importance_tier, entity_type, entity_id, parent_entity_type, parent_entity_id, seen_at')
     .eq('user_id', userId)
     .is('dismissed_at', null)
     .lte('scheduled_for', new Date().toISOString())
@@ -465,10 +501,21 @@ export async function generateAll(userId: string): Promise<{
 
 // --- Preferences ---
 
+export const DEFAULT_EVENT_PREFERENCES: EventPreferencesMap = {
+  comment_mention: { in_app: true, email: 'instant' },
+  comment_reply: { in_app: true, email: 'instant' },
+  task_assigned: { in_app: true, email: 'instant' },
+  task_blocked: { in_app: true, email: 'instant' },
+  task_due_soon: { in_app: true, email: 'digest' },
+  task_status_change: { in_app: true, email: 'digest' },
+  task_completed: { in_app: true, email: 'digest' },
+  subtask_completed: { in_app: true, email: 'off' },
+};
+
 export async function getPreferences(userId: string): Promise<NotificationPrefs> {
   const { data, error } = await supabaseAdmin
     .from('notification_preferences')
-    .select('meeting_reminder_24h, meeting_reminder_1h, meeting_reminder_15m, task_due_reminders, task_overdue_alerts, meeting_minutes_ready, projects_enabled, kpi_enabled, oversight_enabled, do_not_disturb, quiet_hours_start, quiet_hours_end')
+    .select('meeting_reminder_24h, meeting_reminder_1h, meeting_reminder_15m, task_due_reminders, task_overdue_alerts, meeting_minutes_ready, projects_enabled, kpi_enabled, oversight_enabled, do_not_disturb, quiet_hours_start, quiet_hours_end, event_preferences, digest_frequency, digest_time')
     .eq('user_id', userId)
     .single();
 
@@ -486,6 +533,9 @@ export async function getPreferences(userId: string): Promise<NotificationPrefs>
       do_not_disturb: false,
       quiet_hours_start: null,
       quiet_hours_end: null,
+      event_preferences: { ...DEFAULT_EVENT_PREFERENCES },
+      digest_frequency: 'daily',
+      digest_time: '07:00',
     };
   }
 
@@ -502,6 +552,11 @@ export async function getPreferences(userId: string): Promise<NotificationPrefs>
     do_not_disturb: data.do_not_disturb,
     quiet_hours_start: data.quiet_hours_start,
     quiet_hours_end: data.quiet_hours_end,
+    event_preferences: data.event_preferences
+      ? { ...DEFAULT_EVENT_PREFERENCES, ...(data.event_preferences as Partial<EventPreferencesMap>) }
+      : { ...DEFAULT_EVENT_PREFERENCES },
+    digest_frequency: (data.digest_frequency as DigestFrequency) ?? 'daily',
+    digest_time: (data.digest_time as string) ?? '07:00',
   };
 }
 

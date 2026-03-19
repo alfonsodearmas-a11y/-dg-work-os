@@ -2,11 +2,17 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Bell, Calendar, CheckSquare, FileText, Building2, BarChart3, Eye, UserCheck } from 'lucide-react';
+import { X, Bell } from 'lucide-react';
 import { useNotifications } from './NotificationProvider';
+import { useNotificationsWithTiers } from '@/hooks/use-notifications';
+import { NotificationItem } from './notification-item';
+import { resolveNotificationUrl } from './notification-utils';
 import type { Notification } from '@/lib/notifications';
 
-type FilterMode = 'all' | 'unread' | 'action_required';
+// Re-export for backward compatibility (NotificationToast, ActivityPanel import from here)
+export { resolveNotificationUrl } from './notification-utils';
+
+type FilterMode = 'all' | 'unread' | 'action_required' | 'critical';
 type CategoryFilter = string | null;
 
 const CATEGORY_PILLS = [
@@ -16,6 +22,7 @@ const CATEGORY_PILLS = [
   { key: 'projects', label: 'Projects' },
   { key: 'kpi', label: 'KPI' },
   { key: 'oversight', label: 'Oversight' },
+  { key: 'mentions', label: 'Mentions' },
 ] as const;
 
 function getTimeGroup(scheduledFor: string): string {
@@ -38,161 +45,28 @@ function getTimeGroup(scheduledFor: string): string {
   return 'Older';
 }
 
-function relativeTime(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
-function NotificationIcon({ type, category }: { type: string; category?: string }) {
-  // Meeting types
-  if (type === 'meeting_minutes_ready') return <FileText className="h-4 w-4 text-blue-500" />;
-  if (type.startsWith('meeting')) return <Calendar className="h-4 w-4 text-gold-500" />;
-
-  // Project types
-  if (category === 'projects' || type.startsWith('project_')) return <Building2 className="h-4 w-4 text-[#f59e0b]" />;
-
-  // KPI types
-  if (category === 'kpi' || type.startsWith('kpi_')) return <BarChart3 className="h-4 w-4 text-[#8b5cf6]" />;
-
-  // Oversight types
-  if (category === 'oversight' || type.startsWith('oversight_')) return <Eye className="h-4 w-4 text-cyan-500" />;
-
-  // Task management bridge types
-  if (type.startsWith('tm_')) return <UserCheck className="h-4 w-4 text-[#10b981]" />;
-
-  // Default: task
-  return <CheckSquare className="h-4 w-4 text-green-500" />;
-}
-
-function priorityColor(priority: string): string {
-  switch (priority) {
-    case 'urgent': return '#d4af37';
-    case 'high': return '#3b82f6';
-    case 'medium': return '#64748b';
-    default: return 'transparent';
-  }
-}
-
-function actionLabel(actionType: string | null | undefined): string {
-  switch (actionType) {
-    case 'review': return 'Review';
-    case 'acknowledge': return 'Ack';
-    default: return 'View';
-  }
-}
-
-export function resolveNotificationUrl(n: Notification): string | null {
-  // Use reference_url if it's a meaningful deep link (not just '/')
-  if (n.reference_url && n.reference_url !== '/') return n.reference_url;
-
-  // Fallback: build URL from reference_type + reference_id + metadata
-  const id = n.reference_id;
-  const agency = (n.metadata?.agency as string)?.toLowerCase();
-
-  switch (n.reference_type) {
-    case 'task':
-      return '/tasks';
-    case 'meeting':
-      return id ? `/meetings/${id}` : '/meetings';
-    case 'project':
-      return id ? `/projects/${id}` : '/projects';
-    case 'kpi':
-      return agency ? `/intel/${agency}` : '/intel';
-    case 'oversight':
-      return '/oversight';
-    case 'document':
-      return id ? `/documents/${id}` : '/documents';
-    default:
-      break;
-  }
-
-  // Fallback by category
-  switch (n.category) {
-    case 'meetings': return '/meetings';
-    case 'tasks': return '/tasks';
-    case 'projects': return '/projects';
-    case 'kpi': return '/intel';
-    case 'oversight': return '/oversight';
-    default: return null;
-  }
-}
-
-function NotificationCard({ notification, onRead }: { notification: Notification; onRead: (n: Notification) => void }) {
-  const isUnread = !notification.read_at;
-  const hasLink = !!resolveNotificationUrl(notification);
-
-  return (
-    <button
-      onClick={() => onRead(notification)}
-      className={`w-full text-left flex gap-3 p-3 rounded-lg transition-all duration-150 group relative cursor-pointer
-        ${isUnread ? 'bg-white/[0.03]' : ''}
-        hover:bg-white/[0.08] active:bg-white/[0.12]`}
-    >
-      {/* Priority accent bar — doubles as unread indicator */}
-      <div
-        className={`absolute left-0 top-2 bottom-2 w-1 rounded-full transition-colors ${notification.priority === 'urgent' ? 'animate-pulse-gold' : ''}`}
-        style={{
-          backgroundColor: isUnread
-            ? priorityColor(notification.priority) || '#d4af37'
-            : priorityColor(notification.priority),
-        }}
-      />
-
-      {/* Icon */}
-      <div className="mt-0.5 pl-2 flex-shrink-0">
-        <NotificationIcon type={notification.type} category={notification.category} />
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <p className={`text-sm leading-snug ${isUnread ? 'text-white font-medium' : 'text-white/50'}`}>
-          {notification.title}
-        </p>
-        {notification.body && (
-          <p className={`text-xs mt-0.5 truncate ${isUnread ? 'text-white/40' : 'text-white/25'}`}>{notification.body}</p>
-        )}
-        <div className="flex items-center gap-2 mt-1">
-          <p className={`text-xs ${isUnread ? 'text-white/30' : 'text-white/20'}`}>{relativeTime(notification.scheduled_for)}</p>
-          {notification.action_required && (
-            <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-gold-500/20 text-gold-500">
-              {actionLabel(notification.action_type)}
-            </span>
-          )}
-          {hasLink && (
-            <span className="text-xs text-white/20 opacity-0 group-hover:opacity-100 transition-opacity">
-              Open &rarr;
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Unread dot */}
-      {isUnread && (
-        <div className="flex-shrink-0 mt-2">
-          <div className="w-2 h-2 rounded-full bg-gold-500" />
-        </div>
-      )}
-    </button>
-  );
-}
-
 export function NotificationPanel() {
   const router = useRouter();
   const { notifications, isPanelOpen, closePanel, markAsRead, markAllRead, dismissAll, actionRequiredCount } = useNotifications();
+  const { criticalCount } = useNotificationsWithTiers();
   const [filter, setFilter] = useState<FilterMode>('all');
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>(null);
 
   const filtered = useMemo(() => {
     let result = notifications;
+
+    // Status-level filters
     if (filter === 'unread') result = result.filter(n => !n.read_at);
     if (filter === 'action_required') result = result.filter(n => n.action_required);
-    if (categoryFilter) result = result.filter(n => n.category === categoryFilter);
+    if (filter === 'critical') result = result.filter(n => n.importance_tier === 'critical');
+
+    // Category-level filters
+    if (categoryFilter === 'mentions') {
+      result = result.filter(n => n.event_type === 'comment_mention' || n.event_type === 'comment_reply');
+    } else if (categoryFilter) {
+      result = result.filter(n => n.category === categoryFilter);
+    }
+
     return result;
   }, [notifications, filter, categoryFilter]);
 
@@ -278,13 +152,16 @@ export function NotificationPanel() {
               { key: 'all' as FilterMode, label: 'All' },
               { key: 'unread' as FilterMode, label: 'Unread' },
               { key: 'action_required' as FilterMode, label: `Action${actionRequiredCount > 0 ? ` (${actionRequiredCount})` : ''}` },
+              { key: 'critical' as FilterMode, label: `Critical${criticalCount > 0 ? ` (${criticalCount})` : ''}` },
             ]).map(f => (
               <button
                 key={f.key}
                 onClick={() => setFilter(f.key)}
                 className={`text-xs px-2.5 py-1.5 rounded-full transition-colors ${
                   filter === f.key
-                    ? 'bg-gold-500/20 text-gold-500 font-semibold'
+                    ? f.key === 'critical'
+                      ? 'bg-red-500/20 text-red-400 font-semibold'
+                      : 'bg-gold-500/20 text-gold-500 font-semibold'
                     : 'bg-white/5 text-white/40 hover:text-white/60'
                 }`}
               >
@@ -333,7 +210,7 @@ export function NotificationPanel() {
                       {group}
                     </p>
                     {items.map(n => (
-                      <NotificationCard key={n.id} notification={n} onRead={handleRead} />
+                      <NotificationItem key={n.id} notification={n} onRead={handleRead} />
                     ))}
                   </div>
                 );

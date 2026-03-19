@@ -1,42 +1,31 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useSwipeGesture } from '@/hooks/useSwipeGesture';
-import { useIsMobile } from '@/hooks/useIsMobile';
 import {
   Upload, RefreshCw, Calendar, AlertTriangle, Loader2,
 } from 'lucide-react';
-import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { safeDateParse } from '@/lib/format';
-import { HealthScoreTooltip } from '@/components/ui/HealthScoreTooltip';
-import { HealthBreakdownSection } from '@/components/ui/HealthBreakdownSection';
+import { formatGYD, formatPct, hasValue } from '@/lib/gwi-metric-display';
+import { HealthScoreGauge } from '@/components/ui/HealthScoreGauge';
 import { computeGWIHealth } from '@/lib/agency-health';
 import { GWIDocUpload } from './GWIDocUpload';
-import { GWIOverviewTab } from './gwi/GWIOverviewTab';
-import { GWIMetricsTab } from './gwi/GWIMetricsTab';
-import { GWITrendsTab } from './gwi/GWITrendsTab';
-import type { FinancialData } from './gwi/GWIOverviewTab';
-import type { CollectionsData, CustomerServiceData } from './gwi/GWIMetricsTab';
-import type { ProcurementData } from './gwi/GWITrendsTab';
+import { SignalCard, thresholdStatus } from './gwi/DomainCard';
+import { FinancialDomain } from './gwi/GWIOverviewTab';
+import { CollectionsDomain, CustomerServiceDomain } from './gwi/GWIMetricsTab';
+import { ProcurementDomain } from './gwi/GWITrendsTab';
+import type { FinancialData, CollectionsData, CustomerServiceData, ProcurementData, MonthlyReport } from './gwi/gwi-types';
 import type { GWIInsights } from '@/lib/gwi-insights';
 
-// ── Types ───────────────────────────────────────────────────────────────────
-
-interface MonthlyReport {
-  id: string;
-  report_month: string;
-  created_at: string;
-  financial_data: FinancialData;
-  collections_data: CollectionsData;
-  customer_service_data: CustomerServiceData;
-  procurement_data: ProcurementData;
-}
+// Stable empty sentinels — prevent new object creation on every render
+const EMPTY_FIN: FinancialData = {};
+const EMPTY_COLL: CollectionsData = {};
+const EMPTY_CS: CustomerServiceData = {};
+const EMPTY_PROC: ProcurementData = {};
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export function GWIDetail() {
   // State
-  const [activeTab, setActiveTab] = useState('financial');
   const [report, setReport] = useState<MonthlyReport | null>(null);
   const [insights, setInsights] = useState<GWIInsights | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,7 +62,6 @@ export function GWIDetail() {
           if (!selectedMonth && json.data.report_month) {
             setSelectedMonth(json.data.report_month);
           }
-          // Update available months from latest endpoint
           if (json.availableMonths) {
             setAvailableMonths(json.availableMonths);
           }
@@ -142,85 +130,61 @@ export function GWIDetail() {
     }
   }, [selectedMonth]);
 
-  // Default upload period: previous month (reports are typically for the month that just ended)
+  // Default upload period: previous month
   const defaultUploadPeriod = useMemo(() => {
     const d = new Date();
     d.setMonth(d.getMonth() - 1);
     return d.toISOString().slice(0, 7);
   }, []);
 
-  // Reset to latest after upload so availableMonths is refreshed from the latest endpoint
+  // Reset to latest after upload
   const handleUploadSaved = useCallback(() => {
     setSelectedMonth('');
     setRefreshKey(k => k + 1);
   }, []);
 
-  // Data aliases
-  const fin = report?.financial_data || {} as FinancialData;
-  const coll = report?.collections_data || {} as CollectionsData;
-  const cs = report?.customer_service_data || {} as CustomerServiceData;
-  const proc = report?.procurement_data || {} as ProcurementData;
+  // Data aliases (stable refs when data is missing)
+  const fin = report?.financial_data || EMPTY_FIN;
+  const coll = report?.collections_data || EMPTY_COLL;
+  const cs = report?.customer_service_data || EMPTY_CS;
+  const proc = report?.procurement_data || EMPTY_PROC;
 
-  // Tabs — memoized to prevent re-render cascades in swipe handlers
-  const tabs = useMemo(() => [
-    { id: 'financial', label: 'Financial', fullLabel: 'Financial Overview' },
-    { id: 'collections', label: 'Collections', fullLabel: 'Collections & Billing' },
-    { id: 'customer_service', label: 'Service', fullLabel: 'Customer Service' },
-    { id: 'procurement', label: 'Procurement', fullLabel: 'Procurement' },
-  ], []);
+  // Health score value (prefer computed, fall back to AI)
+  const healthScore = gwiHealth?.score ?? insights?.overall?.health_score ?? null;
 
-  // Swipe gesture for mobile tab navigation
-  const isMobile = useIsMobile();
-  const handleSwipeLeft = useCallback(() => {
-    setActiveTab(prev => {
-      const idx = tabs.findIndex(t => t.id === prev);
-      return idx < tabs.length - 1 ? tabs[idx + 1].id : prev;
-    });
-  }, [tabs]);
-  const handleSwipeRight = useCallback(() => {
-    setActiveTab(prev => {
-      const idx = tabs.findIndex(t => t.id === prev);
-      return idx > 0 ? tabs[idx - 1].id : prev;
-    });
-  }, [tabs]);
-  const swipeRef = useSwipeGesture<HTMLDivElement>({
-    onSwipeLeft: handleSwipeLeft,
-    onSwipeRight: handleSwipeRight,
-    enabled: isMobile,
-  });
+  // ── Loading state ──────────────────────────────────────────────────────────
 
-  // Loading state
   if (loading && !report) {
     return (
       <div className="space-y-4 animate-pulse">
-        <div className="bg-navy-900 rounded-xl border border-navy-800 p-5">
-          <div className="flex items-center gap-5">
-            <div className="w-[100px] h-[100px] rounded-full bg-navy-800 shrink-0" />
-            <div className="flex-1 space-y-3">
-              <div className="h-5 bg-navy-800 rounded w-48" />
-              <div className="h-4 bg-navy-800 rounded w-full max-w-md" />
-              <div className="h-4 bg-navy-800 rounded w-2/3" />
+        <div className="bg-navy-900 rounded-xl border border-navy-800 p-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-navy-800 shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-navy-800 rounded w-full max-w-lg" />
+              <div className="h-3 bg-navy-800 rounded w-2/3" />
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-9 bg-navy-800 rounded-lg w-28" />
-          ))}
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="card-premium p-4">
-              <div className="h-4 bg-navy-800 rounded w-24 mb-2" />
+            <div key={i} className="bg-navy-900 rounded-xl border border-navy-800 p-4">
+              <div className="h-3 bg-navy-800 rounded w-20 mb-2" />
               <div className="h-6 bg-navy-800 rounded w-16" />
             </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-navy-900 rounded-xl border border-navy-800 p-4 h-48" />
           ))}
         </div>
       </div>
     );
   }
 
-  // Error state
+  // ── Error state ────────────────────────────────────────────────────────────
+
   if (fetchError && !report) {
     return (
       <div className="bg-navy-900 rounded-xl border border-red-500/30 p-6 md:p-12 text-center">
@@ -239,7 +203,8 @@ export function GWIDetail() {
     );
   }
 
-  // No data state
+  // ── No data state ──────────────────────────────────────────────────────────
+
   if (!report) {
     return (
       <div className="bg-navy-900 rounded-xl border border-navy-800 p-6 md:p-12 text-center">
@@ -267,51 +232,46 @@ export function GWIDetail() {
     );
   }
 
-  const reportMonthStr = report.report_month
-    ? safeDateParse(report.report_month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-    : '';
+  // ── Alert text: best single-line cross-domain finding ──────────────────────
+
+  const alertText = insights?.overall?.headline
+    || (report.report_month
+      ? `GWI Report \u2014 ${safeDateParse(report.report_month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
+      : 'GWI Report');
+
+  // ── Signal row metric statuses ─────────────────────────────────────────────
+
+  const profitStatus = !hasValue(fin.net_profit) ? 'muted' as const
+    : (fin.net_profit > 0 ? 'good' as const : 'critical' as const);
+  const collectionStatus = thresholdStatus(coll.billing_efficiency_pct, 90, 70);
+  const resolutionStatus = thresholdStatus(cs.resolution_rate_pct, 85, 70);
+  const onTimeStatus = thresholdStatus(coll.on_time_payment_pct, 60, 45);
 
   return (
     <div className="space-y-4">
-      {/* Top Section: Health Score + Controls */}
-      <div className="bg-navy-900 rounded-xl border border-navy-800 p-3 md:p-5">
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-          {/* Left: Health Score Gauge */}
-          <div className="flex items-center gap-5 w-full md:flex-1 md:min-w-0">
-            {gwiHealth ? (
+      {/* ── Alert Strip: Health Score + Single-Line Insight + Controls ─── */}
+      <div className="bg-navy-900 rounded-xl border border-navy-800 p-3 md:p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          {/* Health Score Badge (compact, inline) */}
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            {healthScore != null ? (
               <div className="flex-shrink-0">
-                <HealthScoreTooltip score={gwiHealth.score} severity={gwiHealth.severity} breakdown={gwiHealth.breakdown} size={100} />
-              </div>
-            ) : insights?.overall?.health_score != null ? (
-              <div className="flex-shrink-0">
-                <HealthScoreTooltip score={insights.overall.health_score} size={100} />
+                <HealthScoreGauge score={healthScore} compact />
               </div>
             ) : insightsLoading ? (
-              <div className="w-20 h-20 md:w-[100px] md:h-[100px] flex items-center justify-center" role="status" aria-label="Loading">
-                <Loader2 className="w-6 h-6 text-navy-600 animate-spin" aria-hidden="true" />
+              <div className="w-14 h-14 flex items-center justify-center flex-shrink-0" role="status" aria-label="Loading">
+                <Loader2 className="w-5 h-5 text-navy-600 animate-spin" aria-hidden="true" />
               </div>
             ) : null}
 
-            {/* Center: Headline */}
-            <div className="min-w-0 flex-1">
-              {insights?.overall?.headline ? (
-                <>
-                  <p className="text-[10px] uppercase tracking-widest text-gold-500 font-semibold mb-1">AI Analysis</p>
-                  <p className="text-base md:text-[20px] font-bold text-slate-100 leading-snug line-clamp-3 md:line-clamp-none">
-                    {insights.overall.headline}
-                  </p>
-                  {insights.overall.summary && (
-                    <p className="text-slate-400 text-[15px] mt-1 leading-relaxed line-clamp-2 md:line-clamp-none">{insights.overall.summary}</p>
-                  )}
-                </>
-              ) : (
-                <p className="text-slate-400 text-[15px]">GWI Report — {reportMonthStr}</p>
-              )}
-            </div>
+            {/* Single-line alert text */}
+            <p className="text-sm md:text-base font-medium text-slate-100 leading-snug line-clamp-2">
+              {alertText}
+            </p>
           </div>
 
-          {/* Right: Controls */}
-          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+          {/* Controls */}
+          <div className="flex items-center gap-2 flex-shrink-0">
             {availableMonths.length > 0 && (
               <div className="flex items-center gap-1.5">
                 <Calendar className="w-4 h-4 text-navy-600" />
@@ -334,7 +294,7 @@ export function GWIDetail() {
               className="px-3 py-1.5 bg-navy-800 hover:bg-[#3d4a62] text-slate-400 rounded-lg text-sm flex items-center gap-1.5 transition-colors"
             >
               <Upload className="w-4 h-4" />
-              Upload
+              <span className="hidden sm:inline">Upload</span>
             </button>
             {insights && (
               <button
@@ -348,101 +308,38 @@ export function GWIDetail() {
             )}
           </div>
         </div>
-
-        {/* Health Breakdown */}
-        {gwiHealth && (
-          <HealthBreakdownSection breakdown={gwiHealth.breakdown} score={gwiHealth.score} label={gwiHealth.label} severity={gwiHealth.severity} />
-        )}
-
-        {/* Cross-Cutting Issues */}
-        {insights?.cross_cutting && (insights.cross_cutting.issues.length > 0 || insights.cross_cutting.opportunities.length > 0) && (
-          <div className="mt-4">
-            <CollapsibleSection
-              title="Cross-Cutting Issues"
-              icon={AlertTriangle}
-              defaultOpen={false}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {insights.cross_cutting.issues.length > 0 && (
-                  <div>
-                    <p className="text-amber-400 text-sm font-medium mb-2">Issues</p>
-                    <ul className="space-y-1.5">
-                      {insights.cross_cutting.issues.map((issue, i) => (
-                        <li key={i} className="text-slate-400 text-sm flex items-start gap-2">
-                          <span className="text-amber-400 mt-0.5">•</span>
-                          {issue}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {insights.cross_cutting.opportunities.length > 0 && (
-                  <div>
-                    <p className="text-emerald-400 text-sm font-medium mb-2">Opportunities</p>
-                    <ul className="space-y-1.5">
-                      {insights.cross_cutting.opportunities.map((opp, i) => (
-                        <li key={i} className="text-slate-400 text-sm flex items-start gap-2">
-                          <span className="text-emerald-400 mt-0.5">•</span>
-                          {opp}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </CollapsibleSection>
-          </div>
-        )}
       </div>
 
-      {/* Tab Bar */}
-      <div className="bg-navy-900 rounded-xl border border-navy-800 p-1.5">
-        <div className="flex gap-1">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 px-2 md:px-4 py-2 md:py-2.5 rounded-lg text-xs md:text-base font-medium transition-all ${
-                activeTab === tab.id
-                  ? 'bg-gold-500 text-navy-950 shadow-lg shadow-gold-500/20'
-                  : 'text-slate-400 hover:text-slate-100 hover:bg-navy-800'
-              }`}
-            >
-              <span className="md:hidden">{tab.label}</span>
-              <span className="hidden md:inline">{tab.fullLabel}</span>
-            </button>
-          ))}
-        </div>
+      {/* ── Signal Row: 4 Cross-Domain Key Metrics ────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <SignalCard
+          title="Net Profit/Loss"
+          value={formatGYD(fin.net_profit)}
+          status={profitStatus}
+        />
+        <SignalCard
+          title="Collection Rate"
+          value={formatPct(coll.billing_efficiency_pct)}
+          status={collectionStatus}
+        />
+        <SignalCard
+          title="Complaint Resolution"
+          value={formatPct(cs.resolution_rate_pct)}
+          status={resolutionStatus}
+        />
+        <SignalCard
+          title="On-time Payment"
+          value={formatPct(coll.on_time_payment_pct)}
+          status={onTimeStatus}
+        />
       </div>
 
-      {/* Tab Content */}
-      <div ref={swipeRef} className="min-h-[400px]">
-        {activeTab === 'financial' && (
-          <GWIOverviewTab
-            fin={fin}
-            insights={insights}
-            reportMonth={report.report_month}
-            createdAt={report.created_at}
-          />
-        )}
-
-        {(activeTab === 'collections' || activeTab === 'customer_service') && (
-          <GWIMetricsTab
-            activeTab={activeTab}
-            coll={coll}
-            cs={cs}
-            insights={insights}
-            reportMonth={report.report_month}
-          />
-        )}
-
-        {activeTab === 'procurement' && (
-          <GWITrendsTab
-            proc={proc}
-            insights={insights}
-            reportMonth={report.report_month}
-          />
-        )}
+      {/* ── Domain Grid: 2x2 ──────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <FinancialDomain fin={fin} insights={insights} />
+        <CollectionsDomain coll={coll} insights={insights} />
+        <CustomerServiceDomain cs={cs} insights={insights} />
+        <ProcurementDomain proc={proc} insights={insights} />
       </div>
 
       {/* Upload Modal */}
