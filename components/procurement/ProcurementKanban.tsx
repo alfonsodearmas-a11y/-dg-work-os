@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
-import { RefreshCw, AlertTriangle, Package, Plus } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Package } from 'lucide-react';
 import {
   PROCUREMENT_STAGES,
   STAGE_CONFIG,
@@ -12,7 +12,6 @@ import {
 } from '@/lib/procurement-types';
 import { ProcurementCard } from './ProcurementCard';
 import { ProcurementDetailPanel } from './ProcurementDetailPanel';
-import { ProcurementNewPackageForm } from './ProcurementNewPackageForm';
 import { fmtCurrency } from '@/lib/format';
 import { useToast } from '@/components/ui/Toast';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -43,7 +42,7 @@ function sortPackages(packages: ProcurementPackage[]): ProcurementPackage[] {
 // Main component
 // ---------------------------------------------------------------------------
 
-export function ProcurementKanban() {
+export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: number }) {
   const { data: session } = useSession();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -56,8 +55,7 @@ export function ProcurementKanban() {
   const [agencyFilter, setAgencyFilter] = useState('');
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [mobileTab, setMobileTab] = useState<ProcurementStage>('submitted');
-  const [showNewForm, setShowNewForm] = useState(false);
+  const [mobileTab, setMobileTab] = useState<ProcurementStage>('draft');
 
   // ---------------------------------------------------------------------------
   // Data fetching
@@ -92,6 +90,11 @@ export function ProcurementKanban() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
+  // Refetch when parent triggers a refresh (e.g. after new package creation)
+  useEffect(() => {
+    if (refreshTrigger > 0) fetchData();
+  }, [refreshTrigger, fetchData]);
+
   // Global dragend cleanup
   useEffect(() => {
     const handleDragEnd = () => setDraggingId(null);
@@ -112,6 +115,7 @@ export function ProcurementKanban() {
 
   const packagesByStage = useMemo(() => {
     const grouped: Record<ProcurementStage, ProcurementPackage[]> = {
+      draft: [],
       submitted: [],
       advertised: [],
       evaluation: [],
@@ -328,15 +332,6 @@ export function ProcurementKanban() {
             </button>
           ))}
         </div>
-        {(userRole === 'agency_admin' || userRole === 'dg') && (
-          <button
-            onClick={() => setShowNewForm(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gold-500 text-navy-950 hover:bg-[#e5c348] transition-colors"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            New Package
-          </button>
-        )}
       </div>
 
       {/* Stats bar */}
@@ -449,12 +444,6 @@ export function ProcurementKanban() {
         onClose={() => setSelectedPackageId(null)}
       />
 
-      {/* New package form */}
-      <ProcurementNewPackageForm
-        isOpen={showNewForm}
-        onClose={() => setShowNewForm(false)}
-        onCreated={fetchData}
-      />
     </div>
   );
 }

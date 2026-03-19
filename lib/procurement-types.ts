@@ -3,6 +3,7 @@
 // -- Stage & method enums ---------------------------------------------------
 
 export type ProcurementStage =
+  | 'draft'
   | 'submitted'
   | 'advertised'
   | 'evaluation'
@@ -18,6 +19,7 @@ export type ProcurementMethod =
 // -- Pipeline constants -----------------------------------------------------
 
 export const PROCUREMENT_STAGES = [
+  'draft',
   'submitted',
   'advertised',
   'evaluation',
@@ -29,6 +31,7 @@ export const STAGE_CONFIG: Record<
   ProcurementStage,
   { label: string; color: string; description: string }
 > = {
+  draft:         { label: 'Draft',          color: '#6b7280', description: 'Package being prepared' },
   submitted:     { label: 'Submitted',     color: '#94a3b8', description: 'Package submitted for review' },
   advertised:    { label: 'Advertised',    color: '#60a5fa', description: 'Tender advertised publicly' },
   evaluation:    { label: 'Evaluation',    color: '#d4af37', description: 'Bids under evaluation' },
@@ -55,6 +58,7 @@ export interface ProcurementPackage {
   current_stage: ProcurementStage;
   submitted_by: string;
   oversight_project_id: string | null;
+  expected_delivery_date: string | null;
   created_at: string;
   updated_at: string;
   // Computed / joined fields

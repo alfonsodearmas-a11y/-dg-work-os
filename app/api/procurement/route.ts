@@ -43,12 +43,14 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { title, description, estimated_value, procurement_method, agency } = body as {
+    const { title, description, estimated_value, procurement_method, agency, expected_delivery_date, notes } = body as {
       title: string;
       description?: string;
       estimated_value: number;
       procurement_method: string;
       agency?: string;
+      expected_delivery_date?: string;
+      notes?: string;
     };
 
     if (!title?.trim()) {
@@ -74,6 +76,8 @@ export async function POST(request: NextRequest) {
       procurement_method: procurement_method as ProcurementMethod,
       agency: packageAgency,
       submitted_by: session.user.id,
+      expected_delivery_date: expected_delivery_date || undefined,
+      notes: notes?.trim() || undefined,
     });
 
     return NextResponse.json({ package: pkg }, { status: 201 });

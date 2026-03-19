@@ -41,6 +41,8 @@ export function ProcurementNewPackageForm({
   const [estimatedValue, setEstimatedValue] = useState('');
   const [procurementMethod, setProcurementMethod] = useState<ProcurementMethod | ''>('');
   const [agency, setAgency] = useState('');
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState('');
+  const [notes, setNotes] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -55,6 +57,8 @@ export function ProcurementNewPackageForm({
     setEstimatedValue('');
     setProcurementMethod('');
     setAgency('');
+    setExpectedDeliveryDate('');
+    setNotes('');
     setFiles([]);
     setErrors({});
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -121,6 +125,8 @@ export function ProcurementNewPackageForm({
           description: description.trim() || undefined,
           estimated_value: parseFloat(estimatedValue),
           procurement_method: procurementMethod,
+          expected_delivery_date: expectedDeliveryDate || undefined,
+          notes: notes.trim() || undefined,
           ...(isDG && { agency }),
         }),
       });
@@ -283,6 +289,35 @@ export function ProcurementNewPackageForm({
             {errors.agency && <p className="text-xs text-red-400 mt-1">{errors.agency}</p>}
           </div>
         )}
+
+        {/* Expected Delivery Date */}
+        <div>
+          <label htmlFor="pkg-delivery" className="block text-xs text-slate-400 mb-1.5">
+            Expected Delivery Date
+          </label>
+          <input
+            id="pkg-delivery"
+            type="date"
+            value={expectedDeliveryDate}
+            onChange={(e) => setExpectedDeliveryDate(e.target.value)}
+            className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
+          />
+        </div>
+
+        {/* Notes */}
+        <div>
+          <label htmlFor="pkg-notes" className="block text-xs text-slate-400 mb-1.5">
+            Notes
+          </label>
+          <textarea
+            id="pkg-notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Additional notes or context..."
+            rows={3}
+            className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50 resize-none"
+          />
+        </div>
 
         {/* Supporting Documents */}
         <div>

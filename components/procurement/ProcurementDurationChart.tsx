@@ -38,6 +38,7 @@ export function ProcurementDurationChart({ packages }: ProcurementDurationChartP
   const chartData = useMemo(() => {
     // Group packages by stage, compute average days_at_current_stage
     const buckets: Record<ProcurementStage, number[]> = {
+      draft: [],
       submitted: [],
       advertised: [],
       evaluation: [],

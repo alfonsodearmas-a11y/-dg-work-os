@@ -13,7 +13,7 @@ import { PROCUREMENT_STAGES } from '@/lib/procurement-types';
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
-const PACKAGE_COLUMNS = 'id, agency, title, description, estimated_value, procurement_method, current_stage, submitted_by, oversight_project_id, created_at, updated_at';
+const PACKAGE_COLUMNS = 'id, agency, title, description, estimated_value, procurement_method, current_stage, submitted_by, oversight_project_id, expected_delivery_date, created_at, updated_at';
 
 const PACKAGE_SELECT = `${PACKAGE_COLUMNS}, submitter:users!procurement_packages_submitted_by_fkey(name), latest_history:procurement_stage_history(changed_at)`;
 
@@ -63,6 +63,7 @@ function enrichPackage(
     current_stage: row.current_stage as ProcurementStage,
     submitted_by: row.submitted_by as string,
     oversight_project_id: (row.oversight_project_id as string) || null,
+    expected_delivery_date: (row.expected_delivery_date as string) || null,
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
     agency_name: agencyName(row.agency as string),
@@ -219,6 +220,8 @@ export async function createPackage(input: {
   agency: string;
   submitted_by: string;
   oversight_project_id?: string;
+  expected_delivery_date?: string;
+  notes?: string;
 }): Promise<ProcurementPackage> {
   const { data, error } = await supabaseAdmin
     .from('procurement_packages')
@@ -230,6 +233,7 @@ export async function createPackage(input: {
       agency: input.agency,
       submitted_by: input.submitted_by,
       oversight_project_id: input.oversight_project_id || null,
+      expected_delivery_date: input.expected_delivery_date || null,
     })
     .select(`${PACKAGE_COLUMNS}, submitter:users!procurement_packages_submitted_by_fkey(name)`)
     .single();
@@ -240,12 +244,22 @@ export async function createPackage(input: {
   const { error: historyError } = await supabaseAdmin.from('procurement_stage_history').insert({
     package_id: data.id,
     from_stage: null,
-    to_stage: 'submitted',
+    to_stage: 'draft',
     changed_by: input.submitted_by,
     notes: null,
   });
 
   if (historyError) throw historyError;
+
+  // Insert initial note if provided (non-blocking — package is already created)
+  if (input.notes?.trim()) {
+    const { error: noteError } = await supabaseAdmin.from('procurement_notes').insert({
+      package_id: data.id,
+      content: input.notes.trim(),
+      created_by: input.submitted_by,
+    });
+    if (noteError) console.error('Failed to insert initial note for package', data.id, noteError);
+  }
 
   const row = data as Record<string, unknown>;
   return enrichPackage(row, resolveJoinedName(row.submitter), new Date().toISOString());
