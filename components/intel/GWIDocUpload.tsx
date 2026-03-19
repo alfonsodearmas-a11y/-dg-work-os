@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   Upload, FileText, CheckCircle, AlertCircle, Loader2, X,
@@ -56,6 +56,17 @@ const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB Vercel limit
 
 export function GWIDocUpload({ reportPeriod, onClose, onSaved }: GWIDocUploadProps) {
   const gwiModalRef = useRef<HTMLDivElement>(null);
+  const [period, setPeriod] = useState(reportPeriod);
+
+  const monthOptions = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 24 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const value = d.toISOString().slice(0, 7);
+      const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      return { value, label };
+    });
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -106,7 +117,7 @@ export function GWIDocUpload({ reportPeriod, onClose, onSaved }: GWIDocUploadPro
       const formData = new FormData();
       formData.append('file', state.file);
       formData.append('report_type', key);
-      formData.append('report_period', `${reportPeriod}-01`);
+      formData.append('report_period', `${period}-01`);
 
       const res = await fetch(`${API_BASE}/gwi/upload/parse`, {
         method: 'POST',
@@ -144,7 +155,7 @@ export function GWIDocUpload({ reportPeriod, onClose, onSaved }: GWIDocUploadPro
     try {
       // Build the save payload based on report type
       const saveBody: Record<string, unknown> = {
-        report_month: `${reportPeriod}-01`,
+        report_month: `${period}-01`,
         report_type: key,
       };
 
@@ -190,9 +201,19 @@ export function GWIDocUpload({ reportPeriod, onClose, onSaved }: GWIDocUploadPro
         <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-navy-800">
           <div>
             <h2 id="gwi-doc-upload-title" className="text-lg md:text-[22px] font-bold text-white">Upload GWI Reports</h2>
-            <p className="text-navy-600 text-sm mt-0.5">
-              Upload .docx reports for {new Date(`${reportPeriod}-01`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <Calendar className="w-4 h-4 text-navy-600" />
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                aria-label="Report period"
+                className="bg-navy-950 text-slate-300 text-sm border border-navy-800 rounded-lg px-2 py-1 focus:outline-none focus:border-gold-500"
+              >
+                {monthOptions.map(m => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-navy-800 rounded-lg transition-colors" aria-label="Close">
             <X className="w-5 h-5 text-slate-400" />

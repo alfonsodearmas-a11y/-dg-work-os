@@ -142,6 +142,19 @@ export function GWIDetail() {
     }
   }, [selectedMonth]);
 
+  // Default upload period: previous month (reports are typically for the month that just ended)
+  const defaultUploadPeriod = useMemo(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    return d.toISOString().slice(0, 7);
+  }, []);
+
+  // Reset to latest after upload so availableMonths is refreshed from the latest endpoint
+  const handleUploadSaved = useCallback(() => {
+    setSelectedMonth('');
+    setRefreshKey(k => k + 1);
+  }, []);
+
   // Data aliases
   const fin = report?.financial_data || {} as FinancialData;
   const coll = report?.collections_data || {} as CollectionsData;
@@ -245,9 +258,9 @@ export function GWIDetail() {
         </button>
         {showUpload && (
           <GWIDocUpload
-            reportPeriod={new Date().toISOString().slice(0, 7)}
+            reportPeriod={defaultUploadPeriod}
             onClose={() => setShowUpload(false)}
-            onSaved={() => { setSelectedMonth(''); setRefreshKey(k => k + 1); }}
+            onSaved={handleUploadSaved}
           />
         )}
       </div>
@@ -435,13 +448,9 @@ export function GWIDetail() {
       {/* Upload Modal */}
       {showUpload && (
         <GWIDocUpload
-          reportPeriod={selectedMonth ? selectedMonth.slice(0, 7) : new Date().toISOString().slice(0, 7)}
+          reportPeriod={defaultUploadPeriod}
           onClose={() => setShowUpload(false)}
-          onSaved={() => {
-            // Reset to latest so availableMonths is refreshed from the latest endpoint
-            setSelectedMonth('');
-            setRefreshKey(k => k + 1);
-          }}
+          onSaved={handleUploadSaved}
         />
       )}
     </div>
