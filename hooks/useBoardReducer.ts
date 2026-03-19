@@ -88,6 +88,11 @@ export interface BoardState {
 
   // Undo delete
   pendingDelete: { task: Task; column: TaskStatus } | null;
+
+  // Pagination
+  listPage: number;
+  listPageSize: number;
+  columnShowCount: Record<string, number>;
 }
 
 // ---------------------------------------------------------------------------
@@ -164,6 +169,11 @@ export type BoardAction =
   // Delete
   | { type: 'SET_PENDING_DELETE'; pending: BoardState['pendingDelete'] }
 
+  // Pagination
+  | { type: 'SET_LIST_PAGE'; page: number }
+  | { type: 'SET_LIST_PAGE_SIZE'; size: number }
+  | { type: 'SHOW_MORE_COLUMN'; column: string }
+
   // Task mutations (optimistic)
   | { type: 'UPDATE_TASK_OPTIMISTIC'; taskId: string; updates: Partial<Task> }
   | { type: 'MOVE_TASK_OPTIMISTIC'; taskId: string; from: TaskStatus; to: TaskStatus }
@@ -177,6 +187,10 @@ export type BoardAction =
 // ---------------------------------------------------------------------------
 
 export const COLUMNS: (keyof TasksByStatus)[] = ['new', 'active', 'blocked', 'done'];
+
+const DEFAULT_COLUMN_SHOW = 10;
+const DEFAULT_COLUMN_SHOW_COUNT: Record<string, number> = { new: DEFAULT_COLUMN_SHOW, active: DEFAULT_COLUMN_SHOW, blocked: DEFAULT_COLUMN_SHOW, done: DEFAULT_COLUMN_SHOW };
+const PAGINATION_RESET = { listPage: 1, columnShowCount: { ...DEFAULT_COLUMN_SHOW_COUNT } };
 
 // ---------------------------------------------------------------------------
 // Initial state factory
@@ -238,6 +252,10 @@ export function createInitialState(initialViewMode?: ViewMode): BoardState {
     panelOpen: false,
 
     pendingDelete: null,
+
+    listPage: 1,
+    listPageSize: 20,
+    columnShowCount: { ...DEFAULT_COLUMN_SHOW_COUNT },
   };
 }
 
@@ -301,10 +319,11 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
 
     // --- Filters ---
     case 'SET_SEARCH':
-      return { ...state, searchQuery: action.query };
+      return { ...state, searchQuery: action.query, ...PAGINATION_RESET };
     case 'TOGGLE_AGENCY_FILTER':
       return {
         ...state,
+        ...PAGINATION_RESET,
         agencyFilter: state.agencyFilter.includes(action.agency)
           ? state.agencyFilter.filter(a => a !== action.agency)
           : [...state.agencyFilter, action.agency],
@@ -312,6 +331,7 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
     case 'TOGGLE_PRIORITY_FILTER':
       return {
         ...state,
+        ...PAGINATION_RESET,
         priorityFilter: state.priorityFilter.includes(action.priority)
           ? state.priorityFilter.filter(p => p !== action.priority)
           : [...state.priorityFilter, action.priority],
@@ -319,21 +339,23 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
     case 'TOGGLE_STATUS_FILTER':
       return {
         ...state,
+        ...PAGINATION_RESET,
         statusFilter: state.statusFilter.includes(action.status)
           ? state.statusFilter.filter(s => s !== action.status)
           : [...state.statusFilter, action.status],
       };
     case 'SET_ASSIGNEE_FILTER':
-      return { ...state, assigneeFilter: action.assignee };
+      return { ...state, assigneeFilter: action.assignee, ...PAGINATION_RESET };
     case 'SET_DUE_DATE_FILTER':
-      return { ...state, dueDateFilter: action.filter };
+      return { ...state, dueDateFilter: action.filter, ...PAGINATION_RESET };
     case 'SET_SHOW_FILTERS':
       return { ...state, showFilters: action.show };
     case 'SET_MY_TASKS':
-      return { ...state, myTasksOnly: action.myOnly };
+      return { ...state, myTasksOnly: action.myOnly, ...PAGINATION_RESET };
     case 'CLEAR_ALL_FILTERS':
       return {
         ...state,
+        ...PAGINATION_RESET,
         searchQuery: '',
         agencyFilter: [],
         priorityFilter: [],
@@ -346,9 +368,9 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
     // --- Sort ---
     case 'TOGGLE_SORT':
       if (state.sortField === action.field) {
-        return { ...state, sortDir: state.sortDir === 'asc' ? 'desc' : 'asc' };
+        return { ...state, sortDir: state.sortDir === 'asc' ? 'desc' : 'asc', listPage: 1 };
       }
-      return { ...state, sortField: action.field, sortDir: 'asc' };
+      return { ...state, sortField: action.field, sortDir: 'asc', listPage: 1 };
     case 'SET_SHOW_SORT_MENU':
       return { ...state, showSortMenu: action.show };
 
@@ -405,6 +427,20 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
       return { ...state, blockedPrompt: action.prompt };
     case 'SET_BLOCKED_REASON':
       return { ...state, blockedReason: action.reason };
+
+    // --- Pagination ---
+    case 'SET_LIST_PAGE':
+      return { ...state, listPage: action.page };
+    case 'SET_LIST_PAGE_SIZE':
+      return { ...state, listPageSize: action.size, listPage: 1 };
+    case 'SHOW_MORE_COLUMN':
+      return {
+        ...state,
+        columnShowCount: {
+          ...state.columnShowCount,
+          [action.column]: (state.columnShowCount[action.column] || DEFAULT_COLUMN_SHOW) + DEFAULT_COLUMN_SHOW,
+        },
+      };
 
     // --- Panel ---
     case 'OPEN_PANEL':

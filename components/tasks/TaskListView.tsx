@@ -15,6 +15,9 @@ interface TaskListViewProps {
   sortField: SortField;
   sortDir: SortDir;
   onSort: (field: SortField) => void;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
 }
 
 export type SortField = 'due_date' | 'priority' | 'created_at' | 'owner_name' | 'agency' | 'title';
@@ -103,8 +106,15 @@ export function TaskListView({
   sortField,
   sortDir,
   onSort,
+  page,
+  pageSize,
+  onPageChange,
 }: TaskListViewProps) {
   const sorted = useMemo(() => sortTasks(tasks, sortField, sortDir), [tasks, sortField, sortDir]);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const effectivePage = Math.min(page, totalPages);
+  const paginatedTasks = sorted.slice((effectivePage - 1) * pageSize, effectivePage * pageSize);
+
   const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const allSelected = tasks.length > 0 && tasks.every(t => selectedIds.has(t.id));
 
@@ -165,7 +175,7 @@ export function TaskListView({
 
       {/* Rows */}
       <div className="divide-y divide-navy-800/50">
-        {sorted.map((task) => {
+        {paginatedTasks.map((task) => {
           const isSelected = selectedIds.has(task.id);
           const isOverdue = task.due_date && task.status !== 'done' && isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date));
           const priorityDot = task.priority ? PRIORITY_COLORS[task.priority] || PRIORITY_COLORS.medium : '';
@@ -290,12 +300,64 @@ export function TaskListView({
           );
         })}
 
-        {sorted.length === 0 && (
+        {paginatedTasks.length === 0 && (
           <div className="flex items-center justify-center h-32 text-navy-600 text-sm">
             No tasks match your filters
           </div>
         )}
       </div>
+
+      {/* Pagination Footer */}
+      {totalPages > 1 && (
+        <div className="flex flex-wrap items-center justify-between px-3 md:px-4 py-3 border-t border-navy-800 gap-2">
+          <span className="text-navy-600 text-xs">
+            {((effectivePage - 1) * pageSize) + 1}&ndash;{Math.min(effectivePage * pageSize, sorted.length)} of {sorted.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onPageChange(effectivePage - 1)}
+              disabled={effectivePage <= 1}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-navy-800 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+              aria-label="Previous page"
+            >
+              Prev
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === totalPages || Math.abs(p - effectivePage) <= 1)
+              .reduce<(number | 'ellipsis')[]>((acc, p, idx, arr) => {
+                if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('ellipsis');
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((item, idx) =>
+                item === 'ellipsis' ? (
+                  <span key={`e${idx}`} className="px-1.5 text-navy-600 text-xs">&hellip;</span>
+                ) : (
+                  <button
+                    key={item}
+                    onClick={() => onPageChange(item as number)}
+                    aria-current={item === effectivePage ? 'page' : undefined}
+                    className={`min-w-[28px] px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      item === effectivePage
+                        ? 'bg-gold-500/20 text-gold-500 border border-gold-500/30'
+                        : 'text-slate-400 hover:text-white hover:bg-navy-800'
+                    }`}
+                  >
+                    {item}
+                  </button>
+                )
+              )}
+            <button
+              onClick={() => onPageChange(effectivePage + 1)}
+              disabled={effectivePage >= totalPages}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-navy-800 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+              aria-label="Next page"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

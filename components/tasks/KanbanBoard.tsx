@@ -647,6 +647,8 @@ function KanbanBoardInner() {
                 onDrop={handleColumnDrop}
                 onContextMenu={(task, pos) => dispatch({ type: 'SET_CONTEXT_MENU', menu: { task, position: pos } })}
                 onBottomSheet={(task) => dispatch({ type: 'SET_BOTTOM_SHEET', task })}
+                visibleCount={state.columnShowCount[state.mobileTab]}
+                onShowMore={() => dispatch({ type: 'SHOW_MORE_COLUMN', column: state.mobileTab })}
               />
               {/* Mobile quick add at bottom of active tab */}
               {state.quickAddColumn === state.mobileTab && (
@@ -678,6 +680,8 @@ function KanbanBoardInner() {
                     onContextMenu={(task, pos) => dispatch({ type: 'SET_CONTEXT_MENU', menu: { task, position: pos } })}
                     onBottomSheet={(task) => dispatch({ type: 'SET_BOTTOM_SHEET', task })}
                     onQuickAdd={(status) => dispatch({ type: 'SET_QUICK_ADD_COLUMN', column: state.quickAddColumn === status ? null : status })}
+                    visibleCount={state.columnShowCount[column]}
+                    onShowMore={() => dispatch({ type: 'SHOW_MORE_COLUMN', column })}
                   />
                   {state.quickAddColumn === column && (
                     <div className="mt-2 px-2">
@@ -707,6 +711,9 @@ function KanbanBoardInner() {
           sortField={state.sortField}
           sortDir={state.sortDir}
           onSort={(field) => dispatch({ type: 'TOGGLE_SORT', field })}
+          page={state.listPage}
+          pageSize={state.listPageSize}
+          onPageChange={(p) => dispatch({ type: 'SET_LIST_PAGE', page: p })}
         />
       )}
 

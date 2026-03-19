@@ -27,6 +27,8 @@ interface KanbanColumnProps {
   onContextMenu: (task: Task, position: { x: number; y: number }) => void;
   onBottomSheet: (task: Task) => void;
   onQuickAdd?: (status: TaskStatus) => void;
+  visibleCount?: number;
+  onShowMore?: () => void;
 }
 
 const COLUMN_STYLES: Record<string, { dot: string; count: string }> = {
@@ -52,11 +54,14 @@ export function KanbanColumn({
   id, title, tasks, isMobile, draggingId,
   selectedIds, selectionMode, onToggleSelect,
   onOpenModal, onCalendar, onDrop, onContextMenu, onBottomSheet,
-  onQuickAdd,
+  onQuickAdd, visibleCount, onShowMore,
 }: KanbanColumnProps) {
   const [isOver, setIsOver] = useState(false);
 
   const styles = COLUMN_STYLES[title] || COLUMN_STYLES['New'];
+
+  const visibleTasks = visibleCount != null ? tasks.slice(0, visibleCount) : tasks;
+  const hiddenCount = tasks.length - visibleTasks.length;
 
   const allSelected = tasks.length > 0 && tasks.every(t => selectedIds.has(t.id));
 
@@ -107,7 +112,7 @@ export function KanbanColumn({
             <h3 className="text-white font-semibold text-sm">{title}</h3>
           </div>
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles.count}`}>
-            {tasks.length}
+            {hiddenCount > 0 ? `${visibleTasks.length}/${tasks.length}` : tasks.length}
           </span>
         </div>
       )}
@@ -125,7 +130,7 @@ export function KanbanColumn({
             : isMobile ? '' : 'bg-navy-950/50 border-2 border-transparent'
         }`}
       >
-        {tasks.map((task) => (
+        {visibleTasks.map((task) => (
           <TaskCard
             key={task.id}
             task={task}
@@ -140,6 +145,16 @@ export function KanbanColumn({
             onBottomSheet={onBottomSheet}
           />
         ))}
+
+        {hiddenCount > 0 && onShowMore && (
+          <button
+            onClick={onShowMore}
+            className="w-full py-2 rounded-lg text-xs text-navy-600 hover:text-gold-500 hover:bg-gold-500/5 border border-dashed border-navy-800 hover:border-gold-500/20 transition-all"
+            style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+          >
+            Show {hiddenCount} more
+          </button>
+        )}
 
         {tasks.length === 0 && (
           <div className="flex items-center justify-center h-24 text-navy-600 text-sm">
