@@ -22,7 +22,14 @@ export async function GET() {
     ]);
 
     return NextResponse.json({ packages, stats });
-  } catch (err) {
+  } catch (err: unknown) {
+    // Table doesn't exist yet (migration not applied) — return empty data gracefully
+    const code = (err as { code?: string })?.code;
+    const msg = (err as { message?: string })?.message ?? '';
+    if (code === '42P01' || msg.includes('schema cache') || msg.includes('does not exist')) {
+      console.warn('Procurement tables not found — migration 052 likely not applied yet');
+      return NextResponse.json({ packages: [], stats: null });
+    }
     console.error('Error fetching procurement data:', err);
     return NextResponse.json({ error: 'Failed to load procurement data' }, { status: 500 });
   }
