@@ -113,8 +113,9 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
   const handleDescBlur = () => {
     setEditingDesc(false);
     if (task) {
-      const newDesc = descValue.trim() || undefined;
-      if (newDesc !== (task.description || undefined)) {
+      const trimmed = descValue.trim();
+      const newDesc = trimmed || null;
+      if (newDesc !== (task.description || null)) {
         handleInlineUpdate({ description: newDesc }, 'description');
       }
     }

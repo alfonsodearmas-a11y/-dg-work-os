@@ -19,7 +19,7 @@ const createTaskSchema = z.object({
 
 export const dynamic = 'force-dynamic';
 
-const TASK_COLUMNS = 'id, title, description, status, priority, due_date, agency, role, owner_user_id, assigned_by_user_id, source_meeting_id, created_at, updated_at';
+const TASK_COLUMNS = 'id, title, description, status, priority, due_date, agency, role, owner_user_id, assigned_by_user_id, source_meeting_id, blocked_reason, completed_at, created_at, updated_at';
 
 export async function GET(request: NextRequest) {
   const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   const agency = searchParams.get('agency');
   const overdue = searchParams.get('overdue');
   const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-  const limit = Math.min(200, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
+  const limit = Math.min(1000, Math.max(1, parseInt(searchParams.get('limit') || '500', 10)));
 
   // View As support: DG can pass viewAsRole/viewAsAgency to see data as another role
   const viewAsRole = session.user.role === 'dg' ? searchParams.get('viewAsRole') : null;

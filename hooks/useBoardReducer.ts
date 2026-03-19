@@ -250,7 +250,18 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
     // --- Data ---
     case 'FETCH_START':
       return { ...state, loading: true };
-    case 'FETCH_SUCCESS':
+    case 'FETCH_SUCCESS': {
+      // If the detail panel is open, sync panelTask with the fresh data
+      let updatedPanelTask = state.panelTask;
+      if (updatedPanelTask) {
+        for (const status of COLUMNS) {
+          const fresh = action.tasks[status].find(t => t.id === updatedPanelTask!.id);
+          if (fresh) {
+            updatedPanelTask = fresh;
+            break;
+          }
+        }
+      }
       return {
         ...state,
         tasks: action.tasks,
@@ -258,7 +269,9 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
         loading: false,
         syncing: false,
         fetchError: null,
+        panelTask: updatedPanelTask,
       };
+    }
     case 'FETCH_ERROR':
       return { ...state, fetchError: action.error, loading: false, syncing: false };
     case 'SET_SYNCING':

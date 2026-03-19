@@ -8,12 +8,12 @@ import { logger } from '@/lib/logger';
 
 const patchTaskSchema = z.object({
   title: z.string().min(1).optional(),
-  description: z.string().optional(),
+  description: z.string().nullable().optional(),
   status: z.enum(['new', 'active', 'blocked', 'done']).optional(),
-  priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+  priority: z.enum(['low', 'medium', 'high', 'critical']).nullable().optional(),
   due_date: z.string().nullable().optional(),
-  agency: z.string().optional(),
-  role: z.string().optional(),
+  agency: z.string().nullable().optional(),
+  role: z.string().nullable().optional(),
   blocked_reason: z.string().nullable().optional(),
   owner_user_id: z.string().uuid().optional(),
 });
@@ -73,18 +73,20 @@ export const PATCH = withErrorHandler(async (
     updates.blocked_reason = null;
   }
 
+  const TASK_COLUMNS = 'id, title, description, status, priority, due_date, agency, role, owner_user_id, assigned_by_user_id, source_meeting_id, blocked_reason, completed_at, created_at, updated_at';
   const { data: updated, error } = await supabaseAdmin
     .from('tasks')
     .update(updates)
     .eq('id', id)
-    .select('*, owner:users!owner_user_id(id, name)')
+    .select(`${TASK_COLUMNS}, owner:users!owner_user_id(id, name)`)
     .single();
 
   if (error) {
     return apiError('DB_ERROR', error.message, 500);
   }
 
-  const owner = updated.owner as { id: string; name: string } | null;
+  const ownerRaw = updated.owner as unknown;
+  const owner = (Array.isArray(ownerRaw) ? ownerRaw[0] : ownerRaw) as { id: string; name: string } | null;
   const flatTask = { ...updated, owner_name: owner?.name || null, owner: undefined };
 
   const activityEntries: Array<{ task_id: string; user_id: string; action: string; old_value: string | null; new_value: string | null }> = [];

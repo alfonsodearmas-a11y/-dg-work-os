@@ -9,9 +9,9 @@ const bulkPatchSchema = z.object({
   updates: z.object({
     due_date: z.string().nullable().optional(),
     assignee_id: z.string().optional(),
-    agency: z.string().optional(),
+    agency: z.string().nullable().optional(),
     status: z.enum(['new', 'active', 'blocked', 'done']).optional(),
-    blocked_reason: z.string().optional(),
+    blocked_reason: z.string().nullable().optional(),
   }),
 });
 

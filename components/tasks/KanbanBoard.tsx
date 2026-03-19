@@ -165,6 +165,12 @@ function KanbanBoardInner() {
         const errData = await res.json().catch(() => ({}));
         console.error('Failed to update task:', { status: res.status, ...errData });
         fetchTasks();
+      } else {
+        // Reconcile optimistic state with authoritative server response
+        const { task: serverTask } = await res.json().catch(() => ({ task: null }));
+        if (serverTask) {
+          dispatch({ type: 'UPDATE_TASK_OPTIMISTIC', taskId, updates: serverTask });
+        }
       }
     } catch (error) {
       console.error('Failed to update task:', error);
@@ -423,7 +429,7 @@ function KanbanBoardInner() {
     return columnTasks.filter((task) => {
       const matchesSearch = !state.searchQuery ||
         task.title.toLowerCase().includes(state.searchQuery.toLowerCase());
-      const matchesAgency = state.agencyFilter.length === 0 || (task.agency && state.agencyFilter.includes(task.agency));
+      const matchesAgency = state.agencyFilter.length === 0 || (task.agency && state.agencyFilter.some(a => a.toLowerCase() === task.agency!.toLowerCase()));
       const matchesPriority = state.priorityFilter.length === 0 || (task.priority && state.priorityFilter.includes(task.priority));
       const matchesMy = !state.myTasksOnly || task.owner_user_id === effectiveUser.id;
       const matchesAssignee = !state.assigneeFilter || task.owner_user_id === state.assigneeFilter;

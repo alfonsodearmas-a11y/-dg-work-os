@@ -24,7 +24,7 @@ export interface Task {
 
 export interface TaskUpdate {
   title?: string;
-  description?: string;
+  description?: string | null;
   status?: TaskStatus;
   priority?: TaskPriority | null;
   due_date?: string | null;
