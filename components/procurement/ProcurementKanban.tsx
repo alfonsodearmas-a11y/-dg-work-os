@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
-import { RefreshCw, AlertTriangle, Package, ChevronDown } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Package, ChevronDown, LayoutGrid, List } from 'lucide-react';
 import {
   PROCUREMENT_STAGES,
   STAGE_CONFIG,
@@ -12,6 +12,7 @@ import {
 } from '@/lib/procurement-types';
 import { ProcurementCard } from './ProcurementCard';
 import { ProcurementDetailPanel } from './ProcurementDetailPanel';
+import { ProcurementListView } from './ProcurementListView';
 import { fmtCurrency } from '@/lib/format';
 import { useToast } from '@/components/ui/Toast';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -22,6 +23,8 @@ import type { Role } from '@/lib/auth';
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+const LS_VIEW_KEY = 'dg-procurement-view';
 
 function canDrag(role: Role | undefined): boolean {
   return role === 'agency_admin' || role === 'dg';
@@ -56,6 +59,12 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<ProcurementStage | null>('pre_advertisement');
+  const [viewMode, setViewMode] = useState<'board' | 'list'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem(LS_VIEW_KEY) as 'board' | 'list') || 'board';
+    }
+    return 'board';
+  });
 
   // ---------------------------------------------------------------------------
   // Data fetching
@@ -101,6 +110,11 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
     document.addEventListener('dragend', handleDragEnd);
     return () => document.removeEventListener('dragend', handleDragEnd);
   }, []);
+
+  // Persist view preference
+  useEffect(() => {
+    localStorage.setItem(LS_VIEW_KEY, viewMode);
+  }, [viewMode]);
 
   // ---------------------------------------------------------------------------
   // Filtered + grouped packages
@@ -319,6 +333,35 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
             </button>
           ))}
         </div>
+
+        {/* View toggle */}
+        <div className="relative flex items-center rounded-lg border border-navy-800 bg-navy-950/50 p-0.5">
+          <div
+            className="absolute top-0.5 bottom-0.5 rounded-md bg-navy-800 transition-all duration-300 ease-out"
+            style={{
+              width: 'calc(50% - 2px)',
+              left: viewMode === 'board' ? '2px' : 'calc(50%)',
+            }}
+          />
+          <button
+            onClick={() => setViewMode('board')}
+            className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors duration-200 ${
+              viewMode === 'board' ? 'text-gold-500' : 'text-navy-600 hover:text-slate-400'
+            }`}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Board</span>
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors duration-200 ${
+              viewMode === 'list' ? 'text-gold-500' : 'text-navy-600 hover:text-slate-400'
+            }`}
+          >
+            <List className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">List</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats bar */}
@@ -345,8 +388,11 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
         </div>
       )}
 
-      {/* Kanban board */}
-      {isMobile ? (
+      {/* Board / List view */}
+      <div key={viewMode} style={{ animation: 'fadeIn 0.3s ease both' }}>
+      {viewMode === 'list' ? (
+        <ProcurementListView packages={filteredPackages} onSelect={setSelectedPackageId} />
+      ) : isMobile ? (
         /* Mobile: Collapsible stage sections */
         <div className="space-y-2">
           {PROCUREMENT_STAGES.map((stage) => {
@@ -423,6 +469,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
           ))}
         </div>
       )}
+      </div>
 
       {/* Detail panel */}
       <ProcurementDetailPanel
