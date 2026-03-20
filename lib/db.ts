@@ -20,6 +20,11 @@ function createSupabaseClient(): SupabaseClient {
 export const supabase = createSupabaseClient();
 
 // Server client with elevated permissions (bypasses RLS)
+if (supabaseUrl && !supabaseServiceKey) {
+  // eslint-disable-next-line no-console -- runs once at module init before logger may be ready
+  console.warn('SUPABASE_SERVICE_ROLE_KEY is not set — supabaseAdmin falls back to anon key (RLS will block most operations)');
+}
+
 export const supabaseAdmin = (supabaseUrl && supabaseServiceKey)
   ? createClient(supabaseUrl, supabaseServiceKey, {
       auth: {

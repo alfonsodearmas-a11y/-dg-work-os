@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
+import { logger } from '@/lib/logger';
 import type { ProcurementStage, ProcurementMethod } from '@/lib/procurement-types';
 import { METHOD_CONFIG, PROCUREMENT_STAGES } from '@/lib/procurement-types';
 
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (batchError) {
+    logger.error({ err: batchError, agency, fileName }, 'Import batch insert failed');
     return NextResponse.json({ error: 'Failed to create import batch' }, { status: 500 });
   }
 
@@ -101,6 +103,7 @@ export async function POST(request: NextRequest) {
       .select('id, title');
 
     if (insertError) {
+      logger.error({ err: insertError, batchId: batch.id, chunkOffset: i }, 'Bulk package insert failed (batch)');
       // If batch insert fails, try one-by-one to identify specific failures
       for (let j = 0; j < insertRows.length; j++) {
         const { data: single, error: singleError } = await supabaseAdmin
@@ -199,7 +202,8 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await query;
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    logger.error({ err: error }, 'Failed to fetch import batches');
+    return NextResponse.json({ error: 'Failed to fetch import batches' }, { status: 500 });
   }
 
   const batches = (data || []).map((b: Record<string, unknown>) => ({

@@ -15,7 +15,7 @@ import { PROCUREMENT_STAGES } from '@/lib/procurement-types';
 
 const PACKAGE_COLUMNS = 'id, agency, title, description, estimated_value, procurement_method, current_stage, submitted_by, oversight_project_id, expected_delivery_date, created_at, updated_at';
 
-const PACKAGE_SELECT = `${PACKAGE_COLUMNS}, submitter:users!procurement_packages_submitted_by_fkey(name), latest_history:procurement_stage_history(changed_at)`;
+const PACKAGE_SELECT = `${PACKAGE_COLUMNS}, submitter:users!procurement_packages_submitted_by_fkey(name), latest_history:procurement_stage_history!procurement_stage_history_package_id_fkey(changed_at)`;
 
 const STALLED_THRESHOLD_DAYS = 30;
 

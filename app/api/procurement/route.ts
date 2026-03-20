@@ -4,6 +4,7 @@ import { getAllPackages, getPackagesByAgency, getPipelineStats, createPackage } 
 import { MINISTRY_ROLES } from '@/lib/people-types';
 import { METHOD_CONFIG, type ProcurementMethod } from '@/lib/procurement-types';
 import { AGENCY_CODES } from '@/lib/constants/agencies';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -24,14 +25,20 @@ export async function GET() {
 
     return NextResponse.json({ packages, stats });
   } catch (err: unknown) {
-    // Table doesn't exist yet (migration not applied) — return empty data gracefully
     const code = (err as { code?: string })?.code ?? '';
     const msg = (err as { message?: string })?.message ?? '';
-    if (code === '42P01' || code === 'PGRST205' || msg.includes('schema cache') || msg.includes('does not exist')) {
-      console.warn('Procurement tables not found — migration 052 likely not applied yet');
+
+    // Table/column/relationship doesn't exist — migration not applied yet
+    const isSchemaIssue =
+      code === '42P01' || code === '42703' || code === 'PGRST200' || code === 'PGRST205' ||
+      msg.includes('schema cache') || msg.includes('does not exist');
+
+    if (isSchemaIssue) {
+      logger.warn({ code, message: msg }, 'Procurement schema issue (migration may not be applied)');
       return NextResponse.json({ packages: [], stats: null });
     }
-    console.error('Error fetching procurement data:', err);
+
+    logger.error({ err }, 'Error fetching procurement data');
     return NextResponse.json({ error: 'Failed to load procurement data' }, { status: 500 });
   }
 }
@@ -81,8 +88,8 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ package: pkg }, { status: 201 });
-  } catch (err) {
-    console.error('Error creating procurement package:', err);
+  } catch (err: unknown) {
+    logger.error({ err }, 'Error creating procurement package');
     return NextResponse.json({ error: 'Failed to create tender' }, { status: 500 });
   }
 }
