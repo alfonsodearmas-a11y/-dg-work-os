@@ -237,19 +237,36 @@ function KanbanBoardInner() {
 
   const bulkUpdate = useCallback(async (updates: Record<string, unknown>) => {
     const ids = Array.from(selectedIds);
-    dispatch({ type: 'BULK_UPDATE_OPTIMISTIC', taskIds: ids, updates: updates as Partial<Task> });
+
+    // Map assignee_id (UI field) to owner_user_id/owner_name (Task fields)
+    const optimisticUpdates = { ...updates };
+    if ('assignee_id' in optimisticUpdates) {
+      const assigneeId = optimisticUpdates.assignee_id as string | null;
+      if (assigneeId) {
+        const user = state.users.find(u => u.id === assigneeId);
+        optimisticUpdates.owner_user_id = assigneeId;
+        optimisticUpdates.owner_name = user?.name ?? null;
+      } else {
+        optimisticUpdates.owner_user_id = null;
+        optimisticUpdates.owner_name = null;
+      }
+      delete optimisticUpdates.assignee_id;
+    }
+
+    dispatch({ type: 'BULK_UPDATE_OPTIMISTIC', taskIds: ids, updates: optimisticUpdates as Partial<Task> });
     clearSelection();
 
     try {
-      await fetch('/api/tasks/bulk', {
+      const res = await fetch('/api/tasks/bulk', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskIds: ids, updates }),
       });
+      if (!res.ok) fetchTasks();
     } catch {
       fetchTasks();
     }
-  }, [selectedIds, clearSelection, dispatch, fetchTasks]);
+  }, [selectedIds, clearSelection, dispatch, fetchTasks, state.users]);
 
   const bulkDelete = useCallback(async () => {
     const ids = Array.from(selectedIds);

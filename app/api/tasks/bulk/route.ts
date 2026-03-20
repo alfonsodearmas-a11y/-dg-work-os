@@ -8,7 +8,7 @@ const bulkPatchSchema = z.object({
   taskIds: z.array(z.string().min(1)).min(1),
   updates: z.object({
     due_date: z.string().nullable().optional(),
-    assignee_id: z.string().optional(),
+    assignee_id: z.string().nullable().optional(),
     agency: z.string().nullable().optional(),
     status: z.enum(['new', 'active', 'blocked', 'done']).optional(),
     blocked_reason: z.string().nullable().optional(),
