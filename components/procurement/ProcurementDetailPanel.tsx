@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import {
   Package, MessageSquare, Send, FileText, Upload, Download,
-  ArrowRight, CheckCircle2,
+  ArrowRight, CheckCircle2, Trash2, Loader2,
 } from 'lucide-react';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
 import { SlidePanel } from '@/components/layout/SlidePanel';
@@ -40,6 +40,7 @@ interface ProcurementDetailPanelProps {
   packageId: string | null;
   isOpen: boolean;
   onClose: () => void;
+  onDeleted?: () => void;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -52,7 +53,7 @@ function getNextStage(current: ProcurementStage): ProcurementStage | null {
 
 // ── Component ────────────────────────────────────────────────────────────
 
-export function ProcurementDetailPanel({ packageId, isOpen, onClose }: ProcurementDetailPanelProps) {
+export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }: ProcurementDetailPanelProps) {
   const { data: session } = useSession();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -73,6 +74,10 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose }: Procureme
 
   // Document upload state
   const [uploading, setUploading] = useState(false);
+
+  // Delete state
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // ── Data fetching ──────────────────────────────────────────────────────
 
@@ -104,6 +109,7 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose }: Procureme
       setNoteText('');
       setShowAdvanceForm(false);
       setAdvanceNotes('');
+      setConfirmingDelete(false);
     }
   }, [isOpen, packageId, fetchPackage]);
 
@@ -114,8 +120,9 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose }: Procureme
   const isDG = userRole === 'dg';
   const isAgencyAdmin = userRole === 'agency_admin';
   const isOwnAgency = pkg && userAgency?.toLowerCase() === pkg.agency.toLowerCase();
-  const canAdvance = isDG || (isAgencyAdmin && isOwnAgency);
-  const canUploadDocs = isDG || (isAgencyAdmin && isOwnAgency);
+  const canModify = isDG || (isAgencyAdmin && isOwnAgency);
+  const canAdvance = canModify;
+  const canUploadDocs = canModify;
   const nextStage = pkg ? getNextStage(pkg.current_stage) : null;
   const isComplete = pkg?.current_stage === 'awarded';
 
@@ -198,6 +205,27 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose }: Procureme
       setUploading(false);
       // Reset file input
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!packageId) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/procurement/${packageId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || 'Failed to delete package');
+        return;
+      }
+      toast.success('Package deleted');
+      onClose();
+      onDeleted?.();
+    } catch {
+      toast.error('Network error');
+    } finally {
+      setDeleting(false);
+      setConfirmingDelete(false);
     }
   };
 
@@ -528,6 +556,45 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose }: Procureme
               </div>
             )}
           </div>
+
+          {/* ── 6. Delete package ─────────────────────────────────────── */}
+          {canModify && (
+            <>
+              <div className="border-t border-navy-800" />
+              <div>
+                {confirmingDelete ? (
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-white">Delete this package permanently?</p>
+                    <p className="text-xs text-navy-600">All documents, notes, and history will be removed. This cannot be undone.</p>
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        onClick={() => setConfirmingDelete(false)}
+                        className="flex-1 px-3 py-2.5 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-navy-800 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleDelete}
+                        disabled={deleting}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm text-red-400 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                      >
+                        {deleting && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {deleting ? 'Deleting...' : 'Yes, delete'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmingDelete(true)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete package
+                  </button>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
     </SlidePanel>

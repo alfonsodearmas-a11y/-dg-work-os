@@ -442,6 +442,10 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
         packageId={selectedPackageId}
         isOpen={!!selectedPackageId}
         onClose={() => setSelectedPackageId(null)}
+        onDeleted={() => {
+          setSelectedPackageId(null);
+          fetchData();
+        }}
       />
 
     </div>

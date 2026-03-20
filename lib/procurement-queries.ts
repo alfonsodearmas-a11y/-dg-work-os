@@ -379,6 +379,32 @@ export async function uploadDocument(input: {
 }
 
 /**
+ * Delete a procurement package and all related records (cascaded via FK).
+ * Storage files for documents are also removed.
+ */
+export async function deletePackage(packageId: string): Promise<void> {
+  // Fetch document paths so we can clean up storage
+  const { data: docs } = await supabaseAdmin
+    .from('procurement_documents')
+    .select('file_path')
+    .eq('package_id', packageId);
+
+  // Remove files from storage (best-effort)
+  const paths = (docs || []).map((d) => d.file_path as string).filter(Boolean);
+  if (paths.length > 0) {
+    await supabaseAdmin.storage.from('procurement-documents').remove(paths);
+  }
+
+  // Delete the package — stage_history, documents, notes cascade via ON DELETE CASCADE
+  const { error } = await supabaseAdmin
+    .from('procurement_packages')
+    .delete()
+    .eq('id', packageId);
+
+  if (error) throw error;
+}
+
+/**
  * Compute aggregate pipeline statistics across all packages.
  */
 export async function getPipelineStats(agency?: string): Promise<PipelineStats> {
