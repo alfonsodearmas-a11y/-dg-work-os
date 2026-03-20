@@ -49,6 +49,7 @@ export interface ProcurementPackage {
   id: string;
   agency: string;
   title: string;
+  nptab_number: string | null;
   description: string | null;
   estimated_value: number;
   procurement_method: ProcurementMethod;

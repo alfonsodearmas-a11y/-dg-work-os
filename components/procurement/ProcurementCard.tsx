@@ -37,10 +37,16 @@ export function ProcurementCard({ pkg, onClick, isDragging, canDrag = true, onDr
         ${isDragging ? 'opacity-50 scale-105 shadow-2xl !border-gold-500' : 'border-navy-800'}`}
       style={{ minHeight: 44, touchAction: 'manipulation' }}
     >
-      {/* Title */}
-      <h4 className={`text-sm font-medium text-white leading-snug ${isMobile ? 'mb-2.5 line-clamp-1' : 'mb-2 line-clamp-2'}`}>
+      {/* Title + NPTAB */}
+      <h4 className={`text-sm font-medium text-white leading-snug ${isMobile ? 'mb-0.5 line-clamp-1' : 'mb-0.5 line-clamp-2'}`}>
         {pkg.title}
       </h4>
+      {pkg.nptab_number && (
+        <p className={`text-[11px] font-semibold tracking-wide text-navy-600 ${isMobile ? 'mb-2' : 'mb-1.5'}`}>
+          {pkg.nptab_number}
+        </p>
+      )}
+      {!pkg.nptab_number && <div className={isMobile ? 'mb-2' : 'mb-1.5'} />}
 
       {isMobile ? (
         /* Mobile: stacked metadata */

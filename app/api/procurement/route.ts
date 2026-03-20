@@ -50,8 +50,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { title, description, estimated_value, procurement_method, agency, expected_delivery_date, notes } = body as {
+    const { title, nptab_number, description, estimated_value, procurement_method, agency, expected_delivery_date, notes } = body as {
       title: string;
+      nptab_number?: string;
       description?: string;
       estimated_value: number;
       procurement_method: string;
@@ -78,6 +79,7 @@ export async function POST(request: NextRequest) {
 
     const pkg = await createPackage({
       title: title.trim(),
+      nptab_number: nptab_number?.trim() || undefined,
       description: description?.trim(),
       estimated_value,
       procurement_method: procurement_method as ProcurementMethod,

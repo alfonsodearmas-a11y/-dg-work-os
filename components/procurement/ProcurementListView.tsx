@@ -35,7 +35,7 @@ const STAGE_ORDER = Object.fromEntries(
 ) as Record<ProcurementStage, number>;
 
 const PAGE_SIZE = 20;
-const GRID_COLS = 'grid-cols-[40px_1fr_90px_120px_70px_100px_90px_90px]';
+const GRID_COLS = 'grid-cols-[40px_1fr_100px_90px_120px_70px_100px_90px_90px]';
 
 // ---------------------------------------------------------------------------
 // Sorting
@@ -297,6 +297,9 @@ export function ProcurementListView({
               Tender <SortIcon field="title" current={sortField} dir={sortDir} />
             </span>
           </div>
+          <div className={`${thClass} !cursor-default`}>
+            <span className="flex items-center gap-1">NPTAB No.</span>
+          </div>
           <div className={thClass} onClick={() => handleSort('agency')}>
             <span className="flex items-center gap-1">
               Agency <SortIcon field="agency" current={sortField} dir={sortDir} />
@@ -403,6 +406,15 @@ export function ProcurementListView({
                     <span className="text-[11px] text-navy-600 mt-0.5 block">
                       {methodLabel}
                     </span>
+                  </div>
+                  <div className="px-3 py-2.5">
+                    {pkg.nptab_number ? (
+                      <span className="text-xs font-semibold tracking-wide text-slate-400">
+                        {pkg.nptab_number}
+                      </span>
+                    ) : (
+                      <span className="text-[#3d4a62]">&mdash;</span>
+                    )}
                   </div>
                   <div className="px-3 py-2.5">
                     <AgencyBadge agency={pkg.agency} />

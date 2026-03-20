@@ -37,6 +37,7 @@ export function ProcurementNewPackageForm({
 
   // Form state
   const [title, setTitle] = useState('');
+  const [nptabNumber, setNptabNumber] = useState('');
   const [description, setDescription] = useState('');
   const [procurementMethod, setProcurementMethod] = useState<ProcurementMethod | ''>('');
   const [agency, setAgency] = useState('');
@@ -52,6 +53,7 @@ export function ProcurementNewPackageForm({
 
   const resetForm = () => {
     setTitle('');
+    setNptabNumber('');
     setDescription('');
     setProcurementMethod('');
     setAgency('');
@@ -115,6 +117,7 @@ export function ProcurementNewPackageForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: title.trim(),
+          nptab_number: nptabNumber.trim() || undefined,
           description: description.trim() || undefined,
           estimated_value: 0,
           procurement_method: procurementMethod,
@@ -197,6 +200,21 @@ export function ProcurementNewPackageForm({
             className="w-full px-3 py-2.5 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
           />
           {errors.title && <p className="text-xs text-red-400 mt-1">{errors.title}</p>}
+        </div>
+
+        {/* NPTAB No. */}
+        <div>
+          <label htmlFor="pkg-nptab" className="block text-xs text-slate-400 mb-1.5">
+            NPTAB No.
+          </label>
+          <input
+            id="pkg-nptab"
+            type="text"
+            value={nptabNumber}
+            onChange={(e) => setNptabNumber(e.target.value)}
+            placeholder="e.g. NPTAB/2026/001"
+            className="w-full px-3 py-2.5 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white font-semibold tracking-wide placeholder:text-navy-600 placeholder:font-normal placeholder:tracking-normal focus:outline-none focus:ring-1 focus:ring-gold-500/50"
+          />
         </div>
 
         {/* Description */}

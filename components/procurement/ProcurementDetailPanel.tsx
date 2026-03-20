@@ -253,6 +253,13 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
         <div className="space-y-6">
           {/* ── 1. Header info ──────────────────────────────────────────── */}
           <div className="space-y-3">
+            {/* NPTAB number */}
+            {pkg.nptab_number && (
+              <p className="text-xs font-semibold tracking-wide text-navy-600">
+                {pkg.nptab_number}
+              </p>
+            )}
+
             {/* Agency + Method */}
             <div className="flex items-center flex-wrap gap-2">
               <AgencyBadge agency={pkg.agency} />

@@ -13,7 +13,7 @@ import { PROCUREMENT_STAGES } from '@/lib/procurement-types';
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
-const PACKAGE_COLUMNS = 'id, agency, title, description, estimated_value, procurement_method, current_stage, submitted_by, oversight_project_id, expected_delivery_date, created_at, updated_at';
+const PACKAGE_COLUMNS = 'id, agency, title, nptab_number, description, estimated_value, procurement_method, current_stage, submitted_by, oversight_project_id, expected_delivery_date, created_at, updated_at';
 
 const PACKAGE_SELECT = `${PACKAGE_COLUMNS}, submitter:users!procurement_packages_submitted_by_fkey(name), latest_history:procurement_stage_history!procurement_stage_history_package_id_fkey(changed_at)`;
 
@@ -57,6 +57,7 @@ function enrichPackage(
     id: row.id as string,
     agency: row.agency as string,
     title: row.title as string,
+    nptab_number: (row.nptab_number as string) || null,
     description: (row.description as string) || null,
     estimated_value: Number(row.estimated_value) || 0,
     procurement_method: row.procurement_method as ProcurementMethod,
@@ -214,6 +215,7 @@ export async function getPackageById(id: string): Promise<
  */
 export async function createPackage(input: {
   title: string;
+  nptab_number?: string;
   description?: string;
   estimated_value: number;
   procurement_method: ProcurementMethod;
@@ -227,6 +229,7 @@ export async function createPackage(input: {
     .from('procurement_packages')
     .insert({
       title: input.title,
+      nptab_number: input.nptab_number || null,
       description: input.description || null,
       estimated_value: input.estimated_value,
       procurement_method: input.procurement_method,
