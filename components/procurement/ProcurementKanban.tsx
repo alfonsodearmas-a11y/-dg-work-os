@@ -386,7 +386,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
       {/* Board / List view */}
       <div key={viewMode} style={{ animation: 'fadeIn 0.3s ease both' }}>
       {viewMode === 'list' ? (
-        <ProcurementListView packages={filteredPackages} onSelect={setSelectedPackageId} />
+        <ProcurementListView packages={filteredPackages} onSelect={setSelectedPackageId} onBulkAction={fetchData} />
       ) : isMobile ? (
         /* Mobile: Collapsible stage sections */
         <div className="space-y-2">
