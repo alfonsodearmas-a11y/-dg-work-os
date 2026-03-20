@@ -194,7 +194,7 @@ export default function PeoplePage() {
           cmp = (a.name || '').localeCompare(b.name || '');
           break;
         case 'role': {
-          const order = ['dg', 'minister', 'ps', 'agency_admin', 'officer'];
+          const order = ['minister', 'dg', 'parl_sec', 'ps', 'agency_admin', 'officer'];
           cmp = order.indexOf(a.role) - order.indexOf(b.role);
           break;
         }

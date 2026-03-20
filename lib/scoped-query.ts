@@ -1,6 +1,5 @@
 import type { Session } from 'next-auth';
-
-const MINISTRY_ROLES = ['dg', 'minister', 'ps'];
+import { MINISTRY_ROLES } from '@/lib/people-types';
 
 /**
  * Returns the agency scope for the current user session.

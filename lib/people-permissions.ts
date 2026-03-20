@@ -1,6 +1,6 @@
 import { supabaseAdmin } from './db';
 import type { Role, AccessLevel, ActionResult, RoleWithPermissions, ActivityLog, ObjectAccessGrant } from './people-types';
-import { ROLE_HIERARCHY } from './people-types';
+import { ROLE_HIERARCHY, ROLE_DISPLAY_ORDER } from './people-types';
 
 // ─── Pattern 1: Check role-based permission ─────────────────────────
 export async function checkPermission(
@@ -376,6 +376,11 @@ export async function getRolesWithPermissions(): Promise<RoleWithPermissions[]> 
     .order('hierarchy_level', { ascending: false });
 
   if (!roles) return [];
+
+  // Sort by explicit display order (handles same-level roles like Minister/DG)
+  roles.sort((a: { name: string }, b: { name: string }) =>
+    (ROLE_DISPLAY_ORDER[a.name] || 99) - (ROLE_DISPLAY_ORDER[b.name] || 99)
+  );
 
   const result: RoleWithPermissions[] = [];
 

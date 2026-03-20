@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
+import { MINISTRY_ROLES } from '@/lib/people-types';
 
 interface ModuleAccessState {
   modules: string[];
@@ -46,7 +47,7 @@ export function useModuleAccess(): ModuleAccessState {
   const canAccess = useCallback(
     (slug: string) => {
       // Ministry roles always have full access (client-side optimistic check)
-      if (userRole === 'dg' || userRole === 'minister' || userRole === 'ps') return true;
+      if (MINISTRY_ROLES.includes(userRole)) return true;
       // While loading, optimistically allow access (server will enforce)
       if (loading) return true;
       return modules.includes(slug);

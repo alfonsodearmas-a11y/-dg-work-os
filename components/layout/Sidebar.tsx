@@ -33,7 +33,7 @@ import { useModuleAccess } from '@/hooks/useModuleAccess';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import { ViewAsSelector } from './ViewAsSelector';
 
-import { ROLE_LABELS } from '@/lib/people-types';
+import { ROLE_LABELS, MINISTRY_ROLES } from '@/lib/people-types';
 
 // ---------------------------------------------------------------------------
 // Sidebar Tooltip — glassmorphism floating label for collapsed icon rail
@@ -97,10 +97,8 @@ const adminItems = [
   { href: '/admin', label: 'Settings', icon: Settings, moduleSlug: 'settings' },
 ];
 
-// Roles that can see the admin section
-const ADMIN_ROLES = ['dg', 'minister', 'ps'];
-// Roles that can see the full agency list (non-agency users see all; agency users see only theirs)
-const MINISTRY_ROLES = ['dg', 'minister', 'ps'];
+// Roles that can see the admin section + full agency list
+const ADMIN_ROLES = MINISTRY_ROLES;
 
 export function Sidebar() {
   const pathname = usePathname();

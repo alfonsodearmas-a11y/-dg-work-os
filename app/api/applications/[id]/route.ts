@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/db';
 import { canAccessModule } from '@/lib/modules/access';
+import { MINISTRY_ROLES } from '@/lib/people-types';
 
 const APP_COLUMNS = 'id, agency, applicant_name, application_type, reference_number, priority, status, notes, created_by, updated_by, submitted_at, created_at, updated_at';
 
@@ -109,7 +110,6 @@ export async function PATCH(
 
   if (status && status !== app.status) {
     // Enforce status transition rules
-    const MINISTRY_ROLES = ['dg', 'minister', 'ps'];
     const isMinistry = MINISTRY_ROLES.includes(session.user.role);
     const isAgencyAdmin = session.user.role === 'agency_admin';
 

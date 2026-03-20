@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { parseBody, apiError } from '@/lib/api-utils';
+import { MINISTRY_ROLES } from '@/lib/people-types';
 import { escalateProject, deescalateProject } from '@/lib/project-queries';
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
@@ -36,7 +37,7 @@ export async function POST(
     const { data: ministryUsers } = await supabaseAdmin
       .from('users')
       .select('id')
-      .in('role', ['dg', 'minister', 'ps'])
+      .in('role', [...MINISTRY_ROLES])
       .eq('is_active', true);
 
     if (ministryUsers?.length) {

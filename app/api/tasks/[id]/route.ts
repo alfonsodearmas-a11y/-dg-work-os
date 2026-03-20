@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { createNotification } from '@/lib/notifications/notification-service';
+import { MINISTRY_ROLES } from '@/lib/people-types';
 import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { TASK_COLUMNS, flattenTaskOwner } from '@/lib/task-types';
@@ -43,7 +44,7 @@ export const PATCH = withErrorHandler(async (
 
   const isOwner = task.owner_user_id === session.user.id;
   const isAssigner = task.assigned_by_user_id === session.user.id;
-  const isMinistryRole = ['dg', 'minister', 'ps'].includes(session.user.role);
+  const isMinistryRole = MINISTRY_ROLES.includes(session.user.role);
 
   if (!isOwner && !isAssigner && !isMinistryRole) {
     return apiError('FORBIDDEN', 'Not authorized to update this task', 403);

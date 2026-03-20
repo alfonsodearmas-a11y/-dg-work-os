@@ -13,7 +13,7 @@ import type { ModuleInfo } from './UserRolesSection';
 import type { ModuleOverride } from '@/lib/module-types';
 import type { AuditEntry } from './UserActivitySection';
 import { UserCheck, UserX, Clock } from 'lucide-react';
-import { ROLE_LABELS, ROLE_COLORS } from '@/lib/people-types';
+import { ROLE_LABELS, ROLE_COLORS, MINISTRY_ROLES } from '@/lib/people-types';
 
 interface User {
   id: string;
@@ -52,7 +52,6 @@ const STATUS_STYLES: Record<string, { bg: string; label: string; icon: typeof Us
   archived: { bg: 'bg-gray-500/20 text-gray-500', label: 'Archived', icon: Archive },
 };
 
-const MINISTRY_ROLES = ['dg', 'minister', 'ps'];
 
 export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, onUserUpdated, showToast }: UserDetailDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -390,7 +389,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
           </Section>
 
           {/* Module Access Section (DG only, not self, skip ministry roles who have full access) */}
-          {isDG && !isSelf && !['dg', 'minister', 'ps'].includes(user.role) && (
+          {isDG && !isSelf && !MINISTRY_ROLES.includes(user.role) && (
             <Section title="Module Access" id="modules" expanded={expandedSection === 'modules'} onToggle={() => toggleSection('modules')}>
               <ModuleAccessSection
                 user={user}

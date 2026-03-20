@@ -7,7 +7,7 @@ import { insertNotification } from '@/lib/notifications';
 import { sendInviteEmail } from '@/lib/invite-email';
 import { withErrorHandler } from '@/lib/api-utils';
 import { grantModuleAccess } from '@/lib/modules/access';
-import { ROLE_LABELS } from '@/lib/people-types';
+import { ROLE_LABELS, MINISTRY_ROLES } from '@/lib/people-types';
 import type { Role } from '@/lib/people-types';
 
 export async function GET() {
@@ -26,9 +26,8 @@ export async function GET() {
   return NextResponse.json({ users: data });
 }
 
-const ALL_INVITE_ROLES = ['dg', 'minister', 'ps', 'agency_admin', 'officer'] as const;
+const ALL_INVITE_ROLES = ['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer'] as const;
 const VALID_AGENCIES = ['gpl', 'cjia', 'gwi', 'gcaa', 'heci', 'marad', 'has'] as const;
-const MINISTRY_ROLES = ['dg', 'minister', 'ps'];
 
 const inviteSchema = z.object({
   email: z.string().email(),

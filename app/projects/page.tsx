@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
+import { MINISTRY_ROLES } from '@/lib/people-types';
 import {
   Upload, AlertTriangle, Building2, DollarSign, CheckCircle,
   ChevronDown, RefreshCw, Loader2, Search,
@@ -356,7 +357,7 @@ function ProjectSlidePanel({
   const [loadingNotes, setLoadingNotes] = useState(true);
   const [newNote, setNewNote] = useState('');
   const [addingNote, setAddingNote] = useState(false);
-  const canDeescalate = ['dg', 'minister', 'ps'].includes(userRole);
+  const canDeescalate = MINISTRY_ROLES.includes(userRole);
   const projectSlidePanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

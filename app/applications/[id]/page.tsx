@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
+import { MINISTRY_ROLES } from '@/lib/people-types';
 import Link from 'next/link';
 import {
   ArrowLeft, FileText, Upload, Trash2, Clock, CheckCircle, XCircle,
@@ -73,7 +74,6 @@ const ACTION_LABELS: Record<string, string> = {
   note_added: 'added a note',
 };
 
-const MINISTRY_ROLES = ['dg', 'minister', 'ps'];
 
 export default function ApplicationDetailPage() {
   const params = useParams();

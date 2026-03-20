@@ -4,6 +4,7 @@ import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from './db';
+import { MINISTRY_ROLES } from './people-types';
 
 // ── Auth Migration Guide ──────────────────────────────────────────────
 // CANONICAL PATTERN: Use `requireRole()` from `lib/auth-helpers.ts` for
@@ -18,7 +19,7 @@ import { supabaseAdmin } from './db';
 //   import { requireRole } from '@/lib/auth-helpers';
 // ──────────────────────────────────────────────────────────────────────
 
-export type Role = 'dg' | 'minister' | 'ps' | 'agency_admin' | 'officer';
+export type Role = 'dg' | 'minister' | 'ps' | 'parl_sec' | 'agency_admin' | 'officer';
 
 declare module 'next-auth' {
   interface Session {
@@ -342,7 +343,7 @@ export function isCEO(user: LegacyUser): boolean {
 }
 
 export function canAccessTask(user: LegacyUser, task: { assignee_id?: string; created_by?: string; agency?: string }): boolean {
-  if (['dg', 'minister', 'ps'].includes(user.role)) return true;
+  if (MINISTRY_ROLES.includes(user.role)) return true;
   if (task.assignee_id === user.id || task.created_by === user.id) return true;
   if (user.role === 'agency_admin' && task.agency && user.agency === task.agency) return true;
   return false;
@@ -355,7 +356,8 @@ export function authorizeRoles(user: LegacyUser, ...roles: string[]): void {
     admin: ['dg', 'agency_admin'],
     officer: ['officer'],
     minister: ['minister'],
-    ps: ['ps'],
+    ps: ['ps', 'parl_sec'],
+    parl_sec: ['parl_sec'],
   };
 
   const allowedNewRoles = roles.flatMap(r => roleMap[r] || [r]);

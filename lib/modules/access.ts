@@ -2,10 +2,11 @@ import { supabaseAdmin } from '@/lib/db';
 import { auth, type Role } from '@/lib/auth';
 import { NextResponse } from 'next/server';
 import type { ModuleRecord, ModuleOverride } from '@/lib/module-types';
+import { MINISTRY_ROLES } from '@/lib/people-types';
 
 export type { ModuleRecord, ModuleOverride };
 
-const FULL_ACCESS_ROLES: Role[] = ['dg', 'minister', 'ps'];
+const FULL_ACCESS_ROLES: readonly string[] = MINISTRY_ROLES;
 
 /**
  * Look up a module by slug and determine if it's a role default for the given user.

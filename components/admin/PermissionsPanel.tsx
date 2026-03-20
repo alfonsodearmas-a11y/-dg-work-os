@@ -8,6 +8,7 @@ import type { RoleWithPermissions, CorePermission } from '@/lib/people-types';
 const ROLE_COLORS: Record<string, string> = {
   dg: 'text-gold-500',
   minister: 'text-purple-400',
+  parl_sec: 'text-violet-400',
   ps: 'text-blue-400',
   agency_admin: 'text-cyan-400',
   officer: 'text-slate-400',

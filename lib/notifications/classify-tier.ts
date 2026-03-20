@@ -1,3 +1,5 @@
+import { MINISTRY_ROLES } from '@/lib/people-types';
+
 export type ImportanceTier = 'critical' | 'important' | 'informational';
 
 export type NotificationEventType =
@@ -18,7 +20,7 @@ export interface TierContext {
   assigneeRole?: string;   // 'dg' | 'minister' | 'ps' | 'agency_admin' | 'officer'
 }
 
-const SENIOR_ROLES = new Set(['dg', 'minister', 'ps']);
+const SENIOR_ROLES = new Set(MINISTRY_ROLES);
 const HIGH_PRIORITIES = new Set(['high', 'critical']);
 
 /**

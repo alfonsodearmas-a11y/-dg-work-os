@@ -3,6 +3,7 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
+import { MINISTRY_ROLES } from '@/lib/people-types';
 import { sendInviteEmail } from '@/lib/invite-email';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
 
@@ -17,7 +18,7 @@ async function logAudit(actorId: string, targetUserId: string, action: string, m
 
 const patchUserSchema = z.object({
   action: z.enum(['suspend', 'reactivate', 'archive', 'restore', 'force_signout', 'resend_invite']).optional(),
-  role: z.enum(['dg', 'minister', 'ps', 'agency_admin', 'officer'] as const).optional(),
+  role: z.enum(['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer'] as const).optional(),
   agency: z.enum(['gpl', 'cjia', 'gwi', 'gcaa', 'heci', 'marad', 'has'] as const).nullable().optional(),
   name: z.string().min(1).optional(),
   formal_title: z.string().min(1).optional(),
@@ -148,7 +149,7 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
 
   const newRole = (updates.role as string) || undefined;
   if (newRole) {
-    if (['dg', 'minister', 'ps'].includes(newRole)) {
+    if (MINISTRY_ROLES.includes(newRole)) {
       updates.agency = null;
     } else if (['agency_admin', 'officer'].includes(newRole) && !updates.agency && data!.agency === undefined) {
       const { data: existing } = await supabaseAdmin.from('users').select('agency').eq('id', id).single();

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { checkPermission, logActivity } from '@/lib/people-permissions';
+import { MINISTRY_ROLES } from '@/lib/people-types';
 import { sendInviteEmail } from '@/lib/invite-email';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
 
@@ -29,7 +30,7 @@ export async function GET() {
   let members = data || [];
   if (['agency_admin', 'officer'].includes(session.user.role) && session.user.agency) {
     members = members.filter(
-      m => m.agency === session.user.agency || ['dg', 'minister', 'ps'].includes(m.role)
+      m => m.agency === session.user.agency || MINISTRY_ROLES.includes(m.role)
     );
   }
 

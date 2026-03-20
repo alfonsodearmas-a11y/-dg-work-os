@@ -28,7 +28,7 @@ function isCEO(user: LegacyUser): boolean {
 }
 
 function canAccessTask(user: LegacyUser, task: { assignee_id?: string; created_by?: string; agency?: string }): boolean {
-  if (['dg', 'minister', 'ps'].includes(user.role)) return true;
+  if (['dg', 'minister', 'ps', 'parl_sec'].includes(user.role)) return true; // mirrors MINISTRY_ROLES
   if (task.assignee_id === user.id || task.created_by === user.id) return true;
   if (user.role === 'agency_admin' && task.agency && user.agency === task.agency) return true;
   return false;
