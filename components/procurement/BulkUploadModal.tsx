@@ -18,7 +18,7 @@ import {
 import { useDropZone } from '@/hooks/useDropZone';
 import { SELECTABLE_AGENCIES, AGENCY_NAMES } from '@/lib/constants/agencies';
 import { STAGE_CONFIG, type ProcurementStage, PROCUREMENT_STAGES } from '@/lib/procurement-types';
-import { parseSpreadsheet, type ParseResult } from '@/lib/procurement/bulk-upload-parser';
+import { parseSpreadsheet, parseDocx, type ParseResult } from '@/lib/procurement/bulk-upload-parser';
 import { mapColumns, type ColumnMapping } from '@/lib/procurement/column-mapper';
 import { generateTemplate } from '@/lib/procurement/template-generator';
 import type { ValidatedRow } from '@/lib/procurement/row-validator';
@@ -29,7 +29,7 @@ import { useToast } from '@/components/ui/Toast';
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-const ACCEPTED_EXTENSIONS = ['.xlsx', '.xls', '.csv'];
+const ACCEPTED_EXTENSIONS = ['.xlsx', '.xls', '.csv', '.docx'];
 
 const TARGET_FIELDS: { value: string; label: string }[] = [
   { value: 'bid_reference', label: 'Bid Reference' },
@@ -126,7 +126,10 @@ export function BulkUploadModal({ isOpen, onClose, onImported }: BulkUploadModal
     setParsing(true);
     try {
       const ab = await f.arrayBuffer();
-      const result = parseSpreadsheet(ab, sheet);
+      const ext = f.name.toLowerCase().slice(f.name.lastIndexOf('.'));
+      const result = ext === '.docx'
+        ? await parseDocx(ab, sheet)
+        : parseSpreadsheet(ab, sheet);
 
       if (result.rowCount === 0) {
         setParseError('No data rows found in the file. Check that the first row contains headers.');
@@ -158,7 +161,7 @@ export function BulkUploadModal({ isOpen, onClose, onImported }: BulkUploadModal
 
     const ext = f.name.toLowerCase().slice(f.name.lastIndexOf('.'));
     if (!ACCEPTED_EXTENSIONS.includes(ext)) {
-      setParseError('Unsupported format. Please upload .xlsx, .xls, or .csv files.');
+      setParseError('Unsupported format. Please upload .xlsx, .xls, .csv, or .docx files.');
       return;
     }
 
@@ -579,14 +582,14 @@ function StepUpload({
         <input
           ref={fileInputRef}
           type="file"
-          accept=".xlsx,.xls,.csv"
+          accept=".xlsx,.xls,.csv,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           onChange={onFileInput}
           className="hidden"
         />
         {parsing ? (
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="h-8 w-8 text-gold-500 animate-spin" />
-            <p className="text-sm text-slate-400">Parsing spreadsheet...</p>
+            <p className="text-sm text-slate-400">Parsing file...</p>
           </div>
         ) : file && parseResult ? (
           <div className="flex flex-col items-center gap-2">
@@ -608,9 +611,9 @@ function StepUpload({
             </div>
             <div>
               <p className="text-sm font-medium text-slate-300">
-                Drop an Excel or CSV file here, or click to browse
+                Drop an Excel, CSV, or Word file here, or click to browse
               </p>
-              <p className="text-xs text-navy-600 mt-1">.xlsx, .xls, .csv &middot; Max 10 MB</p>
+              <p className="text-xs text-navy-600 mt-1">.xlsx, .xls, .csv, .docx &middot; Max 10 MB</p>
             </div>
           </div>
         )}
