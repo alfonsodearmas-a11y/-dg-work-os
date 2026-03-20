@@ -46,7 +46,10 @@ export async function POST(req: NextRequest) {
     agency ?? null,
   );
   if (!ok) {
-    return NextResponse.json({ error: 'Failed to grant access' }, { status: 500 });
+    return NextResponse.json(
+      { error: `Failed to grant access to module "${moduleSlug}" — check server logs for details` },
+      { status: 500 },
+    );
   }
 
   const overridesDetailed = await getUserModuleOverridesDetailed(userId);
@@ -66,7 +69,10 @@ export async function DELETE(req: NextRequest) {
 
   const ok = await revokeModuleAccess(userId, moduleSlug, result.session.user.id);
   if (!ok) {
-    return NextResponse.json({ error: 'Failed to revoke access' }, { status: 500 });
+    return NextResponse.json(
+      { error: `Failed to revoke access to module "${moduleSlug}" — check server logs for details` },
+      { status: 500 },
+    );
   }
 
   const overridesDetailed = await getUserModuleOverridesDetailed(userId);

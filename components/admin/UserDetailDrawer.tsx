@@ -140,7 +140,8 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
           'success'
         );
       } else {
-        showToast('Failed to update module access', 'error');
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error || 'Failed to update module access', 'error');
       }
     } catch {
       showToast('Failed to update module access', 'error');
@@ -166,7 +167,8 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
           'success'
         );
       } else {
-        showToast('Failed to update edit permission', 'error');
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error || 'Failed to update edit permission', 'error');
       }
     } catch {
       showToast('Failed to update edit permission', 'error');

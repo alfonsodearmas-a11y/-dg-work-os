@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/db';
 import { auth, type Role } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 import { NextResponse } from 'next/server';
 import type { ModuleRecord, ModuleOverride, ModuleOverrideDetailed, ModulePermission } from '@/lib/module-types';
 import { MINISTRY_ROLES } from '@/lib/people-types';
@@ -13,19 +14,26 @@ const FULL_ACCESS_ROLES: readonly string[] = MINISTRY_ROLES;
  * Shared by grantModuleAccess and revokeModuleAccess.
  */
 async function resolveModuleAndRole(userId: string, moduleSlug: string) {
-  const { data: mod } = await supabaseAdmin
+  const { data: mod, error: modError } = await supabaseAdmin
     .from('modules')
     .select('id, default_roles')
     .eq('slug', moduleSlug)
     .single();
 
-  if (!mod) return null;
+  if (!mod) {
+    logger.error({ err: modError, moduleSlug }, 'resolveModuleAndRole: module not found');
+    return null;
+  }
 
-  const { data: user } = await supabaseAdmin
+  const { data: user, error: userError } = await supabaseAdmin
     .from('users')
     .select('role')
     .eq('id', userId)
     .single();
+
+  if (userError) {
+    logger.error({ err: userError, userId }, 'resolveModuleAndRole: user lookup failed');
+  }
 
   const role = (user as { role: string } | null)?.role;
   const isDefault = !!role && (mod.default_roles as string[]).includes(role);
@@ -182,13 +190,17 @@ export async function grantModuleAccess(
   const { mod, isDefault } = result;
 
   if (isDefault && !canEdit && !agency) {
-    // Role default with no special permissions — just remove any deny override
-    await supabaseAdmin
+    // Role default with no special permissions — remove overrides for this module (global scope)
+    const { error } = await supabaseAdmin
       .from('user_module_access')
       .delete()
       .eq('user_id', userId)
       .eq('module_id', mod.id)
-      .eq('access_type', 'deny');
+      .is('agency', null);
+    if (error) {
+      logger.error({ err: error, userId, moduleSlug }, 'grantModuleAccess: failed to clear overrides');
+      return false;
+    }
   } else {
     // Select-then-insert/update pattern (unique index uses COALESCE on agency)
     let query = supabaseAdmin
@@ -203,7 +215,11 @@ export async function grantModuleAccess(
       query = query.is('agency', null);
     }
 
-    const { data: existing } = await query.maybeSingle();
+    const { data: existing, error: selectError } = await query.maybeSingle();
+    if (selectError) {
+      logger.error({ err: selectError, userId, moduleSlug }, 'grantModuleAccess: select failed');
+      return false;
+    }
 
     const now = new Date().toISOString();
     if (existing) {
@@ -217,7 +233,10 @@ export async function grantModuleAccess(
           updated_at: now,
         })
         .eq('id', existing.id);
-      if (error) return false;
+      if (error) {
+        logger.error({ err: error, userId, moduleSlug }, 'grantModuleAccess: update failed');
+        return false;
+      }
     } else {
       const { error } = await supabaseAdmin
         .from('user_module_access')
@@ -231,7 +250,10 @@ export async function grantModuleAccess(
           can_edit: canEdit,
           agency,
         });
-      if (error) return false;
+      if (error) {
+        logger.error({ err: error, userId, moduleSlug }, 'grantModuleAccess: insert failed');
+        return false;
+      }
     }
   }
 
@@ -260,13 +282,18 @@ export async function revokeModuleAccess(userId: string, moduleSlug: string, rev
 
   if (isDefault) {
     // Select-then-insert/update pattern (unique index uses COALESCE on agency)
-    const { data: existing } = await supabaseAdmin
+    const { data: existing, error: selectError } = await supabaseAdmin
       .from('user_module_access')
       .select('id')
       .eq('user_id', userId)
       .eq('module_id', mod.id)
       .is('agency', null)
       .maybeSingle();
+
+    if (selectError) {
+      logger.error({ err: selectError, userId, moduleSlug }, 'revokeModuleAccess: select failed');
+      return false;
+    }
 
     const now = new Date().toISOString();
     if (existing) {
@@ -279,7 +306,10 @@ export async function revokeModuleAccess(userId: string, moduleSlug: string, rev
           updated_at: now,
         })
         .eq('id', existing.id);
-      if (error) return false;
+      if (error) {
+        logger.error({ err: error, userId, moduleSlug }, 'revokeModuleAccess: update failed');
+        return false;
+      }
     } else {
       const { error } = await supabaseAdmin
         .from('user_module_access')
@@ -292,14 +322,21 @@ export async function revokeModuleAccess(userId: string, moduleSlug: string, rev
           access_type: 'deny',
           can_edit: false,
         });
-      if (error) return false;
+      if (error) {
+        logger.error({ err: error, userId, moduleSlug }, 'revokeModuleAccess: insert failed');
+        return false;
+      }
     }
   } else {
-    await supabaseAdmin
+    const { error } = await supabaseAdmin
       .from('user_module_access')
       .delete()
       .eq('user_id', userId)
       .eq('module_id', mod.id);
+    if (error) {
+      logger.error({ err: error, userId, moduleSlug }, 'revokeModuleAccess: delete failed');
+      return false;
+    }
   }
 
   await supabaseAdmin.from('activity_logs').insert({
@@ -490,7 +527,10 @@ export async function bulkUpsertModulePermissions(
     .delete()
     .eq('user_id', userId);
 
-  if (deleteError) return false;
+  if (deleteError) {
+    logger.error({ err: deleteError, userId }, 'bulkUpsert: delete failed');
+    return false;
+  }
 
   // Build insert rows
   const now = new Date().toISOString();
@@ -512,7 +552,10 @@ export async function bulkUpsertModulePermissions(
       .from('user_module_access')
       .insert(rows);
 
-    if (insertError) return false;
+    if (insertError) {
+      logger.error({ err: insertError, userId }, 'bulkUpsert: insert failed');
+      return false;
+    }
   }
 
   // Log the bulk operation
