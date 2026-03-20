@@ -5,10 +5,17 @@ import { useSession } from 'next-auth/react';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import { MINISTRY_ROLES } from '@/lib/people-types';
 
+interface ModulePermissions {
+  canView: boolean;
+  canEdit: boolean;
+}
+
 interface ModuleAccessState {
   modules: string[];
+  permissions: Record<string, ModulePermissions>;
   loading: boolean;
   canAccess: (slug: string) => boolean;
+  canEdit: (slug: string) => boolean;
   refresh: () => void;
 }
 
@@ -16,6 +23,7 @@ export function useModuleAccess(): ModuleAccessState {
   const { status } = useSession();
   const { effectiveUser } = useEffectiveUser();
   const [modules, setModules] = useState<string[]>([]);
+  const [permissions, setPermissions] = useState<Record<string, ModulePermissions>>({});
   const [loading, setLoading] = useState(true);
   const fetchedRef = useRef(false);
 
@@ -28,6 +36,7 @@ export function useModuleAccess(): ModuleAccessState {
       if (res.ok) {
         const data = await res.json();
         setModules(data.modules || []);
+        setPermissions(data.permissions || {});
       }
     } catch {
       // fail silently — will show all modules for DG, none for others
@@ -55,11 +64,22 @@ export function useModuleAccess(): ModuleAccessState {
     [modules, loading, userRole]
   );
 
+  const canEdit = useCallback(
+    (slug: string) => {
+      // Ministry roles always have full access
+      if (MINISTRY_ROLES.includes(userRole)) return true;
+      // While loading, optimistically deny edit access (safer default)
+      if (loading) return false;
+      return permissions[slug]?.canEdit === true;
+    },
+    [permissions, loading, userRole]
+  );
+
   const refresh = useCallback(() => {
     fetchedRef.current = false;
     setLoading(true);
     fetchModules();
   }, [fetchModules]);
 
-  return { modules, loading, canAccess, refresh };
+  return { modules, permissions, loading, canAccess, canEdit, refresh };
 }

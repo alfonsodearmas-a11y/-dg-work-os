@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
-import { ShieldOff } from 'lucide-react';
+import { ShieldOff, Lock } from 'lucide-react';
 
 /**
  * Maps URL paths to module slugs.
@@ -22,6 +22,7 @@ const ROUTE_MODULE_MAP: [string, string][] = [
   ['/calendar', 'calendar'],
   ['/documents', 'documents'],
   ['/applications', 'applications'],
+  ['/procurement', 'procurement'],
   ['/admin/people', 'people'],
   ['/admin', 'settings'],
 ];
@@ -37,22 +38,38 @@ function getModuleForPath(pathname: string): string | null {
   return null;
 }
 
-export function ModuleGate({ children }: { children: React.ReactNode }) {
+interface ModuleGateProps {
+  children: React.ReactNode;
+  mode?: 'view' | 'edit';
+}
+
+export function ModuleGate({ children, mode = 'view' }: ModuleGateProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { canAccess, loading } = useModuleAccess();
+  const { canAccess, canEdit, loading } = useModuleAccess();
   const [denied, setDenied] = useState(false);
+  const [editDenied, setEditDenied] = useState(false);
 
   const moduleSlug = getModuleForPath(pathname);
 
   useEffect(() => {
     if (loading || !moduleSlug) {
       setDenied(false);
+      setEditDenied(false);
       return;
     }
 
     if (!canAccess(moduleSlug)) {
       setDenied(true);
+      setEditDenied(false);
+      // Redirect after showing message briefly
+      const timer = setTimeout(() => {
+        router.replace('/');
+      }, 2500);
+      return () => clearTimeout(timer);
+    } else if (mode === 'edit' && !canEdit(moduleSlug)) {
+      setDenied(false);
+      setEditDenied(true);
       // Redirect after showing message briefly
       const timer = setTimeout(() => {
         router.replace('/');
@@ -60,8 +77,9 @@ export function ModuleGate({ children }: { children: React.ReactNode }) {
       return () => clearTimeout(timer);
     } else {
       setDenied(false);
+      setEditDenied(false);
     }
-  }, [loading, moduleSlug, canAccess, router]);
+  }, [loading, moduleSlug, canAccess, canEdit, mode, router]);
 
   if (denied) {
     return (
@@ -76,6 +94,52 @@ export function ModuleGate({ children }: { children: React.ReactNode }) {
         <p className="text-navy-700 text-xs mt-4">Redirecting to home...</p>
       </div>
     );
+  }
+
+  if (editDenied) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-4">
+          <Lock className="h-8 w-8 text-amber-400" />
+        </div>
+        <h2 className="text-xl font-bold text-white mb-2">View-Only Access</h2>
+        <p className="text-navy-600 text-sm max-w-md">
+          You have view-only access to this module. Contact the Director General for edit permissions.
+        </p>
+        <p className="text-navy-700 text-xs mt-4">Redirecting to home...</p>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+/** Wraps content that requires edit access to the current module */
+export function ModuleEditGate({
+  children,
+  fallback,
+}: {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}) {
+  const pathname = usePathname();
+  const { canAccess, canEdit, loading } = useModuleAccess();
+
+  const moduleSlug = getModuleForPath(pathname);
+
+  // While loading, don't render edit-gated content (safer default)
+  if (loading) return null;
+
+  // No module slug for this route — render children (no gating)
+  if (!moduleSlug) return <>{children}</>;
+
+  // If user has no view access at all, render nothing
+  // (the parent ModuleGate will handle the redirect)
+  if (!canAccess(moduleSlug)) return null;
+
+  // If user can view but not edit, render fallback or nothing
+  if (!canEdit(moduleSlug)) {
+    return fallback ? <>{fallback}</> : null;
   }
 
   return <>{children}</>;

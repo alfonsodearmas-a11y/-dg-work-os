@@ -6,7 +6,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { insertNotification } from '@/lib/notifications';
 import { sendInviteEmail } from '@/lib/invite-email';
 import { withErrorHandler } from '@/lib/api-utils';
-import { grantModuleAccess } from '@/lib/modules/access';
+import { grantModuleAccess, bulkUpsertModulePermissions } from '@/lib/modules/access';
 import { ROLE_LABELS, MINISTRY_ROLES } from '@/lib/people-types';
 import type { Role } from '@/lib/people-types';
 
@@ -106,8 +106,15 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     inviteToken,
   }).catch(() => ({ success: false, error: 'Email send failed' }));
 
-  // Grant explicit module access
-  if (moduleGrants.length > 0) {
+  // Grant explicit module access (prefer granular modulePermissions, fall back to moduleGrants)
+  const modulePermissions: Array<{ moduleSlug: string; canEdit: boolean }> = Array.isArray(body.modulePermissions) ? body.modulePermissions : [];
+  if (modulePermissions.length > 0) {
+    await bulkUpsertModulePermissions(
+      newUser.id,
+      modulePermissions.map(p => ({ moduleSlug: p.moduleSlug, accessType: 'grant' as const, canEdit: p.canEdit ?? false })),
+      session.user.id,
+    );
+  } else if (moduleGrants.length > 0) {
     await Promise.all(
       moduleGrants.map(slug => grantModuleAccess(newUser.id, slug, session.user.id))
     );

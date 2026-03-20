@@ -10,7 +10,7 @@ import { UserProfileSection } from './UserProfileSection';
 import { UserRolesSection, ModuleAccessSection } from './UserRolesSection';
 import { UserActivitySection } from './UserActivitySection';
 import type { ModuleInfo } from './UserRolesSection';
-import type { ModuleOverride } from '@/lib/module-types';
+import type { ModuleOverride, ModuleOverrideDetailed } from '@/lib/module-types';
 import type { AuditEntry } from './UserActivitySection';
 import { UserCheck, UserX, Clock } from 'lucide-react';
 import { ROLE_LABELS, ROLE_COLORS, MINISTRY_ROLES } from '@/lib/people-types';
@@ -69,6 +69,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
   // Module access state
   const [allModules, setAllModules] = useState<ModuleInfo[]>([]);
   const [moduleOverrides, setModuleOverrides] = useState<ModuleOverride[]>([]);
+  const [overridesDetailed, setOverridesDetailed] = useState<ModuleOverrideDetailed[]>([]);
   const [modulesLoading, setModulesLoading] = useState(false);
   const [moduleToggling, setModuleToggling] = useState<string | null>(null);
   const [resettingDefaults, setResettingDefaults] = useState(false);
@@ -111,6 +112,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
       if (overridesRes.ok) {
         const data = await overridesRes.json();
         setModuleOverrides(data.overrides || []);
+        setOverridesDetailed(data.overridesDetailed || []);
       }
     } catch {}
     setModulesLoading(false);
@@ -132,6 +134,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
       if (res.ok) {
         const data = await res.json();
         setModuleOverrides(data.overrides || []);
+        setOverridesDetailed(data.overridesDetailed || []);
         showToast(
           currentlyHasAccess ? `Revoked access to ${moduleSlug}` : `Granted access to ${moduleSlug}`,
           'success'
@@ -145,6 +148,85 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
     setModuleToggling(null);
   };
 
+  const toggleModuleEdit = async (moduleSlug: string, currentCanEdit: boolean) => {
+    if (!user) return;
+    setModuleToggling(moduleSlug);
+    try {
+      const res = await fetch('/api/admin/modules/access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, moduleSlug, canEdit: !currentCanEdit }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setModuleOverrides(data.overrides || []);
+        setOverridesDetailed(data.overridesDetailed || []);
+        showToast(
+          !currentCanEdit ? `Edit access granted for ${moduleSlug}` : `Edit access revoked for ${moduleSlug}`,
+          'success'
+        );
+      } else {
+        showToast('Failed to update edit permission', 'error');
+      }
+    } catch {
+      showToast('Failed to update edit permission', 'error');
+    }
+    setModuleToggling(null);
+  };
+
+  const handleBulkPreset = async (preset: 'full' | 'view-only' | 'clear') => {
+    if (!user) return;
+    setResettingDefaults(true);
+    try {
+      if (preset === 'clear') {
+        const res = await fetch('/api/admin/modules/access/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id }),
+        });
+        if (res.ok) {
+          setModuleOverrides([]);
+          setOverridesDetailed([]);
+          showToast('All module overrides cleared', 'success');
+        } else {
+          showToast('Failed to clear module access', 'error');
+        }
+      } else {
+        const activeModules = allModules.filter(m => m.is_active);
+        const permissions = activeModules.map(m => ({
+          moduleSlug: m.slug,
+          accessType: 'grant' as const,
+          canEdit: preset === 'full',
+        }));
+        const res = await fetch('/api/admin/modules/access/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, permissions }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setOverridesDetailed(data.overridesDetailed || []);
+          // Rebuild overrides from detailed
+          setModuleOverrides(
+            (data.overridesDetailed || []).map((o: ModuleOverrideDetailed) => ({
+              slug: o.slug,
+              access_type: o.access_type,
+            }))
+          );
+          showToast(
+            preset === 'full' ? 'Full access granted to all modules' : 'View-only access granted to all modules',
+            'success'
+          );
+        } else {
+          showToast('Failed to apply bulk preset', 'error');
+        }
+      }
+    } catch {
+      showToast('Failed to apply bulk preset', 'error');
+    }
+    setResettingDefaults(false);
+  };
+
   const resetToDefaults = async () => {
     if (!user) return;
     setResettingDefaults(true);
@@ -156,6 +238,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
       });
       if (res.ok) {
         setModuleOverrides([]);
+        setOverridesDetailed([]);
         showToast('Module access reset to role defaults', 'success');
       } else {
         showToast('Failed to reset module access', 'error');
@@ -395,11 +478,14 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                 user={user}
                 allModules={allModules}
                 moduleOverrides={moduleOverrides}
+                overridesDetailed={overridesDetailed}
                 modulesLoading={modulesLoading}
                 moduleToggling={moduleToggling}
                 resettingDefaults={resettingDefaults}
                 onToggleModuleAccess={toggleModuleAccess}
+                onToggleModuleEdit={toggleModuleEdit}
                 onResetToDefaults={resetToDefaults}
+                onBulkPreset={handleBulkPreset}
               />
             </Section>
           )}

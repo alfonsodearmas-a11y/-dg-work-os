@@ -20,3 +20,18 @@ export interface ModuleOverride {
   slug: string;
   access_type: AccessType;
 }
+
+/** View/edit permission for a single module */
+export interface ModulePermission {
+  slug: string;
+  canView: boolean;
+  canEdit: boolean;
+}
+
+/** Detailed override including can_edit and agency */
+export interface ModuleOverrideDetailed {
+  slug: string;
+  access_type: AccessType;
+  can_edit: boolean;
+  agency: string | null;
+}
