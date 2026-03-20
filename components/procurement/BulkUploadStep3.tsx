@@ -134,7 +134,7 @@ export function StepValidation({
         </div>
         <h3 className="text-lg font-bold text-white mb-2">Confirm Import</h3>
         <p className="text-sm text-slate-400 max-w-md mb-6">
-          Import <span className="text-white font-semibold">{count} packages</span> to the{' '}
+          Import <span className="text-white font-semibold">{count} tenders</span> to the{' '}
           <span className="text-gold-500 font-semibold">{agencyName}</span> pipeline?
         </p>
         <div className="flex gap-3">
@@ -156,7 +156,7 @@ export function StepValidation({
                 Importing... {importProgress} of {count}
               </>
             ) : (
-              `Import ${count} Packages`
+              `Import ${count} Tenders`
             )}
           </button>
         </div>

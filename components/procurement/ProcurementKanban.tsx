@@ -154,13 +154,13 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
 
       // Rule: only agency_admin or DG can advance
       if (!canDrag(userRole)) {
-        toast.error('Only agency admins can advance packages');
+        toast.error('Only agency admins can advance tenders');
         return;
       }
 
       // Rule: package must belong to user's agency (DG can advance any)
       if (userRole !== 'dg' && pkg.agency.toLowerCase() !== userAgency?.toLowerCase()) {
-        toast.error('Cannot advance packages from another agency');
+        toast.error('Cannot advance tenders from another agency');
         return;
       }
 
@@ -183,7 +183,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
 
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          toast.error(err.error || 'Failed to advance package');
+          toast.error(err.error || 'Failed to advance tender');
           // Revert optimistic update
           fetchData();
           return;
@@ -197,7 +197,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
         }
 
         const stageLabel = STAGE_CONFIG[targetStage].label;
-        toast.success(`Package advanced to ${stageLabel}`);
+        toast.success(`Tender advanced to ${stageLabel}`);
       } catch {
         toast.error('Network error');
         fetchData();
@@ -277,8 +277,8 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
     return (
       <EmptyState
         icon={<Package className="h-12 w-12" />}
-        title="No procurement packages"
-        description="No procurement packages have been submitted yet."
+        title="No procurement tenders"
+        description="No procurement tenders have been submitted yet."
       />
     );
   }
@@ -326,7 +326,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
       {stats && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="bg-navy-900 rounded-xl border border-navy-800 p-3">
-            <div className="text-navy-600 text-xs mb-1">Active Packages</div>
+            <div className="text-navy-600 text-xs mb-1">Active Tenders</div>
             <div className="text-white text-lg font-bold">{stats.total_active}</div>
           </div>
           <div className="bg-navy-900 rounded-xl border border-navy-800 p-3">
@@ -385,7 +385,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
                   <div className="space-y-2 pt-2">
                     {pkgs.length === 0 ? (
                       <div className="flex items-center justify-center h-16 text-navy-600 text-sm">
-                        No packages
+                        No tenders
                       </div>
                     ) : (
                       pkgs.map((pkg) => (
@@ -538,7 +538,7 @@ function ProcurementColumn({
 
         {pkgs.length === 0 && (
           <div className="flex items-center justify-center h-24 text-navy-600 text-sm">
-            No packages
+            No tenders
           </div>
         )}
       </div>

@@ -28,17 +28,17 @@ export async function POST(request: NextRequest) {
     // Lightweight fetch to verify ownership and current stage
     const pkg = await getPackageSummary(packageId);
     if (!pkg) {
-      return NextResponse.json({ error: 'Package not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Tender not found' }, { status: 404 });
     }
 
     // Verify the package belongs to user's agency (DG can advance any)
     if (session.user.role !== 'dg' && pkg.agency.toLowerCase() !== session.user.agency?.toLowerCase()) {
-      return NextResponse.json({ error: 'Cannot advance packages from another agency' }, { status: 403 });
+      return NextResponse.json({ error: 'Cannot advance tenders from another agency' }, { status: 403 });
     }
 
     // Prevent no-op (same stage)
     if (newStage === pkg.current_stage) {
-      return NextResponse.json({ error: 'Package is already at this stage' }, { status: 400 });
+      return NextResponse.json({ error: 'Tender is already at this stage' }, { status: 400 });
     }
 
     const updated = await updatePackageStage(packageId, newStage, session.user.id, notes);
@@ -46,6 +46,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ package: updated });
   } catch (err) {
     console.error('Error advancing procurement package:', err);
-    return NextResponse.json({ error: 'Failed to advance package' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to advance tender' }, { status: 500 });
   }
 }

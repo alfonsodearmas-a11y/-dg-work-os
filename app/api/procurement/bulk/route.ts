@@ -253,7 +253,7 @@ export async function DELETE(request: NextRequest) {
     .eq('import_batch_id', batchId);
 
   if (deleteError) {
-    return NextResponse.json({ error: 'Failed to delete packages' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to delete tenders' }, { status: 500 });
   }
 
   // Mark batch as rolled back

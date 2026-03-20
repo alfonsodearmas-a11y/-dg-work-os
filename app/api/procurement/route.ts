@@ -83,6 +83,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ package: pkg }, { status: 201 });
   } catch (err) {
     console.error('Error creating procurement package:', err);
-    return NextResponse.json({ error: 'Failed to create package' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create tender' }, { status: 500 });
   }
 }

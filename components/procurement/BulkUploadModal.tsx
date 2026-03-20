@@ -265,7 +265,7 @@ export function BulkUploadModal({ isOpen, onClose, onImported }: BulkUploadModal
       } else {
         const cancelledCount = validatedRows.filter((r) => r.resolvedStage === 'cancelled').length;
         const suffix = cancelledCount > 0 ? ` (${cancelledCount} auto-cancelled)` : '';
-        toast.success(`${data.imported} packages imported to ${AGENCY_NAMES[agency] ?? agency} pipeline${suffix}`);
+        toast.success(`${data.imported} tenders imported to ${AGENCY_NAMES[agency] ?? agency} pipeline${suffix}`);
       }
 
       onImported();
@@ -300,7 +300,7 @@ export function BulkUploadModal({ isOpen, onClose, onImported }: BulkUploadModal
   }, [isOpen, step, fetchBatches]);
 
   const handleRollback = useCallback(async (batchId: string, fileName: string, rowCount: number) => {
-    if (!confirm(`Remove all ${rowCount} packages from this import?`)) return;
+    if (!confirm(`Remove all ${rowCount} tenders from this import?`)) return;
     try {
       const res = await fetch('/api/procurement/bulk', {
         method: 'DELETE',
@@ -312,7 +312,7 @@ export function BulkUploadModal({ isOpen, onClose, onImported }: BulkUploadModal
         toast.error(data.error || 'Rollback failed');
         return;
       }
-      toast.success(`Import rolled back. ${data.removed} packages removed.`);
+      toast.success(`Import rolled back. ${data.removed} tenders removed.`);
       fetchBatches();
       onImported();
     } catch {
@@ -390,7 +390,7 @@ export function BulkUploadModal({ isOpen, onClose, onImported }: BulkUploadModal
               </div>
               <div>
                 <h2 id="bulk-upload-title" className="text-lg md:text-xl font-bold text-white">Bulk Upload</h2>
-                <p className="text-slate-400 text-xs md:text-sm">Import procurement packages from a spreadsheet</p>
+                <p className="text-slate-400 text-xs md:text-sm">Import procurement tenders from a spreadsheet</p>
               </div>
             </div>
             <button

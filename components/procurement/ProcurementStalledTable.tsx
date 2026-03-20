@@ -53,7 +53,7 @@ export function ProcurementStalledTable({ packages, onPackageClick, isMobile = f
         <EmptyState
           icon={<CheckCircle className="h-12 w-12" />}
           title="Nothing stuck"
-          description="All packages are progressing normally."
+          description="All tenders are progressing normally."
         />
       ) : isMobile ? (
         /* Mobile: card list */
@@ -83,7 +83,7 @@ export function ProcurementStalledTable({ packages, onPackageClick, isMobile = f
         </div>
       ) : (
         /* Desktop: table */
-        <Table ariaLabel="Stalled procurement packages">
+        <Table ariaLabel="Stalled procurement tenders">
           <TableHeader>
             <TableRow>
               <TableHead className="min-w-[200px]">Title</TableHead>

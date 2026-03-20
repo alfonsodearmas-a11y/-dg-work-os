@@ -88,7 +88,7 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
       const res = await fetch(`/api/procurement/${packageId}`);
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || 'Failed to load package');
+        setError(data.error || 'Failed to load tender');
         setPkg(null);
         return;
       }
@@ -215,10 +215,10 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
       const res = await fetch(`/api/procurement/${packageId}`, { method: 'DELETE' });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        toast.error(data.error || 'Failed to delete package');
+        toast.error(data.error || 'Failed to delete tender');
         return;
       }
-      toast.success('Package deleted');
+      toast.success('Tender deleted');
       onClose();
       onDeleted?.();
     } catch {
@@ -235,7 +235,7 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
     <SlidePanel
       isOpen={isOpen}
       onClose={onClose}
-      title={pkg?.title || 'Package Details'}
+      title={pkg?.title || 'Tender Details'}
       subtitle={pkg?.agency_name}
       icon={Package}
       accentColor="from-gold-600 to-gold-500"
@@ -248,7 +248,7 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
         </div>
       ) : !pkg ? (
         <div className="flex-1 flex items-center justify-center py-12">
-          <p className="text-navy-600 text-sm">Package not found</p>
+          <p className="text-navy-600 text-sm">Tender not found</p>
         </div>
       ) : (
         <div className="space-y-6">
@@ -506,7 +506,7 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
               <textarea
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
-                placeholder="Add a note to track this package..."
+                placeholder="Add a note to track this tender..."
                 rows={3}
                 className="w-full px-3 py-2.5 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50 resize-none"
               />
@@ -531,7 +531,7 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
               <div className="text-center py-6">
                 <MessageSquare className="h-8 w-8 text-navy-700 mx-auto mb-2" />
                 <p className="text-sm text-navy-600">No notes yet.</p>
-                <p className="text-xs text-navy-700 mt-1">Add the first note to track this package.</p>
+                <p className="text-xs text-navy-700 mt-1">Add the first note to track this tender.</p>
               </div>
             ) : (
               <div className="space-y-0">
@@ -573,7 +573,7 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
               <div>
                 {confirmingDelete ? (
                   <div className="space-y-2">
-                    <p className="text-sm font-semibold text-white">Delete this package permanently?</p>
+                    <p className="text-sm font-semibold text-white">Delete this tender permanently?</p>
                     <p className="text-xs text-navy-600">All documents, notes, and history will be removed. This cannot be undone.</p>
                     <div className="flex gap-2 pt-1">
                       <button
@@ -598,7 +598,7 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
                     className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
-                    Delete package
+                    Delete tender
                   </button>
                 )}
               </div>

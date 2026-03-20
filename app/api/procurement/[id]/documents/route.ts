@@ -27,11 +27,11 @@ export async function POST(
     // Lightweight check: verify package exists and belongs to user's agency
     const pkg = await getPackageSummary(id);
     if (!pkg) {
-      return NextResponse.json({ error: 'Package not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Tender not found' }, { status: 404 });
     }
 
     if (session.user.role !== 'dg' && pkg.agency.toLowerCase() !== session.user.agency?.toLowerCase()) {
-      return NextResponse.json({ error: 'Cannot upload documents to another agency\'s package' }, { status: 403 });
+      return NextResponse.json({ error: 'Cannot upload documents to another agency\'s tender' }, { status: 403 });
     }
 
     const formData = await request.formData();

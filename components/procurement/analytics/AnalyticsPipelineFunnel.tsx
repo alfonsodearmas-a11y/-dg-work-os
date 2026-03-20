@@ -55,7 +55,7 @@ export function AnalyticsPipelineFunnel({ stats, isMobile = false }: Props) {
     <div className="card-premium p-5 h-full flex flex-col">
       <div className="flex items-baseline justify-between mb-4">
         <h3 className="text-sm font-semibold text-white">Pipeline Shape</h3>
-        <span className="text-xs text-navy-600">{totalPackages} total packages</span>
+        <span className="text-xs text-navy-600">{totalPackages} total tenders</span>
       </div>
 
       <div className={isMobile ? 'h-56' : 'h-64'}>
@@ -79,7 +79,7 @@ export function AnalyticsPipelineFunnel({ stats, isMobile = false }: Props) {
             <Tooltip
               {...CHART_TOOLTIP_STYLE}
               formatter={(value: number, _name: string, props: { payload?: { value: number } }) => [
-                `${value} packages — ${fmtCurrency(props.payload?.value ?? 0)}`,
+                `${value} tenders — ${fmtCurrency(props.payload?.value ?? 0)}`,
                 'Count',
               ]}
             />

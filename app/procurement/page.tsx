@@ -105,7 +105,7 @@ export default function ProcurementPage() {
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-gold-500 text-navy-950 hover:bg-[#e5c348] transition-colors"
               >
                 <Plus className="h-4 w-4" />
-                New Package
+                New Tender
               </button>
             </>
           )}

@@ -15,7 +15,7 @@ export async function GET(
   try {
     const pkg = await getPackageById(id);
     if (!pkg) {
-      return NextResponse.json({ error: 'Package not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Tender not found' }, { status: 404 });
     }
 
     // Agency roles must belong to the package's agency
@@ -26,7 +26,7 @@ export async function GET(
     return NextResponse.json({ package: pkg });
   } catch (err) {
     console.error('Error fetching procurement package:', err);
-    return NextResponse.json({ error: 'Failed to fetch package' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch tender' }, { status: 500 });
   }
 }
 
@@ -43,12 +43,12 @@ export async function DELETE(
   try {
     const pkg = await getPackageSummary(id);
     if (!pkg) {
-      return NextResponse.json({ error: 'Package not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Tender not found' }, { status: 404 });
     }
 
     // Agency admins can only delete their own agency's packages
     if (session.user.role !== 'dg' && pkg.agency.toLowerCase() !== session.user.agency?.toLowerCase()) {
-      return NextResponse.json({ error: 'Cannot delete packages from another agency' }, { status: 403 });
+      return NextResponse.json({ error: 'Cannot delete tenders from another agency' }, { status: 403 });
     }
 
     await deletePackage(id);
@@ -56,6 +56,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('Error deleting procurement package:', err);
-    return NextResponse.json({ error: 'Failed to delete package' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to delete tender' }, { status: 500 });
   }
 }

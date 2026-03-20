@@ -133,7 +133,7 @@ export function ProcurementNewPackageForm({
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        toast.error(data.error || 'Failed to create package');
+        toast.error(data.error || 'Failed to create tender');
         setSubmitting(false);
         return;
       }
@@ -159,13 +159,13 @@ export function ProcurementNewPackageForm({
 
         if (failedCount > 0) {
           toast.warning(
-            `Package created but ${failedCount} document${failedCount > 1 ? 's' : ''} failed to upload`
+            `Tender created but ${failedCount} document${failedCount > 1 ? 's' : ''} failed to upload`
           );
         } else {
-          toast.success('Package submitted');
+          toast.success('Tender submitted');
         }
       } else {
-        toast.success('Package submitted');
+        toast.success('Tender submitted');
       }
 
       onCreated();
@@ -183,7 +183,7 @@ export function ProcurementNewPackageForm({
     <SlidePanel
       isOpen={isOpen}
       onClose={handleClose}
-      title="New Procurement Package"
+      title="New Procurement Tender"
       subtitle={isDG ? 'Director General' : userAgency?.toUpperCase()}
       icon={Package}
       accentColor="from-gold-600 to-gold-500"
@@ -215,7 +215,7 @@ export function ProcurementNewPackageForm({
             id="pkg-desc"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Brief description of the procurement package..."
+            placeholder="Brief description of the procurement tender..."
             rows={3}
             className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50 resize-none"
           />
@@ -384,7 +384,7 @@ export function ProcurementNewPackageForm({
                 Submitting...
               </>
             ) : (
-              'Submit Package'
+              'Submit Tender'
             )}
           </button>
         </div>

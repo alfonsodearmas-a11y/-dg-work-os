@@ -22,7 +22,7 @@ export function AnalyticsKpiRow({ stats }: AnalyticsKpiRowProps) {
 
   const cards: KpiCard[] = [
     {
-      label: 'Active Packages',
+      label: 'Active Tenders',
       value: stats.total_active.toLocaleString(),
       icon: Package,
       accent: 'text-blue-400',
@@ -43,7 +43,7 @@ export function AnalyticsKpiRow({ stats }: AnalyticsKpiRowProps) {
       bgAccent: 'bg-slate-500/15',
     },
     {
-      label: 'Stuck Packages',
+      label: 'Stuck Tenders',
       value: stats.stalled_count.toLocaleString(),
       icon: AlertTriangle,
       accent: stats.stalled_count > 0 ? 'text-amber-400' : 'text-emerald-400',

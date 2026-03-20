@@ -55,7 +55,7 @@ export function AnalyticsStalledPanel({ packages, onPackageClick, isMobile = fal
         <div className="flex-1 flex items-center justify-center py-6">
           <div className="text-center">
             <CheckCircle2 className="w-10 h-10 text-emerald-500/30 mx-auto mb-2" />
-            <p className="text-sm text-emerald-400 font-medium">All packages moving</p>
+            <p className="text-sm text-emerald-400 font-medium">All tenders moving</p>
             <p className="text-xs text-navy-600 mt-1">Nothing stuck beyond 30 days</p>
           </div>
         </div>

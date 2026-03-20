@@ -90,7 +90,7 @@ export function AnalyticsMethodDistribution({ packages, isMobile = false }: Prop
               </Pie>
               <Tooltip
                 {...CHART_TOOLTIP_STYLE}
-                formatter={(value: number, name: string) => [`${value} packages`, name]}
+                formatter={(value: number, name: string) => [`${value} tenders`, name]}
               />
             </PieChart>
           </ResponsiveContainer>

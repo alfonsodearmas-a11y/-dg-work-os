@@ -16,7 +16,7 @@ export async function POST(
     // Lightweight check: verify package exists and user has access
     const pkg = await getPackageSummary(id);
     if (!pkg) {
-      return NextResponse.json({ error: 'Package not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Tender not found' }, { status: 404 });
     }
 
     if (!canAccessAgency(session.user.role, session.user.agency, pkg.agency)) {

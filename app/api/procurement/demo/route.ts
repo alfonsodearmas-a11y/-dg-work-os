@@ -251,7 +251,7 @@ export async function POST() {
       seeded++;
     }
 
-    return NextResponse.json({ seeded, message: `Seeded ${seeded} demo packages` });
+    return NextResponse.json({ seeded, message: `Seeded ${seeded} demo tenders` });
   } catch (err) {
     console.error('Error seeding demo data:', err);
     return NextResponse.json({ error: 'Failed to seed demo data' }, { status: 500 });
@@ -296,7 +296,7 @@ export async function DELETE() {
 
     if (error) throw error;
 
-    return NextResponse.json({ erased: ids.length, message: `Erased ${ids.length} demo packages` });
+    return NextResponse.json({ erased: ids.length, message: `Erased ${ids.length} demo tenders` });
   } catch (err) {
     console.error('Error erasing demo data:', err);
     return NextResponse.json({ error: 'Failed to erase demo data' }, { status: 500 });
