@@ -3,8 +3,7 @@
 // -- Stage & method enums ---------------------------------------------------
 
 export type ProcurementStage =
-  | 'draft'
-  | 'submitted'
+  | 'pre_advertisement'
   | 'advertised'
   | 'evaluation'
   | 'no_objection'
@@ -19,8 +18,7 @@ export type ProcurementMethod =
 // -- Pipeline constants -----------------------------------------------------
 
 export const PROCUREMENT_STAGES = [
-  'draft',
-  'submitted',
+  'pre_advertisement',
   'advertised',
   'evaluation',
   'no_objection',
@@ -31,12 +29,11 @@ export const STAGE_CONFIG: Record<
   ProcurementStage,
   { label: string; color: string; description: string }
 > = {
-  draft:         { label: 'Draft',          color: '#6b7280', description: 'Package being prepared' },
-  submitted:     { label: 'Submitted',     color: '#94a3b8', description: 'Package submitted for review' },
-  advertised:    { label: 'Advertised',    color: '#60a5fa', description: 'Tender advertised publicly' },
-  evaluation:    { label: 'Evaluation',    color: '#d4af37', description: 'Bids under evaluation' },
-  no_objection:  { label: 'No-Objection',  color: '#34d399', description: 'Awaiting no-objection clearance' },
-  awarded:       { label: 'Awarded',       color: '#10b981', description: 'Contract awarded' },
+  pre_advertisement: { label: 'Pre-Advertisement Review', color: '#94a3b8', description: 'Ministry review before advertisement' },
+  advertised:        { label: 'Advertised',               color: '#60a5fa', description: 'Tender advertised publicly' },
+  evaluation:        { label: 'Evaluation',               color: '#d4af37', description: 'Bids under evaluation' },
+  no_objection:      { label: 'No-Objection',             color: '#34d399', description: 'Awaiting no-objection clearance' },
+  awarded:           { label: 'Awarded',                  color: '#10b981', description: 'Contract awarded' },
 };
 
 export const METHOD_CONFIG: Record<ProcurementMethod, { label: string }> = {

@@ -12,8 +12,7 @@ import { CHART_TOOLTIP_STYLE, CHART_AXIS_LINE, chartResponsive } from '@/lib/cha
 
 // Stage gradient: navy → gold → green
 const FUNNEL_COLORS = [
-  '#475569', // draft — slate
-  '#64748b', // submitted — slate lighter
+  '#94a3b8', // pre_advertisement — slate
   '#60a5fa', // advertised — blue
   '#d4af37', // evaluation — gold
   '#34d399', // no_objection — emerald

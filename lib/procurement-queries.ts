@@ -244,7 +244,7 @@ export async function createPackage(input: {
   const { error: historyError } = await supabaseAdmin.from('procurement_stage_history').insert({
     package_id: data.id,
     from_stage: null,
-    to_stage: 'draft',
+    to_stage: 'pre_advertisement',
     changed_by: input.submitted_by,
     notes: null,
   });

@@ -55,7 +55,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
   const [agencyFilter, setAgencyFilter] = useState('');
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [mobileTab, setMobileTab] = useState<ProcurementStage | null>('draft');
+  const [mobileTab, setMobileTab] = useState<ProcurementStage | null>('pre_advertisement');
 
   // ---------------------------------------------------------------------------
   // Data fetching
@@ -115,8 +115,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
 
   const packagesByStage = useMemo(() => {
     const grouped: Record<ProcurementStage, ProcurementPackage[]> = {
-      draft: [],
-      submitted: [],
+      pre_advertisement: [],
       advertised: [],
       evaluation: [],
       no_objection: [],

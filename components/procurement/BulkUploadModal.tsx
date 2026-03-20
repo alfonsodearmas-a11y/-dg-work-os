@@ -87,7 +87,7 @@ export function BulkUploadModal({ isOpen, onClose, onImported }: BulkUploadModal
   // ── Step 2: Column mapping ─────────────────────────────────────────────
   const [mappings, setMappings] = useState<ColumnMapping[]>([]);
   const [agency, setAgency] = useState(userAgency ?? '');
-  const [defaultStage, setDefaultStage] = useState<ProcurementStage>('submitted');
+  const [defaultStage, setDefaultStage] = useState<ProcurementStage>('pre_advertisement');
 
   // ── Step 3: Import ───────────────────────────────────────────────────
   const [importing, setImporting] = useState(false);
@@ -108,7 +108,7 @@ export function BulkUploadModal({ isOpen, onClose, onImported }: BulkUploadModal
     setParsing(false);
     setMappings([]);
     setAgency(userAgency ?? '');
-    setDefaultStage('submitted' as ProcurementStage);
+    setDefaultStage('pre_advertisement');
     setImporting(false);
     setImportProgress(0);
     if (fileInputRef.current) fileInputRef.current.value = '';

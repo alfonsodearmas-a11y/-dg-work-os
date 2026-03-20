@@ -72,7 +72,7 @@ const DEMO_PACKAGES: DemoPackage[] = [
     description: 'Two-year supply contract for water treatment chemicals — liquid chlorine and sodium hypochlorite.',
     estimated_value: 95_000_000,
     procurement_method: 'open_tender',
-    target_stage: 'submitted',
+    target_stage: 'pre_advertisement',
     days_ago_created: 8,
     stage_history_days: [8],
   },
@@ -93,9 +93,9 @@ const DEMO_PACKAGES: DemoPackage[] = [
     description: 'Procurement of spectrophotometers, turbidity meters, and consumables for Georgetown central lab.',
     estimated_value: 22_000_000,
     procurement_method: 'request_for_quotation',
-    target_stage: 'draft',
+    target_stage: 'pre_advertisement',
     days_ago_created: 3,
-    stage_history_days: [],
+    stage_history_days: [3],
   },
   // CJIA — 3 packages
   {
@@ -125,7 +125,7 @@ const DEMO_PACKAGES: DemoPackage[] = [
     description: 'Replacement of halogen approach and runway edge lights with LED fixtures (ICAO compliant).',
     estimated_value: 112_000_000,
     procurement_method: 'open_tender',
-    target_stage: 'submitted',
+    target_stage: 'pre_advertisement',
     days_ago_created: 42,
     stage_history_days: [42],
     note: 'Specifications reviewed by GCAA — approved for tender.',
@@ -148,14 +148,14 @@ const DEMO_PACKAGES: DemoPackage[] = [
     description: 'Desks, chairs, conference tables, and partition walls for the new GCAA regulatory office.',
     estimated_value: 15_000_000,
     procurement_method: 'request_for_quotation',
-    target_stage: 'draft',
+    target_stage: 'pre_advertisement',
     days_ago_created: 5,
-    stage_history_days: [],
+    stage_history_days: [5],
   },
 ];
 
 // Stage order for building history
-const STAGES: ProcurementStage[] = ['draft', 'submitted', 'advertised', 'evaluation', 'no_objection', 'awarded'];
+const STAGES: ProcurementStage[] = ['pre_advertisement', 'advertised', 'evaluation', 'no_objection', 'awarded'];
 
 // ── POST — Seed demo data ────────────────────────────────────────────────
 
@@ -203,7 +203,7 @@ export async function POST() {
         continue;
       }
 
-      // Build stage history — initial "→ draft" plus each transition
+      // Build stage history — initial entry plus each transition
       const historyRows: {
         package_id: string;
         from_stage: ProcurementStage | null;
@@ -217,7 +217,7 @@ export async function POST() {
       historyRows.push({
         package_id: pkg.id,
         from_stage: null,
-        to_stage: 'draft',
+        to_stage: 'pre_advertisement',
         changed_by: userId,
         changed_at: new Date(now - demo.days_ago_created * 86400000).toISOString(),
         notes: null,

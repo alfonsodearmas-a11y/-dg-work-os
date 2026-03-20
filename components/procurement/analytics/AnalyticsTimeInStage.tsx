@@ -27,7 +27,7 @@ export function AnalyticsTimeInStage({ packages, isMobile = false }: Props) {
 
   const chartData = useMemo(() => {
     const buckets: Record<ProcurementStage, number[]> = {
-      draft: [], submitted: [], advertised: [], evaluation: [], no_objection: [], awarded: [],
+      pre_advertisement: [], advertised: [], evaluation: [], no_objection: [], awarded: [],
     };
 
     for (const pkg of packages) {
