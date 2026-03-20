@@ -11,7 +11,6 @@ import { SlidePanel } from '@/components/layout/SlidePanel';
 import { Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/components/ui/Toast';
 import { AgencyBadge } from './AgencyBadge';
-import { ProcurementValueDisplay } from './ProcurementValueDisplay';
 import { ProcurementStageIndicator } from './ProcurementStageIndicator';
 import { ProcurementStageBadge } from './ProcurementStageBadge';
 import { DaysAtStageIndicator } from './DaysAtStageIndicator';
@@ -254,15 +253,12 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
         <div className="space-y-6">
           {/* ── 1. Header info ──────────────────────────────────────────── */}
           <div className="space-y-3">
-            {/* Agency + Method + Value */}
+            {/* Agency + Method */}
             <div className="flex items-center flex-wrap gap-2">
               <AgencyBadge agency={pkg.agency} />
               <span className="text-xs text-navy-600">
                 {METHOD_CONFIG[pkg.procurement_method]?.label ?? pkg.procurement_method}
               </span>
-              <div className="ml-auto">
-                <ProcurementValueDisplay value={pkg.estimated_value} size="lg" />
-              </div>
             </div>
 
             {/* Stage indicator */}
@@ -620,7 +616,6 @@ function LoadingSkeleton() {
         <div className="flex items-center gap-2">
           <div className="h-6 bg-navy-800 rounded w-14" />
           <div className="h-4 bg-navy-800 rounded w-24" />
-          <div className="ml-auto h-6 bg-navy-800 rounded w-20" />
         </div>
         <div className="h-3 bg-navy-800 rounded w-48" />
         <div className="h-3 bg-navy-800 rounded w-32" />

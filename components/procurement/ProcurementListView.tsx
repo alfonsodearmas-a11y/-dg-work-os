@@ -11,7 +11,7 @@ import {
 import { AgencyBadge } from './AgencyBadge';
 import { ProcurementStageBadge } from './ProcurementStageBadge';
 import { DaysAtStageIndicator } from './DaysAtStageIndicator';
-import { fmtCurrency, fmtDate, fmtRelativeTime } from '@/lib/format';
+import { fmtDate, fmtRelativeTime } from '@/lib/format';
 
 // ---------------------------------------------------------------------------
 // Types & constants
@@ -21,7 +21,6 @@ type SortField =
   | 'title'
   | 'agency'
   | 'current_stage'
-  | 'estimated_value'
   | 'days_at_current_stage'
   | 'expected_delivery_date'
   | 'updated_at'
@@ -34,7 +33,7 @@ const STAGE_ORDER = Object.fromEntries(
 ) as Record<ProcurementStage, number>;
 
 const PAGE_SIZE = 20;
-const GRID_COLS = '${GRID_COLS}';
+const GRID_COLS = 'grid-cols-[1fr_90px_120px_70px_100px_90px_90px]';
 
 // ---------------------------------------------------------------------------
 // Sorting
@@ -56,9 +55,6 @@ function sortList(
         break;
       case 'current_stage':
         cmp = STAGE_ORDER[a.current_stage] - STAGE_ORDER[b.current_stage];
-        break;
-      case 'estimated_value':
-        cmp = a.estimated_value - b.estimated_value;
         break;
       case 'days_at_current_stage':
         cmp = a.days_at_current_stage - b.days_at_current_stage;
@@ -143,7 +139,7 @@ export function ProcurementListView({
   };
 
   const thClass =
-    'px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider cursor-pointer select-none transition-colors text-navy-600 hover:text-slate-300';
+    'px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider cursor-pointer select-none transition-colors text-navy-600 hover:text-slate-300';
 
   return (
     <div
@@ -165,7 +161,7 @@ export function ProcurementListView({
 
       {/* Desktop header */}
       <div
-        className="hidden md:grid ${GRID_COLS} border-b border-navy-800/70"
+        className={`hidden md:grid ${GRID_COLS} border-b border-navy-800/70`}
         style={{
           background:
             'linear-gradient(135deg, rgba(26, 39, 68, 0.95) 0%, rgba(20, 32, 56, 0.95) 100%)',
@@ -185,19 +181,6 @@ export function ProcurementListView({
           <span className="flex items-center gap-1">
             Stage{' '}
             <SortIcon field="current_stage" current={sortField} dir={sortDir} />
-          </span>
-        </div>
-        <div
-          className={`${thClass} text-right`}
-          onClick={() => handleSort('estimated_value')}
-        >
-          <span className="flex items-center gap-1 justify-end">
-            Value{' '}
-            <SortIcon
-              field="estimated_value"
-              current={sortField}
-              dir={sortDir}
-            />
           </span>
         </div>
         <div
@@ -263,12 +246,15 @@ export function ProcurementListView({
               }`}
               style={{
                 animation: 'fadeIn 0.3s ease both',
-                animationDelay: `${Math.min(index * 30, 270)}ms`,
+                animationDelay: `${Math.min(index * 20, 400)}ms`,
               }}
             >
               {/* Desktop row */}
-              <div className="hidden md:grid ${GRID_COLS} items-center">
-                <div className="px-3 py-3.5">
+              <div
+                className={`hidden md:grid ${GRID_COLS} items-center`}
+                style={{ minHeight: 44 }}
+              >
+                <div className="px-3 py-2.5">
                   <span className="text-sm text-white font-medium line-clamp-1 group-hover:text-gold-400 transition-colors">
                     {pkg.title}
                   </span>
@@ -276,21 +262,16 @@ export function ProcurementListView({
                     {methodLabel}
                   </span>
                 </div>
-                <div className="px-3 py-3.5">
+                <div className="px-3 py-2.5">
                   <AgencyBadge agency={pkg.agency} />
                 </div>
-                <div className="px-3 py-3.5">
+                <div className="px-3 py-2.5">
                   <ProcurementStageBadge stage={pkg.current_stage} size="sm" />
                 </div>
-                <div className="px-3 py-3.5 text-right">
-                  <span className="text-sm text-slate-300 font-medium">
-                    {fmtCurrency(pkg.estimated_value)}
-                  </span>
-                </div>
-                <div className="px-3 py-3.5">
+                <div className="px-3 py-2.5">
                   <DaysAtStageIndicator days={pkg.days_at_current_stage} />
                 </div>
-                <div className="px-3 py-3.5">
+                <div className="px-3 py-2.5">
                   {pkg.expected_delivery_date ? (
                     <span className="text-xs text-navy-600 flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
@@ -300,12 +281,12 @@ export function ProcurementListView({
                     <span className="text-[#3d4a62]">&mdash;</span>
                   )}
                 </div>
-                <div className="px-3 py-3.5">
+                <div className="px-3 py-2.5">
                   <span className="text-xs text-slate-400 truncate block">
                     {pkg.submitted_by_name || '\u2014'}
                   </span>
                 </div>
-                <div className="px-3 py-3.5">
+                <div className="px-3 py-2.5">
                   <span className="text-[11px] text-navy-600">
                     {fmtRelativeTime(pkg.updated_at)}
                   </span>
@@ -314,8 +295,8 @@ export function ProcurementListView({
 
               {/* Mobile row */}
               <div
-                className="flex md:hidden items-center gap-3 px-3 py-3.5"
-                style={{ minHeight: 52 }}
+                className="flex md:hidden items-center gap-3 px-3 py-2.5"
+                style={{ minHeight: 48 }}
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-white font-medium truncate group-hover:text-gold-400 transition-colors">
@@ -329,11 +310,6 @@ export function ProcurementListView({
                     />
                     <DaysAtStageIndicator days={pkg.days_at_current_stage} />
                   </div>
-                </div>
-                <div className="text-right shrink-0">
-                  <span className="text-sm text-slate-300 font-medium">
-                    {fmtCurrency(pkg.estimated_value)}
-                  </span>
                 </div>
               </div>
             </div>
@@ -409,6 +385,7 @@ export function ProcurementListView({
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -5,7 +5,6 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Cell, LabelList,
 } from 'recharts';
-import { fmtCurrency } from '@/lib/format';
 import { PROCUREMENT_STAGES, STAGE_CONFIG } from '@/lib/procurement-types';
 import type { PipelineStats } from '@/lib/procurement-types';
 import { CHART_TOOLTIP_STYLE, CHART_AXIS_LINE, chartResponsive } from '@/lib/chart-styles';
@@ -32,7 +31,6 @@ export function AnalyticsPipelineFunnel({ stats, isMobile = false }: Props) {
     const data = PROCUREMENT_STAGES.map((stage, i) => ({
       stage: STAGE_CONFIG[stage].label,
       count: stats.by_stage[stage].count,
-      value: stats.by_stage[stage].total_value,
       color: FUNNEL_COLORS[i],
       stageKey: stage,
     }));
@@ -77,8 +75,8 @@ export function AnalyticsPipelineFunnel({ stats, isMobile = false }: Props) {
             />
             <Tooltip
               {...CHART_TOOLTIP_STYLE}
-              formatter={(value: number, _name: string, props: { payload?: { value: number } }) => [
-                `${value} tenders — ${fmtCurrency(props.payload?.value ?? 0)}`,
+              formatter={(value: number) => [
+                `${value} tenders`,
                 'Count',
               ]}
             />
@@ -99,16 +97,6 @@ export function AnalyticsPipelineFunnel({ stats, isMobile = false }: Props) {
         </ResponsiveContainer>
       </div>
 
-      {/* Value per stage — compact row below chart */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 pt-3 border-t border-navy-800">
-        {chartData.filter((d) => d.count > 0).map((d) => (
-          <div key={d.stageKey} className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
-            <span className="text-[10px] text-navy-600">{d.stage}</span>
-            <span className="text-[10px] text-slate-400 font-medium">{fmtCurrency(d.value)}</span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

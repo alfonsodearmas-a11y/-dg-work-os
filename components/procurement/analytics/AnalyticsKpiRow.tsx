@@ -1,7 +1,6 @@
 'use client';
 
-import { Package, DollarSign, Clock, AlertTriangle } from 'lucide-react';
-import { fmtCurrency } from '@/lib/format';
+import { Package, Clock, AlertTriangle } from 'lucide-react';
 import type { PipelineStats } from '@/lib/procurement-types';
 
 interface AnalyticsKpiRowProps {
@@ -29,13 +28,6 @@ export function AnalyticsKpiRow({ stats }: AnalyticsKpiRowProps) {
       bgAccent: 'bg-blue-500/15',
     },
     {
-      label: 'Pipeline Value',
-      value: fmtCurrency(stats.total_value),
-      icon: DollarSign,
-      accent: 'text-gold-500',
-      bgAccent: 'bg-gold-500/15',
-    },
-    {
       label: 'Avg Days to Award',
       value: stats.avg_days_to_award > 0 ? `${stats.avg_days_to_award}d` : '—',
       icon: Clock,
@@ -53,7 +45,7 @@ export function AnalyticsKpiRow({ stats }: AnalyticsKpiRowProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-3 gap-3">
       {cards.map((card) => {
         const Icon = card.icon;
         return (

@@ -13,7 +13,6 @@ import {
 import { ProcurementCard } from './ProcurementCard';
 import { ProcurementDetailPanel } from './ProcurementDetailPanel';
 import { ProcurementListView } from './ProcurementListView';
-import { fmtCurrency } from '@/lib/format';
 import { useToast } from '@/components/ui/Toast';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -231,8 +230,8 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
             <div key={i} className="h-8 bg-navy-800 rounded-lg w-16" />
           ))}
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-3 gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="h-20 bg-navy-900 rounded-xl border border-navy-800" />
           ))}
         </div>
@@ -366,14 +365,10 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
 
       {/* Stats bar */}
       {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div className="bg-navy-900 rounded-xl border border-navy-800 p-3">
             <div className="text-navy-600 text-xs mb-1">Active Tenders</div>
             <div className="text-white text-lg font-bold">{stats.total_active}</div>
-          </div>
-          <div className="bg-navy-900 rounded-xl border border-navy-800 p-3">
-            <div className="text-navy-600 text-xs mb-1">Pipeline Value</div>
-            <div className="text-white text-lg font-bold">{fmtCurrency(stats.total_value)}</div>
           </div>
           <div className="bg-navy-900 rounded-xl border border-navy-800 p-3">
             <div className="text-navy-600 text-xs mb-1">Avg Days to Award</div>

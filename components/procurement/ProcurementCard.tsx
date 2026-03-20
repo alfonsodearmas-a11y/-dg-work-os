@@ -2,7 +2,6 @@
 
 import { ProcurementPackage, METHOD_CONFIG } from '@/lib/procurement-types';
 import { AgencyBadge } from './AgencyBadge';
-import { ProcurementValueDisplay } from './ProcurementValueDisplay';
 import { DaysAtStageIndicator } from './DaysAtStageIndicator';
 interface ProcurementCardProps {
   pkg: ProcurementPackage;
@@ -46,10 +45,7 @@ export function ProcurementCard({ pkg, onClick, isDragging, canDrag = true, onDr
       {isMobile ? (
         /* Mobile: stacked metadata */
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <AgencyBadge agency={pkg.agency} />
-            <ProcurementValueDisplay value={pkg.estimated_value} size="sm" />
-          </div>
+          <AgencyBadge agency={pkg.agency} />
           <div className="flex items-center justify-between text-xs">
             <DaysAtStageIndicator days={pkg.days_at_current_stage} />
             <span className="text-navy-600">{methodLabel}</span>
@@ -58,9 +54,8 @@ export function ProcurementCard({ pkg, onClick, isDragging, canDrag = true, onDr
       ) : (
         /* Desktop: compact inline */
         <>
-          <div className="flex items-center gap-2 mb-2">
+          <div className="mb-2">
             <AgencyBadge agency={pkg.agency} />
-            <ProcurementValueDisplay value={pkg.estimated_value} size="sm" />
           </div>
           <div className="flex items-center justify-between text-xs">
             <DaysAtStageIndicator days={pkg.days_at_current_stage} />

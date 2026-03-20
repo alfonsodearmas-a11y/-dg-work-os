@@ -9,7 +9,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Badge } from '@/components/ui/Badge';
 import { AgencyBadge } from '@/components/procurement/AgencyBadge';
 import { ProcurementStageBadge } from '@/components/procurement/ProcurementStageBadge';
-import { ProcurementValueDisplay } from '@/components/procurement/ProcurementValueDisplay';
 import { DaysAtStageIndicator } from '@/components/procurement/DaysAtStageIndicator';
 import type { ProcurementPackage } from '@/lib/procurement-types';
 
@@ -37,7 +36,7 @@ export function ProcurementStalledTable({ packages, onPackageClick, isMobile = f
   const stalledPackages = useMemo(() => {
     return packages
       .filter((pkg) => pkg.days_at_current_stage > STALLED_THRESHOLD)
-      .sort((a, b) => b.estimated_value - a.estimated_value);
+      .sort((a, b) => b.days_at_current_stage - a.days_at_current_stage);
   }, [packages]);
 
   return (
@@ -67,12 +66,9 @@ export function ProcurementStalledTable({ packages, onPackageClick, isMobile = f
               style={{ minHeight: 44 }}
             >
               <p className="text-sm font-medium text-white line-clamp-1">{pkg.title}</p>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <AgencyBadge agency={pkg.agency} />
-                  <ProcurementStageBadge stage={pkg.current_stage} size="sm" />
-                </div>
-                <ProcurementValueDisplay value={pkg.estimated_value} size="sm" />
+              <div className="flex items-center gap-2">
+                <AgencyBadge agency={pkg.agency} />
+                <ProcurementStageBadge stage={pkg.current_stage} size="sm" />
               </div>
               <div className="flex items-center gap-1">
                 <DaysAtStageIndicator days={pkg.days_at_current_stage} />
@@ -90,7 +86,6 @@ export function ProcurementStalledTable({ packages, onPackageClick, isMobile = f
               <TableHead>Agency</TableHead>
               <TableHead>Stage</TableHead>
               <TableHead>Days</TableHead>
-              <TableHead className="text-right">Value</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -117,9 +112,6 @@ export function ProcurementStalledTable({ packages, onPackageClick, isMobile = f
                 </TableCell>
                 <TableCell>
                   <DaysAtStageIndicator days={pkg.days_at_current_stage} />
-                </TableCell>
-                <TableCell className="text-right">
-                  <ProcurementValueDisplay value={pkg.estimated_value} size="sm" />
                 </TableCell>
               </TableRow>
             ))}

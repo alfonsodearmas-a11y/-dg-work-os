@@ -4,7 +4,6 @@ import { useMemo } from 'react';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import { AgencyBadge } from '../AgencyBadge';
 import { ProcurementStageBadge } from '../ProcurementStageBadge';
-import { ProcurementValueDisplay } from '../ProcurementValueDisplay';
 import type { ProcurementPackage } from '@/lib/procurement-types';
 
 const STALLED_THRESHOLD = 30;
@@ -81,10 +80,9 @@ export function AnalyticsStalledPanel({ packages, onPackageClick, isMobile = fal
                 </div>
               </div>
 
-              {/* Days + Value */}
+              {/* Days */}
               <div className="text-right shrink-0">
                 <p className="text-sm font-semibold text-red-400 tabular-nums">{pkg.days_at_current_stage}d</p>
-                <ProcurementValueDisplay value={pkg.estimated_value} size="sm" />
               </div>
             </button>
           ))}

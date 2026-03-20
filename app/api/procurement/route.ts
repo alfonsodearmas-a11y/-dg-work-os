@@ -63,8 +63,8 @@ export async function POST(request: NextRequest) {
     if (!title?.trim()) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
     }
-    if (!estimated_value || estimated_value <= 0) {
-      return NextResponse.json({ error: 'Estimated value must be greater than 0' }, { status: 400 });
+    if (estimated_value == null || estimated_value < 0) {
+      return NextResponse.json({ error: 'Estimated value is invalid' }, { status: 400 });
     }
     if (!procurement_method || !(procurement_method in METHOD_CONFIG)) {
       return NextResponse.json({ error: 'Invalid procurement method' }, { status: 400 });
