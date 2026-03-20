@@ -20,6 +20,7 @@ import type { ProcurementPackage } from '@/lib/procurement-types';
 interface ProcurementStalledTableProps {
   packages: ProcurementPackage[];
   onPackageClick?: (packageId: string) => void;
+  isMobile?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -32,7 +33,7 @@ const STALLED_THRESHOLD = 30;
 // Component
 // ---------------------------------------------------------------------------
 
-export function ProcurementStalledTable({ packages, onPackageClick }: ProcurementStalledTableProps) {
+export function ProcurementStalledTable({ packages, onPackageClick, isMobile = false }: ProcurementStalledTableProps) {
   const stalledPackages = useMemo(() => {
     return packages
       .filter((pkg) => pkg.days_at_current_stage > STALLED_THRESHOLD)
@@ -40,7 +41,7 @@ export function ProcurementStalledTable({ packages, onPackageClick }: Procuremen
   }, [packages]);
 
   return (
-    <div className="card-premium p-6">
+    <div className="card-premium p-4 md:p-6">
       <div className="flex items-center gap-3 mb-4">
         <h3 className="text-lg font-semibold text-white">What is stuck?</h3>
         {stalledPackages.length > 0 && (
@@ -54,7 +55,34 @@ export function ProcurementStalledTable({ packages, onPackageClick }: Procuremen
           title="Nothing stuck"
           description="All packages are progressing normally."
         />
+      ) : isMobile ? (
+        /* Mobile: card list */
+        <div className="space-y-2">
+          {stalledPackages.map((pkg) => (
+            <button
+              key={pkg.id}
+              type="button"
+              onClick={() => onPackageClick?.(pkg.id)}
+              className="w-full text-left p-3 rounded-xl border border-navy-800 bg-navy-900/50 space-y-2 touch-active"
+              style={{ minHeight: 44 }}
+            >
+              <p className="text-sm font-medium text-white line-clamp-1">{pkg.title}</p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AgencyBadge agency={pkg.agency} />
+                  <ProcurementStageBadge stage={pkg.current_stage} size="sm" />
+                </div>
+                <ProcurementValueDisplay value={pkg.estimated_value} size="sm" />
+              </div>
+              <div className="flex items-center gap-1">
+                <DaysAtStageIndicator days={pkg.days_at_current_stage} />
+                <span className="text-xs text-navy-600">at stage</span>
+              </div>
+            </button>
+          ))}
+        </div>
       ) : (
+        /* Desktop: table */
         <Table ariaLabel="Stalled procurement packages">
           <TableHeader>
             <TableRow>

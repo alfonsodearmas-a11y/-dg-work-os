@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Spinner } from '@/components/ui/Spinner';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { ProcurementStageDistribution } from './ProcurementStageDistribution';
 import { ProcurementDurationChart } from './ProcurementDurationChart';
 import { ProcurementStalledTable } from './ProcurementStalledTable';
@@ -13,6 +14,7 @@ interface ProcurementAnalyticsProps {
 }
 
 export function ProcurementAnalytics({ onPackageClick }: ProcurementAnalyticsProps) {
+  const isMobile = useIsMobile();
   const [packages, setPackages] = useState<ProcurementPackage[]>([]);
   const [stats, setStats] = useState<PipelineStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,11 +47,11 @@ export function ProcurementAnalytics({ onPackageClick }: ProcurementAnalyticsPro
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-      <ProcurementStageDistribution packages={packages} />
-      <ProcurementDurationChart packages={packages} />
-      <ProcurementStalledTable packages={packages} onPackageClick={onPackageClick} />
-      {stats && <ProcurementPipelineValue stats={stats} />}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-6">
+      <ProcurementStageDistribution packages={packages} isMobile={isMobile} />
+      <ProcurementDurationChart packages={packages} isMobile={isMobile} />
+      <ProcurementStalledTable packages={packages} onPackageClick={onPackageClick} isMobile={isMobile} />
+      {stats && <ProcurementPipelineValue stats={stats} isMobile={isMobile} />}
     </div>
   );
 }

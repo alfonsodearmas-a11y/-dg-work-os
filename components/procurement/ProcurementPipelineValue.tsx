@@ -8,7 +8,7 @@ import {
 import { fmtCurrency } from '@/lib/format';
 import { PROCUREMENT_STAGES, STAGE_CONFIG } from '@/lib/procurement-types';
 import type { PipelineStats, ProcurementStage } from '@/lib/procurement-types';
-import { CHART_TOOLTIP_STYLE, CHART_AXIS_TICK, CHART_AXIS_LINE, CHART_GRID_STROKE } from '@/lib/chart-styles';
+import { CHART_TOOLTIP_STYLE, CHART_AXIS_LINE, CHART_GRID_STROKE, chartResponsive } from '@/lib/chart-styles';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -16,13 +16,15 @@ import { CHART_TOOLTIP_STYLE, CHART_AXIS_TICK, CHART_AXIS_LINE, CHART_GRID_STROK
 
 interface ProcurementPipelineValueProps {
   stats: PipelineStats;
+  isMobile?: boolean;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function ProcurementPipelineValue({ stats }: ProcurementPipelineValueProps) {
+export function ProcurementPipelineValue({ stats, isMobile = false }: ProcurementPipelineValueProps) {
+  const cr = chartResponsive(isMobile);
   const { chartData, totalValue } = useMemo(() => {
     const data = PROCUREMENT_STAGES.map((stage: ProcurementStage) => ({
       stage: STAGE_CONFIG[stage].label,
@@ -42,13 +44,13 @@ export function ProcurementPipelineValue({ stats }: ProcurementPipelineValueProp
   return (
     <div className="card-premium p-6">
       <h3 className="text-lg font-semibold text-white mb-4">Pipeline value by stage</h3>
-      <div className="h-72">
+      <div className={cr.heightClass}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} layout="vertical" barSize={24}>
+          <BarChart data={chartData} layout="vertical" barSize={cr.barSize(24)}>
             <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} horizontal={false} />
             <XAxis
               type="number"
-              tick={CHART_AXIS_TICK}
+              tick={cr.axisTick}
               axisLine={CHART_AXIS_LINE}
               tickLine={CHART_AXIS_LINE}
               tickFormatter={(v: number) => fmtCurrency(v)}
@@ -56,8 +58,8 @@ export function ProcurementPipelineValue({ stats }: ProcurementPipelineValueProp
             <YAxis
               type="category"
               dataKey="stage"
-              width={100}
-              tick={CHART_AXIS_TICK}
+              width={cr.yAxisWidth}
+              tick={cr.axisTick}
               axisLine={CHART_AXIS_LINE}
               tickLine={CHART_AXIS_LINE}
             />
@@ -73,7 +75,7 @@ export function ProcurementPipelineValue({ stats }: ProcurementPipelineValueProp
                 dataKey="value"
                 position="right"
                 fill="#94a3b8"
-                fontSize={11}
+                fontSize={cr.labelFontSize}
                 formatter={(value: number) => (value > 0 ? fmtCurrency(value) : '')}
               />
             </Bar>

@@ -36,17 +36,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cannot advance packages from another agency' }, { status: 403 });
     }
 
-    // Validate forward-only movement
-    const currentIdx = PROCUREMENT_STAGES.indexOf(pkg.current_stage);
-    const newIdx = PROCUREMENT_STAGES.indexOf(newStage);
-
-    if (newIdx <= currentIdx) {
-      return NextResponse.json({ error: 'Can only advance to a later stage' }, { status: 400 });
-    }
-
-    // Validate exactly one stage forward (no skipping)
-    if (newIdx !== currentIdx + 1) {
-      return NextResponse.json({ error: 'Cannot skip stages' }, { status: 400 });
+    // Prevent no-op (same stage)
+    if (newStage === pkg.current_stage) {
+      return NextResponse.json({ error: 'Package is already at this stage' }, { status: 400 });
     }
 
     const updated = await updatePackageStage(packageId, newStage, session.user.id, notes);

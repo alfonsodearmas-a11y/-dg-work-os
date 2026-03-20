@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
-import { RefreshCw, AlertTriangle, Package } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Package, ChevronDown } from 'lucide-react';
 import {
   PROCUREMENT_STAGES,
   STAGE_CONFIG,
@@ -55,7 +55,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
   const [agencyFilter, setAgencyFilter] = useState('');
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [mobileTab, setMobileTab] = useState<ProcurementStage>('draft');
+  const [mobileTab, setMobileTab] = useState<ProcurementStage | null>('draft');
 
   // ---------------------------------------------------------------------------
   // Data fetching
@@ -164,20 +164,8 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
         return;
       }
 
-      const currentIdx = PROCUREMENT_STAGES.indexOf(pkg.current_stage);
-      const targetIdx = PROCUREMENT_STAGES.indexOf(targetStage);
-
-      // Rule: forward-only
-      if (targetIdx <= currentIdx) {
-        toast.error('Can only advance to a later stage');
-        return;
-      }
-
-      // Rule: exactly one stage forward
-      if (targetIdx !== currentIdx + 1) {
-        toast.error('Cannot skip stages');
-        return;
-      }
+      // Prevent no-op (same stage)
+      if (targetStage === pkg.current_stage) return;
 
       // Optimistic update
       setPackages((prev) =>
@@ -360,61 +348,62 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
 
       {/* Kanban board */}
       {isMobile ? (
-        <>
-          {/* Mobile: Tab bar */}
-          <div className="flex overflow-x-auto gap-1 -mx-1 px-1 pb-1 scrollbar-none">
-            {PROCUREMENT_STAGES.map((stage) => {
-              const isActive = mobileTab === stage;
-              const config = STAGE_CONFIG[stage];
-              const count = packagesByStage[stage].length;
-              return (
+        /* Mobile: Collapsible stage sections */
+        <div className="space-y-2">
+          {PROCUREMENT_STAGES.map((stage) => {
+            const config = STAGE_CONFIG[stage];
+            const pkgs = packagesByStage[stage];
+            const isExpanded = mobileTab === stage;
+            return (
+              <div key={stage}>
                 <button
-                  key={stage}
-                  onClick={() => setMobileTab(stage)}
-                  className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                    isActive
-                      ? 'bg-navy-900'
-                      : 'border-transparent text-navy-600'
-                  }`}
-                  style={{
-                    borderBottomColor: isActive ? config.color : 'transparent',
-                    color: isActive ? config.color : undefined,
-                    minHeight: 44,
-                    touchAction: 'manipulation',
-                  }}
+                  onClick={() => setMobileTab(isExpanded ? null : stage)}
+                  className="w-full flex items-center justify-between px-3.5 py-3 rounded-xl bg-navy-900/70 border border-navy-800 transition-colors"
+                  style={{ minHeight: 48, touchAction: 'manipulation' }}
                 >
-                  <span
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: config.color }}
-                    aria-hidden="true"
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: config.color }}
+                    />
+                    <span className="text-sm font-semibold text-white">{config.label}</span>
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full font-medium"
+                      style={{
+                        backgroundColor: `${config.color}33`,
+                        color: config.color,
+                      }}
+                    >
+                      {pkgs.length}
+                    </span>
+                  </div>
+                  <ChevronDown
+                    className={`w-4 h-4 text-navy-600 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
                   />
-                  {config.label}
-                  <span
-                    className={`text-xs px-1.5 py-0.5 rounded-full ${
-                      isActive ? 'bg-white/10' : 'bg-navy-800'
-                    }`}
-                  >
-                    {count}
-                  </span>
                 </button>
-              );
-            })}
-          </div>
-
-          {/* Mobile: Single column */}
-          <ProcurementColumn
-            stage={mobileTab}
-            packages={packagesByStage[mobileTab]}
-            isMobile={true}
-            draggingId={null}
-            isDraggable={false}
-            userRole={userRole}
-            userAgency={userAgency}
-            onDrop={() => {}}
-            onCardClick={setSelectedPackageId}
-            onDragStart={handleDragStart}
-          />
-        </>
+                {isExpanded && (
+                  <div className="space-y-2 pt-2">
+                    {pkgs.length === 0 ? (
+                      <div className="flex items-center justify-center h-16 text-navy-600 text-sm">
+                        No packages
+                      </div>
+                    ) : (
+                      pkgs.map((pkg) => (
+                        <ProcurementCard
+                          key={pkg.id}
+                          pkg={pkg}
+                          onClick={() => setSelectedPackageId(pkg.id)}
+                          canDrag={false}
+                          isMobile
+                        />
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       ) : (
         /* Desktop: Multi-column */
         <div className="flex gap-4 overflow-x-auto pb-4">
@@ -423,7 +412,6 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
               <ProcurementColumn
                 stage={stage}
                 packages={packagesByStage[stage]}
-                isMobile={false}
                 draggingId={draggingId}
                 isDraggable={isDraggable}
                 userRole={userRole}
@@ -459,7 +447,6 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
 interface ProcurementColumnProps {
   stage: ProcurementStage;
   packages: ProcurementPackage[];
-  isMobile: boolean;
   draggingId: string | null;
   isDraggable: boolean;
   userRole: Role | undefined;
@@ -472,7 +459,6 @@ interface ProcurementColumnProps {
 function ProcurementColumn({
   stage,
   packages: pkgs,
-  isMobile,
   draggingId,
   isDraggable,
   userRole,
@@ -502,49 +488,41 @@ function ProcurementColumn({
   };
 
   return (
-    <div className={isMobile ? 'w-full' : ''}>
-      {/* Column Header (hidden on mobile -- tab bar handles it) */}
-      {!isMobile && (
-        <div className="flex items-center justify-between mb-3 px-1">
-          <div className="flex items-center gap-2">
-            <div
-              className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: config.color }}
-            />
-            <h3 className="text-white font-semibold text-sm">{config.label}</h3>
-          </div>
-          <span
-            className="px-2 py-0.5 rounded-full text-xs font-medium"
-            style={{
-              backgroundColor: `${config.color}33`,
-              color: config.color,
-            }}
-          >
-            {pkgs.length}
-          </span>
+    <div>
+      {/* Column Header */}
+      <div className="flex items-center justify-between mb-3 px-1">
+        <div className="flex items-center gap-2">
+          <div
+            className="w-2 h-2 rounded-full"
+            style={{ backgroundColor: config.color }}
+          />
+          <h3 className="text-white font-semibold text-sm">{config.label}</h3>
         </div>
-      )}
+        <span
+          className="px-2 py-0.5 rounded-full text-xs font-medium"
+          style={{
+            backgroundColor: `${config.color}33`,
+            color: config.color,
+          }}
+        >
+          {pkgs.length}
+        </span>
+      </div>
 
       {/* Drop zone */}
       <div
-        {...(!isMobile
-          ? {
-              onDragOver: handleDragOver,
-              onDragLeave: handleDragLeave,
-              onDrop: handleDrop,
-            }
-          : {})}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
         className={`space-y-2 p-2 rounded-xl min-h-[200px] transition-colors duration-200 ${
           isOver
             ? 'bg-gold-500/10 border-2 border-dashed border-gold-500/50'
-            : isMobile
-              ? ''
-              : 'bg-navy-950/50 border-2 border-transparent'
+            : 'bg-navy-950/50 border-2 border-transparent'
         }`}
       >
         {pkgs.map((pkg) => {
           const cardDraggable =
-            isDraggable && !isMobile && (userRole === 'dg' || pkg.agency.toLowerCase() === userAgency?.toLowerCase());
+            isDraggable && (userRole === 'dg' || pkg.agency.toLowerCase() === userAgency?.toLowerCase());
 
           return (
             <ProcurementCard

@@ -8,7 +8,7 @@ import {
 import type { ProcurementPackage } from '@/lib/procurement-types';
 import { PROCUREMENT_STAGES, STAGE_CONFIG } from '@/lib/procurement-types';
 import { AGENCY_HEX_COLORS } from '@/lib/constants/agencies';
-import { CHART_TOOLTIP_STYLE, CHART_AXIS_TICK, CHART_AXIS_LINE, CHART_GRID_STROKE } from '@/lib/chart-styles';
+import { CHART_TOOLTIP_STYLE, CHART_AXIS_LINE, CHART_GRID_STROKE, chartResponsive } from '@/lib/chart-styles';
 
 const DEFAULT_COLOR = '#94a3b8';
 
@@ -18,13 +18,15 @@ const DEFAULT_COLOR = '#94a3b8';
 
 interface ProcurementStageDistributionProps {
   packages: ProcurementPackage[];
+  isMobile?: boolean;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function ProcurementStageDistribution({ packages }: ProcurementStageDistributionProps) {
+export function ProcurementStageDistribution({ packages, isMobile = false }: ProcurementStageDistributionProps) {
+  const cr = chartResponsive(isMobile);
   const { chartData, agencies } = useMemo(() => {
     // Discover agencies that have packages
     const agencySet = new Set<string>();
@@ -67,19 +69,23 @@ export function ProcurementStageDistribution({ packages }: ProcurementStageDistr
   return (
     <div className="card-premium p-6">
       <h3 className="text-lg font-semibold text-white mb-4">Where are things?</h3>
-      <div className="h-72">
+      <div className={cr.heightClass}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} barCategoryGap="20%">
+          <BarChart data={chartData} barCategoryGap={isMobile ? '12%' : '20%'}>
             <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
             <XAxis
               dataKey="stage"
-              tick={CHART_AXIS_TICK}
+              tick={{ ...cr.axisTick, fontSize: isMobile ? 9 : cr.axisTick.fontSize }}
               axisLine={CHART_AXIS_LINE}
               tickLine={CHART_AXIS_LINE}
+              interval={0}
+              angle={isMobile ? -35 : 0}
+              textAnchor={isMobile ? 'end' : 'middle'}
+              height={isMobile ? 60 : 30}
             />
             <YAxis
               allowDecimals={false}
-              tick={CHART_AXIS_TICK}
+              tick={cr.axisTick}
               axisLine={CHART_AXIS_LINE}
               tickLine={CHART_AXIS_LINE}
             />

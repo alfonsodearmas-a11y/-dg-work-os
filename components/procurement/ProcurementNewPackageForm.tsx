@@ -201,7 +201,7 @@ export function ProcurementNewPackageForm({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Supply of Distribution Transformers"
             required
-            className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
+            className="w-full px-3 py-2.5 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
           />
           {errors.title && <p className="text-xs text-red-400 mt-1">{errors.title}</p>}
         </div>
@@ -229,13 +229,14 @@ export function ProcurementNewPackageForm({
           <input
             id="pkg-value"
             type="number"
+            inputMode="numeric"
             value={estimatedValue}
             onChange={(e) => setEstimatedValue(e.target.value)}
             placeholder="0"
             required
             min="1"
             step="any"
-            className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
+            className="w-full px-3 py-2.5 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
           />
           {errors.estimatedValue && (
             <p className="text-xs text-red-400 mt-1">{errors.estimatedValue}</p>
@@ -369,21 +370,24 @@ export function ProcurementNewPackageForm({
           )}
         </div>
 
-        {/* Submit */}
-        <button
-          type="submit"
-          disabled={submitting || !title.trim() || !estimatedValue || !procurementMethod || (isDG && !agency)}
-          className="w-full py-2.5 rounded-lg bg-gold-500 text-navy-950 font-semibold text-sm hover:bg-[#e5c348] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-        >
-          {submitting ? (
-            <>
-              <Spinner size="sm" className="border-navy-950 border-t-transparent" />
-              Submitting...
-            </>
-          ) : (
-            'Submit Package'
-          )}
-        </button>
+        {/* Submit — sticky on mobile via SlidePanel's bottom padding */}
+        <div className="sticky bottom-0 -mx-3 md:-mx-6 px-3 md:px-6 py-3 bg-navy-950/95 backdrop-blur-sm border-t border-navy-800 mt-4">
+          <button
+            type="submit"
+            disabled={submitting || !title.trim() || !estimatedValue || !procurementMethod || (isDG && !agency)}
+            className="w-full py-3 rounded-lg bg-gold-500 text-navy-950 font-semibold text-sm hover:bg-[#e5c348] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            style={{ minHeight: 48 }}
+          >
+            {submitting ? (
+              <>
+                <Spinner size="sm" className="border-navy-950 border-t-transparent" />
+                Submitting...
+              </>
+            ) : (
+              'Submit Package'
+            )}
+          </button>
+        </div>
       </form>
     </SlidePanel>
   );

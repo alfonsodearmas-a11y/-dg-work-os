@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import type { ProcurementPackage, ProcurementStage } from '@/lib/procurement-types';
 import { PROCUREMENT_STAGES, STAGE_CONFIG } from '@/lib/procurement-types';
-import { CHART_TOOLTIP_STYLE, CHART_AXIS_TICK, CHART_AXIS_LINE, CHART_GRID_STROKE } from '@/lib/chart-styles';
+import { CHART_TOOLTIP_STYLE, CHART_AXIS_LINE, CHART_GRID_STROKE, chartResponsive } from '@/lib/chart-styles';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -15,6 +15,7 @@ import { CHART_TOOLTIP_STYLE, CHART_AXIS_TICK, CHART_AXIS_LINE, CHART_GRID_STROK
 
 interface ProcurementDurationChartProps {
   packages: ProcurementPackage[];
+  isMobile?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -34,7 +35,8 @@ function brighten(hex: string, factor: number): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export function ProcurementDurationChart({ packages }: ProcurementDurationChartProps) {
+export function ProcurementDurationChart({ packages, isMobile = false }: ProcurementDurationChartProps) {
+  const cr = chartResponsive(isMobile);
   const chartData = useMemo(() => {
     // Group packages by stage, compute average days_at_current_stage
     const buckets: Record<ProcurementStage, number[]> = {
@@ -76,13 +78,13 @@ export function ProcurementDurationChart({ packages }: ProcurementDurationChartP
   return (
     <div className="card-premium p-6">
       <h3 className="text-lg font-semibold text-white mb-4">How long is it taking?</h3>
-      <div className="h-72">
+      <div className={cr.heightClass}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} layout="vertical" barSize={20}>
+          <BarChart data={chartData} layout="vertical" barSize={cr.barSize(20)}>
             <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} horizontal={false} />
             <XAxis
               type="number"
-              tick={CHART_AXIS_TICK}
+              tick={cr.axisTick}
               axisLine={CHART_AXIS_LINE}
               tickLine={CHART_AXIS_LINE}
               unit="d"
@@ -90,8 +92,8 @@ export function ProcurementDurationChart({ packages }: ProcurementDurationChartP
             <YAxis
               type="category"
               dataKey="stage"
-              width={100}
-              tick={CHART_AXIS_TICK}
+              width={cr.yAxisWidth}
+              tick={cr.axisTick}
               axisLine={CHART_AXIS_LINE}
               tickLine={CHART_AXIS_LINE}
             />

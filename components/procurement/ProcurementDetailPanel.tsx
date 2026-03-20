@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import {
   Package, MessageSquare, Send, FileText, Upload, Download,
-  ArrowRight, CheckCircle2, Trash2, Loader2,
+  ArrowRight, Trash2, Loader2,
 } from 'lucide-react';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
 import { SlidePanel } from '@/components/layout/SlidePanel';
@@ -45,10 +45,8 @@ interface ProcurementDetailPanelProps {
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-function getNextStage(current: ProcurementStage): ProcurementStage | null {
-  const idx = PROCUREMENT_STAGES.indexOf(current);
-  if (idx < 0 || idx >= PROCUREMENT_STAGES.length - 1) return null;
-  return PROCUREMENT_STAGES[idx + 1];
+function getAvailableStages(current: ProcurementStage): ProcurementStage[] {
+  return PROCUREMENT_STAGES.filter((s) => s !== current);
 }
 
 // ── Component ────────────────────────────────────────────────────────────
@@ -65,6 +63,7 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
 
   // Advance stage state
   const [showAdvanceForm, setShowAdvanceForm] = useState(false);
+  const [selectedStage, setSelectedStage] = useState<ProcurementStage | null>(null);
   const [advanceNotes, setAdvanceNotes] = useState('');
   const [advancing, setAdvancing] = useState(false);
 
@@ -108,6 +107,7 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
       fetchPackage();
       setNoteText('');
       setShowAdvanceForm(false);
+      setSelectedStage(null);
       setAdvanceNotes('');
       setConfirmingDelete(false);
     }
@@ -123,13 +123,12 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
   const canModify = isDG || (isAgencyAdmin && isOwnAgency);
   const canAdvance = canModify;
   const canUploadDocs = canModify;
-  const nextStage = pkg ? getNextStage(pkg.current_stage) : null;
-  const isComplete = pkg?.current_stage === 'awarded';
+  const availableStages = pkg ? getAvailableStages(pkg.current_stage) : [];
 
   // ── Handlers ───────────────────────────────────────────────────────────
 
   const handleAdvanceStage = async () => {
-    if (!pkg || !nextStage) return;
+    if (!pkg || !selectedStage) return;
     setAdvancing(true);
     try {
       const res = await fetch('/api/procurement/advance', {
@@ -137,17 +136,18 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           packageId: pkg.id,
-          newStage: nextStage,
+          newStage: selectedStage,
           notes: advanceNotes.trim() || undefined,
         }),
       });
       if (!res.ok) {
         const data = await res.json();
-        toast.error(data.error || 'Failed to advance stage');
+        toast.error(data.error || 'Failed to change stage');
         return;
       }
-      toast.success(`Moved to ${STAGE_CONFIG[nextStage].label}`);
+      toast.success(`Moved to ${STAGE_CONFIG[selectedStage].label}`);
       setShowAdvanceForm(false);
+      setSelectedStage(null);
       setAdvanceNotes('');
       fetchPackage();
     } catch {
@@ -291,63 +291,72 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
           </div>
 
           {/* ── 2. Advance stage action ─────────────────────────────────── */}
-          {canAdvance && (
+          {canAdvance && availableStages.length > 0 && (
             <>
               <div className="border-t border-navy-800" />
               <div>
-                {isComplete ? (
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                    <span className="text-sm font-medium text-emerald-400">Procurement Complete</span>
-                  </div>
-                ) : nextStage ? (
-                  <div className="space-y-3">
-                    {!showAdvanceForm ? (
-                      <button
-                        onClick={() => setShowAdvanceForm(true)}
-                        className="btn-gold px-4 py-2 text-sm"
+                <div className="space-y-3">
+                  {!showAdvanceForm ? (
+                    <button
+                      onClick={() => setShowAdvanceForm(true)}
+                      className="btn-gold px-4 py-2 text-sm"
+                    >
+                      Change Stage
+                    </button>
+                  ) : (
+                    <div className="space-y-3 p-3 rounded-lg border border-navy-800 bg-navy-900/50">
+                      <label className="block text-xs text-slate-400 mb-1">Move to</label>
+                      <select
+                        value={selectedStage ?? ''}
+                        onChange={(e) => setSelectedStage((e.target.value || null) as ProcurementStage | null)}
+                        className="w-full px-3 py-2.5 bg-navy-900 border border-navy-800 rounded-lg text-white text-sm focus:outline-none focus:border-gold-500"
                       >
-                        Move to {STAGE_CONFIG[nextStage].label}
-                      </button>
-                    ) : (
-                      <div className="space-y-3 p-3 rounded-lg border border-navy-800 bg-navy-900/50">
+                        <option value="">Select stage</option>
+                        {availableStages.map((stage) => (
+                          <option key={stage} value={stage}>
+                            {STAGE_CONFIG[stage].label}
+                          </option>
+                        ))}
+                      </select>
+                      {selectedStage && (
                         <p className="text-xs text-slate-400">
-                          Advancing from <ProcurementStageBadge stage={pkg.current_stage} size="sm" /> to <ProcurementStageBadge stage={nextStage} size="sm" />
+                          From <ProcurementStageBadge stage={pkg.current_stage} size="sm" /> to <ProcurementStageBadge stage={selectedStage} size="sm" />
                         </p>
-                        <textarea
-                          value={advanceNotes}
-                          onChange={(e) => setAdvanceNotes(e.target.value)}
-                          placeholder="Optional notes about this stage change..."
-                          rows={2}
-                          className="w-full px-3 py-2 bg-navy-900 border border-navy-800 rounded-lg text-white placeholder-navy-600 focus:outline-none focus:border-gold-500 text-sm resize-none"
-                        />
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => {
-                              setShowAdvanceForm(false);
-                              setAdvanceNotes('');
-                            }}
-                            className="px-4 py-2 text-sm text-slate-400 border border-navy-800 rounded-lg hover:border-navy-700 transition-colors"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={handleAdvanceStage}
-                            disabled={advancing}
-                            className="btn-gold px-4 py-2 text-sm flex items-center gap-2"
-                          >
-                            {advancing ? (
-                              <Spinner size="sm" className="border-navy-950 border-t-transparent" />
-                            ) : (
-                              <ArrowRight className="h-3.5 w-3.5" />
-                            )}
-                            {advancing ? 'Moving...' : 'Confirm'}
-                          </button>
-                        </div>
+                      )}
+                      <textarea
+                        value={advanceNotes}
+                        onChange={(e) => setAdvanceNotes(e.target.value)}
+                        placeholder="Optional notes about this stage change..."
+                        rows={2}
+                        className="w-full px-3 py-2 bg-navy-900 border border-navy-800 rounded-lg text-white placeholder-navy-600 focus:outline-none focus:border-gold-500 text-sm resize-none"
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setShowAdvanceForm(false);
+                            setSelectedStage(null);
+                            setAdvanceNotes('');
+                          }}
+                          className="px-4 py-2 text-sm text-slate-400 border border-navy-800 rounded-lg hover:border-navy-700 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleAdvanceStage}
+                          disabled={advancing || !selectedStage}
+                          className="btn-gold px-4 py-2 text-sm flex items-center gap-2"
+                        >
+                          {advancing ? (
+                            <Spinner size="sm" className="border-navy-950 border-t-transparent" />
+                          ) : (
+                            <ArrowRight className="h-3.5 w-3.5" />
+                          )}
+                          {advancing ? 'Moving...' : 'Confirm'}
+                        </button>
                       </div>
-                    )}
-                  </div>
-                ) : null}
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}
