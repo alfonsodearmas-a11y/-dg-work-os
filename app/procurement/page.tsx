@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { ArrowLeft, ShoppingCart, LayoutDashboard, BarChart3, Plus, Database, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, LayoutDashboard, BarChart3, Plus, Upload, Database, Trash2, Loader2 } from 'lucide-react';
 import { Tabs, type Tab } from '@/components/ui/Tabs';
 import { ProcurementKanban } from '@/components/procurement/ProcurementKanban';
 import { ProcurementAnalytics } from '@/components/procurement/ProcurementAnalytics';
 import { ProcurementNewPackageForm } from '@/components/procurement/ProcurementNewPackageForm';
+import { BulkUploadModal } from '@/components/procurement/BulkUploadModal';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { useToast } from '@/components/ui/Toast';
 
@@ -21,6 +22,7 @@ export default function ProcurementPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('pipeline');
   const [showNewForm, setShowNewForm] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [demoLoading, setDemoLoading] = useState<'seed' | 'erase' | null>(null);
 
@@ -90,13 +92,22 @@ export default function ProcurementPage() {
             </>
           )}
           {canCreate && (
-            <button
-              onClick={() => setShowNewForm(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-gold-500 text-navy-950 hover:bg-[#e5c348] transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              New Package
-            </button>
+            <>
+              <button
+                onClick={() => setShowBulkUpload(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-navy-800 text-navy-600 hover:text-gold-500 hover:border-gold-500/30 transition-colors"
+              >
+                <Upload className="h-4 w-4" />
+                <span className="hidden sm:inline">Bulk Upload</span>
+              </button>
+              <button
+                onClick={() => setShowNewForm(true)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-gold-500 text-navy-950 hover:bg-[#e5c348] transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                New Package
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -114,6 +125,13 @@ export default function ProcurementPage() {
         isOpen={showNewForm}
         onClose={() => setShowNewForm(false)}
         onCreated={() => setRefreshTrigger((t) => t + 1)}
+      />
+
+      {/* Bulk upload modal */}
+      <BulkUploadModal
+        isOpen={showBulkUpload}
+        onClose={() => setShowBulkUpload(false)}
+        onImported={() => setRefreshTrigger((t) => t + 1)}
       />
     </div>
   );
