@@ -129,6 +129,18 @@ export function OversightFilterPanel({
     }
   }, [showFilters, agencies, statuses, regions, healths, measureHeight]);
 
+  // Dropdowns are clipped by overflow-hidden during the expand animation;
+  // remove the constraint once the animation finishes so they can extend beyond.
+  const EXPAND_DURATION_MS = 300; // must match duration-300 on the animated container
+  const [overflowVisible, setOverflowVisible] = useState(false);
+  useEffect(() => {
+    if (showFilters) {
+      const timer = setTimeout(() => setOverflowVisible(true), EXPAND_DURATION_MS);
+      return () => clearTimeout(timer);
+    }
+    setOverflowVisible(false);
+  }, [showFilters]);
+
   return (
     <div className="card-premium">
       <button onClick={onToggleFilters} className="w-full px-4 py-3 flex items-center justify-between hover:bg-navy-900/40 transition-colors">
@@ -142,7 +154,7 @@ export function OversightFilterPanel({
         <ChevronDown className={`h-4 w-4 text-navy-600 transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`} />
       </button>
       <div
-        className="overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out"
+        className={`${overflowVisible ? '' : 'overflow-hidden'} transition-[max-height,opacity] duration-300 ease-in-out`}
         style={{
           maxHeight: showFilters ? `${contentHeight}px` : '0px',
           opacity: showFilters ? 1 : 0,

@@ -15,7 +15,7 @@ import {
 import { Badge } from '@/components/ui/Badge';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { fmtCurrency as _fmtCurrency, fmtDate } from '@/lib/format';
-import { PROJECT_STATUS_VARIANTS as STATUS_STYLES, HEALTH_DOT } from '@/lib/constants/agencies';
+import { PROJECT_STATUS_VARIANTS as STATUS_STYLES, HEALTH_DOT, SELECTABLE_AGENCIES } from '@/lib/constants/agencies';
 import type { Project, PortfolioSummary, ProjectNote, ProjectSummaryData, SavedFilter, ViewMode } from '@/types/projects';
 import { MultiSelect } from '@/components/projects/MultiSelectDropdown';
 import { ProjectTable } from '@/components/projects/ProjectTable';
@@ -24,7 +24,7 @@ import { ProjectBulkActionBar } from '@/components/projects/ProjectBulkActionBar
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const AGENCY_OPTIONS = ['GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'MOPUA', 'HAS'];
+const AGENCY_OPTIONS = SELECTABLE_AGENCIES;
 
 
 const REGION_OPTIONS = [

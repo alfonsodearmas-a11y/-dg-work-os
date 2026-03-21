@@ -106,7 +106,7 @@ export type TabMode = 'alerts' | 'projects';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-export const AGENCY_OPTIONS = ['GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'MOPUA', 'HAS'];
+export { SELECTABLE_AGENCIES as AGENCY_OPTIONS } from '@/lib/constants/agencies';
 export const REGION_OPTIONS = [
   { value: '01', label: 'Region 1 – Barima-Waini' },
   { value: '02', label: 'Region 2 – Pomeroon-Supenaam' },
