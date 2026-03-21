@@ -24,6 +24,11 @@ import type { Role } from '@/lib/auth';
 // ---------------------------------------------------------------------------
 
 const LS_VIEW_KEY = 'dg-procurement-view';
+const BOARD_PAGE_SIZE = 10;
+
+const INITIAL_COLUMN_PAGES = Object.fromEntries(
+  PROCUREMENT_STAGES.map(s => [s, 1]),
+) as Record<ProcurementStage, number>;
 
 function canDrag(role: Role | undefined): boolean {
   return role === 'agency_admin' || role === 'dg';
@@ -64,6 +69,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
     }
     return 'board';
   });
+  const [columnPages, setColumnPages] = useState(INITIAL_COLUMN_PAGES);
 
   // ---------------------------------------------------------------------------
   // Data fetching
@@ -115,6 +121,11 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
     localStorage.setItem(LS_VIEW_KEY, viewMode);
   }, [viewMode]);
 
+  // Reset column pagination when filter or view mode changes
+  useEffect(() => {
+    setColumnPages(INITIAL_COLUMN_PAGES);
+  }, [agencyFilter, viewMode]);
+
   // ---------------------------------------------------------------------------
   // Filtered + grouped packages
   // ---------------------------------------------------------------------------
@@ -143,6 +154,20 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
     }
     return grouped;
   }, [filteredPackages]);
+
+  // Per-column visible slices for board pagination
+  const visibleByStage = useMemo(() => {
+    const result = {} as Record<ProcurementStage, ProcurementPackage[]>;
+    for (const stage of PROCUREMENT_STAGES) {
+      const all = packagesByStage[stage];
+      result[stage] = all.slice(0, columnPages[stage] * BOARD_PAGE_SIZE);
+    }
+    return result;
+  }, [packagesByStage, columnPages]);
+
+  const handleLoadMore = useCallback((stage: ProcurementStage) => {
+    setColumnPages(prev => ({ ...prev, [stage]: prev[stage] + 1 }));
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Drag and drop
@@ -393,7 +418,9 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
           {PROCUREMENT_STAGES.map((stage) => {
             const config = STAGE_CONFIG[stage];
             const pkgs = packagesByStage[stage];
+            const visiblePkgs = visibleByStage[stage];
             const isExpanded = mobileTab === stage;
+            const stageHasMore = visiblePkgs.length < pkgs.length;
             return (
               <div key={stage}>
                 <button
@@ -428,15 +455,26 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
                         No tenders
                       </div>
                     ) : (
-                      pkgs.map((pkg) => (
-                        <ProcurementCard
-                          key={pkg.id}
-                          pkg={pkg}
-                          onClick={() => setSelectedPackageId(pkg.id)}
-                          canDrag={false}
-                          isMobile
-                        />
-                      ))
+                      <>
+                        {visiblePkgs.map((pkg) => (
+                          <ProcurementCard
+                            key={pkg.id}
+                            pkg={pkg}
+                            onClick={() => setSelectedPackageId(pkg.id)}
+                            canDrag={false}
+                            isMobile
+                          />
+                        ))}
+                        {stageHasMore && (
+                          <button
+                            onClick={() => handleLoadMore(stage)}
+                            className="w-full py-2.5 text-xs font-medium text-navy-600 hover:text-gold-500 transition-colors rounded-lg hover:bg-navy-900/50"
+                            style={{ minHeight: 44, touchAction: 'manipulation' }}
+                          >
+                            Show more · {pkgs.length - visiblePkgs.length} remaining
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
@@ -451,7 +489,10 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
             <div key={stage} className="flex-1 min-w-[240px] max-w-[280px]">
               <ProcurementColumn
                 stage={stage}
-                packages={packagesByStage[stage]}
+                packages={visibleByStage[stage]}
+                totalCount={packagesByStage[stage].length}
+                hasMore={visibleByStage[stage].length < packagesByStage[stage].length}
+                onLoadMore={() => handleLoadMore(stage)}
                 draggingId={draggingId}
                 isDraggable={isDraggable}
                 userRole={userRole}
@@ -488,6 +529,9 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
 interface ProcurementColumnProps {
   stage: ProcurementStage;
   packages: ProcurementPackage[];
+  totalCount: number;
+  hasMore: boolean;
+  onLoadMore: () => void;
   draggingId: string | null;
   isDraggable: boolean;
   userRole: Role | undefined;
@@ -500,6 +544,9 @@ interface ProcurementColumnProps {
 function ProcurementColumn({
   stage,
   packages: pkgs,
+  totalCount,
+  hasMore,
+  onLoadMore,
   draggingId,
   isDraggable,
   userRole,
@@ -546,7 +593,7 @@ function ProcurementColumn({
             color: config.color,
           }}
         >
-          {pkgs.length}
+          {totalCount}
         </span>
       </div>
 
@@ -581,6 +628,15 @@ function ProcurementColumn({
           <div className="flex items-center justify-center h-24 text-navy-600 text-sm">
             No tenders
           </div>
+        )}
+
+        {hasMore && (
+          <button
+            onClick={onLoadMore}
+            className="w-full mt-1 py-2 text-xs font-medium text-navy-600 hover:text-gold-500 transition-colors rounded-lg hover:bg-navy-900/50"
+          >
+            Show more · {totalCount - pkgs.length} remaining
+          </button>
         )}
       </div>
     </div>
