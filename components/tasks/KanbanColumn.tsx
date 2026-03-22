@@ -157,7 +157,7 @@ export function KanbanColumn({
         )}
 
         {tasks.length === 0 && (
-          <div className="flex items-center justify-center h-24 text-navy-600 text-sm">
+          <div className="flex items-center justify-center h-24 text-white/30 text-sm">
             No tasks
           </div>
         )}

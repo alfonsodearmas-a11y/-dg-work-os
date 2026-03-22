@@ -13,6 +13,7 @@ import { AccessControlPanel } from '@/components/admin/AccessControlPanel';
 import { ActivityLogPanel } from '@/components/admin/ActivityLogPanel';
 import { usePermissions } from '@/hooks/usePeople';
 import { Spinner } from '@/components/ui/Spinner';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { ROLE_LABELS, ROLE_COLORS, ROLE_OPTIONS, MINISTRY_ROLES } from '@/lib/people-types';
 
@@ -662,10 +663,29 @@ export default function PeoplePage() {
                 })}
                 {sorted.length === 0 && (
                   <tr>
-                    <td colSpan={isDG ? 7 : 6} className="px-4 py-12 text-center text-navy-600">
-                      {baseList.length === 0
-                        ? tab === 'archived' ? 'No archived users.' : 'No users yet.'
-                        : 'No users match your filters.'}
+                    <td colSpan={isDG ? 7 : 6} className="px-4 py-4">
+                      {baseList.length === 0 && !searchQuery && !hasActiveFilters ? (
+                        <EmptyState
+                          icon={<Users className="h-12 w-12" />}
+                          title="No team members yet"
+                          description="Invite your first team member to get started."
+                          action={isDG ? (
+                            <button
+                              onClick={() => setShowInvite(true)}
+                              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gold-500/20 text-gold-500 hover:bg-gold-500/30 transition-colors text-sm font-medium"
+                            >
+                              <UserPlus className="h-4 w-4" />
+                              Invite User
+                            </button>
+                          ) : undefined}
+                        />
+                      ) : (
+                        <p className="text-navy-600 text-center py-8">
+                          {baseList.length === 0
+                            ? tab === 'archived' ? 'No archived users.' : 'No users yet.'
+                            : 'No users match your filters.'}
+                        </p>
+                      )}
                     </td>
                   </tr>
                 )}

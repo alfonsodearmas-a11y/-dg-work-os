@@ -5,12 +5,13 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import {
   Eye, RefreshCw, AlertTriangle,
-  Building2, ChevronDown,
+  Building2, ChevronDown, BarChart3,
   Filter, X, Lightbulb,
   List, GanttChart,
   Download, UserPlus,
 } from 'lucide-react';
 import { Tabs, type Tab } from '@/components/ui/Tabs';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import type { OversightData, Project, PortfolioSummary, SavedFilter, ViewMode, TabMode } from '@/components/oversight/types';
 import { HEALTH_OPTIONS } from '@/components/oversight/types';
@@ -296,6 +297,15 @@ export default function OversightPage() {
         </button>
       </div>
 
+      {/* Empty state when no project data at all */}
+      {!oversightLoading && !psipLoading && !oversightData?.summary?.overdue && !oversightData?.summary?.atRisk && !oversightData?.summary?.delayed && (psipSummary?.total_projects ?? 0) === 0 ? (
+        <EmptyState
+          icon={<BarChart3 className="h-12 w-12" />}
+          title="No projects tracked"
+          description="Project data syncs automatically from oversight.gov.gy."
+        />
+      ) : <>
+
       {/* Tab Switcher */}
       <Tabs
         tabs={[
@@ -432,6 +442,8 @@ export default function OversightPage() {
           )}
         </>
       )}
+
+      </>}
 
       {/* Bulk Action Bar */}
       {selectedIds.size > 0 && <BulkActionBar count={selectedIds.size} onUpdateHealth={h => handleBulkUpdate({ health: h })} onAssignOfficer={userId => handleBulkUpdate({ assigned_to: userId })} onExport={handleExport} onClear={() => setSelectedIds(new Set())} officers={officers} />}

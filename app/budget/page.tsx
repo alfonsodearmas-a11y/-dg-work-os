@@ -8,6 +8,7 @@ import { BudgetAskPanel } from '@/components/budget/BudgetAskPanel';
 import { BudgetAIBrief } from '@/components/budget/BudgetAIBrief';
 import { SearchResultsView } from '@/components/budget/SearchResultsView';
 import { SectorCard, SECTOR_ICONS } from '@/components/budget/SectorCard';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { SearchResults, SearchAllocation } from '@/components/budget/SearchResultsView';
 import type { Sector } from '@/components/budget/SectorCard';
 
@@ -189,6 +190,12 @@ export default function BudgetPage() {
                 ))}
               </div>
             </div>
+          ) : data && data.grand_total === 0 ? (
+            <EmptyState
+              icon={<DollarSign className="h-12 w-12" />}
+              title="No budget data available"
+              description="Budget allocations for 2026 have not been uploaded yet."
+            />
           ) : data ? (
             <>
               {/* Grand Total Card */}

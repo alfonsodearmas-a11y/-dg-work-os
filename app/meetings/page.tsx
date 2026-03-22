@@ -28,6 +28,7 @@ import {
   CalendarPlus,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { NewMeetingModal } from '@/components/meetings/NewMeetingModal';
 import { CreateEventModal } from '@/components/calendar/CreateEventModal';
 import {
@@ -1512,12 +1513,27 @@ export default function MeetingsPage() {
                 </button>
               </div>
             ) : filtered.length === 0 ? (
-              <div className="text-center py-8">
-                <BookOpen className="h-8 w-8 text-navy-600 mx-auto mb-2" />
-                <p className="text-slate-400 text-sm">
-                  {searchQuery ? 'No meetings match your search' : 'No meetings yet'}
-                </p>
-              </div>
+              meetings.length === 0 ? (
+                <EmptyState
+                  icon={<Mic className="h-12 w-12" />}
+                  title="No meetings recorded"
+                  description="Upload a meeting transcript to get started with AI-powered analysis."
+                  action={
+                    <button
+                      onClick={() => setShowNewModal(true)}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gold-500/20 text-gold-500 hover:bg-gold-500/30 transition-colors text-sm font-medium"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Upload Transcript
+                    </button>
+                  }
+                />
+              ) : (
+                <div className="text-center py-8">
+                  <BookOpen className="h-8 w-8 text-navy-600 mx-auto mb-2" />
+                  <p className="text-slate-400 text-sm">No meetings match your search</p>
+                </div>
+              )
             ) : (
               filtered.map((m) => {
                 const isSelected = selectedId === m.id;
