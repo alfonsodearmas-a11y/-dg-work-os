@@ -37,7 +37,7 @@ export async function GET(
 
   const enriched = (comments || []).map((c) => {
     const usersRaw = c.users as unknown;
-    const user = (Array.isArray(usersRaw) ? usersRaw[0] : usersRaw) as { name: string; role: string } | null;
+    const user = usersRaw ? (Array.isArray(usersRaw) ? usersRaw[0] : usersRaw) as { name: string; role: string } : null;
     return {
       id: c.id,
       task_id: c.task_id,
@@ -45,8 +45,8 @@ export async function GET(
       body: c.body,
       parent_id: c.parent_id,
       created_at: c.created_at,
-      user_name: user?.name || 'Unknown',
-      user_role: user?.role || '',
+      user_name: user?.name ?? 'Unknown User',
+      user_role: user?.role ?? 'unknown',
     };
   });
 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { requireRole } from '@/lib/auth-helpers';
+import { logger } from '@/lib/logger';
 
 const HIGHLIGHTS_PATH = path.join(process.cwd(), 'scraper', 'output', 'oversight-highlights-latest.json');
 
@@ -68,7 +69,13 @@ export async function GET() {
     }
 
     const raw = fs.readFileSync(HIGHLIGHTS_PATH, 'utf-8');
-    const data = JSON.parse(raw);
+    let data: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    try {
+      data = JSON.parse(raw);
+    } catch (parseErr) {
+      logger.error({ err: parseErr, path: HIGHLIGHTS_PATH }, '[oversight] Failed to parse highlights JSON');
+      data = { highlights: [] };
+    }
 
     // Normalize project arrays so the frontend gets consistent field names
     data.overdue = normalizeArray(data.overdue);

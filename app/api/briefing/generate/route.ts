@@ -33,9 +33,18 @@ interface BriefingResponse {
 
 async function fetchSourceData() {
   const [actionsRes, calendarRes, meetingsRes] = await Promise.all([
-    getActions().then(r => r.json()),
-    getCalendar().then(r => r.json()),
-    getMeetings().then(r => r.json()),
+    getActions().then(r => {
+      if (!r.ok) throw new Error(`Fetch failed: ${r.status} ${r.statusText}`);
+      return r.json();
+    }),
+    getCalendar().then(r => {
+      if (!r.ok) throw new Error(`Fetch failed: ${r.status} ${r.statusText}`);
+      return r.json();
+    }),
+    getMeetings().then(r => {
+      if (!r.ok) throw new Error(`Fetch failed: ${r.status} ${r.statusText}`);
+      return r.json();
+    }),
   ]);
   return { actions: actionsRes, calendar: calendarRes, meetings: meetingsRes };
 }

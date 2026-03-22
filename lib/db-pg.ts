@@ -11,10 +11,12 @@ const pool = new Pool({
   database: process.env.PG_DATABASE || 'ministry_dashboard',
   user: process.env.PG_USER || 'ministry_app',
   password: process.env.PG_PASSWORD,
-  max: 20,
+  // Serverless functions share a pooler — keep low to avoid exhausting Supabase connection limits
+  max: 5,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  // Enforce TLS certificate validation in production to prevent MITM attacks
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false,
 });
 
 pool.on('error', (err) => {
