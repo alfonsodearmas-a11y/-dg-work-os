@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { buildAnalysisContext } from '@/lib/budget-db';
 import { requireRole } from '@/lib/auth-helpers';
 import { parseBody } from '@/lib/api-utils';
+import { AI_MODEL_OPUS } from '@/lib/constants/ai-config';
 
 const ANALYSIS_SYSTEM_PROMPT = `You are the senior budget analyst preparing the Honourable Minister of Public Utilities & Aviation for parliamentary committee defence of Guyana's 2026 Budget Estimates.
 
@@ -79,7 +80,7 @@ ${context}`;
     async start(controller) {
       try {
         const response = await client.messages.create({
-          model: 'claude-opus-4-6',
+          model: AI_MODEL_OPUS,
           max_tokens: 16000,
           system: ANALYSIS_SYSTEM_PROMPT,
           messages: [{ role: 'user', content: userMsg }],

@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '@/lib/logger';
+import { AI_MODEL_HAIKU } from '@/lib/constants/ai-config';
 
 // ── History Compression ─────────────────────────────────────────────────────
 // When conversation exceeds 10 messages, summarize the first N-2 using Haiku
@@ -34,7 +35,7 @@ export async function compressHistory(
     const anthropic = new Anthropic({ apiKey });
 
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: AI_MODEL_HAIKU,
       max_tokens: 300,
       messages: [{
         role: 'user',

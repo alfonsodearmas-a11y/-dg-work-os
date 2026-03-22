@@ -7,9 +7,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { supabaseAdmin } from './db';
 import { logger } from '@/lib/logger';
+import { AI_MODEL } from '@/lib/constants/ai-config';
 
 const AI_CONFIG = {
-  MODEL: 'claude-sonnet-4-5-20250929',
+  MODEL: AI_MODEL,
   MAX_TOKENS: 4096,
   TEMPERATURE: 0.2,
 } as const;
@@ -409,22 +410,22 @@ export async function generateForecast(): Promise<GenerateForecastResponse> {
 
   try {
     // Stage 1: Assemble data
-    console.log('[gpl-multivariate] Assembling historical data...');
+    logger.info({ context: 'gpl-multivariate' }, 'Assembling historical data');
     const historicalData = await assembleHistoricalData();
 
     if (historicalData.monthlyKPIs.length < 3) {
-      console.log('[gpl-multivariate] Insufficient historical data, using fallback');
+      logger.warn({ context: 'gpl-multivariate' }, 'Insufficient historical data, using fallback');
       return { success: true, forecast: generateFallbackForecast(historicalData) };
     }
 
     // Check for API key
     if (!process.env.ANTHROPIC_API_KEY) {
-      console.log('[gpl-multivariate] No API key, using fallback');
+      logger.warn({ context: 'gpl-multivariate' }, 'No API key, using fallback');
       return { success: true, forecast: generateFallbackForecast(historicalData) };
     }
 
     // Stage 2: Call Claude for analysis
-    console.log('[gpl-multivariate] Calling Claude for analysis...');
+    logger.info({ context: 'gpl-multivariate' }, 'Calling Claude for analysis');
     const prompt = buildForecastPrompt(historicalData);
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -452,7 +453,7 @@ export async function generateForecast(): Promise<GenerateForecastResponse> {
       }
     } catch (parseErr) {
       logger.error({ err: parseErr }, 'gpl-multivariate: failed to parse AI response');
-      console.log('[gpl-multivariate] Raw response:', responseText.slice(0, 500));
+      logger.info({ rawResponse: responseText.slice(0, 500), context: 'gpl-multivariate' }, 'Raw response on parse failure');
       return { success: true, forecast: generateFallbackForecast(historicalData) };
     }
 

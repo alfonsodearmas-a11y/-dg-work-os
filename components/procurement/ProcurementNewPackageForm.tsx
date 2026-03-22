@@ -188,7 +188,7 @@ export function ProcurementNewPackageForm({
         {/* Title */}
         <div>
           <label htmlFor="pkg-title" className="block text-xs text-slate-400 mb-1.5">
-            Title *
+            Title <span className="text-red-400 ml-0.5" aria-label="required">*</span>
           </label>
           <input
             id="pkg-title"
@@ -197,9 +197,11 @@ export function ProcurementNewPackageForm({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Supply of Distribution Transformers"
             required
+            aria-invalid={!!errors.title}
+            aria-describedby={errors.title ? 'pkg-title-error' : undefined}
             className="w-full px-3 py-2.5 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
           />
-          {errors.title && <p className="text-xs text-red-400 mt-1">{errors.title}</p>}
+          {errors.title && <p id="pkg-title-error" className="text-xs text-red-400 mt-1">{errors.title}</p>}
         </div>
 
         {/* NPTAB No. */}
@@ -235,13 +237,15 @@ export function ProcurementNewPackageForm({
         {/* Procurement Method */}
         <div>
           <label htmlFor="pkg-method" className="block text-xs text-slate-400 mb-1.5">
-            Procurement Method *
+            Procurement Method <span className="text-red-400 ml-0.5" aria-label="required">*</span>
           </label>
           <select
             id="pkg-method"
             value={procurementMethod}
             onChange={(e) => setProcurementMethod(e.target.value as ProcurementMethod | '')}
             required
+            aria-invalid={!!errors.procurementMethod}
+            aria-describedby={errors.procurementMethod ? 'pkg-method-error' : undefined}
             className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
           >
             <option value="">Select method</option>
@@ -252,7 +256,7 @@ export function ProcurementNewPackageForm({
             ))}
           </select>
           {errors.procurementMethod && (
-            <p className="text-xs text-red-400 mt-1">{errors.procurementMethod}</p>
+            <p id="pkg-method-error" className="text-xs text-red-400 mt-1">{errors.procurementMethod}</p>
           )}
         </div>
 
@@ -260,13 +264,15 @@ export function ProcurementNewPackageForm({
         {isDG && (
           <div>
             <label htmlFor="pkg-agency" className="block text-xs text-slate-400 mb-1.5">
-              Agency *
+              Agency <span className="text-red-400 ml-0.5" aria-label="required">*</span>
             </label>
             <select
               id="pkg-agency"
               value={agency}
               onChange={(e) => setAgency(e.target.value)}
               required
+              aria-invalid={!!errors.agency}
+              aria-describedby={errors.agency ? 'pkg-agency-error' : undefined}
               className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
             >
               <option value="">Select agency</option>
@@ -276,7 +282,7 @@ export function ProcurementNewPackageForm({
                 </option>
               ))}
             </select>
-            {errors.agency && <p className="text-xs text-red-400 mt-1">{errors.agency}</p>}
+            {errors.agency && <p id="pkg-agency-error" className="text-xs text-red-400 mt-1">{errors.agency}</p>}
           </div>
         )}
 

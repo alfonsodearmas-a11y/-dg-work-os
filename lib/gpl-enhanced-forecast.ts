@@ -9,9 +9,10 @@ import Anthropic from '@anthropic-ai/sdk';
 import { supabaseAdmin } from './db';
 import { createHash } from 'crypto';
 import { logger } from '@/lib/logger';
+import { AI_MODEL } from '@/lib/constants/ai-config';
 
 const AI_CONFIG = {
-  MODEL: 'claude-sonnet-4-5-20250929',
+  MODEL: AI_MODEL,
   MAX_TOKENS: 8192,
   TEMPERATURE: 0.2,
 } as const;
@@ -352,7 +353,7 @@ export async function getEnhancedForecast(forceRegenerate = false): Promise<{
     const prompt = buildEnhancedPrompt(data);
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    console.log(`[enhanced-forecast] Calling Claude with ${data.kpiRows.length} months of data...`);
+    logger.info({ months: data.kpiRows.length, context: 'enhanced-forecast' }, 'Calling Claude for forecast');
 
     const response = await anthropic.messages.create({
       model: AI_CONFIG.MODEL,
@@ -377,7 +378,7 @@ export async function getEnhancedForecast(forceRegenerate = false): Promise<{
       }
     } catch (parseErr: any) {
       logger.error({ err: parseErr }, 'enhanced-forecast: JSON parse error');
-      console.log('[enhanced-forecast] Raw (first 500):', responseText.slice(0, 500));
+      logger.info({ rawResponse: responseText.slice(0, 500), context: 'enhanced-forecast' }, 'Raw response on parse failure');
       return { success: false, error: 'Failed to parse AI response' };
     }
 
@@ -416,7 +417,7 @@ export async function getEnhancedForecast(forceRegenerate = false): Promise<{
       processingTime
     );
 
-    console.log(`[enhanced-forecast] Generated in ${processingTime}ms (${response.usage?.input_tokens}/${response.usage?.output_tokens} tokens)`);
+    logger.info({ processingTime, inputTokens: response.usage?.input_tokens, outputTokens: response.usage?.output_tokens, context: 'enhanced-forecast' }, 'Forecast generated');
 
     return { success: true, forecast, cached: false };
   } catch (err: any) {

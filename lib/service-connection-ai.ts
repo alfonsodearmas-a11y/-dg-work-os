@@ -4,8 +4,9 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import type { EfficiencyMetrics, ServiceConnection, AIInsight } from './service-connection-types';
 import { parseAIJson } from '@/lib/parse-utils';
+import { AI_MODEL } from '@/lib/constants/ai-config';
 
-const MODEL = 'claude-sonnet-4-5-20250929';
+const MODEL = AI_MODEL;
 const MAX_TOKENS = 8192;
 const TEMPERATURE = 0.3;
 

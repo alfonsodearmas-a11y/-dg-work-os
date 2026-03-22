@@ -9,6 +9,7 @@ import crypto from 'crypto';
 import { supabaseAdmin } from './db';
 import { logger } from '@/lib/logger';
 import { parseAIJson } from '@/lib/parse-utils';
+import { AI_MODEL } from '@/lib/constants/ai-config';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -57,7 +58,7 @@ export interface CJIAInsights {
 // ── Config ──────────────────────────────────────────────────────────────────
 
 const AI_CONFIG = {
-  MODEL: 'claude-sonnet-4-5-20250929',
+  MODEL: AI_MODEL,
   MAX_TOKENS: 8000,
   TEMPERATURE: 0.3,
 } as const;
@@ -199,14 +200,14 @@ export async function generateCJIAInsights(
   const startTime = Date.now();
 
   if (!process.env.ANTHROPIC_API_KEY) {
-    console.warn('[cjia-insights] ANTHROPIC_API_KEY not configured');
+    logger.warn('cjia-insights: ANTHROPIC_API_KEY not configured');
     return null;
   }
 
   // Assemble data
   const data = await assembleCJIAData(month);
   if (data.length === 0) {
-    console.warn('[cjia-insights] No data found for month:', month);
+    logger.warn({ month }, 'cjia-insights: no data found for month');
     return null;
   }
 
@@ -222,13 +223,13 @@ export async function generateCJIAInsights(
       .single();
 
     if (cached && cached.data_hash === dataHash) {
-      console.log('[cjia-insights] Returning cached insights for', month);
+      logger.info({ month }, 'cjia-insights: returning cached insights');
       return cached.insight_json as unknown as CJIAInsights;
     }
   }
 
   // Generate new insights with Claude Opus
-  console.log('[cjia-insights] Generating new insights for', month);
+  logger.info({ month }, 'cjia-insights: generating new insights');
 
   try {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -277,7 +278,7 @@ export async function generateCJIAInsights(
       logger.error({ err: upsertError }, 'cjia-insights: failed to cache insights');
     }
 
-    console.log(`[cjia-insights] Insights generated in ${processingTime}ms`);
+    logger.info({ processingTime }, 'cjia-insights: insights generated');
     return insights;
   } catch (err) {
     logger.error({ err }, 'cjia-insights: error generating insights');

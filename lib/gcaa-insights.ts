@@ -9,6 +9,7 @@ import crypto from 'crypto';
 import { supabaseAdmin } from './db';
 import { logger } from '@/lib/logger';
 import { parseAIJson } from '@/lib/parse-utils';
+import { AI_MODEL } from '@/lib/constants/ai-config';
 
 // -- Types -------------------------------------------------------------------
 
@@ -57,7 +58,7 @@ export interface GCAAInsights {
 // -- Config ------------------------------------------------------------------
 
 const AI_CONFIG = {
-  MODEL: 'claude-sonnet-4-5-20250929',
+  MODEL: AI_MODEL,
   MAX_TOKENS: 8000,
   TEMPERATURE: 0.3,
 } as const;
@@ -197,14 +198,14 @@ export async function generateGCAAInsights(
   const startTime = Date.now();
 
   if (!process.env.ANTHROPIC_API_KEY) {
-    console.warn('[gcaa-insights] ANTHROPIC_API_KEY not configured');
+    logger.warn('gcaa-insights: ANTHROPIC_API_KEY not configured');
     return null;
   }
 
   // Assemble data
   const data = await assembleGCAAData(month);
   if (data.length === 0) {
-    console.warn('[gcaa-insights] No data found for month:', month);
+    logger.warn({ month }, 'gcaa-insights: no data found for month');
     return null;
   }
 
@@ -220,13 +221,13 @@ export async function generateGCAAInsights(
       .single();
 
     if (cached && cached.data_hash === dataHash) {
-      console.log('[gcaa-insights] Returning cached insights for', month);
+      logger.info({ month }, 'gcaa-insights: returning cached insights');
       return cached.insight_json as unknown as GCAAInsights;
     }
   }
 
   // Generate new insights with Claude Opus
-  console.log('[gcaa-insights] Generating new insights for', month);
+  logger.info({ month }, 'gcaa-insights: generating new insights');
 
   try {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -275,7 +276,7 @@ export async function generateGCAAInsights(
       logger.error({ err: upsertError }, 'gcaa-insights: failed to cache insights');
     }
 
-    console.log(`[gcaa-insights] Insights generated in ${processingTime}ms`);
+    logger.info({ processingTime }, 'gcaa-insights: insights generated');
     return insights;
   } catch (err) {
     logger.error({ err }, 'gcaa-insights: error generating insights');

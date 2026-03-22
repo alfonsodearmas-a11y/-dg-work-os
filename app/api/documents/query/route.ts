@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 import { sanitizeSearchInput } from '@/lib/parse-utils';
+import { AI_MODEL_OPUS } from '@/lib/constants/ai-config';
 
 const anthropic = new Anthropic();
 
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     const response = await anthropic.messages.create({
-      model: 'claude-opus-4-20250514',
+      model: AI_MODEL_OPUS,
       max_tokens: 3000,
       messages: [
         {

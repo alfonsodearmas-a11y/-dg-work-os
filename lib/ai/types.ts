@@ -1,13 +1,15 @@
 // ── AI Cost Optimization — Shared Types ──────────────────────────────────────
 
+import { AI_MODEL, AI_MODEL_OPUS, AI_MODEL_HAIKU } from '@/lib/constants/ai-config';
+
 export type ModelTier = 'haiku' | 'sonnet' | 'opus';
 
 export type ContextLevel = 'minimal' | 'focused' | 'full';
 
 export const MODEL_IDS: Record<ModelTier, string> = {
-  haiku: 'claude-haiku-4-5-20251001',
-  sonnet: 'claude-sonnet-4-5-20250929',
-  opus: 'claude-opus-4-6',
+  haiku: AI_MODEL_HAIKU,
+  sonnet: AI_MODEL,
+  opus: AI_MODEL_OPUS,
 };
 
 export const MAX_TOKENS: Record<ModelTier, number> = {

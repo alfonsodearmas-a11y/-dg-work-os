@@ -300,7 +300,7 @@ export function Sidebar() {
           <div className="hidden md:block mt-auto pt-4 px-2">
             <button
               onClick={toggleCollapse}
-              className="sidebar-collapse-btn"
+              className="sidebar-collapse-btn min-h-[44px] min-w-[44px] flex items-center justify-center"
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               aria-expanded={!collapsed}
             >

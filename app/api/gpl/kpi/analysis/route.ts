@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
 import { withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+import { AI_MODEL } from '@/lib/constants/ai-config';
 
 // In-memory cache — invalidated when row count changes (new upload)
 let cachedAnalysis: { analysis: any; generatedAt: number; rowCount: number } | null = null;
@@ -119,7 +120,7 @@ Respond in JSON format:
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: AI_MODEL,
       max_tokens: 2048,
       messages: [{ role: 'user', content: prompt }],
     });

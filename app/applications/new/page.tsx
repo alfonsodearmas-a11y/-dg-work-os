@@ -102,7 +102,7 @@ export default function NewApplicationPage() {
 
       <form onSubmit={handleSubmit} className="card-premium p-6 space-y-5">
         <div>
-          <label htmlFor="app-name" className="block text-xs text-slate-400 mb-1.5">Applicant Name *</label>
+          <label htmlFor="app-name" className="block text-xs text-slate-400 mb-1.5">Applicant Name <span className="text-red-400 ml-0.5" aria-label="required">*</span></label>
           <input
             id="app-name"
             type="text"
@@ -115,7 +115,7 @@ export default function NewApplicationPage() {
         </div>
 
         <div>
-          <label htmlFor="app-type" className="block text-xs text-slate-400 mb-1.5">Application Type *</label>
+          <label htmlFor="app-type" className="block text-xs text-slate-400 mb-1.5">Application Type <span className="text-red-400 ml-0.5" aria-label="required">*</span></label>
           <select
             id="app-type"
             value={form.application_type}

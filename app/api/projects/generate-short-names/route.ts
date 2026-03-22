@@ -4,6 +4,7 @@ import { apiError } from '@/lib/api-utils';
 import { supabaseAdmin } from '@/lib/db';
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '@/lib/logger';
+import { AI_MODEL } from '@/lib/constants/ai-config';
 
 let client: Anthropic | null = null;
 function getClient(): Anthropic {
@@ -67,7 +68,7 @@ Projects:
 ${projectList}`;
 
       const response = await getClient().messages.create({
-        model: 'claude-sonnet-4-5-20250929',
+        model: AI_MODEL,
         max_tokens: 4096,
         temperature: 0.2,
         messages: [{ role: 'user', content: prompt }],

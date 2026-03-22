@@ -5,6 +5,7 @@ import { parseBody, apiError } from '@/lib/api-utils';
 import { getProjectById, getProjectNotes, getProjectSummary, upsertProjectSummary } from '@/lib/project-queries';
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '@/lib/logger';
+import { AI_MODEL } from '@/lib/constants/ai-config';
 
 const generateSummarySchema = z.object({
   force: z.boolean().optional(),
@@ -104,7 +105,7 @@ Respond ONLY with valid JSON matching this structure:
 }`;
 
     const response = await getClient().messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: AI_MODEL,
       max_tokens: 1024,
       temperature: 0.3,
       messages: [{ role: 'user', content: prompt }],

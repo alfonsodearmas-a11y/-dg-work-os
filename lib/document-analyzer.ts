@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { parseAIJson } from '@/lib/parse-utils';
+import { AI_MODEL_OPUS } from '@/lib/constants/ai-config';
 
 const anthropic = new Anthropic();
 
@@ -31,7 +32,7 @@ export async function analyzeDocument(
   checkRateLimit();
 
   const response = await anthropic.messages.create({
-    model: 'claude-opus-4-20250514',
+    model: AI_MODEL_OPUS,
     max_tokens: 4000,
     messages: [
       {

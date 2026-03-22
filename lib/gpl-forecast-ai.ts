@@ -7,6 +7,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { supabaseAdmin } from './db';
 import { logger } from '@/lib/logger';
+import { AI_MODEL } from '@/lib/constants/ai-config';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -140,7 +141,7 @@ interface FullAnalysisResult {
 // ── Config ─────────────────────────────────────────────────────────────────────
 
 const AI_CONFIG = {
-  MODEL: 'claude-sonnet-4-5-20250929',
+  MODEL: AI_MODEL,
   MAX_TOKENS: 6000,
   TEMPERATURE: 0.3,
 } as const;

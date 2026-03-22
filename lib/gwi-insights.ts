@@ -10,6 +10,7 @@ import { supabaseAdmin } from './db';
 import { logger } from '@/lib/logger';
 import { parseAIJson } from '@/lib/parse-utils';
 import { groupAndMerge, GWI_REPORT_COLUMNS } from '@/lib/gwi-report-merge';
+import { AI_MODEL_OPUS } from '@/lib/constants/ai-config';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -60,7 +61,7 @@ export interface GWIInsights {
 // ── Config ──────────────────────────────────────────────────────────────────
 
 const AI_CONFIG = {
-  MODEL: 'claude-opus-4-6',
+  MODEL: AI_MODEL_OPUS,
   MAX_TOKENS: 8000,
   TEMPERATURE: 0.3,
 } as const;

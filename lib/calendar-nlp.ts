@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { AI_MODEL } from '@/lib/constants/ai-config';
 
 export interface ParsedEvent {
   title: string;
@@ -19,7 +20,7 @@ export async function parseNaturalLanguageEvent(input: string): Promise<ParsedEv
   const dayOfWeek = now.toLocaleDateString('en-US', { weekday: 'long' });
 
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: AI_MODEL,
     max_tokens: 512,
     messages: [{
       role: 'user',

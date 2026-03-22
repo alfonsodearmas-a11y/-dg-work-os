@@ -91,36 +91,42 @@ export function InviteUserModal({ open, onClose, onSuccess }: InviteUserModalPro
 
         <div className="p-5 space-y-4">
           <div>
-            <label className="block text-xs font-medium text-navy-600 mb-1">Full Name</label>
+            <label className="block text-xs font-medium text-navy-600 mb-1">Full Name <span className="text-red-400 ml-0.5" aria-label="required">*</span></label>
             <input
               type="text"
               value={form.full_name}
               onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))}
               aria-label="Full name"
               aria-required="true"
+              aria-invalid={!!error && !form.full_name}
+              aria-describedby={error ? 'invite-error' : undefined}
               className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
               placeholder="John Smith"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-navy-600 mb-1">Email</label>
+            <label className="block text-xs font-medium text-navy-600 mb-1">Email <span className="text-red-400 ml-0.5" aria-label="required">*</span></label>
             <input
               type="email"
               value={form.email}
               onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
               aria-label="Email"
               aria-required="true"
+              aria-invalid={!!error && !form.email}
+              aria-describedby={error ? 'invite-error' : undefined}
               className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
               placeholder="ceo@agency.gov.gy"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-navy-600 mb-1">Agency</label>
+            <label className="block text-xs font-medium text-navy-600 mb-1">Agency <span className="text-red-400 ml-0.5" aria-label="required">*</span></label>
             <select
               value={form.agency}
               onChange={(e) => setForm(f => ({ ...f, agency: e.target.value }))}
               aria-label="Agency"
               aria-required="true"
+              aria-invalid={!!error && !form.agency}
+              aria-describedby={error ? 'invite-error' : undefined}
               className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
             >
               <option value="">Select agency...</option>
@@ -139,7 +145,7 @@ export function InviteUserModal({ open, onClose, onSuccess }: InviteUserModalPro
               {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
             </select>
           </div>
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p id="invite-error" className="text-sm text-red-400">{error}</p>}
         </div>
 
         <div className="px-5 py-4 border-t border-navy-800 flex justify-end gap-2">

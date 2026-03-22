@@ -5,8 +5,9 @@ import { GET as getActions } from '../actions/route';
 import { GET as getCalendar } from '../calendar/route';
 import { GET as getMeetings } from '../meetings/route';
 import { logger } from '@/lib/logger';
+import { AI_MODEL } from '@/lib/constants/ai-config';
 
-const MODEL = 'claude-sonnet-4-5-20250929';
+const MODEL = AI_MODEL;
 
 const SYSTEM_PROMPT = `You are the AI briefing assistant for the Director General of the Ministry of Public Utilities and Aviation, Guyana. You produce a concise, direct morning briefing. The DG oversees 7 agencies: GPL (power), GWI (water), CJIA (airport), GCAA (civil aviation), MARAD (maritime), HECI (hinterland electrification), and HAS (hinterland airstrips).
 

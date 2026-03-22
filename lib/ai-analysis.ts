@@ -1,8 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { parseAIJson } from '@/lib/parse-utils';
+import { AI_MODEL, AI_MODEL_HAIKU } from '@/lib/constants/ai-config';
 
 const CONFIG = {
-  MODEL: 'claude-sonnet-4-5-20250929',
+  MODEL: AI_MODEL,
   MAX_TOKENS: 4096,
   TEMPERATURE: 0.3,
 };
@@ -275,7 +276,7 @@ export async function healthCheck() {
   try {
     if (!process.env.ANTHROPIC_API_KEY) return { healthy: false, configured: false, error: 'ANTHROPIC_API_KEY not set' };
     const client = getClient();
-    await client.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 10, messages: [{ role: 'user', content: 'Respond with "OK"' }] });
+    await client.messages.create({ model: AI_MODEL_HAIKU, max_tokens: 10, messages: [{ role: 'user', content: 'Respond with "OK"' }] });
     return { healthy: true, configured: true, model: CONFIG.MODEL };
   } catch (error: any) {
     return { healthy: false, configured: true, error: error.message };

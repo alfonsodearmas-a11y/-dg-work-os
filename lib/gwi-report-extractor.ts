@@ -7,8 +7,9 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { parseAIJson } from '@/lib/parse-utils';
+import { AI_MODEL_OPUS } from '@/lib/constants/ai-config';
 
-const MODEL = 'claude-opus-4-6';
+const MODEL = AI_MODEL_OPUS;
 const MAX_TOKENS = 4096;
 const TEMPERATURE = 0.2;
 

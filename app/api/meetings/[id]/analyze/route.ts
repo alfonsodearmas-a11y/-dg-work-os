@@ -3,6 +3,7 @@ import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '@/lib/logger';
+import { AI_MODEL_OPUS } from '@/lib/constants/ai-config';
 
 export const maxDuration = 60;
 
@@ -115,7 +116,7 @@ export const POST = withErrorHandler(async (
 
     // Call Claude
     const completion = await getAnthropic().messages.create({
-      model: 'claude-opus-4-5-20250514',
+      model: AI_MODEL_OPUS,
       max_tokens: 4096,
       system: `You are an executive assistant for Alfonso De Armas, Director General of Guyana's Ministry of Public Utilities and Aviation, overseeing GPL, GWI, CJIA, GCAA, MARAD, HECI and Hinterland Airstrips. Analyze the transcript and return ONLY valid JSON:
 {

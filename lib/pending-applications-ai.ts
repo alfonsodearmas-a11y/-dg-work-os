@@ -1,9 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { GPLAnalysis, GWIAnalysis, PendingApplication } from './pending-applications-types';
 import { parseAIJson } from '@/lib/parse-utils';
+import { AI_MODEL } from '@/lib/constants/ai-config';
 
 const CONFIG = {
-  MODEL: 'claude-sonnet-4-5-20250929',
+  MODEL: AI_MODEL,
   MAX_TOKENS: 8192,
   TEMPERATURE: 0.3,
 };

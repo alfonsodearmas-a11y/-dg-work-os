@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { supabaseAdmin } from './db';
+import { AI_MODEL_OPUS } from '@/lib/constants/ai-config';
 
 const anthropic = new Anthropic();
 
@@ -26,7 +27,7 @@ export async function askDocument(
   const fullText = chunks?.map(c => c.content).join('\n\n') || '';
 
   const response = await anthropic.messages.create({
-    model: 'claude-opus-4-20250514',
+    model: AI_MODEL_OPUS,
     max_tokens: 2000,
     messages: [
       {
