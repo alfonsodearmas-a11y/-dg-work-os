@@ -10,6 +10,8 @@ import {
   Clock,
   Plus,
   Sparkles,
+  FileText,
+  ChevronRight,
 } from 'lucide-react';
 import { RefreshButton } from './RefreshButton';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
@@ -213,6 +215,30 @@ export function MissionControlView({ data, briefing, userName }: Props) {
                 );
               })}
             </div>
+
+            {/* Open Applications */}
+            {(data.gplPendingApplications > 0 || data.gwiPendingApplications > 0) && (
+              <Link
+                href="/applications"
+                className="block rounded-xl border border-gold-500/20 bg-gradient-to-br from-[#1a2744] to-[#0f1d35] p-4 hover:border-gold-500/40 transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-gold-500/15 text-gold-500 shrink-0">
+                    <FileText size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-white">Open Applications</p>
+                    <p className="text-xs text-navy-600 mt-0.5">
+                      {[
+                        data.gplPendingApplications > 0 && `GPL: ${data.gplPendingApplications} pending`,
+                        data.gwiPendingApplications > 0 && `GWI: ${data.gwiPendingApplications} pending`,
+                      ].filter(Boolean).join(' · ')}
+                    </p>
+                  </div>
+                  <ChevronRight size={16} className="text-navy-600 group-hover:text-gold-500 transition-colors shrink-0" />
+                </div>
+              </Link>
+            )}
           </>
         )}
 

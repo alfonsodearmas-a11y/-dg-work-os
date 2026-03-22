@@ -25,7 +25,7 @@ import {
   CalendarDays,
   ChevronsLeft,
 } from 'lucide-react';
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { signOut } from 'next-auth/react';
 import { useSidebar } from './SidebarContext';
@@ -108,6 +108,24 @@ export function Sidebar() {
   const { mobileOpen, setMobileOpen, collapsed, toggleCollapse } = useSidebar();
   const { canAccess } = useModuleAccess();
   const { tooltip, onEnter, onLeave } = useTooltip();
+
+  // Overdue task count for badge
+  const [overdueCount, setOverdueCount] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchOverdue() {
+      try {
+        const res = await fetch('/api/tasks/overdue-count');
+        if (res.ok && !cancelled) {
+          const { count } = await res.json();
+          setOverdueCount(count ?? 0);
+        }
+      } catch { /* sidebar badge is supplementary */ }
+    }
+    fetchOverdue();
+    const interval = setInterval(fetchOverdue, 60_000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
 
   // Use effective user for rendering decisions
   const userRole = effectiveUser.role;
@@ -204,6 +222,7 @@ export function Sidebar() {
           {filteredMainNav.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
+            const showOverdueBadge = item.href === '/tasks' && overdueCount > 0;
             return (
               <Link
                 key={item.href}
@@ -214,9 +233,19 @@ export function Sidebar() {
                 onMouseEnter={collapsed ? (e) => onEnter(item.label, e.currentTarget) : undefined}
                 onMouseLeave={collapsed ? onLeave : undefined}
               >
-                <Icon className={active ? 'text-gold-500' : ''} aria-hidden="true" />
+                <span className="relative">
+                  <Icon className={active ? 'text-gold-500' : ''} aria-hidden="true" />
+                  {collapsed && showOverdueBadge && (
+                    <span className="absolute -top-1 -right-1.5 h-2.5 w-2.5 rounded-full bg-red-500 animate-scale-in" />
+                  )}
+                </span>
                 {!collapsed && <span className="sidebar-label">{item.label}</span>}
-                {active && !collapsed && <ChevronRight className="ml-auto h-4 w-4" aria-hidden="true" />}
+                {!collapsed && showOverdueBadge && (
+                  <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500/90 px-1.5 text-[11px] font-semibold text-white animate-scale-in">
+                    {overdueCount > 99 ? '99+' : overdueCount}
+                  </span>
+                )}
+                {active && !collapsed && !showOverdueBadge && <ChevronRight className="ml-auto h-4 w-4" aria-hidden="true" />}
               </Link>
             );
           })}

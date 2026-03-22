@@ -112,12 +112,15 @@ export function ActivityPanel() {
       {rightCollapsed && (
         <button
           onClick={toggleRightCollapse}
-          className="activity-panel-tab"
+          className="activity-panel-tab relative"
           aria-label="Open activity panel"
         >
           <PanelRightOpen size={16} />
           {taskCount > 0 && (
             <span className="activity-panel-tab-badge">{taskCount}</span>
+          )}
+          {notifications.length > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 animate-scale-in" />
           )}
         </button>
       )}

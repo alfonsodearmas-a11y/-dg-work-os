@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Sparkles,
   ArrowUpRight,
+  ListTodo,
   Mic,
   XCircle,
   Trash2,
@@ -120,6 +121,10 @@ export default function MeetingsPage() {
   const [knownAssignees, setKnownAssignees] = useState<string[]>([]);
   const [reviewToast, setReviewToast] = useState<string | null>(null);
 
+  // Create-task-from-action state
+  const [creatingTaskId, setCreatingTaskId] = useState<string | null>(null);
+  const [actionToast, setActionToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
   // Notes
   const [notesText, setNotesText] = useState('');
   const [notesSaved, setNotesSaved] = useState(true);
@@ -134,6 +139,13 @@ export default function MeetingsPage() {
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
   }, [editingTranscript, notesSaved]);
+
+  // Auto-dismiss action toast
+  useEffect(() => {
+    if (!actionToast) return;
+    const t = setTimeout(() => setActionToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [actionToast]);
 
   // Polling ref
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -423,43 +435,35 @@ export default function MeetingsPage() {
   }
 
   async function handlePushToTask(action: MeetingAction) {
+    if (!selectedId || creatingTaskId) return;
+    setCreatingTaskId(action.id);
+    setActionToast(null);
     try {
-      const res = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: action.task,
-          description: `From meeting: ${selectedMeeting?.title}`,
-          due_date: action.due_date || null,
-          priority: 'medium',
-          role: 'Meeting Action Item',
-          source_meeting_id: selectedId,
-        }),
-      });
-      if (!res.ok) throw new Error('Failed to create task');
+      const res = await fetch(
+        `/api/meetings/${selectedId}/actions/${action.id}/create-task`,
+        { method: 'POST' }
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || 'Failed to create task');
+      }
       const { task } = await res.json();
 
-      // Link task_id back to the action
-      if (task?.id && selectedId) {
-        await fetch(`/api/meetings/${selectedId}/actions/${action.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ task_id: task.id }),
-        });
-        setSelectedMeeting((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            meeting_actions: prev.meeting_actions.map((a) =>
-              a.id === action.id ? { ...a, task_id: task.id } : a
-            ),
-          };
-        });
-      }
+      setSelectedMeeting((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          meeting_actions: prev.meeting_actions.map((a) =>
+            a.id === action.id ? { ...a, task_id: task.id } : a
+          ),
+        };
+      });
 
-      await handleToggleAction(action.id);
+      setActionToast({ type: 'success', message: 'Task created and linked' });
     } catch (err) {
-      console.error('Push to task failed:', err);
+      setActionToast({ type: 'error', message: err instanceof Error ? err.message : 'Failed to create task' });
+    } finally {
+      setCreatingTaskId(null);
     }
   }
 
@@ -1236,13 +1240,21 @@ export default function MeetingsPage() {
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>
-                  {!a.task_id && (
+                  {a.task_id ? (
+                    <span className="flex items-center gap-1 px-2 py-1 text-[10px] text-emerald-400 ml-1" title="Linked to task">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span className="hidden sm:inline">Linked</span>
+                    </span>
+                  ) : (
                     <button
                       onClick={() => handlePushToTask(a)}
-                      className="btn-navy flex items-center gap-1 px-2 py-1 text-[10px] opacity-70 hover:opacity-100 transition-opacity ml-1"
-                      title="Push to Task Board"
+                      disabled={creatingTaskId === a.id}
+                      className="btn-navy flex items-center gap-1 px-2 py-1 text-[10px] opacity-70 hover:opacity-100 hover:text-[var(--gold-500)] transition-all ml-1 disabled:opacity-50"
+                      title="Create task from action"
                     >
-                      <ArrowUpRight className="h-3 w-3" />
+                      {creatingTaskId === a.id
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <ListTodo className="h-3 w-3" />}
                       <span className="hidden sm:inline">Task</span>
                     </button>
                   )}
@@ -1936,6 +1948,22 @@ export default function MeetingsPage() {
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-sm font-medium shadow-lg backdrop-blur-sm flex items-center gap-2">
           <CheckCircle2 className="h-4 w-4" />
           {reviewToast}
+        </div>
+      )}
+
+      {/* Action-to-task toast */}
+      {actionToast && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg backdrop-blur-sm flex items-center gap-2 ${
+            actionToast.type === 'success'
+              ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
+              : 'bg-red-500/15 border border-red-500/30 text-red-300'
+          }`}
+        >
+          {actionToast.type === 'success'
+            ? <CheckCircle2 className="h-4 w-4" />
+            : <AlertCircle className="h-4 w-4" />}
+          {actionToast.message}
         </div>
       )}
     </div>
