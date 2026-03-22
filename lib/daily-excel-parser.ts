@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { parseExcelDate } from '@/lib/parse-utils';
 import { GY_TIMEZONE_OFFSET } from '@/lib/constants/config';
+import type { MetricRow } from '@/lib/types/metrics';
 
 const CONFIG = {
   METADATA_COLUMNS: ['A', 'B', 'C', 'D', 'E', 'F'],
@@ -39,7 +40,7 @@ export function getYesterdayGuyana(): string {
 }
 
 
-function parseCellValue(cell: any) {
+function parseCellValue(cell: XLSX.CellObject | undefined) {
   if (!cell) return { raw: null, numeric: null, type: 'empty', error: null };
   if (cell.t === 'e') {
     const errorVal = cell.w || cell.v || 'ERROR';
@@ -82,7 +83,7 @@ function getCell(sheet: XLSX.WorkSheet, col: string, row: number) {
   return sheet[`${col}${row}`];
 }
 
-function getCellValue(sheet: XLSX.WorkSheet, col: string, row: number): any {
+function getCellValue(sheet: XLSX.WorkSheet, col: string, row: number): unknown {
   const cell = getCell(sheet, col, row);
   return cell ? (cell.v !== undefined ? cell.v : cell.w) : null;
 }
@@ -123,28 +124,39 @@ function findYesterdayColumn(sheet: XLSX.WorkSheet) {
   return { column: null, date: null, exactMatch: false, error: 'No date columns found in row 4', scannedColumns: 0 };
 }
 
+interface RowMetadata {
+  row: number;
+  metric_name: string | null;
+  category: string | null;
+  subcategory: string | null;
+  agency: string | null;
+  unit: string | null;
+  extra: unknown;
+}
+
 function extractMetadata(sheet: XLSX.WorkSheet) {
-  const metadata: Record<string, any>[] = [];
+  const metadata: RowMetadata[] = [];
   for (let row = CONFIG.DATA_START_ROW; row <= CONFIG.DATA_END_ROW; row++) {
-    const rowMeta: Record<string, any> = {
+    const trimStr = (v: unknown): string | null => {
+      if (typeof v === 'string') return v.trim() || null;
+      return v != null ? String(v) : null;
+    };
+    const rowMeta: RowMetadata = {
       row,
-      metric_name: getCellValue(sheet, 'A', row),
-      category: getCellValue(sheet, 'B', row),
-      subcategory: getCellValue(sheet, 'C', row),
-      agency: getCellValue(sheet, 'D', row),
-      unit: getCellValue(sheet, 'E', row),
+      metric_name: trimStr(getCellValue(sheet, 'A', row)),
+      category: trimStr(getCellValue(sheet, 'B', row)),
+      subcategory: trimStr(getCellValue(sheet, 'C', row)),
+      agency: trimStr(getCellValue(sheet, 'D', row)),
+      unit: trimStr(getCellValue(sheet, 'E', row)),
       extra: getCellValue(sheet, 'F', row),
     };
-    for (const key of Object.keys(rowMeta)) {
-      if (typeof rowMeta[key] === 'string') rowMeta[key] = rowMeta[key].trim();
-    }
     metadata.push(rowMeta);
   }
   return metadata;
 }
 
-function extractColumnData(sheet: XLSX.WorkSheet, column: string, metadata: Record<string, any>[]) {
-  const records: any[] = [];
+function extractColumnData(sheet: XLSX.WorkSheet, column: string, metadata: RowMetadata[]) {
+  const records: MetricRow[] = [];
   let emptyCount = 0, errorCount = 0, numericCount = 0, textCount = 0;
 
   for (let i = 0; i < metadata.length; i++) {
@@ -160,11 +172,11 @@ function extractColumnData(sheet: XLSX.WorkSheet, column: string, metadata: Reco
       subcategory: meta.subcategory,
       agency: meta.agency,
       unit: meta.unit,
-      raw_value: parsed.raw,
+      raw_value: parsed.raw as MetricRow['raw_value'],
       numeric_value: parsed.numeric,
-      value_type: parsed.type,
+      value_type: parsed.type as MetricRow['value_type'],
       has_error: parsed.type === 'error',
-      error_detail: parsed.error,
+      error_detail: parsed.error as string | null,
     });
 
     switch (parsed.type) {
@@ -183,7 +195,7 @@ function extractColumnData(sheet: XLSX.WorkSheet, column: string, metadata: Reco
 
 export function parseDailyExcel(buffer: Buffer, options: { sheetName?: string } = {}) {
   const startTime = Date.now();
-  const warnings: any[] = [];
+  const warnings: { type: string; message: string; [key: string]: unknown }[] = [];
 
   try {
     if (!buffer || buffer.length === 0) return { success: false, error: 'Empty file buffer provided' };
@@ -224,8 +236,9 @@ export function parseDailyExcel(buffer: Buffer, options: { sheetName?: string } 
       },
       warnings: warnings.length > 0 ? warnings : undefined,
     };
-  } catch (error: any) {
-    return { success: false, error: `Failed to parse Excel file: ${error.message}` };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    return { success: false, error: `Failed to parse Excel file: ${msg}` };
   }
 }
 

@@ -1,29 +1,29 @@
 import * as XLSX from 'xlsx';
-
-interface UnitDetail {
-  unit: any;
-  installed_mva?: number;
-  derated_mw: number;
-  available_mw: number;
-}
-
-interface StationData {
-  units: number;
-  installed_mva: number;
-  derated_mw: number;
-  available_mw: number;
-  unit_details: UnitDetail[];
-}
+import type { GPLStationData, GPLUnitDetail, GPLParseSummaries } from '@/lib/types/gpl';
 
 interface ParseResult {
   success: boolean;
   error?: string;
   data?: {
     reportDate: string | null;
-    stationData: Record<string, StationData>;
-    summaries: Record<string, any>;
-    apiPayload: Record<string, any>;
-    meta: Record<string, any>;
+    stationData: Record<string, GPLStationData>;
+    summaries: GPLParseSummaries;
+    apiPayload: {
+      reportDate: string | null;
+      stationData: Record<string, { units: number; derated_mw: number; available_mw: number }>;
+      generationAvailability: number;
+      hampshireSolarMwp: number;
+      prospectSolarMwp: number;
+      trafalgarSolarMwp: number;
+    };
+    meta: {
+      sheetName: string;
+      stationCount: number;
+      totalUnits: number;
+      calculatedTotalMW: number;
+      totalSolarMwp: number;
+      totalDBISCapacity: number;
+    };
   };
 }
 
@@ -38,12 +38,12 @@ export function parseGPLExcel(buffer: Buffer): ParseResult {
       return { success: false, error: 'Generation Status sheet not found' };
     }
 
-    const genData = XLSX.utils.sheet_to_json(genStatusSheet, { header: 1, defval: null }) as any[][];
+    const genData = XLSX.utils.sheet_to_json(genStatusSheet, { header: 1, defval: null }) as unknown[][];
     const schedData = scheduleSheet
-      ? (XLSX.utils.sheet_to_json(scheduleSheet, { header: 1, defval: null }) as any[][])
+      ? (XLSX.utils.sheet_to_json(scheduleSheet, { header: 1, defval: null }) as unknown[][])
       : null;
 
-    const stationData: Record<string, StationData> = {};
+    const stationData: Record<string, GPLStationData> = {};
     let currentStation: string | null = null;
 
     // Parse Generation Status sheet (rows 4-40)
@@ -63,10 +63,10 @@ export function parseGPLExcel(buffer: Buffer): ParseResult {
         continue;
       }
 
-      const unitNo = row[2];
-      const installedMVA = parseFloat(row[3]) || 0;
-      const deratedMW = parseFloat(row[4]) || 0;
-      const availableMW = parseFloat(row[5]) || 0;
+      const unitNo = row[2] as string | number | null;
+      const installedMVA = parseFloat(String(row[3])) || 0;
+      const deratedMW = parseFloat(String(row[4])) || 0;
+      const availableMW = parseFloat(String(row[5])) || 0;
 
       if (unitNo !== null && unitNo !== undefined && unitNo !== '') {
         if (!stationData[currentStation]) {
@@ -78,7 +78,7 @@ export function parseGPLExcel(buffer: Buffer): ParseResult {
         stationData[currentStation].derated_mw += deratedMW;
         stationData[currentStation].available_mw += availableMW;
         stationData[currentStation].unit_details.push({
-          unit: unitNo,
+          unit: unitNo as GPLUnitDetail['unit'],
           installed_mva: installedMVA,
           derated_mw: deratedMW,
           available_mw: availableMW,
@@ -89,7 +89,7 @@ export function parseGPLExcel(buffer: Buffer): ParseResult {
     // Summary metrics are parsed from the Schedule sheet (not Generation Status).
     // Generation Status summary rows (41-47) use generator-column headers for summary
     // data, producing misleading values. Only outage data (cols 7-10) is reliable here.
-    const summaries: Record<string, any> = {};
+    const summaries: Record<string, number | null> = {};
 
     // Get report date from row 49
     let reportDate: string | null = null;
@@ -118,11 +118,11 @@ export function parseGPLExcel(buffer: Buffer): ParseResult {
           if (!stationData['COL']) {
             stationData['COL'] = { units: 0, installed_mva: 0, derated_mw: 0, available_mw: 0, unit_details: [] };
           }
-          const deratedMW = parseFloat(row[5]) || parseFloat(row[4]) || 0;
+          const deratedMW = parseFloat(String(row[5])) || parseFloat(String(row[4])) || 0;
           stationData['COL'].units += 1;
           stationData['COL'].derated_mw += deratedMW;
           stationData['COL'].available_mw += deratedMW;
-          stationData['COL'].unit_details.push({ unit: row[2], derated_mw: deratedMW, available_mw: deratedMW });
+          stationData['COL'].unit_details.push({ unit: row[2] as string | number, derated_mw: deratedMW, available_mw: deratedMW });
         }
       }
 
@@ -136,11 +136,11 @@ export function parseGPLExcel(buffer: Buffer): ParseResult {
           }
         }
         if (row[2] !== null && row[2] !== '' && stationData['Power Ship 1 (PS1)']) {
-          const deratedMW = parseFloat(row[5]) || parseFloat(row[4]) || 0;
+          const deratedMW = parseFloat(String(row[5])) || parseFloat(String(row[4])) || 0;
           stationData['Power Ship 1 (PS1)'].units += 1;
           stationData['Power Ship 1 (PS1)'].derated_mw += deratedMW;
           stationData['Power Ship 1 (PS1)'].available_mw += deratedMW;
-          stationData['Power Ship 1 (PS1)'].unit_details.push({ unit: row[2], derated_mw: deratedMW, available_mw: deratedMW });
+          stationData['Power Ship 1 (PS1)'].unit_details.push({ unit: row[2] as string | number, derated_mw: deratedMW, available_mw: deratedMW });
         }
       }
 
@@ -154,20 +154,20 @@ export function parseGPLExcel(buffer: Buffer): ParseResult {
           }
         }
         if (row[2] !== null && row[2] !== '' && stationData['Power Ship 2 (PS2)']) {
-          const deratedMW = parseFloat(row[5]) || parseFloat(row[4]) || 0;
+          const deratedMW = parseFloat(String(row[5])) || parseFloat(String(row[4])) || 0;
           stationData['Power Ship 2 (PS2)'].units += 1;
           stationData['Power Ship 2 (PS2)'].derated_mw += deratedMW;
           stationData['Power Ship 2 (PS2)'].available_mw += deratedMW;
-          stationData['Power Ship 2 (PS2)'].unit_details.push({ unit: row[2], derated_mw: deratedMW, available_mw: deratedMW });
+          stationData['Power Ship 2 (PS2)'].unit_details.push({ unit: row[2] as string | number, derated_mw: deratedMW, available_mw: deratedMW });
         }
       }
 
       // Solar data (rows 74-76)
-      if (schedData[74]) summaries.hampshireSolarMwp = parseFloat(schedData[74][4]) || parseFloat(schedData[74][5]) || 0;
-      if (schedData[75]) summaries.prospectSolarMwp = parseFloat(schedData[75][4]) || parseFloat(schedData[75][5]) || 0;
-      if (schedData[76]) summaries.trafalgarSolarMwp = parseFloat(schedData[76][4]) || parseFloat(schedData[76][5]) || 0;
+      if (schedData[74]) summaries.hampshireSolarMwp = parseFloat(String(schedData[74][4])) || parseFloat(String(schedData[74][5])) || 0;
+      if (schedData[75]) summaries.prospectSolarMwp = parseFloat(String(schedData[75][4])) || parseFloat(String(schedData[75][5])) || 0;
+      if (schedData[76]) summaries.trafalgarSolarMwp = parseFloat(String(schedData[76][4])) || parseFloat(String(schedData[76][5])) || 0;
 
-      if (schedData[68]) summaries.totalFossilFromSchedule = parseFloat(schedData[68][5]) || parseFloat(schedData[68][4]) || null;
+      if (schedData[68]) summaries.totalFossilFromSchedule = parseFloat(String(schedData[68][5])) || parseFloat(String(schedData[68][4])) || null;
     }
 
     // Round station totals
@@ -225,7 +225,8 @@ export function parseGPLExcel(buffer: Buffer): ParseResult {
         },
       },
     };
-  } catch (error: any) {
-    return { success: false, error: `Failed to parse Excel file: ${error.message}` };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    return { success: false, error: `Failed to parse Excel file: ${msg}` };
   }
 }

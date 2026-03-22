@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { parseAIJson } from '@/lib/parse-utils';
 import { AI_MODEL, AI_MODEL_HAIKU } from '@/lib/constants/ai-config';
+import type { MetricRow } from '@/lib/types/metrics';
 
 const CONFIG = {
   MODEL: AI_MODEL,
@@ -19,7 +20,7 @@ function getClient(): Anthropic {
   return anthropicClient;
 }
 
-function buildAnalysisPrompt(metrics: any[], date: string): string {
+function buildAnalysisPrompt(metrics: MetricRow[], date: string): string {
   const metricsText = metrics
     .filter(m => m.value_type !== 'empty')
     .map(m => {
@@ -71,7 +72,7 @@ function parseAnalysisResponse(response: string) {
   }
 }
 
-export async function analyzeMetrics(metrics: any[], date: string, options: { includeRaw?: boolean } = {}) {
+export async function analyzeMetrics(metrics: MetricRow[], date: string, options: { includeRaw?: boolean } = {}) {
   const startTime = Date.now();
   try {
     if (!process.env.ANTHROPIC_API_KEY) {
@@ -101,14 +102,44 @@ export async function analyzeMetrics(metrics: any[], date: string, options: { in
   }
 }
 
+interface GPLSystemOverview {
+  availableCapacityMw?: number | null;
+  expectedPeakMw?: number | null;
+  reserveCapacityMw?: number | null;
+  expectedReserveMw?: number | null;
+  eveningPeak?: { onBars?: number | null; suppressed?: number | null } | null;
+}
+
+interface GPLRenewables {
+  hampshireMwp?: number;
+  prospectMwp?: number;
+  trafalgarMwp?: number;
+  totalMwp?: number;
+}
+
+interface GPLStationSummary {
+  name: string;
+  capacityMw: number;
+  availableMw: number;
+  online: number;
+  units: number;
+}
+
+interface GPLOutage {
+  station: string;
+  unit?: string;
+  reason?: string;
+  expectedCompletion?: string;
+}
+
 interface GPLBriefingContext {
   reportDate: string;
-  systemOverview: any;
-  renewables: any;
-  unitStats: any;
-  stations: any[];
+  systemOverview: GPLSystemOverview;
+  renewables: GPLRenewables;
+  unitStats: Record<string, unknown>;
+  stations: GPLStationSummary[];
   criticalStations: string[];
-  outages: any[];
+  outages: GPLOutage[];
 }
 
 function buildGPLPrompt(context: GPLBriefingContext): string {
@@ -125,7 +156,7 @@ function buildGPLPrompt(context: GPLBriefingContext): string {
     : null;
 
   const totalAvailableMw: number | null = systemOverview.availableCapacityMw
-    ?? stations.reduce((sum: number, s: any) => sum + (s.availableMw || 0), 0);
+    ?? stations.reduce((sum: number, s: GPLStationSummary) => sum + (s.availableMw || 0), 0);
   const expectedPeakMw: number | null = systemOverview.expectedPeakMw ?? null;
   const reserveMarginPct = (totalAvailableMw != null && expectedPeakMw != null && totalAvailableMw > 0)
     ? Math.round(((totalAvailableMw - expectedPeakMw) / totalAvailableMw) * 10000) / 100
@@ -134,20 +165,20 @@ function buildGPLPrompt(context: GPLBriefingContext): string {
   const expectedReserveMw: number | null = systemOverview.expectedReserveMw ?? null;
 
   // Per-station lines and offline detection
-  const stationLines = stations.map((s: any) => {
+  const stationLines = stations.map((s) => {
     const availPct = s.capacityMw > 0 ? Math.round((s.availableMw / s.capacityMw) * 10000) / 100 : 0;
     return `  - ${s.name}: ${s.availableMw?.toFixed(1) || 0} MW avail / ${s.capacityMw?.toFixed(1) || 0} MW derated, ${s.online || 0}/${s.units || 0} units online, ${availPct}% availability`;
   }).join('\n');
 
   const stationsFullyOffline = stations
-    .filter((s: any) => (s.availableMw === 0 || s.availableMw == null) && (s.units || 0) > 0)
-    .map((s: any) => `${s.name} (${s.capacityMw?.toFixed(1) || 0} MW derated, ${s.units} units)`);
+    .filter((s) => (s.availableMw === 0 || s.availableMw == null) && (s.units || 0) > 0)
+    .map((s) => `${s.name} (${s.capacityMw?.toFixed(1) || 0} MW derated, ${s.units} units)`);
 
-  const totalUnitsOnline = stations.reduce((sum: number, s: any) => sum + (s.online || 0), 0);
-  const totalUnitsAll = stations.reduce((sum: number, s: any) => sum + (s.units || 0), 0);
+  const totalUnitsOnline = stations.reduce((sum: number, s: GPLStationSummary) => sum + (s.online || 0), 0);
+  const totalUnitsAll = stations.reduce((sum: number, s: GPLStationSummary) => sum + (s.units || 0), 0);
 
   const outageLines = outages.length > 0
-    ? outages.map((o: any) => `  - ${o.station} ${o.unit || ''}: ${o.reason || 'Unknown'}${o.expectedCompletion ? ` (ETA: ${o.expectedCompletion})` : ''}`).join('\n')
+    ? outages.map((o) => `  - ${o.station} ${o.unit || ''}: ${o.reason || 'Unknown'}${o.expectedCompletion ? ` (ETA: ${o.expectedCompletion})` : ''}`).join('\n')
     : '  None reported';
 
   return `You are a power grid data analyst for the Demerara-Berbice Interconnected System (DBIS) in Guyana. You produce a concise executive briefing for the Director General of the Ministry of Public Utilities.
@@ -244,27 +275,30 @@ export async function generateGPLBriefing(context: GPLBriefingContext) {
 
     let parsed;
     try {
-      parsed = parseAIJson<Record<string, any>>(responseText);
+      parsed = parseAIJson<Record<string, unknown>>(responseText);
     } catch {
       parsed = { executiveBriefing: { headline: responseText.split('\n')[0]?.slice(0, 200) || 'Analysis completed.', sections: [{ title: 'Full Analysis', severity: 'stable', summary: '', detail: responseText.slice(0, 2000) }] }, criticalAlerts: [] };
     }
 
     // Handle executiveBriefing — can be structured object (new) or plain string (legacy)
-    let executiveBriefing = parsed.executiveBriefing;
-    if (typeof executiveBriefing === 'string') {
+    const rawBriefing = parsed.executiveBriefing;
+    let executiveBriefing: { headline: string; sections: { title: string; severity: string; summary: string; detail: string }[] };
+    if (typeof rawBriefing === 'string') {
       // Legacy format — wrap in structured object for consistent handling
       executiveBriefing = {
-        headline: executiveBriefing.split('\n')[0]?.slice(0, 200) || 'Analysis completed.',
-        sections: [{ title: 'Full Analysis', severity: 'stable', summary: executiveBriefing.split('\n')[0]?.slice(0, 120) || '', detail: executiveBriefing }],
+        headline: rawBriefing.split('\n')[0]?.slice(0, 200) || 'Analysis completed.',
+        sections: [{ title: 'Full Analysis', severity: 'stable', summary: rawBriefing.split('\n')[0]?.slice(0, 120) || '', detail: rawBriefing }],
       };
-    } else if (!executiveBriefing || !executiveBriefing.headline) {
+    } else if (!rawBriefing || typeof rawBriefing !== 'object' || !('headline' in rawBriefing)) {
       executiveBriefing = { headline: 'Analysis completed.', sections: [] };
+    } else {
+      executiveBriefing = rawBriefing as typeof executiveBriefing;
     }
 
     return {
       success: true,
       executiveBriefing,
-      criticalAlerts: parsed.criticalAlerts || [],
+      criticalAlerts: (parsed.criticalAlerts as unknown[]) || [],
       usage: { promptTokens: response.usage?.input_tokens, completionTokens: response.usage?.output_tokens },
     };
   } catch (error: any) {

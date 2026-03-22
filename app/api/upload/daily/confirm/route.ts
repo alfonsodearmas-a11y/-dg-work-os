@@ -6,6 +6,7 @@ import { analyzeMetrics } from '@/lib/ai-analysis';
 import { auth } from '@/lib/auth';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+import type { MetricRow } from '@/lib/types/metrics';
 
 const confirmSchema = z.object({
   date: z.string().min(1),
@@ -54,7 +55,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   await auditService.log({ userId, action: 'DAILY_UPLOAD', entityType: 'daily_uploads', entityId: result.uploadId, newValues: { date, filename, recordCount: records.length }, request });
 
-  analyzeMetrics(records, date).then(async (analysis) => {
+  analyzeMetrics(records as unknown as MetricRow[], date).then(async (analysis) => {
     if (analysis.success) {
       try {
         await query(

@@ -1,5 +1,7 @@
 // ── Scraped Oversight Types ────────────────────────────────────────────────
 
+import type { ScrapedOversightProject } from '@/lib/types/project';
+
 export interface OversightData {
   metadata: {
     generatedAt: string;
@@ -29,11 +31,11 @@ export interface OversightData {
     atRisk: number;
     bondWarnings: number;
   };
-  delayed: any[];
-  overdue: any[];
-  endingSoon: any[];
-  atRisk: any[];
-  bondWarnings: any[];
+  delayed: ScrapedOversightProject[];
+  overdue: ScrapedOversightProject[];
+  endingSoon: ScrapedOversightProject[];
+  atRisk: ScrapedOversightProject[];
+  bondWarnings: ScrapedOversightProject[];
   agencyBreakdown: {
     agency: string;
     agencyFull: string | null;
@@ -42,7 +44,7 @@ export interface OversightData {
     totalValueDisplay: string | null;
     avgCompletion: number | null;
   }[];
-  top10: any[];
+  top10: ScrapedOversightProject[];
 }
 
 // ── PSIP Project Types ─────────────────────────────────────────────────────
@@ -97,7 +99,7 @@ export interface PortfolioSummary {
 export interface SavedFilter {
   id: string;
   filter_name: string;
-  filter_params: Record<string, any>;
+  filter_params: Record<string, unknown>;
   created_at: string;
 }
 

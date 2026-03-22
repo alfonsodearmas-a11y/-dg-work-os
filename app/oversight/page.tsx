@@ -14,6 +14,7 @@ import { Tabs, type Tab } from '@/components/ui/Tabs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import type { OversightData, Project, PortfolioSummary, SavedFilter, ViewMode, TabMode } from '@/components/oversight/types';
+import type { ScrapedOversightProject } from '@/lib/types/project';
 import { HEALTH_OPTIONS } from '@/components/oversight/types';
 import { SaveFilterModal, OversightFilterPanel } from '@/components/oversight/OversightFilters';
 import { ProjectSlidePanel, OversightProjectTable } from '@/components/oversight/OversightTable';
@@ -73,12 +74,12 @@ export default function OversightPage() {
 
   const projectsByAgency = useMemo(() => {
     if (!oversightData) return {};
-    const map: Record<string, { project: any; tag: string }[]> = {};
+    const map: Record<string, { project: ScrapedOversightProject; tag: string }[]> = {};
     const seen = new Set<string>();
-    function addProjects(arr: any[], tag: string) {
+    function addProjects(arr: ScrapedOversightProject[], tag: string) {
       for (const p of arr) {
-        const agency = p.agency || p.subAgency || '-';
-        const key = `${agency}-${p.name || p.projectName || ''}-${p.id || p.p3Id || ''}`;
+        const agency = (p.agency as string) || '-';
+        const key = `${agency}-${p.name || ''}-${p.id || ''}`;
         if (seen.has(key)) continue; seen.add(key);
         if (!map[agency]) map[agency] = [];
         map[agency].push({ project: p, tag });
@@ -188,7 +189,7 @@ export default function OversightPage() {
     Promise.all([fetchPsipSummary(), fetchProjects()]).finally(() => setPsipLoading(false));
     fetch('/api/projects/contractors').then(r => r.json()).then(d => { if (Array.isArray(d)) setContractors(d); }).catch(() => {});
     fetch('/api/projects/filters').then(r => r.json()).then(d => { if (Array.isArray(d)) setSavedFilters(d); }).catch(() => {});
-    fetch('/api/admin/users').then(r => r.ok ? r.json() : null).then(d => { const users = d?.users; if (Array.isArray(users)) setOfficers(users.filter((u: any) => u.is_active).map((u: any) => ({ id: u.id, name: u.name || u.email }))); }).catch(() => {});
+    fetch('/api/admin/users').then(r => r.ok ? r.json() : null).then(d => { const users = d?.users; if (Array.isArray(users)) setOfficers(users.filter((u: { is_active: boolean }) => u.is_active).map((u: { id: string; name?: string; email: string }) => ({ id: u.id, name: u.name || u.email }))); }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -232,7 +233,7 @@ export default function OversightPage() {
   function toggleSelect(id: string) { setSelectedIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }
   function toggleSelectAll() { setSelectedIds(selectedIds.size === projects.length ? new Set() : new Set(projects.map(p => p.id))); }
 
-  async function handleBulkUpdate(updates: Record<string, any>) {
+  async function handleBulkUpdate(updates: { health?: string; assigned_to?: string | null }) {
     try {
       const res = await fetch('/api/projects/bulk', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_ids: Array.from(selectedIds), ...updates }) });
       if (!res.ok) { const d = await res.json(); alert(d.error || 'Update failed'); return; }
@@ -250,12 +251,12 @@ export default function OversightPage() {
   }
 
   function applySavedFilter(sf: SavedFilter) {
-    const fp = sf.filter_params;
-    if (fp.agencies) setAgencies(fp.agencies); if (fp.statuses) setStatuses(fp.statuses);
-    if (fp.regions) setRegions(fp.regions); if (fp.healths) setHealths(fp.healths);
-    if (fp.budgetMin) setBudgetMin(fp.budgetMin); if (fp.budgetMax) setBudgetMax(fp.budgetMax);
-    if (fp.contractor) setContractor(fp.contractor); if (fp.search) setSearch(fp.search);
-    if (fp.sort) setSort(fp.sort);
+    const fp = sf.filter_params as Record<string, string | string[]>;
+    if (fp.agencies) setAgencies(fp.agencies as string[]); if (fp.statuses) setStatuses(fp.statuses as string[]);
+    if (fp.regions) setRegions(fp.regions as string[]); if (fp.healths) setHealths(fp.healths as string[]);
+    if (fp.budgetMin) setBudgetMin(fp.budgetMin as string); if (fp.budgetMax) setBudgetMax(fp.budgetMax as string);
+    if (fp.contractor) setContractor(fp.contractor as string); if (fp.search) setSearch(fp.search as string);
+    if (fp.sort) setSort(fp.sort as string);
   }
 
   async function deleteSavedFilter(id: string) {
@@ -263,7 +264,7 @@ export default function OversightPage() {
   }
 
   const currentFilterParams = useMemo(() => {
-    const fp: Record<string, any> = {};
+    const fp: Record<string, unknown> = {};
     if (agencies.length) fp.agencies = agencies; if (statuses.length) fp.statuses = statuses;
     if (regions.length) fp.regions = regions; if (healths.length) fp.healths = healths;
     if (budgetMin) fp.budgetMin = budgetMin; if (budgetMax) fp.budgetMax = budgetMax;

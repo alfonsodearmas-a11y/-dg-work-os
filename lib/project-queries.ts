@@ -1,6 +1,7 @@
 import { supabaseAdmin } from './db';
 import { PROJECT_CONTRACT_CAP } from '@/lib/constants/config';
 import { logger } from '@/lib/logger';
+import type { RawProjectRow } from '@/lib/types/project';
 
 // ── Status computation (uses scraped project_status from oversight.gov.gy) ──
 
@@ -111,7 +112,7 @@ export interface SavedFilter {
   id: string;
   user_id: string;
   filter_name: string;
-  filter_params: Record<string, any>;
+  filter_params: Record<string, unknown>;
   created_at: string;
 }
 
@@ -119,7 +120,7 @@ export interface SavedFilter {
 
 const OUTLIER_CAP = PROJECT_CONTRACT_CAP;
 
-function safeContractValue(raw: any): number | null {
+function safeContractValue(raw: unknown): number | null {
   if (raw === null || raw === undefined) return null;
   const num = Number(raw);
   if (isNaN(num) || num <= 0) return null;
@@ -182,7 +183,7 @@ export function computeHealth(
   return 'green';
 }
 
-function enrichProject(row: any): Project {
+function enrichProject(row: RawProjectRow): Project {
   const completionPct = Number(row.completion_pct) || 0;
   const endDate = row.project_end_date || null;
   const projectStatus = row.project_status || null;
@@ -422,7 +423,7 @@ export async function getProjectsList(filters: {
   if (needsClientFilter) {
     // Fetch in pages of 1000 to avoid Supabase row limits
     const MAX_PAGES = 10; // Up to 10,000 rows max
-    let allRows: any[] = [];
+    let allRows: RawProjectRow[] = [];
     let truncated = false;
 
     for (let p = 0; p < MAX_PAGES; p++) {
@@ -502,16 +503,19 @@ export async function getProjectNotes(projectId: string): Promise<ProjectNote[]>
     .eq('project_id', projectId)
     .order('created_at', { ascending: false });
 
-  return (data || []).map((row: any) => ({
-    id: row.id,
-    project_id: row.project_id,
-    user_id: row.user_id,
-    note_text: row.note_text,
-    note_type: row.note_type,
-    created_at: row.created_at,
-    user_name: row.users?.name || 'Unknown',
-    user_role: row.users?.role || 'officer',
-  }));
+  return (data || []).map((row: Record<string, unknown>) => {
+    const users = row.users as { name?: string; role?: string } | null;
+    return {
+      id: row.id as string,
+      project_id: row.project_id as string,
+      user_id: row.user_id as string,
+      note_text: row.note_text as string,
+      note_type: row.note_type as ProjectNote['note_type'],
+      created_at: row.created_at as string,
+      user_name: users?.name || 'Unknown',
+      user_role: users?.role || 'officer',
+    };
+  });
 }
 
 export async function addProjectNote(
@@ -622,7 +626,7 @@ export async function getSavedFilters(userId: string): Promise<SavedFilter[]> {
 export async function saveFilter(
   userId: string,
   filterName: string,
-  filterParams: Record<string, any>
+  filterParams: Record<string, unknown>
 ): Promise<SavedFilter> {
   const { data, error } = await supabaseAdmin
     .from('saved_filters')
@@ -651,7 +655,7 @@ export async function getContractors(): Promise<string[]> {
     .not('contractor', 'is', null)
     .order('contractor');
 
-  const unique = [...new Set((data || []).map((r: any) => r.contractor).filter(Boolean))];
+  const unique = [...new Set((data || []).map((r: { contractor: string | null }) => r.contractor).filter(Boolean))];
   return unique as string[];
 }
 
@@ -661,7 +665,8 @@ export async function recalculateAllHealth(): Promise<{ updated: number; total: 
   // Fetch all projects in pages of 1000 to avoid Supabase's default row cap
   const HEALTH_FETCH_COLUMNS = 'id, completion_pct, project_end_date, start_date, project_status, escalated, health, updated_at';
   const MAX_PAGES = 10;
-  let allData: any[] = [];
+  type HealthRow = Pick<RawProjectRow, 'id' | 'completion_pct' | 'project_end_date' | 'start_date' | 'project_status' | 'escalated' | 'health' | 'updated_at'>;
+  let allData: HealthRow[] = [];
   for (let p = 0; p < MAX_PAGES; p++) {
     const rangeStart = p * 1000;
     const { data: pageData } = await supabaseAdmin
@@ -669,7 +674,7 @@ export async function recalculateAllHealth(): Promise<{ updated: number; total: 
       .select(HEALTH_FETCH_COLUMNS)
       .range(rangeStart, rangeStart + 999);
     if (!pageData || pageData.length === 0) break;
-    allData = allData.concat(pageData);
+    allData = allData.concat(pageData as HealthRow[]);
     if (pageData.length < 1000) break;
   }
   const data = allData;
@@ -719,7 +724,7 @@ export async function getDistinctStatuses(): Promise<string[]> {
     .not('project_status', 'is', null)
     .order('project_status');
 
-  const unique = [...new Set((data || []).map((r: any) => r.project_status).filter(Boolean))];
+  const unique = [...new Set((data || []).map((r: { project_status: string | null }) => r.project_status).filter(Boolean))];
   return unique as string[];
 }
 
