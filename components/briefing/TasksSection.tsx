@@ -79,9 +79,9 @@ function formatDueDate(task: Task): { label: string; className: string } {
 }
 
 const statusStyles: Record<string, string> = {
-  new: 'bg-navy-700/30 text-slate-400',
-  active: 'bg-blue-500/20 text-blue-400',
-  blocked: 'bg-amber-500/20 text-amber-400',
+  new: 'bg-blue-500/20 text-blue-400',
+  active: 'bg-gold-500/20 text-gold-500',
+  blocked: 'bg-red-500/20 text-red-400',
   done: 'bg-emerald-500/20 text-emerald-400',
 };
 
@@ -94,9 +94,9 @@ const statusLabels: Record<string, string> = {
 
 const priorityDot: Record<string, string> = {
   critical: 'bg-red-500',
-  high: 'bg-amber-500',
-  medium: 'bg-blue-500',
-  low: 'bg-navy-700',
+  high: 'bg-orange-400',
+  medium: 'bg-gold-500',
+  low: 'bg-white/40',
 };
 
 export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps) {

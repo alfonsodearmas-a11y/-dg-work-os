@@ -5,14 +5,13 @@ import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import {
   Search, Users, UserCheck, UserX, UserPlus, Shield, ShieldOff,
   CheckCircle, AlertTriangle, X, Clock, Archive, ChevronDown,
-  ArrowUpDown, Filter, Trash2, MoreHorizontal, Lock, Activity,
+  ArrowUpDown, Filter, Trash2, MoreHorizontal, Lock, Activity, Loader2,
 } from 'lucide-react';
 import { UserDetailDrawer } from '@/components/admin/UserDetailDrawer';
 import { PermissionsPanel } from '@/components/admin/PermissionsPanel';
 import { AccessControlPanel } from '@/components/admin/AccessControlPanel';
 import { ActivityLogPanel } from '@/components/admin/ActivityLogPanel';
 import { usePermissions } from '@/hooks/usePeople';
-import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { ROLE_LABELS, ROLE_COLORS, ROLE_OPTIONS, MINISTRY_ROLES } from '@/lib/people-types';
@@ -563,7 +562,7 @@ export default function PeoplePage() {
       <div className="card-premium overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <Spinner />
+            <Loader2 className="h-5 w-5 animate-spin text-gold-500" />
           </div>
         ) : (
           <div className="overflow-x-auto">

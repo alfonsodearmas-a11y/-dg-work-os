@@ -27,9 +27,9 @@ function NotificationIcon({ type, category }: { type: string; category?: string 
 
 function priorityColor(priority: string): string {
   switch (priority) {
-    case 'urgent': return '#d4af37';
-    case 'high': return '#3b82f6';
-    case 'medium': return '#64748b';
+    case 'urgent': return '#dc2626';
+    case 'high': return '#fb923c';
+    case 'medium': return '#d4af37';
     default: return 'transparent';
   }
 }

@@ -13,9 +13,9 @@ interface TaskBottomSheetProps {
 }
 
 const STATUS_OPTIONS: { value: TaskStatus; label: string; dot: string }[] = [
-  { value: 'new', label: 'New', dot: 'bg-indigo-400' },
-  { value: 'active', label: 'Active', dot: 'bg-blue-400' },
-  { value: 'blocked', label: 'Blocked', dot: 'bg-amber-400' },
+  { value: 'new', label: 'New', dot: 'bg-blue-400' },
+  { value: 'active', label: 'Active', dot: 'bg-gold-500' },
+  { value: 'blocked', label: 'Blocked', dot: 'bg-red-400' },
   { value: 'done', label: 'Done', dot: 'bg-emerald-400' },
 ];
 

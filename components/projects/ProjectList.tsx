@@ -20,9 +20,9 @@ const AGENCY_COLORS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   'COMMENCED': 'bg-blue-500/15 text-blue-400',
   'DELAYED': 'bg-red-500/15 text-red-400',
-  'COMPLETED': 'bg-green-500/15 text-green-400',
-  'CANCELLED': 'bg-gray-500/15 text-gray-400',
-  'ROLLOVER': 'bg-yellow-500/15 text-yellow-400',
+  'COMPLETED': 'bg-emerald-500/15 text-emerald-400',
+  'CANCELLED': 'bg-white/10 text-white/40',
+  'ROLLOVER': 'bg-gold-500/15 text-gold-500',
 };
 
 interface Project {

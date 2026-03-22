@@ -8,7 +8,7 @@ import {
   ArrowLeft, Building2, Calendar, DollarSign, Clock,
   MapPin, User, FileText, AlertTriangle, TrendingUp,
   CheckCircle, Camera, Banknote, MessageSquare, RefreshCw,
-  ChevronDown, ChevronUp, ChevronRight,
+  ChevronDown, ChevronUp, ChevronRight, Loader2,
 } from 'lucide-react';
 import { EscalationControls } from '@/components/projects/EscalationControls';
 import { ProjectAISummary } from '@/components/projects/ProjectAISummary';
@@ -16,7 +16,6 @@ import { ProjectActivityLog } from '@/components/projects/ProjectActivityLog';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { fmtCurrency, fmtDate } from '@/lib/format';
 import { AGENCY_NAMES, PROJECT_STATUS_STYLES as STATUS_STYLES, HEALTH_DOT_LABELED as HEALTH_DOT } from '@/lib/constants/agencies';
-import { Spinner } from '@/components/ui/Spinner';
 
 /* ------------------------------------------------------------------ */
 /*  Collapsible Section                                               */
@@ -114,7 +113,7 @@ export default function ProjectDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Spinner />
+        <Loader2 className="h-5 w-5 animate-spin text-gold-500" />
       </div>
     );
   }

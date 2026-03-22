@@ -5,16 +5,16 @@ import { X } from 'lucide-react';
 import { Task, TaskStatus, TaskUpdate } from '@/lib/task-types';
 
 export const STATUSES: { value: TaskStatus; label: string; dot: string }[] = [
-  { value: 'new', label: 'New', dot: 'bg-indigo-400' },
-  { value: 'active', label: 'Active', dot: 'bg-blue-400' },
-  { value: 'blocked', label: 'Blocked', dot: 'bg-amber-400' },
+  { value: 'new', label: 'New', dot: 'bg-blue-400' },
+  { value: 'active', label: 'Active', dot: 'bg-gold-500' },
+  { value: 'blocked', label: 'Blocked', dot: 'bg-red-400' },
   { value: 'done', label: 'Done', dot: 'bg-emerald-400' },
 ];
 
 export const STATUS_PILLS: Record<string, string> = {
-  new: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
-  active: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  blocked: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  new: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  active: 'bg-gold-500/20 text-gold-500 border-gold-500/30',
+  blocked: 'bg-red-500/20 text-red-400 border-red-500/30',
   done: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
 };
 

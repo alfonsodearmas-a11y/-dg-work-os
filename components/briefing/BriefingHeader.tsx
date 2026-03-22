@@ -6,10 +6,10 @@ import {
   Flame,
   TrendingDown,
   Users,
+  Loader2,
 } from 'lucide-react';
 import type { BriefingData } from './types';
 import { Skeleton } from './briefing-shared';
-import { Spinner } from '@/components/ui/Spinner';
 
 function HeroSkeleton() {
   return (
@@ -69,7 +69,7 @@ export function ExecutiveBriefHero({
       {loading ? (
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-4">
-            <Spinner size="sm" />
+            <Loader2 className="h-5 w-5 animate-spin text-gold-500" />
             <span className="text-gold-500 text-sm font-medium">Generating briefing...</span>
           </div>
           <div className="space-y-3">

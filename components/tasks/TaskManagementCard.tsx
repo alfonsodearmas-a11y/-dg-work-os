@@ -15,19 +15,21 @@ const AGENCY_COLORS: Record<string, string> = {
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
-  high: 'bg-red-500',
-  medium: 'bg-yellow-500',
-  low: 'bg-green-500',
+  critical: 'bg-red-500',
+  high: 'bg-orange-400',
+  medium: 'bg-gold-500',
+  low: 'bg-white/40',
 };
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   new: { label: 'New', color: 'bg-blue-500/20 text-blue-400' },
-  active: { label: 'Active', color: 'bg-yellow-500/20 text-yellow-400' },
+  active: { label: 'Active', color: 'bg-gold-500/20 text-gold-500' },
   blocked: { label: 'Blocked', color: 'bg-red-500/20 text-red-400' },
-  done: { label: 'Done', color: 'bg-green-500/20 text-green-400' },
+  done: { label: 'Done', color: 'bg-emerald-500/20 text-emerald-400' },
   // Legacy aliases for dashboard pages using the PG task system
-  in_progress: { label: 'In Progress', color: 'bg-yellow-500/20 text-yellow-400' },
+  in_progress: { label: 'In Progress', color: 'bg-gold-500/20 text-gold-500' },
   delayed: { label: 'Delayed', color: 'bg-red-500/20 text-red-400' },
+  cancelled: { label: 'Cancelled', color: 'bg-white/20 text-white/40' },
 };
 
 interface TaskCardProps {

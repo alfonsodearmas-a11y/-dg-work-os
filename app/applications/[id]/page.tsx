@@ -7,9 +7,8 @@ import { MINISTRY_ROLES } from '@/lib/people-types';
 import Link from 'next/link';
 import {
   ArrowLeft, FileText, Upload, Trash2, Clock, CheckCircle, XCircle,
-  AlertTriangle, Eye, ChevronDown, Download, X, File,
+  AlertTriangle, Eye, ChevronDown, Download, X, File, Loader2,
 } from 'lucide-react';
-import { Spinner } from '@/components/ui/Spinner';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
 
@@ -60,9 +59,9 @@ const STATUS_STYLES: Record<string, { bg: string; label: string; icon: typeof Cl
 };
 
 const PRIORITY_STYLES: Record<string, string> = {
-  low: 'bg-gray-500/20 text-gray-400',
+  low: 'bg-white/10 text-white/40',
   normal: 'bg-navy-700/20 text-slate-400',
-  high: 'bg-orange-500/20 text-orange-400',
+  high: 'bg-orange-400/20 text-orange-400',
   urgent: 'bg-red-500/20 text-red-400',
 };
 
@@ -236,7 +235,7 @@ export default function ApplicationDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Spinner />
+        <Loader2 className="h-5 w-5 animate-spin text-gold-500" />
       </div>
     );
   }
@@ -378,7 +377,7 @@ export default function ApplicationDetailPage() {
             >
               {uploading ? (
                 <div className="flex items-center justify-center gap-2">
-                  <Spinner size="sm" />
+                  <Loader2 className="h-5 w-5 animate-spin text-gold-500" />
                   <span className="text-sm text-slate-400">Uploading...</span>
                 </div>
               ) : (
@@ -417,7 +416,7 @@ export default function ApplicationDetailPage() {
                         aria-label="Delete document"
                       >
                         {deleting === doc.id ? (
-                          <Spinner size="sm" className="border-red-400" />
+                          <Loader2 className="h-5 w-5 animate-spin text-gold-500" />
                         ) : (
                           <Trash2 className="h-4 w-4" />
                         )}

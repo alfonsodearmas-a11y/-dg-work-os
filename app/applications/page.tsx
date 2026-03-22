@@ -6,10 +6,9 @@ import Link from 'next/link';
 import {
   ArrowLeft, Plus, Search, Filter, Clock, CheckCircle, XCircle,
   Eye, FileText, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, X,
-  AlertTriangle, Download, MessageSquare,
+  AlertTriangle, Download, MessageSquare, Loader2,
 } from 'lucide-react';
 import { exportToCsv } from '@/lib/export-csv';
-import { Spinner } from '@/components/ui/Spinner';
 import { ApplicationDetailDrawer } from '@/components/applications/ApplicationDetailDrawer';
 
 interface Application {
@@ -42,9 +41,9 @@ const STATUS_STYLES: Record<string, { bg: string; label: string }> = {
 };
 
 const PRIORITY_STYLES: Record<string, string> = {
-  low: 'bg-gray-500/20 text-gray-400',
+  low: 'bg-white/10 text-white/40',
   normal: 'bg-navy-700/20 text-slate-400',
-  high: 'bg-orange-500/20 text-orange-400',
+  high: 'bg-orange-400/20 text-orange-400',
   urgent: 'bg-red-500/20 text-red-400',
 };
 
@@ -304,7 +303,7 @@ export default function ApplicationsPage() {
       <div className="card-premium overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <Spinner />
+            <Loader2 className="h-5 w-5 animate-spin text-gold-500" />
           </div>
         ) : applications.length === 0 ? (
           <div className="text-center py-12 text-navy-600">

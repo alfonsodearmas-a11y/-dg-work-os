@@ -33,16 +33,16 @@ interface KanbanColumnProps {
 
 const COLUMN_STYLES: Record<string, { dot: string; count: string }> = {
   'New': {
-    dot: 'bg-indigo-400',
-    count: 'bg-indigo-500/20 text-indigo-400'
-  },
-  'Active': {
     dot: 'bg-blue-400',
     count: 'bg-blue-500/20 text-blue-400'
   },
+  'Active': {
+    dot: 'bg-gold-500',
+    count: 'bg-gold-500/20 text-gold-500'
+  },
   'Blocked': {
-    dot: 'bg-amber-400',
-    count: 'bg-amber-500/20 text-amber-400'
+    dot: 'bg-red-400',
+    count: 'bg-red-500/20 text-red-400'
   },
   'Done': {
     dot: 'bg-emerald-400',

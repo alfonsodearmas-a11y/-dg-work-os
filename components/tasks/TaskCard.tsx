@@ -33,16 +33,16 @@ const AGENCY_COLORS: Record<string, string> = {
 
 const PRIORITY_DOT: Record<string, string> = {
   critical: 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]',
-  high: 'bg-red-500',
-  medium: 'bg-amber-500',
-  low: 'bg-navy-600',
+  high: 'bg-orange-400',
+  medium: 'bg-gold-500',
+  low: 'bg-white/40',
 };
 
 const PRIORITY_BORDER: Record<string, string> = {
   critical: 'border-l-red-500',
-  high: 'border-l-red-400',
-  medium: 'border-l-amber-500',
-  low: 'border-l-navy-600',
+  high: 'border-l-orange-400',
+  medium: 'border-l-gold-500',
+  low: 'border-l-white/40',
 };
 
 function getInitials(name: string | null): string {
