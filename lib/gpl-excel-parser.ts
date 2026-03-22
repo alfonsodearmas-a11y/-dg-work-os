@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { safeParseFloat } from '@/lib/parse-utils';
 import type { GPLStationData, GPLUnitDetail, GPLParseSummaries } from '@/lib/types/gpl';
 
 interface ParseResult {
@@ -64,9 +65,9 @@ export function parseGPLExcel(buffer: Buffer): ParseResult {
       }
 
       const unitNo = row[2] as string | number | null;
-      const installedMVA = parseFloat(String(row[3])) || 0;
-      const deratedMW = parseFloat(String(row[4])) || 0;
-      const availableMW = parseFloat(String(row[5])) || 0;
+      const installedMVA = safeParseFloat(row[3]);
+      const deratedMW = safeParseFloat(row[4]);
+      const availableMW = safeParseFloat(row[5]);
 
       if (unitNo !== null && unitNo !== undefined && unitNo !== '') {
         if (!stationData[currentStation]) {
@@ -118,7 +119,7 @@ export function parseGPLExcel(buffer: Buffer): ParseResult {
           if (!stationData['COL']) {
             stationData['COL'] = { units: 0, installed_mva: 0, derated_mw: 0, available_mw: 0, unit_details: [] };
           }
-          const deratedMW = parseFloat(String(row[5])) || parseFloat(String(row[4])) || 0;
+          const deratedMW = safeParseFloat(row[5]) || safeParseFloat(row[4]);
           stationData['COL'].units += 1;
           stationData['COL'].derated_mw += deratedMW;
           stationData['COL'].available_mw += deratedMW;
@@ -136,7 +137,7 @@ export function parseGPLExcel(buffer: Buffer): ParseResult {
           }
         }
         if (row[2] !== null && row[2] !== '' && stationData['Power Ship 1 (PS1)']) {
-          const deratedMW = parseFloat(String(row[5])) || parseFloat(String(row[4])) || 0;
+          const deratedMW = safeParseFloat(row[5]) || safeParseFloat(row[4]);
           stationData['Power Ship 1 (PS1)'].units += 1;
           stationData['Power Ship 1 (PS1)'].derated_mw += deratedMW;
           stationData['Power Ship 1 (PS1)'].available_mw += deratedMW;
@@ -154,7 +155,7 @@ export function parseGPLExcel(buffer: Buffer): ParseResult {
           }
         }
         if (row[2] !== null && row[2] !== '' && stationData['Power Ship 2 (PS2)']) {
-          const deratedMW = parseFloat(String(row[5])) || parseFloat(String(row[4])) || 0;
+          const deratedMW = safeParseFloat(row[5]) || safeParseFloat(row[4]);
           stationData['Power Ship 2 (PS2)'].units += 1;
           stationData['Power Ship 2 (PS2)'].derated_mw += deratedMW;
           stationData['Power Ship 2 (PS2)'].available_mw += deratedMW;
@@ -163,11 +164,11 @@ export function parseGPLExcel(buffer: Buffer): ParseResult {
       }
 
       // Solar data (rows 74-76)
-      if (schedData[74]) summaries.hampshireSolarMwp = parseFloat(String(schedData[74][4])) || parseFloat(String(schedData[74][5])) || 0;
-      if (schedData[75]) summaries.prospectSolarMwp = parseFloat(String(schedData[75][4])) || parseFloat(String(schedData[75][5])) || 0;
-      if (schedData[76]) summaries.trafalgarSolarMwp = parseFloat(String(schedData[76][4])) || parseFloat(String(schedData[76][5])) || 0;
+      if (schedData[74]) summaries.hampshireSolarMwp = safeParseFloat(schedData[74][4]) || safeParseFloat(schedData[74][5]);
+      if (schedData[75]) summaries.prospectSolarMwp = safeParseFloat(schedData[75][4]) || safeParseFloat(schedData[75][5]);
+      if (schedData[76]) summaries.trafalgarSolarMwp = safeParseFloat(schedData[76][4]) || safeParseFloat(schedData[76][5]);
 
-      if (schedData[68]) summaries.totalFossilFromSchedule = parseFloat(String(schedData[68][5])) || parseFloat(String(schedData[68][4])) || null;
+      if (schedData[68]) summaries.totalFossilFromSchedule = safeParseFloat(schedData[68][5]) || safeParseFloat(schedData[68][4]) || null;
     }
 
     // Round station totals

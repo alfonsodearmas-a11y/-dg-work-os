@@ -14,21 +14,16 @@ const AGENCY_COLORS: Record<string, string> = {
   ministry: 'bg-gold-500/20 text-gold-500 border-gold-500/30',
 };
 
-const PRIORITY_COLORS: Record<string, string> = {
-  critical: 'bg-red-500',
-  high: 'bg-orange-400',
-  medium: 'bg-gold-500',
-  low: 'bg-white/40',
-};
+import { PRIORITY_DOT as PRIORITY_COLORS, STATUS_PILL, STATUS_LABEL } from '@/lib/constants/task-styles';
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  new: { label: 'New', color: 'bg-blue-500/20 text-blue-400' },
-  active: { label: 'Active', color: 'bg-gold-500/20 text-gold-500' },
-  blocked: { label: 'Blocked', color: 'bg-red-500/20 text-red-400' },
-  done: { label: 'Done', color: 'bg-emerald-500/20 text-emerald-400' },
+  new: { label: STATUS_LABEL.new, color: STATUS_PILL.new },
+  active: { label: STATUS_LABEL.active, color: STATUS_PILL.active },
+  blocked: { label: STATUS_LABEL.blocked, color: STATUS_PILL.blocked },
+  done: { label: STATUS_LABEL.done, color: STATUS_PILL.done },
   // Legacy aliases for dashboard pages using the PG task system
-  in_progress: { label: 'In Progress', color: 'bg-gold-500/20 text-gold-500' },
-  delayed: { label: 'Delayed', color: 'bg-red-500/20 text-red-400' },
+  in_progress: { label: 'In Progress', color: STATUS_PILL.active },
+  delayed: { label: 'Delayed', color: STATUS_PILL.blocked },
   cancelled: { label: 'Cancelled', color: 'bg-white/20 text-white/40' },
 };
 

@@ -987,23 +987,23 @@ async function saveForecastsToDb(
 export async function runAllForecasts(): Promise<AllForecasts> {
   logger.info({ context: 'gpl-forecast' }, 'Starting forecast computation');
 
-  const demandForecasts = await computeDemandForecast();
-  logger.info({ count: demandForecasts.length, context: 'gpl-forecast' }, 'Computed demand forecasts');
+  const [demandForecasts, capacityTimeline, loadShedding, stationReliability, unitRisk, kpiForecasts] = await Promise.all([
+    computeDemandForecast(),
+    computeCapacityTimeline(),
+    computeLoadSheddingAnalysis(),
+    computeStationReliability(90),
+    computeUnitRisk(90),
+    computeKpiForecasts(),
+  ]);
 
-  const capacityTimeline = await computeCapacityTimeline();
-  logger.info({ count: capacityTimeline.length, context: 'gpl-forecast' }, 'Computed capacity timeline');
-
-  const loadShedding = await computeLoadSheddingAnalysis();
-  logger.info({ context: 'gpl-forecast' }, 'Computed load shedding analysis');
-
-  const stationReliability = await computeStationReliability(90);
-  logger.info({ count: stationReliability.length, context: 'gpl-forecast' }, 'Computed station reliability');
-
-  const unitRisk = await computeUnitRisk(90);
-  logger.info({ count: unitRisk.length, context: 'gpl-forecast' }, 'Computed unit risk');
-
-  const kpiForecasts = await computeKpiForecasts();
-  logger.info({ count: kpiForecasts.length, context: 'gpl-forecast' }, 'Computed KPI forecasts');
+  logger.info({
+    context: 'gpl-forecast',
+    demand: demandForecasts.length,
+    capacity: capacityTimeline.length,
+    stations: stationReliability.length,
+    units: unitRisk.length,
+    kpis: kpiForecasts.length,
+  }, 'All forecasts computed');
 
   // Save to database
   await saveForecastsToDb(demandForecasts, capacityTimeline, loadShedding, stationReliability, unitRisk, kpiForecasts);

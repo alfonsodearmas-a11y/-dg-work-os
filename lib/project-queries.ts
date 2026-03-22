@@ -696,21 +696,21 @@ export async function recalculateAllHealth(): Promise<{ updated: number; total: 
     }
   }
 
-  // Batch update: one UPDATE per health value instead of one per project
-  let totalUpdated = 0;
-  for (const [health, ids] of Object.entries(updatesByHealth)) {
-    if (ids.length === 0) continue;
-
-    // Process in chunks of 200 IDs per batch (Supabase IN clause limit)
-    for (let i = 0; i < ids.length; i += 200) {
-      const chunk = ids.slice(i, i + 200);
-      await supabaseAdmin
-        .from('projects')
-        .update({ health })
-        .in('id', chunk);
-    }
-    totalUpdated += ids.length;
-  }
+  // Batch update: one UPDATE per health value, all health values in parallel
+  const batchPromises = Object.entries(updatesByHealth)
+    .filter(([, ids]) => ids.length > 0)
+    .map(async ([health, ids]) => {
+      for (let i = 0; i < ids.length; i += 200) {
+        const chunk = ids.slice(i, i + 200);
+        await supabaseAdmin
+          .from('projects')
+          .update({ health })
+          .in('id', chunk);
+      }
+      return ids.length;
+    });
+  const results = await Promise.all(batchPromises);
+  const totalUpdated = results.reduce((sum, n) => sum + n, 0);
 
   return { updated: totalUpdated, total: data.length, breakdown };
 }

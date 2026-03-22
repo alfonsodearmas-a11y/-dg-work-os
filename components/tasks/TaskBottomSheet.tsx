@@ -12,12 +12,7 @@ interface TaskBottomSheetProps {
   onDelete: (taskId: string) => void;
 }
 
-const STATUS_OPTIONS: { value: TaskStatus; label: string; dot: string }[] = [
-  { value: 'new', label: 'New', dot: 'bg-blue-400' },
-  { value: 'active', label: 'Active', dot: 'bg-gold-500' },
-  { value: 'blocked', label: 'Blocked', dot: 'bg-red-400' },
-  { value: 'done', label: 'Done', dot: 'bg-emerald-400' },
-];
+import { STATUS_OPTIONS } from '@/lib/constants/task-styles';
 
 const NEXT_STATUS: Record<string, { label: string; value: TaskStatus }> = {
   new: { label: 'Move to Active', value: 'active' },

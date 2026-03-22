@@ -21,12 +21,7 @@ interface BulkActionBarProps {
 }
 
 const AGENCIES = ['GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'HAS', 'Hinterland', 'Ministry'];
-const STATUSES: { value: TaskStatus; label: string; dot: string }[] = [
-  { value: 'new', label: 'New', dot: 'bg-blue-400' },
-  { value: 'active', label: 'Active', dot: 'bg-gold-500' },
-  { value: 'blocked', label: 'Blocked', dot: 'bg-red-400' },
-  { value: 'done', label: 'Done', dot: 'bg-emerald-400' },
-];
+import { STATUS_OPTIONS as STATUSES } from '@/lib/constants/task-styles';
 
 type ActivePopover = 'date' | 'assignee' | 'agency' | 'status' | 'delete' | null;
 

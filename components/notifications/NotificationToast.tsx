@@ -17,14 +17,7 @@ function ToastIcon({ type, category }: { type: string; category?: string }) {
   return <CheckSquare className="h-4 w-4 text-green-500" />;
 }
 
-function priorityColor(priority: string): string {
-  switch (priority) {
-    case 'urgent': return '#dc2626';
-    case 'high': return '#fb923c';
-    case 'medium': return '#d4af37';
-    default: return 'transparent';
-  }
-}
+import { notificationPriorityColor as priorityColor } from '@/lib/constants/task-styles';
 
 function SingleToast({
   notification,

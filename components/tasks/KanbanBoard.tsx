@@ -42,11 +42,13 @@ const COLUMN_LABELS: Record<string, string> = {
   done: 'Done',
 };
 
+import { STATUS_DOT } from '@/lib/constants/task-styles';
+
 const COLUMN_TAB_STYLES: Record<string, { active: string; dot: string }> = {
-  new: { active: 'border-blue-400 text-blue-400', dot: 'bg-blue-400' },
-  active: { active: 'border-gold-500 text-gold-500', dot: 'bg-gold-500' },
-  blocked: { active: 'border-red-400 text-red-400', dot: 'bg-red-400' },
-  done: { active: 'border-emerald-400 text-emerald-400', dot: 'bg-emerald-400' },
+  new: { active: 'border-blue-400 text-blue-400', dot: STATUS_DOT.new },
+  active: { active: 'border-gold-500 text-gold-500', dot: STATUS_DOT.active },
+  blocked: { active: 'border-red-400 text-red-400', dot: STATUS_DOT.blocked },
+  done: { active: 'border-emerald-400 text-emerald-400', dot: STATUS_DOT.done },
 };
 
 // ---------------------------------------------------------------------------

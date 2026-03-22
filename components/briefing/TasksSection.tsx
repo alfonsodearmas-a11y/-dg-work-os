@@ -78,26 +78,7 @@ function formatDueDate(task: Task): { label: string; className: string } {
   return { label: formatted, className: 'text-navy-600' };
 }
 
-const statusStyles: Record<string, string> = {
-  new: 'bg-blue-500/20 text-blue-400',
-  active: 'bg-gold-500/20 text-gold-500',
-  blocked: 'bg-red-500/20 text-red-400',
-  done: 'bg-emerald-500/20 text-emerald-400',
-};
-
-const statusLabels: Record<string, string> = {
-  new: 'New',
-  active: 'Active',
-  blocked: 'Blocked',
-  done: 'Done',
-};
-
-const priorityDot: Record<string, string> = {
-  critical: 'bg-red-500',
-  high: 'bg-orange-400',
-  medium: 'bg-gold-500',
-  low: 'bg-white/40',
-};
+import { STATUS_PILL as statusStyles, STATUS_LABEL as statusLabels, PRIORITY_DOT as priorityDot } from '@/lib/constants/task-styles';
 
 export function TasksSection({ tasks, onEditTask, onRefresh }: TasksSectionProps) {
   const overdueCount = useMemo(() => tasks.filter(isOverdue).length, [tasks]);

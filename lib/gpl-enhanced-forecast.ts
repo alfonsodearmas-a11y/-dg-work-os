@@ -9,6 +9,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { supabaseAdmin } from './db';
 import { createHash } from 'crypto';
 import { logger } from '@/lib/logger';
+import { safeParseFloat } from '@/lib/parse-utils';
 import type { GPLDailySummary, GPLDailyStation } from '@/lib/types/gpl';
 import { AI_MODEL } from '@/lib/constants/ai-config';
 
@@ -100,20 +101,27 @@ interface AssembledData {
 }
 
 async function assembleAllData(): Promise<AssembledData> {
-  // Fetch ALL monthly KPI data
-  const { data: rawKpis, error: kpiErr } = await supabaseAdmin
-    .from('gpl_monthly_kpis')
-    .select('report_month, kpi_name, value')
-    .order('report_month', { ascending: true });
+  // Fetch KPI data and latest DBIS summary in parallel (independent queries)
+  const [kpiResult, summaryResult] = await Promise.all([
+    supabaseAdmin
+      .from('gpl_monthly_kpis')
+      .select('report_month, kpi_name, value')
+      .order('report_month', { ascending: true }),
+    supabaseAdmin
+      .from('gpl_daily_summary')
+      .select('*')
+      .order('report_date', { ascending: false })
+      .limit(1),
+  ]);
 
-  if (kpiErr) throw kpiErr;
+  if (kpiResult.error) throw kpiResult.error;
 
   // Group by month
   const byMonth: Record<string, Record<string, number>> = {};
-  (rawKpis || []).forEach((r: { report_month: string; kpi_name: string; value: number | string }) => {
+  (kpiResult.data || []).forEach((r: { report_month: string; kpi_name: string; value: number | string }) => {
     const m = new Date(r.report_month).toISOString().slice(0, 7);
     if (!byMonth[m]) byMonth[m] = {};
-    byMonth[m][r.kpi_name] = parseFloat(String(r.value));
+    byMonth[m][r.kpi_name] = safeParseFloat(r.value);
   });
 
   const months = Object.keys(byMonth).sort();
@@ -132,15 +140,9 @@ async function assembleAllData(): Promise<AssembledData> {
     };
   });
 
-  // Fetch latest DBIS summary
-  const { data: summaryRows } = await supabaseAdmin
-    .from('gpl_daily_summary')
-    .select('*')
-    .order('report_date', { ascending: false })
-    .limit(1);
-  const latestDbis = (summaryRows?.[0] as GPLDailySummary | undefined) || null;
+  const latestDbis = (summaryResult.data?.[0] as GPLDailySummary | undefined) || null;
 
-  // Fetch latest stations
+  // Fetch latest stations (depends on latestDbis)
   let latestStations: GPLDailyStation[] = [];
   if (latestDbis) {
     const { data: stRows } = await supabaseAdmin

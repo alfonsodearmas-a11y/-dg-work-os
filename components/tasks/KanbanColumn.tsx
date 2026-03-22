@@ -31,23 +31,13 @@ interface KanbanColumnProps {
   onShowMore?: () => void;
 }
 
+import { STATUS_DOT, STATUS_PILL } from '@/lib/constants/task-styles';
+
 const COLUMN_STYLES: Record<string, { dot: string; count: string }> = {
-  'New': {
-    dot: 'bg-blue-400',
-    count: 'bg-blue-500/20 text-blue-400'
-  },
-  'Active': {
-    dot: 'bg-gold-500',
-    count: 'bg-gold-500/20 text-gold-500'
-  },
-  'Blocked': {
-    dot: 'bg-red-400',
-    count: 'bg-red-500/20 text-red-400'
-  },
-  'Done': {
-    dot: 'bg-emerald-400',
-    count: 'bg-emerald-500/20 text-emerald-400'
-  }
+  'New': { dot: STATUS_DOT.new, count: STATUS_PILL.new },
+  'Active': { dot: STATUS_DOT.active, count: STATUS_PILL.active },
+  'Blocked': { dot: STATUS_DOT.blocked, count: STATUS_PILL.blocked },
+  'Done': { dot: STATUS_DOT.done, count: STATUS_PILL.done },
 };
 
 export function KanbanColumn({

@@ -30,19 +30,7 @@ const PRIORITY_ORDER: Record<string, number> = {
   low: 3,
 };
 
-const PRIORITY_COLORS: Record<string, string> = {
-  critical: 'bg-red-500',
-  high: 'bg-orange-400',
-  medium: 'bg-gold-500',
-  low: 'bg-white/40',
-};
-
-const STATUS_PILLS: Record<string, string> = {
-  new: 'bg-blue-500/20 text-blue-400',
-  active: 'bg-gold-500/20 text-gold-500',
-  blocked: 'bg-red-500/20 text-red-400',
-  done: 'bg-emerald-500/20 text-emerald-400',
-};
+import { PRIORITY_DOT as PRIORITY_COLORS, STATUS_PILL as STATUS_PILLS } from '@/lib/constants/task-styles';
 
 const AGENCY_COLORS: Record<string, string> = {
   'GPL': 'bg-[#4a82f5]/15 text-[#4a82f5]',

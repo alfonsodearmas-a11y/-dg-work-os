@@ -60,6 +60,17 @@ export function parsePaginationParams(
 }
 
 /**
+ * Safely parse a value to float. Handles numbers, strings, null/undefined.
+ * Returns fallback (default 0) for unparseable values.
+ */
+export function safeParseFloat(value: unknown, fallback: number = 0): number {
+  if (typeof value === 'number') return isNaN(value) ? fallback : value;
+  if (value == null || value === '') return fallback;
+  const n = parseFloat(String(value));
+  return isNaN(n) ? fallback : n;
+}
+
+/**
  * Parse an Excel date value (serial number, Date object, or string) into an ISO date string.
  * Returns null if the value cannot be parsed.
  */

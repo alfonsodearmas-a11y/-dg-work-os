@@ -120,7 +120,7 @@ export function ActivityPanel() {
             <span className="activity-panel-tab-badge">{taskCount}</span>
           )}
           {notifications.length > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 animate-scale-in" />
+            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 animate-scale-in" aria-hidden="true" />
           )}
         </button>
       )}

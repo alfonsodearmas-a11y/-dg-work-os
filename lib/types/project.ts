@@ -38,16 +38,6 @@ export interface RawProjectRow {
 }
 
 /**
- * Enriched project with computed fields.
- * `health` is recomputed (not trusted from DB), `status` and `days_overdue` are derived.
- */
-export interface EnrichedProject extends RawProjectRow {
-  status: string;                           // computed from project_status
-  days_overdue: number;                     // computed from end date
-  health: 'green' | 'amber' | 'red';       // recomputed, overrides DB value
-}
-
-/**
  * Normalized scraped project from oversight.gov.gy.
  * Different shape from Supabase projects — camelCase fields.
  */

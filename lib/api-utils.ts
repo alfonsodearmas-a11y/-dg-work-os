@@ -63,17 +63,6 @@ export function withErrorHandler(
         return apiError(err.code, err.message, err.status)
       }
 
-      const msg = err instanceof Error ? err.message.toLowerCase() : ''
-      if (msg.includes('unauthorized') || msg.includes('forbidden')) {
-        return apiError('UNAUTHORIZED', 'Unauthorized', msg.includes('forbidden') ? 403 : 401)
-      }
-      if (msg.includes('not found')) {
-        return apiError('NOT_FOUND', 'Resource not found', 404)
-      }
-      if (msg.includes('validation') || msg.includes('invalid')) {
-        return apiError('VALIDATION_ERROR', 'Validation error', 400)
-      }
-
       return apiError('INTERNAL_ERROR', 'Something went wrong', 500)
     }
   }

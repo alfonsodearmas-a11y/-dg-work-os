@@ -31,11 +31,11 @@ const AGENCY_COLORS: Record<string, string> = {
   'Ministry': 'border-indigo-500/40 bg-indigo-500/15 text-indigo-400',
 };
 
+import { PRIORITY_DOT as BASE_PRIORITY_DOT } from '@/lib/constants/task-styles';
+
 const PRIORITY_DOT: Record<string, string> = {
-  critical: 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]',
-  high: 'bg-orange-400',
-  medium: 'bg-gold-500',
-  low: 'bg-white/40',
+  ...BASE_PRIORITY_DOT,
+  critical: BASE_PRIORITY_DOT.critical + ' shadow-[0_0_6px_rgba(239,68,68,0.6)]',
 };
 
 const PRIORITY_BORDER: Record<string, string> = {
