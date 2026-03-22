@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import type { ProcurementStage, ProcurementMethod } from '@/lib/procurement-types';
 import { METHOD_CONFIG, PROCUREMENT_STAGES } from '@/lib/procurement-types';
+import { withErrorHandler } from '@/lib/api-utils';
 
 // ── POST: Bulk import packages ───────────────────────────────────────────────
 
@@ -20,7 +21,7 @@ interface BulkRow {
   current_stage: string;
 }
 
-export async function POST(request: NextRequest) {
+async function _POST(request: NextRequest) {
   const result = await requireRole(['dg', 'agency_admin']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
@@ -185,7 +186,7 @@ export async function POST(request: NextRequest) {
 
 // ── GET: Recent import batches ───────────────────────────────────────────────
 
-export async function GET(request: NextRequest) {
+async function _GET(request: NextRequest) {
   const result = await requireRole(['dg', 'agency_admin']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
@@ -221,7 +222,7 @@ export async function GET(request: NextRequest) {
 
 // ── DELETE: Rollback an import batch ─────────────────────────────────────────
 
-export async function DELETE(request: NextRequest) {
+async function _DELETE(request: NextRequest) {
   const result = await requireRole(['dg', 'agency_admin']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
@@ -268,3 +269,7 @@ export async function DELETE(request: NextRequest) {
 
   return NextResponse.json({ removed: count ?? 0, batchId });
 }
+
+export const POST = withErrorHandler(_POST);
+export const GET = withErrorHandler(_GET);
+export const DELETE = withErrorHandler(_DELETE);

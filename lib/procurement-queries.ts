@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/db';
 import { AGENCY_NAMES } from '@/lib/constants/agencies';
+import { logger } from '@/lib/logger';
 import type {
   ProcurementPackage,
   ProcurementStageHistory,
@@ -261,7 +262,7 @@ export async function createPackage(input: {
       content: input.notes.trim(),
       created_by: input.submitted_by,
     });
-    if (noteError) console.error('Failed to insert initial note for package', data.id, noteError);
+    if (noteError) logger.error({ err: noteError, packageId: data.id }, 'procurement: failed to insert initial note');
   }
 
   const row = data as Record<string, unknown>;

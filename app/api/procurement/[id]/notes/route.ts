@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
 import { getPackageSummary, addNote } from '@/lib/procurement-queries';
+import { logger } from '@/lib/logger';
 
 export async function POST(
   request: NextRequest,
@@ -34,7 +35,7 @@ export async function POST(
 
     return NextResponse.json({ note }, { status: 201 });
   } catch (err) {
-    console.error('Error adding procurement note:', err);
+    logger.error({ err }, 'procurement-notes: error adding note');
     return NextResponse.json({ error: 'Failed to add note' }, { status: 500 });
   }
 }

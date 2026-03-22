@@ -9,6 +9,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { supabaseAdmin } from './db';
 import { createHash } from 'crypto';
 import { logger } from '@/lib/logger';
+import type { GPLDailySummary, GPLDailyStation } from '@/lib/types/gpl';
 import { AI_MODEL } from '@/lib/constants/ai-config';
 
 const AI_CONFIG = {
@@ -92,8 +93,8 @@ interface HistoricalRow {
 
 interface AssembledData {
   kpiRows: HistoricalRow[];
-  latestDbis: Record<string, any> | null;
-  latestStations: any[];
+  latestDbis: GPLDailySummary | null;
+  latestStations: GPLDailyStation[];
   dataHash: string;
   dataRange: { start: string; end: string; months: number };
 }
@@ -109,10 +110,10 @@ async function assembleAllData(): Promise<AssembledData> {
 
   // Group by month
   const byMonth: Record<string, Record<string, number>> = {};
-  (rawKpis || []).forEach((r: any) => {
+  (rawKpis || []).forEach((r: { report_month: string; kpi_name: string; value: number | string }) => {
     const m = new Date(r.report_month).toISOString().slice(0, 7);
     if (!byMonth[m]) byMonth[m] = {};
-    byMonth[m][r.kpi_name] = parseFloat(r.value);
+    byMonth[m][r.kpi_name] = parseFloat(String(r.value));
   });
 
   const months = Object.keys(byMonth).sort();
@@ -137,16 +138,16 @@ async function assembleAllData(): Promise<AssembledData> {
     .select('*')
     .order('report_date', { ascending: false })
     .limit(1);
-  const latestDbis = summaryRows?.[0] || null;
+  const latestDbis = (summaryRows?.[0] as GPLDailySummary | undefined) || null;
 
   // Fetch latest stations
-  let latestStations: any[] = [];
+  let latestStations: GPLDailyStation[] = [];
   if (latestDbis) {
     const { data: stRows } = await supabaseAdmin
       .from('gpl_daily_stations')
       .select('station, total_units, total_derated_capacity_mw, total_available_mw, units_online, units_offline')
       .eq('upload_id', latestDbis.upload_id);
-    latestStations = stRows || [];
+    latestStations = (stRows || []) as GPLDailyStation[];
   }
 
   // Compute hash of all input data for cache invalidation

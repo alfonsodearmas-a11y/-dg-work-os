@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
+import { logger } from '@/lib/logger';
 import type { ProcurementStage, ProcurementMethod } from '@/lib/procurement-types';
 
 // ── Demo tag used to identify seeded data ────────────────────────────────
@@ -199,7 +200,7 @@ export async function POST() {
         .single();
 
       if (pkgError || !pkg) {
-        console.error('Failed to seed package:', demo.title, pkgError);
+        logger.error({ err: pkgError, title: demo.title }, 'procurement-demo: failed to seed package');
         continue;
       }
 
@@ -253,7 +254,7 @@ export async function POST() {
 
     return NextResponse.json({ seeded, message: `Seeded ${seeded} demo tenders` });
   } catch (err) {
-    console.error('Error seeding demo data:', err);
+    logger.error({ err }, 'procurement-demo: error seeding demo data');
     return NextResponse.json({ error: 'Failed to seed demo data' }, { status: 500 });
   }
 }
@@ -298,7 +299,7 @@ export async function DELETE() {
 
     return NextResponse.json({ erased: ids.length, message: `Erased ${ids.length} demo tenders` });
   } catch (err) {
-    console.error('Error erasing demo data:', err);
+    logger.error({ err }, 'procurement-demo: error erasing demo data');
     return NextResponse.json({ error: 'Failed to erase demo data' }, { status: 500 });
   }
 }

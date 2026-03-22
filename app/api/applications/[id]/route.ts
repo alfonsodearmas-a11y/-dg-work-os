@@ -3,14 +3,16 @@ import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/db';
 import { canAccessModule } from '@/lib/modules/access';
 import { MINISTRY_ROLES } from '@/lib/people-types';
+import { withErrorHandler } from '@/lib/api-utils';
 
 const APP_COLUMNS = 'id, agency, applicant_name, application_type, reference_number, priority, status, notes, created_by, updated_by, submitted_at, created_at, updated_at';
 
 // GET /api/applications/[id] — single application with documents and activity
-export async function GET(
+async function _GET(
   _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  ctx?: unknown
 ) {
+  const { params } = ctx as { params: Promise<{ id: string }> };
   const { id } = await params;
   const session = await auth(); // TODO: migrate to requireRole()
   if (!session?.user?.id) {
@@ -72,10 +74,11 @@ export async function GET(
 }
 
 // PATCH /api/applications/[id] — update status/notes
-export async function PATCH(
+async function _PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  ctx?: unknown
 ) {
+  const { params } = ctx as { params: Promise<{ id: string }> };
   const { id } = await params;
   const session = await auth(); // TODO: migrate to requireRole()
   if (!session?.user?.id) {
@@ -167,3 +170,6 @@ export async function PATCH(
 
   return NextResponse.json({ application: data });
 }
+
+export const GET = withErrorHandler(_GET);
+export const PATCH = withErrorHandler(_PATCH);

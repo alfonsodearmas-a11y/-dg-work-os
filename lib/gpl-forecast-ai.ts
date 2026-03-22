@@ -335,7 +335,7 @@ export async function generateStrategicBriefing(forecastData: ForecastData): Pro
   const startTime = Date.now();
 
   if (!process.env.ANTHROPIC_API_KEY) {
-    console.warn('[gpl-forecast-ai] ANTHROPIC_API_KEY not configured');
+    logger.warn({ context: 'gpl-forecast-ai' }, 'ANTHROPIC_API_KEY not configured');
     return {
       success: false,
       error: 'AI analysis not configured',
@@ -379,7 +379,7 @@ export async function generateStrategicBriefing(forecastData: ForecastData): Pro
 
     const prompt = buildStrategicPrompt(promptData);
 
-    console.log('[gpl-forecast-ai] Generating strategic briefing...');
+    logger.info({ context: 'gpl-forecast-ai' }, 'Generating strategic briefing');
 
     const response = await anthropic.messages.create({
       model: AI_CONFIG.MODEL,
@@ -418,7 +418,7 @@ export async function generateStrategicBriefing(forecastData: ForecastData): Pro
       logger.error({ err: insertError }, 'gpl-forecast-ai: failed to save briefing to DB');
     }
 
-    console.log(`[gpl-forecast-ai] Strategic briefing generated in ${processingTime}ms`);
+    logger.info({ processingTime, context: 'gpl-forecast-ai' }, 'Strategic briefing generated');
 
     return {
       success: true,
@@ -466,7 +466,7 @@ export async function getLatestBriefing(): Promise<AiAnalysisRow | null> {
  * Run full forecast + AI analysis pipeline
  */
 export async function runFullAnalysis(): Promise<FullAnalysisResult> {
-  console.log('[gpl-forecast-ai] Starting full analysis pipeline...');
+  logger.info({ context: 'gpl-forecast-ai' }, 'Starting full analysis pipeline');
 
   const forecasting = await getForecasting();
 

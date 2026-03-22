@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ZodSchema } from 'zod'
 import { logger } from '@/lib/logger'
 
+export class AppError extends Error {
+  constructor(
+    message: string,
+    public status: number = 500,
+    public code: string = 'INTERNAL_ERROR'
+  ) {
+    super(message);
+    this.name = 'AppError';
+  }
+}
+
 type ParseSuccess<T> = { data: T; error: null }
 type ParseFailure = { data: null; error: NextResponse }
 type ParseResult<T> = ParseSuccess<T> | ParseFailure
@@ -47,6 +58,22 @@ export function withErrorHandler(
       return await handler(req, ctx)
     } catch (err) {
       logger.error({ err, route: req.nextUrl.pathname }, 'Unhandled API error')
+
+      if (err instanceof AppError) {
+        return apiError(err.code, err.message, err.status)
+      }
+
+      const msg = err instanceof Error ? err.message.toLowerCase() : ''
+      if (msg.includes('unauthorized') || msg.includes('forbidden')) {
+        return apiError('UNAUTHORIZED', 'Unauthorized', msg.includes('forbidden') ? 403 : 401)
+      }
+      if (msg.includes('not found')) {
+        return apiError('NOT_FOUND', 'Resource not found', 404)
+      }
+      if (msg.includes('validation') || msg.includes('invalid')) {
+        return apiError('VALIDATION_ERROR', 'Validation error', 400)
+      }
+
       return apiError('INTERNAL_ERROR', 'Something went wrong', 500)
     }
   }

@@ -471,7 +471,7 @@ export async function generateForecast(): Promise<GenerateForecastResponse> {
     // Save to database
     await saveForecastToDb(forecast);
 
-    console.log(`[gpl-multivariate] Generated successfully in ${processingTime}ms`);
+    logger.info({ processingTime, context: 'gpl-multivariate' }, 'Forecast generated successfully');
     return { success: true, forecast };
 
   } catch (err: any) {
@@ -673,7 +673,7 @@ async function saveForecastToDb(forecast: ForecastResult): Promise<void> {
       logger.error({ err: error }, 'gpl-multivariate: failed to save');
       // Non-fatal, continue
     } else {
-      console.log('[gpl-multivariate] Saved to database');
+      logger.info({ context: 'gpl-multivariate' }, 'Saved to database');
     }
   } catch (err) {
     logger.error({ err }, 'gpl-multivariate: failed to save');

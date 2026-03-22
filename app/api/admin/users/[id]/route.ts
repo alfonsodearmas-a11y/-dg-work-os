@@ -6,6 +6,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { MINISTRY_ROLES } from '@/lib/people-types';
 import { sendInviteEmail } from '@/lib/invite-email';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 async function logAudit(actorId: string, targetUserId: string, action: string, metadata: Record<string, unknown> = {}) {
   await supabaseAdmin.from('admin_audit_log').insert({
@@ -221,7 +222,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     await supabaseAdmin.auth.admin.deleteUser(id);
   } catch (authErr) {
     // Profile is gone; orphaned auth user is harmless (no matching profile = no access)
-    console.error('Failed to delete auth user (orphaned):', authErr);
+    logger.error({ err: authErr }, 'admin-users: failed to delete auth user (orphaned)');
   }
 
   // Audit log (after deletion, user details preserved in metadata)

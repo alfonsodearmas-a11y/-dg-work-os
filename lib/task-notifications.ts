@@ -89,7 +89,7 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
 export async function sendTaskEmail(to: string, subject: string, html: string): Promise<boolean> {
   const result = await sendEmail({ to, subject, html });
   if (result.success) {
-    console.log(`[task-email] Sent "${subject}" to ${to}`);
+    logger.info({ to, subject }, 'task-email: sent');
   } else {
     logger.error({ err: result.error, to, subject }, 'task-email: failed to send');
   }

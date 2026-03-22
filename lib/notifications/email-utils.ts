@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { logger } from '@/lib/logger';
 
 /**
  * Shared utilities for notification email routes (send-email + digest).
@@ -17,7 +18,7 @@ export function getAppBaseUrl(): string {
 
   if (!url && !_baseUrlWarned) {
     _baseUrlWarned = true;
-    console.warn('[email-utils] getAppBaseUrl(): no NEXTAUTH_URL or VERCEL_URL set — email links will be relative paths');
+    logger.warn('email-utils: getAppBaseUrl(): no NEXTAUTH_URL or VERCEL_URL set — email links will be relative paths');
   }
 
   return url;

@@ -969,7 +969,7 @@ async function saveForecastsToDb(
       if (error) throw error;
     }
 
-    console.log('[gpl-forecast] Saved all forecasts to database');
+    logger.info({ context: 'gpl-forecast' }, 'Saved all forecasts to database');
 
   } catch (err) {
     logger.error({ err }, 'gpl-forecast: failed to save forecasts');
@@ -985,25 +985,25 @@ async function saveForecastsToDb(
  * Run all forecasting computations
  */
 export async function runAllForecasts(): Promise<AllForecasts> {
-  console.log('[gpl-forecast] Starting forecast computation...');
+  logger.info({ context: 'gpl-forecast' }, 'Starting forecast computation');
 
   const demandForecasts = await computeDemandForecast();
-  console.log(`[gpl-forecast] Computed ${demandForecasts.length} demand forecasts`);
+  logger.info({ count: demandForecasts.length, context: 'gpl-forecast' }, 'Computed demand forecasts');
 
   const capacityTimeline = await computeCapacityTimeline();
-  console.log(`[gpl-forecast] Computed capacity timeline for ${capacityTimeline.length} grids`);
+  logger.info({ count: capacityTimeline.length, context: 'gpl-forecast' }, 'Computed capacity timeline');
 
   const loadShedding = await computeLoadSheddingAnalysis();
-  console.log('[gpl-forecast] Computed load shedding analysis');
+  logger.info({ context: 'gpl-forecast' }, 'Computed load shedding analysis');
 
   const stationReliability = await computeStationReliability(90);
-  console.log(`[gpl-forecast] Computed reliability for ${stationReliability.length} stations`);
+  logger.info({ count: stationReliability.length, context: 'gpl-forecast' }, 'Computed station reliability');
 
   const unitRisk = await computeUnitRisk(90);
-  console.log(`[gpl-forecast] Computed risk for ${unitRisk.length} units`);
+  logger.info({ count: unitRisk.length, context: 'gpl-forecast' }, 'Computed unit risk');
 
   const kpiForecasts = await computeKpiForecasts();
-  console.log(`[gpl-forecast] Computed ${kpiForecasts.length} KPI forecasts`);
+  logger.info({ count: kpiForecasts.length, context: 'gpl-forecast' }, 'Computed KPI forecasts');
 
   // Save to database
   await saveForecastsToDb(demandForecasts, capacityTimeline, loadShedding, stationReliability, unitRisk, kpiForecasts);

@@ -225,14 +225,14 @@ export async function generateGWIInsights(
   const startTime = Date.now();
 
   if (!process.env.ANTHROPIC_API_KEY) {
-    console.warn('[gwi-insights] ANTHROPIC_API_KEY not configured');
+    logger.warn({ context: 'gwi-insights' }, 'ANTHROPIC_API_KEY not configured');
     return null;
   }
 
   // Assemble data
   const data = await assembleGWIData(month);
   if (data.length === 0) {
-    console.warn('[gwi-insights] No data found for month:', month);
+    logger.warn({ month, context: 'gwi-insights' }, 'No data found for month');
     return null;
   }
 
@@ -248,13 +248,13 @@ export async function generateGWIInsights(
       .single();
 
     if (cached && cached.data_hash === dataHash) {
-      console.log('[gwi-insights] Returning cached insights for', month);
+      logger.info({ month, context: 'gwi-insights' }, 'Returning cached insights');
       return cached.insight_json as unknown as GWIInsights;
     }
   }
 
   // Generate new insights with Claude Opus
-  console.log('[gwi-insights] Generating new insights for', month);
+  logger.info({ month, context: 'gwi-insights' }, 'Generating new insights');
 
   try {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -303,7 +303,7 @@ export async function generateGWIInsights(
       logger.error({ err: upsertError }, 'gwi-insights: failed to cache insights');
     }
 
-    console.log(`[gwi-insights] Insights generated in ${processingTime}ms`);
+    logger.info({ processingTime, context: 'gwi-insights' }, 'Insights generated');
     return insights;
   } catch (err) {
     logger.error({ err }, 'gwi-insights: error generating insights');

@@ -3,11 +3,13 @@ import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { checkPermission, logActivity, canManageUser } from '@/lib/people-permissions';
 import type { Role } from '@/lib/people-types';
+import { withErrorHandler } from '@/lib/api-utils';
 
-export async function PUT(
+async function _PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  ctx?: unknown
 ) {
+  const { params } = ctx as { params: Promise<{ id: string }> };
   const { id } = await params;
   const authResult = await requireRole(['dg', 'minister', 'ps']);
   if (authResult instanceof NextResponse) return authResult;
@@ -101,10 +103,11 @@ export async function PUT(
   return NextResponse.json({ success: true });
 }
 
-export async function DELETE(
+async function _DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  ctx?: unknown
 ) {
+  const { params } = ctx as { params: Promise<{ id: string }> };
   const { id } = await params;
   const authResult = await requireRole(['dg']);
   if (authResult instanceof NextResponse) return authResult;
@@ -161,3 +164,6 @@ export async function DELETE(
 
   return NextResponse.json({ success: true });
 }
+
+export const PUT = withErrorHandler(_PUT);
+export const DELETE = withErrorHandler(_DELETE);

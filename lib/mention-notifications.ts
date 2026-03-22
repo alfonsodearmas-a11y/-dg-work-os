@@ -50,7 +50,7 @@ export async function notifyMentionedUsers(
       );
     } catch (err) {
       // Table may not exist yet — log and continue
-      console.warn('[mention-notifications] Could not insert mention record:', (err as Error).message);
+      logger.warn({ err }, 'mention-notifications: could not insert mention record');
     }
 
     // Create in-app notification via the existing notifications system

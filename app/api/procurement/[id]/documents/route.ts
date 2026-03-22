@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { getPackageSummary, uploadDocument } from '@/lib/procurement-queries';
+import { logger } from '@/lib/logger';
 
 const ALLOWED_TYPES = [
   'application/pdf',
@@ -75,7 +76,7 @@ export async function POST(
 
     return NextResponse.json({ document }, { status: 201 });
   } catch (err) {
-    console.error('Error uploading procurement document:', err);
+    logger.error({ err }, 'procurement-documents: error uploading document');
     return NextResponse.json({ error: 'Failed to upload document' }, { status: 500 });
   }
 }

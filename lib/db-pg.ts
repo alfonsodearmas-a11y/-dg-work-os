@@ -29,7 +29,7 @@ export async function query(text: string, params?: unknown[]): Promise<QueryResu
     const result = await pool.query(text, params);
     const duration = Date.now() - start;
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[db-pg] ${text.substring(0, 80)}... (${duration}ms, ${result.rowCount} rows)`);
+      logger.debug({ query: text.substring(0, 80), duration, rowCount: result.rowCount }, 'DB query');
     }
     return result;
   } catch (error: unknown) {

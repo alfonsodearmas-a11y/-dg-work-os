@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/db';
 import { canAccessModule } from '@/lib/modules/access';
+import { withErrorHandler } from '@/lib/api-utils';
 
 // GET /api/applications — list with filters, agency-scoped
-export async function GET(req: NextRequest) {
+async function _GET(req: NextRequest) {
   const session = await auth(); // TODO: migrate to requireRole()
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
@@ -112,7 +113,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/applications — create new application
-export async function POST(req: NextRequest) {
+async function _POST(req: NextRequest) {
   const session = await auth(); // TODO: migrate to requireRole()
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
@@ -168,3 +169,6 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ application: data }, { status: 201 });
 }
+
+export const GET = withErrorHandler(_GET);
+export const POST = withErrorHandler(_POST);

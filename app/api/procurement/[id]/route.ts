@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
 import { getPackageById, getPackageSummary, deletePackage } from '@/lib/procurement-queries';
+import { logger } from '@/lib/logger';
 
 export async function GET(
   _request: Request,
@@ -25,7 +26,7 @@ export async function GET(
 
     return NextResponse.json({ package: pkg });
   } catch (err) {
-    console.error('Error fetching procurement package:', err);
+    logger.error({ err, context: 'procurement' }, 'Error fetching procurement package');
     return NextResponse.json({ error: 'Failed to fetch tender' }, { status: 500 });
   }
 }
@@ -55,7 +56,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error('Error deleting procurement package:', err);
+    logger.error({ err, context: 'procurement' }, 'Error deleting procurement package');
     return NextResponse.json({ error: 'Failed to delete tender' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { getPackageSummary, updatePackageStage } from '@/lib/procurement-queries';
 import { PROCUREMENT_STAGES, ProcurementStage } from '@/lib/procurement-types';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   const result = await requireRole(['dg', 'agency_admin']);
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ package: updated });
   } catch (err) {
-    console.error('Error advancing procurement package:', err);
+    logger.error({ err }, 'procurement-advance: error advancing package');
     return NextResponse.json({ error: 'Failed to advance tender' }, { status: 500 });
   }
 }
