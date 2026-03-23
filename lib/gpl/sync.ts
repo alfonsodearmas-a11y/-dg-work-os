@@ -136,6 +136,41 @@ export async function isCacheStale(): Promise<boolean> {
   return ageMinutes > GPL_CONFIG.sync.staleAfterMinutes;
 }
 
+// ── Row Mappers (shared by API routes that read from cache) ─────────────────
+
+export function mapOutageRow(r: Record<string, unknown>): GplOutage {
+  return {
+    id: r.outage_id as number,
+    feeder_id: r.feeder_id as number,
+    date: r.date as string,
+    time_out: r.time_out as string | null,
+    time_in: r.time_in as string | null,
+    duration_minutes: r.duration_minutes as number | null,
+    customers_affected: r.customers_affected as number | null,
+    mw_lost: r.mw_lost as number | null,
+    ens_mwh: r.ens_mwh as number | null,
+    cause_detail: r.cause_detail as string | null,
+    status: r.status as string,
+    areas_affected: r.areas_affected as string | null,
+    feeder_code: r.feeder_code as string | null,
+    substation_code: r.substation_code as string | null,
+    cause_category: r.cause_category as string | null,
+    cause_subcategory: r.cause_subcategory as string | null,
+    root_cause: r.root_cause as string | null,
+  };
+}
+
+export function mapFeederRow(r: Record<string, unknown>): GplFeeder {
+  return {
+    id: r.feeder_id as number,
+    code: r.code as string,
+    name: r.name as string,
+    substation_code: r.substation_code as string,
+    area_served: r.area_served as string | null,
+    customer_count: r.customer_count as number,
+  };
+}
+
 // ── Full Sync Orchestration ─────────────────────────────────────────────────
 
 export async function syncGplData(): Promise<SyncResult> {

@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
-import { syncGplData } from '@/lib/gpl/sync';
+import { syncGplData, mapOutageRow, mapFeederRow } from '@/lib/gpl/sync';
 import { calculatePulseScore } from '@/lib/gpl/scoring';
-import type { GplOutage, GplFeeder } from '@/lib/gpl/types';
 
 export async function POST(_request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
@@ -40,34 +39,8 @@ export async function POST(_request: NextRequest) {
     if (outagesResult.error) throw outagesResult.error;
     if (feedersResult.error) throw feedersResult.error;
 
-    const outages: GplOutage[] = (outagesResult.data ?? []).map((r) => ({
-      id: r.outage_id,
-      feeder_id: r.feeder_id,
-      date: r.date,
-      time_out: r.time_out,
-      time_in: r.time_in,
-      duration_minutes: r.duration_minutes,
-      customers_affected: r.customers_affected,
-      mw_lost: r.mw_lost,
-      ens_mwh: r.ens_mwh,
-      cause_detail: r.cause_detail,
-      status: r.status,
-      areas_affected: r.areas_affected,
-      feeder_code: r.feeder_code,
-      substation_code: r.substation_code,
-      cause_category: r.cause_category,
-      cause_subcategory: r.cause_subcategory,
-      root_cause: r.root_cause,
-    }));
-
-    const feeders: GplFeeder[] = (feedersResult.data ?? []).map((r) => ({
-      id: r.feeder_id,
-      code: r.code,
-      name: r.name,
-      substation_code: r.substation_code,
-      area_served: r.area_served,
-      customer_count: r.customer_count,
-    }));
+    const outages = (outagesResult.data ?? []).map(mapOutageRow);
+    const feeders = (feedersResult.data ?? []).map(mapFeederRow);
 
     // 3. Calculate and store pulse score
     const pulseScore = calculatePulseScore(outages, feeders);

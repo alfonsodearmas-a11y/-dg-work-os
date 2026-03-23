@@ -6,6 +6,7 @@ import { useAgencyData } from '@/hooks/useAgencyData';
 import { GPLDetail } from '@/components/intel/GPLDetail';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PendingConnectionsCard } from '@/components/intel/PendingConnectionsCard';
+import { PulseScoreCard } from '@/app/pulse/gpl/grid-health/components/PulseScoreCard';
 
 export default function GPLIntelPage() {
   const { rawData, isLoading, loadGPLByDate } = useAgencyData();
@@ -31,6 +32,9 @@ export default function GPLIntelPage() {
           </div>
         </div>
       </div>
+
+      {/* Grid Health Score */}
+      <PulseScoreCard />
 
       {/* Pending Connections */}
       <PendingConnectionsCard agency="GPL" />
