@@ -11,6 +11,7 @@ import {
   Settings,
   Zap,
   Plane,
+  PlaneLanding,
   Droplets,
   Shield,
   ChevronRight,
@@ -83,6 +84,7 @@ const mainNavItems = [
   { href: '/meetings', label: 'Meetings', icon: Mic, moduleSlug: 'meetings' },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays, moduleSlug: 'calendar' },
   { href: '/documents', label: 'Documents', icon: FileText, moduleSlug: 'documents' },
+  { href: '/airstrips', label: 'Airstrips', icon: PlaneLanding, moduleSlug: 'airstrips' },
 ];
 
 const agencies = [
