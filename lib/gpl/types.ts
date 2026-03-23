@@ -380,12 +380,21 @@ export interface MonthSummary {
   } | null;
 }
 
+export interface TodayFeederHealth {
+  grade: FeederGrade;
+  score: number;
+  outages_30d: number;
+  avg_duration_30d: number;
+  trend: TrendDirection;
+}
+
 export interface TodayOutage {
   id: number;
   feeder_id: number;
   feeder_code: string;
   feeder_name: string;
   substation_code: string;
+  substation_name: string;
   date: string;
   time_out: string | null;
   time_in: string | null;
@@ -397,6 +406,19 @@ export interface TodayOutage {
   cause_detail: string | null;
   status: string;
   areas_affected: string | null;
-  feeder_grade: FeederGrade;
-  feeder_score: number;
+  feeder_health: TodayFeederHealth;
+}
+
+export interface TodaySummary {
+  active: number;
+  restored: number;
+  total: number;
+  total_customers_affected: number;
+  total_duration_minutes: number;
+}
+
+export interface TodayResponse {
+  date: string;
+  summary: TodaySummary;
+  outages: TodayOutage[];
 }

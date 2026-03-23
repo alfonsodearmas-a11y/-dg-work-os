@@ -48,4 +48,20 @@ export const GPL_CONFIG = {
 
   // Average restoration minutes → restoration sub-score
   restorationScoring: { 10: 100, 20: 80, 30: 60, 60: 40 } as Record<number, number>,
+  substationNames: {
+    SOPHIA: 'Sophia Substation',
+    GOE: 'Garden of Eden Substation',
+    DP3: 'Demerara Power 3',
+    DP4: 'Demerara Power 4',
+    'N/GT': 'New Georgetown Substation',
+    'G/HOPE': 'Good Hope Substation',
+    'G/GROVE': 'Golden Grove Substation',
+    COLUMBIA: 'Columbia Substation',
+    ONVERWAGT: 'Onverwagt Substation',
+    SKELDON: 'Skeldon Substation',
+    'V/HOOP': 'Vreed-en-Hoop Substation',
+    'E/BERG': 'Evergreen/Berg Substation',
+    '#53': 'Substation #53',
+    'C/FIELD': 'Cane Field Substation',
+  } as Record<string, string>,
 } as const;

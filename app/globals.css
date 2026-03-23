@@ -710,6 +710,15 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   animation: pulse-gold 2s infinite;
 }
 
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
 .animate-slide-in-right {
   animation: slideInRight 0.3s ease forwards;
 }
