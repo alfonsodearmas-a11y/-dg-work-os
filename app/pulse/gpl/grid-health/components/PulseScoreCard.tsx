@@ -147,7 +147,7 @@ export function PulseScoreCard() {
       <div className="flex items-start gap-5">
         <div className="flex flex-col items-center shrink-0">
           <span
-            className={`text-4xl font-bold font-[family-name:var(--font-outfit)] tabular-nums ${theme.textClass}`}
+            className={`text-4xl font-bold tabular-nums ${theme.textClass}`}
           >
             {data.overall}
           </span>

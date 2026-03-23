@@ -27,7 +27,7 @@ import {
   ChevronsLeft,
   Gauge,
 } from 'lucide-react';
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import { signOut } from 'next-auth/react';
 import { useSidebar } from './SidebarContext';
@@ -78,7 +78,6 @@ function useTooltip() {
 const mainNavItems = [
   { href: '/', label: 'Mission Control', icon: LayoutDashboard, moduleSlug: 'briefing' },
   { href: '/intel', label: 'Agency Intel', icon: Activity, moduleSlug: 'agency-intel' },
-  { href: '/pulse/gpl/grid-health', label: 'Grid Health', icon: Gauge, moduleSlug: 'grid-health' },
   { href: '/tasks', label: 'Tasks', icon: CheckSquare, moduleSlug: 'tasks' },
   { href: '/procurement', label: 'Procurement', icon: ShoppingCart, moduleSlug: 'procurement' },
   { href: '/oversight', label: 'Oversight', icon: Eye, moduleSlug: 'oversight' },
@@ -152,6 +151,8 @@ export function Sidebar() {
   const filteredMainNav = mainNavItems.filter(item => canAccess(item.moduleSlug));
   const filteredAgencies = visibleAgencies.filter(a => canAccess(a.moduleSlug));
   const filteredAdminItems = adminItems.filter(item => canAccess(item.moduleSlug));
+
+  const gridHealthActive = pathname.startsWith('/pulse/gpl/grid-health');
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/login' });
@@ -278,20 +279,36 @@ export function Sidebar() {
                     const Icon = agency.icon;
                     const href = `/intel/${agency.code}`;
                     const active = pathname.startsWith(href);
+                    // When viewing Grid Health, don't highlight the GPL agency link
+                    const showActive = active && !(agency.code === 'gpl' && gridHealthActive);
                     return (
-                      <Link
-                        key={agency.code}
-                        href={href}
-                        onClick={handleNavClick}
-                        className={`sidebar-item ${active ? 'active' : ''} ${collapsed ? 'sidebar-item-collapsed' : ''}`}
-                        {...(active ? { 'aria-current': 'page' as const } : {})}
-                        onMouseEnter={collapsed ? (e) => onEnter(agency.label, e.currentTarget) : undefined}
-                        onMouseLeave={collapsed ? onLeave : undefined}
-                      >
-                        <Icon className={`h-4 w-4 ${active ? 'text-gold-500' : ''}`} aria-hidden="true" />
-                        {!collapsed && <span className="sidebar-label">{agency.label}</span>}
-                        {!collapsed && <span className="ml-auto text-xs text-navy-600 hidden group-hover:inline">{agency.name}</span>}
-                      </Link>
+                      <Fragment key={agency.code}>
+                        <Link
+                          href={href}
+                          onClick={handleNavClick}
+                          className={`sidebar-item ${showActive ? 'active' : ''} ${collapsed ? 'sidebar-item-collapsed' : ''}`}
+                          {...(showActive ? { 'aria-current': 'page' as const } : {})}
+                          onMouseEnter={collapsed ? (e) => onEnter(agency.label, e.currentTarget) : undefined}
+                          onMouseLeave={collapsed ? onLeave : undefined}
+                        >
+                          <Icon className={`h-4 w-4 ${showActive ? 'text-gold-500' : ''}`} aria-hidden="true" />
+                          {!collapsed && <span className="sidebar-label">{agency.label}</span>}
+                          {!collapsed && <span className="ml-auto text-xs text-navy-600 hidden group-hover:inline">{agency.name}</span>}
+                        </Link>
+                        {agency.code === 'gpl' && canAccess('grid-health') && (
+                          <Link
+                            href="/pulse/gpl/grid-health"
+                            onClick={handleNavClick}
+                            className={`sidebar-item ${gridHealthActive ? 'active' : ''} ${collapsed ? 'sidebar-item-collapsed' : ''}`}
+                            {...(gridHealthActive ? { 'aria-current': 'page' as const } : {})}
+                            onMouseEnter={collapsed ? (e) => onEnter('Grid Health', e.currentTarget) : undefined}
+                            onMouseLeave={collapsed ? onLeave : undefined}
+                          >
+                            <Gauge className={`h-4 w-4 ${gridHealthActive ? 'text-gold-500' : ''}`} aria-hidden="true" />
+                            {!collapsed && <span className="sidebar-label">Grid Health</span>}
+                          </Link>
+                        )}
+                      </Fragment>
                     );
                   })}
                 </div>

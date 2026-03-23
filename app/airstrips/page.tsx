@@ -16,6 +16,7 @@ import type { Airstrip } from '@/lib/airstrip-types';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { exportToCsv } from '@/lib/export-csv';
 import AddEditAirstripModal from '@/components/airstrips/AddEditAirstripModal';
+import BulkUploadAirstripsModal from '@/components/airstrips/BulkUploadAirstripsModal';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -142,6 +143,7 @@ export default function AirstripsPage() {
   const [dir, setDir] = useState(() => searchParams.get('dir') || 'asc');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
 
   // ── URL sync ──
   const buildParams = useCallback(() => {
@@ -335,7 +337,7 @@ export default function AirstripsPage() {
             >
               <Download className="h-3.5 w-3.5" /> Export CSV
             </button>
-            <button className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1.5 opacity-50 cursor-not-allowed" disabled title="Coming soon">
+            <button onClick={() => setBulkUploadOpen(true)} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1.5">
               <Upload className="h-3.5 w-3.5" /> Bulk Upload
             </button>
             <button onClick={() => setAddModalOpen(true)} className="btn-gold px-3 py-1.5 text-xs flex items-center gap-1.5">
@@ -531,6 +533,13 @@ export default function AirstripsPage() {
         onClose={() => setAddModalOpen(false)}
         onSaved={fetchAirstrips}
         surfaceTypes={distinctSurfaceTypes}
+      />
+
+      {/* Bulk Upload Modal */}
+      <BulkUploadAirstripsModal
+        open={bulkUploadOpen}
+        onClose={() => setBulkUploadOpen(false)}
+        onImported={fetchAirstrips}
       />
     </div>
   );

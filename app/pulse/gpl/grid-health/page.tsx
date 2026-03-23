@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { RefreshCw } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Gauge } from 'lucide-react';
+import { Tabs } from '@/components/ui/Tabs';
 import FeederHealthTable from './components/FeederHealthTable';
 import MonthlyPerformance from './components/MonthlyPerformance';
 import TodayGrid from './components/TodayGrid';
@@ -214,51 +215,45 @@ function GridHealthContent() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb + Header */}
-      <div>
-        <div className="flex items-center gap-1.5 text-xs text-navy-600 mb-3">
+    <div className="space-y-4 md:space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
+        <div className="flex items-center gap-3 md:gap-4">
           <Link
-            href="/intel"
-            className="hover:text-gold-500 transition-colors"
+            href="/intel/gpl"
+            className="p-2 rounded-lg text-navy-600 hover:text-white hover:bg-navy-900 transition-colors touch-active"
+            aria-label="Back"
           >
-            Pulse
+            <ArrowLeft className="h-5 w-5" />
           </Link>
-          <span>/</span>
-          <span className="text-slate-400">GPL Grid Health</span>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gold-500/20 flex items-center justify-center">
+              <Gauge className="h-4 w-4 md:h-5 md:w-5 text-gold-500" />
+            </div>
+            <div>
+              <h1 className="text-lg md:text-xl font-bold text-white">GPL Grid Health</h1>
+              <p className="text-xs md:text-sm text-navy-600">Feeder performance, outage patterns, and live grid status</p>
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1
-              className="text-xl md:text-2xl font-bold text-gold-500"
-              style={{ fontFamily: 'DM Serif Display, serif' }}
-            >
-              GPL Grid Health
-            </h1>
-            <p className="text-navy-600 text-xs mt-0.5">
-              Feeder performance, outage patterns, and live grid status
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {syncAgo && (
-              <span className="text-[11px] text-navy-600">
-                Last synced {syncAgo}
-              </span>
-            )}
-            <button
-              onClick={handleSync}
-              disabled={syncing}
-              className="btn-navy flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
-            >
-              <RefreshCw
-                size={14}
-                className={syncing ? 'animate-spin' : ''}
-              />
-              {syncing ? 'Syncing...' : 'Sync Now'}
-            </button>
-          </div>
+        <div className="flex items-center gap-3">
+          {syncAgo && (
+            <span className="text-[11px] text-navy-600">
+              Last synced {syncAgo}
+            </span>
+          )}
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="btn-navy flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+          >
+            <RefreshCw
+              size={14}
+              className={syncing ? 'animate-spin' : ''}
+            />
+            {syncing ? 'Syncing...' : 'Sync Now'}
+          </button>
         </div>
       </div>
 
@@ -299,26 +294,16 @@ function GridHealthContent() {
         </div>
       )}
 
-      {/* Tab pills */}
-      <div className="flex gap-2.5">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => {
-              if (tab.id === 'feeders') setFeederSubstationFilter('');
-              if (tab.id === 'today') setTodayDateRange(undefined);
-              setActiveTab(tab.id);
-            }}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-              activeTab === tab.id
-                ? 'bg-gold-500 text-navy-950'
-                : 'bg-transparent text-navy-600 hover:text-white hover:bg-white/[0.04]'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* Tabs */}
+      <Tabs
+        tabs={TABS}
+        activeTab={activeTab}
+        onChange={(tabId) => {
+          if (tabId === 'feeders') setFeederSubstationFilter('');
+          if (tabId === 'today') setTodayDateRange(undefined);
+          setActiveTab(tabId as TabId);
+        }}
+      />
 
       {/* Tab content */}
       <div key={refreshKey}>

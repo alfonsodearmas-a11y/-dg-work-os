@@ -65,3 +65,18 @@ export const GPL_CONFIG = {
     'C/FIELD': 'Cane Field Substation',
   } as Record<string, string>,
 } as const;
+
+/** Canonical cause-category → color map for outage visualizations. */
+export const GPL_CAUSE_COLORS: Record<string, string> = {
+  'Earth Fault': '#EF9F27',
+  'Overcurrent': '#D85A30',
+  'Planned': '#5DCAA5',
+  'Planned/Emergency Outage': '#5DCAA5',
+  'Generation Shortfall': '#7B68EE',
+  'External Mechanism': '#5B8DEF',
+};
+export const GPL_CAUSE_COLOR_DEFAULT = '#888780';
+
+export function getGplCauseColor(subcategory: string): string {
+  return GPL_CAUSE_COLORS[subcategory] ?? GPL_CAUSE_COLOR_DEFAULT;
+}

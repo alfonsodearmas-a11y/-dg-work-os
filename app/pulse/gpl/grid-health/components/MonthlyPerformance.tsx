@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { Spinner } from '@/components/ui/Spinner';
+import { GPL_CAUSE_COLORS, GPL_CAUSE_COLOR_DEFAULT } from '@/lib/gpl/config';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -48,28 +50,14 @@ interface MonthlyPerformanceProps {
   onNavigateToday?: (dateRange: { from: string; to: string }) => void;
 }
 
-// ── Constants ───────────────────────────────────────────────────────────────
-
-const CAUSE_COLORS: Record<string, string> = {
-  'Earth Fault': '#EF9F27',
-  Overcurrent: '#D85A30',
-  Planned: '#5DCAA5',
-  'Generation Shortfall': '#7B68EE',
-  'External Mechanism': '#5B8DEF',
-};
-const DEFAULT_CAUSE_COLOR = '#888780';
-
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function DeltaArrow({ value }: { value: number }) {
-  if (value === 0) return <span style={{ color: '#64748b', fontSize: 11 }}>--</span>;
-  // Negative = fewer outages = improving (green), positive = worsening (red)
+  if (value === 0) return <span className="text-navy-600 text-[11px]">--</span>;
   const improving = value < 0;
-  const color = improving ? '#059669' : '#dc2626';
-  const arrow = improving ? '\u2193' : '\u2191';
   return (
-    <span style={{ color, fontSize: 11, fontWeight: 600 }}>
-      {arrow} {Math.abs(value)}%
+    <span className={`text-[11px] font-semibold ${improving ? 'text-emerald-600' : 'text-red-500'}`}>
+      {improving ? '\u2193' : '\u2191'} {Math.abs(value)}%
     </span>
   );
 }
@@ -113,6 +101,8 @@ export default function MonthlyPerformance({
     [months],
   );
 
+  const expandedData = months.find((m) => m.month === expandedMonth);
+
   function toggleMonth(month: string) {
     setExpandedMonth((prev) => (prev === month ? null : month));
   }
@@ -126,36 +116,18 @@ export default function MonthlyPerformance({
 
   if (loading) {
     return (
-      <div style={{ padding: 32, textAlign: 'center', color: '#64748b' }}>
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            border: '3px solid #2d3a52',
-            borderTopColor: '#d4af37',
-            borderRadius: '50%',
-            margin: '0 auto 12px',
-            animation: 'spin 1s linear infinite',
-          }}
-        />
-        Loading monthly performance...
-        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      <div className="card-premium p-8">
+        <div className="flex items-center justify-center gap-3 text-navy-600">
+          <Spinner size="sm" />
+          Loading monthly performance...
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div
-        style={{
-          padding: 24,
-          background: 'rgba(220, 38, 38, 0.08)',
-          border: '1px solid rgba(220, 38, 38, 0.3)',
-          borderRadius: 10,
-          color: '#f87171',
-          fontSize: 13,
-        }}
-      >
+      <div className="p-6 bg-red-500/[0.08] border border-red-500/30 rounded-xl text-red-400 text-[13px]">
         {error}
       </div>
     );
@@ -163,27 +135,16 @@ export default function MonthlyPerformance({
 
   if (months.length === 0) {
     return (
-      <div style={{ padding: 32, textAlign: 'center', color: '#64748b', fontSize: 13 }}>
+      <div className="p-8 text-center text-navy-600 text-[13px]">
         No outage data available for the selected period.
       </div>
     );
   }
 
-  const expandedData = useMemo(
-    () => months.find((m) => m.month === expandedMonth),
-    [months, expandedMonth],
-  );
-
   return (
     <div>
       {/* ── Month Card Grid ─────────────────────────────────────────────── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-          gap: 12,
-        }}
-      >
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
         {months.map((m) => {
           const isExpanded = expandedMonth === m.month;
           const barIntensity = m.outage_count / maxOutageCount;
@@ -198,116 +159,56 @@ export default function MonthlyPerformance({
             <button
               key={m.month}
               onClick={() => toggleMonth(m.month)}
-              style={{
-                position: 'relative',
-                background: isExpanded
-                  ? 'linear-gradient(135deg, #1a2744 0%, #1f3055 100%)'
-                  : '#0d1b2e',
-                border: m.is_current
-                  ? '1px solid rgba(212, 175, 55, 0.5)'
+              className={`relative overflow-hidden rounded-xl px-3.5 pt-3.5 pb-2 cursor-pointer text-center transition-all duration-200 flex flex-col items-center gap-0.5 w-full border ${
+                m.is_current
+                  ? 'border-gold-500/50'
                   : isExpanded
-                    ? '1px solid rgba(212, 175, 55, 0.3)'
-                    : '1px solid #2d3a52',
-                borderRadius: 10,
-                padding: '14px 14px 8px',
-                cursor: 'pointer',
-                textAlign: 'center',
-                overflow: 'hidden',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 2,
-                width: '100%',
-              }}
+                    ? 'border-gold-500/30'
+                    : 'border-navy-800'
+              } ${
+                isExpanded
+                  ? 'bg-gradient-to-br from-navy-900 to-[#1f3055]'
+                  : 'bg-navy-950'
+              }`}
             >
               {m.has_long_outage && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: 8,
-                    right: 8,
-                    width: 7,
-                    height: 7,
-                    borderRadius: '50%',
-                    background: '#dc2626',
-                    boxShadow: '0 0 6px rgba(220, 38, 38, 0.5)',
-                  }}
-                />
+                <span className="absolute top-2 right-2 w-[7px] h-[7px] rounded-full bg-red-500 shadow-[0_0_6px_rgba(220,38,38,0.5)]" />
               )}
 
-              <span
-                style={{
-                  fontSize: 11,
-                  color: '#64748b',
-                  fontFamily: 'Outfit, sans-serif',
-                  letterSpacing: '0.02em',
-                }}
-              >
+              <span className="text-[11px] text-navy-600 tracking-wide">
                 {m.label}
                 {m.is_current && (
-                  <span style={{ color: '#d4af37', marginLeft: 4, fontSize: 9 }}>
-                    (in progress)
-                  </span>
+                  <span className="text-gold-500 ml-1 text-[9px]">(in progress)</span>
                 )}
               </span>
 
-              <span
-                style={{
-                  fontSize: 24,
-                  fontWeight: 700,
-                  color: '#f1f5f9',
-                  fontFamily: 'Outfit, sans-serif',
-                  lineHeight: 1.1,
-                }}
-              >
+              <span className="text-2xl font-bold text-slate-100 leading-tight tabular-nums">
                 {m.outage_count}
               </span>
-              <span
-                style={{
-                  fontSize: 10,
-                  color: '#64748b',
-                  fontFamily: 'Outfit, sans-serif',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                }}
-              >
+              <span className="text-[10px] text-navy-600 uppercase tracking-widest">
                 outages
               </span>
 
-              <div style={{ marginTop: 2, minHeight: 16 }}>
+              <div className="mt-0.5 min-h-[16px]">
                 {m.vs_previous ? (
                   <DeltaArrow value={m.vs_previous.outage_count_delta_pct} />
                 ) : (
-                  <span style={{ fontSize: 11, color: '#64748b' }}>--</span>
+                  <span className="text-[11px] text-navy-600">--</span>
                 )}
               </div>
 
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  width: '100%',
-                  marginTop: 4,
-                  paddingTop: 6,
-                  borderTop: '1px solid rgba(45, 58, 82, 0.5)',
-                }}
-              >
-                <span style={{ fontSize: 11, color: '#94a3b8', fontFamily: 'Outfit, sans-serif' }}>
+              <div className="flex justify-between w-full mt-1 pt-1.5 border-t border-navy-800/50">
+                <span className="text-[11px] text-slate-400">
                   {m.avg_duration_minutes}m avg
                 </span>
-                <span style={{ fontSize: 11, color: '#94a3b8', fontFamily: 'Outfit, sans-serif' }}>
+                <span className="text-[11px] text-slate-400">
                   {m.total_ens_mwh.toFixed(1)} MWh
                 </span>
               </div>
 
               <div
+                className="absolute bottom-0 left-0 right-0 h-[3px]"
                 style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: 3,
                   background: barColor,
                   opacity: 0.3 + barIntensity * 0.7,
                 }}
@@ -320,109 +221,39 @@ export default function MonthlyPerformance({
       {/* ── Detail Panel ────────────────────────────────────────────────── */}
       <div
         ref={detailRef}
-        style={{
-          maxHeight: expandedData ? 600 : 0,
-          overflow: 'hidden',
-          transition: 'max-height 0.35s ease-in-out',
-        }}
+        className="overflow-hidden transition-all duration-300 ease-in-out"
+        style={{ maxHeight: expandedData ? 600 : 0 }}
       >
         {expandedData && (
-          <div
-            style={{
-              marginTop: 16,
-              background: 'linear-gradient(135deg, #0f2035 0%, #14253d 100%)',
-              border: '1px solid #2d3a52',
-              borderTop: '2px solid rgba(212, 175, 55, 0.4)',
-              borderRadius: 10,
-              padding: 20,
-            }}
-          >
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 24,
-              }}
-            >
+          <div className="mt-4 card-premium p-5 border-t-2 border-t-gold-500/40">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <h4
-                  style={{
-                    margin: '0 0 10px',
-                    fontSize: 11,
-                    color: '#64748b',
-                    fontFamily: 'Outfit, sans-serif',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                  }}
-                >
+                <h4 className="text-[11px] text-navy-600 uppercase tracking-widest mb-2.5 font-semibold">
                   By Substation
                 </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div className="flex flex-col gap-1.5">
                   {expandedData.by_substation.slice(0, 8).map((sub, idx) => {
                     const maxCount = expandedData.by_substation[0]?.count ?? 1;
                     const barWidth = Math.round((sub.count / maxCount) * 60);
-                    const barColor =
+                    const subBarColor =
                       idx === 0 ? '#dc2626' : idx === 1 ? '#d4af37' : '#5DCAA5';
 
                     return (
                       <button
                         key={sub.code}
                         onClick={() => onFeederSelect?.(sub.code)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          background: 'transparent',
-                          border: 'none',
-                          cursor: 'pointer',
-                          padding: '3px 0',
-                          width: '100%',
-                          textAlign: 'left',
-                        }}
+                        className="flex items-center gap-2 bg-transparent border-none cursor-pointer py-0.5 w-full text-left"
                       >
-                        <span
-                          style={{
-                            flex: 1,
-                            fontSize: 12,
-                            color: '#e2e8f0',
-                            fontFamily: 'Outfit, sans-serif',
-                            minWidth: 0,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
+                        <span className="flex-1 text-xs text-slate-200 truncate min-w-0">
                           {sub.name}
                         </span>
-                        <span
-                          style={{
-                            fontSize: 12,
-                            color: '#94a3b8',
-                            fontFamily: 'JetBrains Mono, monospace',
-                            minWidth: 20,
-                            textAlign: 'right',
-                          }}
-                        >
+                        <span className="text-xs text-slate-400 font-mono min-w-[20px] text-right">
                           {sub.count}
                         </span>
-                        <div
-                          style={{
-                            width: 60,
-                            height: 6,
-                            background: '#1a2744',
-                            borderRadius: 3,
-                            overflow: 'hidden',
-                            flexShrink: 0,
-                          }}
-                        >
+                        <div className="w-[60px] h-1.5 bg-navy-900 rounded-full overflow-hidden shrink-0">
                           <div
-                            style={{
-                              width: barWidth,
-                              height: '100%',
-                              background: barColor,
-                              borderRadius: 3,
-                              opacity: 0.8,
-                            }}
+                            className="h-full rounded-full opacity-80"
+                            style={{ width: barWidth, background: subBarColor }}
                           />
                         </div>
                       </button>
@@ -431,62 +262,31 @@ export default function MonthlyPerformance({
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div className="flex flex-col gap-5">
                 <div>
-                  <h4
-                    style={{
-                      margin: '0 0 10px',
-                      fontSize: 11,
-                      color: '#64748b',
-                      fontFamily: 'Outfit, sans-serif',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.08em',
-                    }}
-                  >
+                  <h4 className="text-[11px] text-navy-600 uppercase tracking-widest mb-2.5 font-semibold">
                     By Cause
                   </h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <div className="flex flex-col gap-1.5">
                     {expandedData.by_cause.slice(0, 5).map((c) => (
                       <div
                         key={c.subcategory}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          fontSize: 12,
-                          fontFamily: 'Outfit, sans-serif',
-                        }}
+                        className="flex items-center gap-2 text-xs"
                       >
                         <span
+                          className="w-2 h-2 rounded-full shrink-0"
                           style={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: '50%',
                             background:
-                              CAUSE_COLORS[c.subcategory] ?? DEFAULT_CAUSE_COLOR,
-                            flexShrink: 0,
+                              GPL_CAUSE_COLORS[c.subcategory] ?? GPL_CAUSE_COLOR_DEFAULT,
                           }}
                         />
-                        <span
-                          style={{
-                            flex: 1,
-                            color: '#e2e8f0',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
+                        <span className="flex-1 text-slate-200 truncate">
                           {c.subcategory}
                         </span>
-                        <span
-                          style={{
-                            color: '#94a3b8',
-                            fontFamily: 'JetBrains Mono, monospace',
-                          }}
-                        >
+                        <span className="text-slate-400 font-mono">
                           {c.count}
                         </span>
-                        <span style={{ color: '#64748b', fontSize: 11, minWidth: 30 }}>
+                        <span className="text-navy-600 text-[11px] min-w-[30px]">
                           {c.pct}%
                         </span>
                       </div>
@@ -496,19 +296,10 @@ export default function MonthlyPerformance({
 
                 {expandedData.vs_previous && (
                   <div>
-                    <h4
-                      style={{
-                        margin: '0 0 10px',
-                        fontSize: 11,
-                        color: '#64748b',
-                        fontFamily: 'Outfit, sans-serif',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.08em',
-                      }}
-                    >
+                    <h4 className="text-[11px] text-navy-600 uppercase tracking-widest mb-2.5 font-semibold">
                       vs Previous Month
                     </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div className="flex flex-col gap-1.5">
                       <ComparisonRow
                         label="Outages"
                         delta={expandedData.vs_previous.outage_count_delta_pct}
@@ -528,104 +319,50 @@ export default function MonthlyPerformance({
             </div>
 
             {expandedData.worst_feeders.length > 0 && (
-              <div style={{ marginTop: 16 }}>
-                <h4
-                  style={{
-                    margin: '0 0 8px',
-                    fontSize: 11,
-                    color: '#64748b',
-                    fontFamily: 'Outfit, sans-serif',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                  }}
-                >
+              <div className="mt-4">
+                <h4 className="text-[11px] text-navy-600 uppercase tracking-widest mb-2 font-semibold">
                   Repeat Offenders
                 </h4>
-                <div
-                  style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}
-                >
-                  {expandedData.worst_feeders.map((f) => {
-                    const bg =
-                      f.count >= 3
-                        ? 'rgba(220, 38, 38, 0.2)'
-                        : f.count >= 2
-                          ? 'rgba(212, 175, 55, 0.15)'
-                          : 'rgba(45, 58, 82, 0.5)';
-                    const border =
-                      f.count >= 3
-                        ? 'rgba(220, 38, 38, 0.4)'
-                        : f.count >= 2
-                          ? 'rgba(212, 175, 55, 0.3)'
-                          : '#2d3a52';
-
-                    return (
-                      <button
-                        key={f.feeder_code}
-                        onClick={() => onFeederSelect?.(f.feeder_code)}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          padding: '5px 10px',
-                          background: bg,
-                          border: `1px solid ${border}`,
-                          borderRadius: 16,
-                          cursor: 'pointer',
-                          fontSize: 11,
-                          fontFamily: 'Outfit, sans-serif',
-                          color: '#e2e8f0',
-                          transition: 'opacity 0.15s',
-                        }}
-                      >
-                        <span style={{ fontWeight: 600 }}>{f.display}</span>
-                        <span
-                          style={{
-                            fontFamily: 'JetBrains Mono, monospace',
-                            color: '#94a3b8',
-                          }}
-                        >
-                          {f.count}x
-                        </span>
-                        <span style={{ color: '#64748b', fontSize: 10 }}>
-                          {formatNumber(f.customer_count)} cust
-                        </span>
-                      </button>
-                    );
-                  })}
+                <div className="flex flex-wrap gap-1.5">
+                  {expandedData.worst_feeders.map((f) => (
+                    <button
+                      key={f.feeder_code}
+                      onClick={() => onFeederSelect?.(f.feeder_code)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full cursor-pointer text-[11px] text-slate-200 transition-opacity border ${
+                        f.count >= 3
+                          ? 'bg-red-500/20 border-red-500/40'
+                          : f.count >= 2
+                            ? 'bg-gold-500/15 border-gold-500/30'
+                            : 'bg-navy-800/50 border-navy-800'
+                      }`}
+                    >
+                      <span className="font-semibold">{f.display}</span>
+                      <span className="font-mono text-slate-400">
+                        {f.count}x
+                      </span>
+                      <span className="text-navy-600 text-[10px]">
+                        {formatNumber(f.customer_count)} cust
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
 
-            <div
-              style={{
-                marginTop: 16,
-                paddingTop: 12,
-                borderTop: '1px solid rgba(45, 58, 82, 0.5)',
-                textAlign: 'right',
-              }}
-            >
+            <div className="mt-4 pt-3 border-t border-navy-800/50 text-right">
               <button
                 onClick={() => {
-                  const [y, m] = expandedData.month.split('-').map(Number);
-                  const lastDay = new Date(y, m, 0).getDate();
+                  const [y, mNum] = expandedData.month.split('-').map(Number);
+                  const lastDay = new Date(y, mNum, 0).getDate();
                   onNavigateToday?.({
                     from: `${expandedData.month}-01`,
                     to: `${expandedData.month}-${String(lastDay).padStart(2, '0')}`,
                   });
                 }}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#d4af37',
-                  fontSize: 12,
-                  fontFamily: 'Outfit, sans-serif',
-                  fontWeight: 500,
-                  padding: 0,
-                }}
+                className="bg-transparent border-none cursor-pointer text-gold-500 text-xs font-medium p-0 hover:text-gold-400 transition-colors"
               >
-                View all {expandedData.outage_count} outages for {expandedData.label}{' '}
-                &rarr;
+                View all {expandedData.outage_count} outages for{' '}
+                {expandedData.label} &rarr;
               </button>
             </div>
           </div>
@@ -638,24 +375,10 @@ export default function MonthlyPerformance({
 // ── Sub-components ──────────────────────────────────────────────────────────
 
 function ComparisonRow({ label, delta }: { label: string; delta: number }) {
-  const improving = delta < 0;
-  const color = delta === 0 ? '#64748b' : improving ? '#059669' : '#dc2626';
-  const arrow = delta === 0 ? '' : improving ? '\u2193' : '\u2191';
-
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        fontSize: 12,
-        fontFamily: 'Outfit, sans-serif',
-      }}
-    >
-      <span style={{ color: '#94a3b8' }}>{label}</span>
-      <span style={{ color, fontWeight: 600 }}>
-        {arrow} {Math.abs(delta)}%
-      </span>
+    <div className="flex justify-between items-center text-xs">
+      <span className="text-slate-400">{label}</span>
+      <DeltaArrow value={delta} />
     </div>
   );
 }
