@@ -123,11 +123,11 @@ export function ProcurementCard({ pkg, onClick, isDragging, canDrag = true, onDr
         </>
       )}
 
-      {/* Trello external link hint */}
+      {/* External link hint */}
       {isTrello && (
         <div className="flex items-center gap-1 mt-1.5 text-[10px] text-navy-600 opacity-0 group-hover:opacity-100 transition-opacity">
           <ExternalLink className="h-3 w-3" />
-          Open in Trello
+          Open details
         </div>
       )}
     </div>

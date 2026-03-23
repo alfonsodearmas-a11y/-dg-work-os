@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSession } from 'next-auth/react';
-import { RefreshCw, AlertTriangle, Package, ChevronDown, LayoutGrid, List } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Package, ChevronDown, LayoutGrid, List, Settings } from 'lucide-react';
 import {
   PROCUREMENT_STAGES,
   STAGE_CONFIG,
@@ -411,16 +411,13 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
             <span className="hidden sm:inline">List</span>
           </button>
         </div>
-      </div>
 
-      {/* Trello sync indicator */}
-      {trelloLastSyncedAt && (
-        <div className="flex items-center gap-3 text-xs">
-          <span className="text-navy-600">
-            Trello synced: {relativeTime(trelloLastSyncedAt)}
-          </span>
-          <button
-            onClick={async () => {
+        {/* Sync settings gear (hidden behind icon) */}
+        {trelloLastSyncedAt && (
+          <SyncDropdown
+            lastSyncedAt={trelloLastSyncedAt}
+            syncing={trelloSyncing}
+            onSync={async () => {
               setTrelloSyncing(true);
               try {
                 await fetch('/api/integrations/trello/sync', { method: 'POST' });
@@ -429,14 +426,9 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
                 setTrelloSyncing(false);
               }
             }}
-            disabled={trelloSyncing}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-navy-800 text-navy-600 hover:text-gold-500 hover:border-gold-500/30 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`h-3 w-3 ${trelloSyncing ? 'animate-spin' : ''}`} />
-            {trelloSyncing ? 'Syncing…' : 'Sync Now'}
-          </button>
-        </div>
-      )}
+          />
+        )}
+      </div>
 
       {/* Stats bar */}
       {stats && (
@@ -568,6 +560,61 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
         }}
       />
 
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sync dropdown (gear icon)
+// ---------------------------------------------------------------------------
+
+function SyncDropdown({
+  lastSyncedAt,
+  syncing,
+  onSync,
+}: {
+  lastSyncedAt: string;
+  syncing: boolean;
+  onSync: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handle = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="p-1.5 rounded-lg text-navy-600 hover:text-white hover:bg-navy-800/50 transition-colors"
+        aria-label="Sync settings"
+      >
+        <Settings className="h-4 w-4" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-50 w-64 rounded-xl border border-navy-800 bg-navy-900 shadow-xl p-4 space-y-3">
+          <h4 className="text-xs font-semibold text-white uppercase tracking-wider">Data Sources</h4>
+          <div className="space-y-1.5">
+            <p className="text-sm text-white font-medium">HECI Capital Projects</p>
+            <p className="text-xs text-navy-600">Last synced: {relativeTime(lastSyncedAt)}</p>
+          </div>
+          <button
+            onClick={() => { onSync(); setOpen(false); }}
+            disabled={syncing}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border border-navy-800 text-navy-600 hover:text-gold-500 hover:border-gold-500/30 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3 w-3 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Syncing…' : 'Sync Now'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
