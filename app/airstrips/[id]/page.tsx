@@ -20,6 +20,7 @@ import type {
   Airstrip, AirstripMaintenanceLog, AirstripPhoto,
   AirstripInspection, AirstripStatusLog,
 } from '@/lib/airstrip-types';
+import AddEditAirstripModal from '@/components/airstrips/AddEditAirstripModal';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -150,6 +151,7 @@ export default function AirstripDetailPage() {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
 
   // Modal states
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [maintenanceModalOpen, setMaintenanceModalOpen] = useState(false);
   const [inspectionModalOpen, setInspectionModalOpen] = useState(false);
@@ -240,7 +242,7 @@ export default function AirstripDetailPage() {
             <button onClick={() => setStatusModalOpen(true)} className="btn-navy px-3 py-2 text-xs flex items-center gap-1.5">
               Change Status
             </button>
-            <button className="btn-navy px-3 py-2 text-xs flex items-center gap-1.5 opacity-50 cursor-not-allowed" disabled title="Coming in Prompt 5">
+            <button onClick={() => setEditModalOpen(true)} className="btn-navy px-3 py-2 text-xs flex items-center gap-1.5">
               <Edit3 className="h-3.5 w-3.5" /> Edit
             </button>
             <button onClick={fetchData} className="p-2 rounded-lg hover:bg-navy-800 text-navy-600 hover:text-white transition-colors" aria-label="Refresh">
@@ -299,6 +301,12 @@ export default function AirstripDetailPage() {
       </Tabs>
 
       {/* ── Modals ── */}
+      <AddEditAirstripModal
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        onSaved={fetchData}
+        airstrip={a}
+      />
       <ChangeStatusModal
         open={statusModalOpen}
         onClose={() => setStatusModalOpen(false)}

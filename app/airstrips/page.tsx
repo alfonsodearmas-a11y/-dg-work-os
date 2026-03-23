@@ -15,6 +15,7 @@ import {
 import type { Airstrip } from '@/lib/airstrip-types';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { exportToCsv } from '@/lib/export-csv';
+import AddEditAirstripModal from '@/components/airstrips/AddEditAirstripModal';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -140,6 +141,7 @@ export default function AirstripsPage() {
   const [sort, setSort] = useState<SortField>(() => (searchParams.get('sort') as SortField) || 'name');
   const [dir, setDir] = useState(() => searchParams.get('dir') || 'asc');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [addModalOpen, setAddModalOpen] = useState(false);
 
   // ── URL sync ──
   const buildParams = useCallback(() => {
@@ -200,6 +202,10 @@ export default function AirstripsPage() {
   const airstrips = data?.airstrips || [];
   const summary = data?.summary;
   const availableRegions = data?.filters?.regions || [];
+  const distinctSurfaceTypes = React.useMemo(
+    () => [...new Set(airstrips.map(a => a.surface_type).filter(Boolean) as string[])].sort(),
+    [airstrips],
+  );
 
   // ── Render ──
   return (
@@ -332,7 +338,7 @@ export default function AirstripsPage() {
             <button className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1.5 opacity-50 cursor-not-allowed" disabled title="Coming soon">
               <Upload className="h-3.5 w-3.5" /> Bulk Upload
             </button>
-            <button className="btn-gold px-3 py-1.5 text-xs flex items-center gap-1.5 opacity-50 cursor-not-allowed" disabled title="Coming soon">
+            <button onClick={() => setAddModalOpen(true)} className="btn-gold px-3 py-1.5 text-xs flex items-center gap-1.5">
               <Plus className="h-3.5 w-3.5" /> Add Airstrip
             </button>
 
@@ -518,6 +524,14 @@ export default function AirstripsPage() {
           })}
         </div>
       )}
+
+      {/* Add Airstrip Modal */}
+      <AddEditAirstripModal
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onSaved={fetchAirstrips}
+        surfaceTypes={distinctSurfaceTypes}
+      />
     </div>
   );
 }

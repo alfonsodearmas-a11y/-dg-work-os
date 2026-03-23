@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
+import { z } from 'zod';
+import { AIRSTRIP_STATUSES, SURFACE_CONDITIONS, FLIGHT_FREQUENCIES } from '@/lib/airstrip-types';
+import { parseBody } from '@/lib/api-utils';
 
 // GET /api/airstrips/[id] — full detail with related data
 export async function GET(
@@ -71,5 +74,101 @@ export async function GET(
   } catch (error) {
     logger.error({ err: error }, 'Airstrip detail error');
     return NextResponse.json({ error: 'Failed to fetch airstrip' }, { status: 500 });
+  }
+}
+
+// ── PATCH /api/airstrips/[id] ────────────────────────────────────────────────
+// Update an existing airstrip. If status changed, logs to airstrip_status_log.
+
+const updateSchema = z.object({
+  name: z.string().min(1, 'Name is required').trim().optional(),
+  region: z.number().int().min(1).max(10).optional(),
+  status: z.enum(AIRSTRIP_STATUSES).optional(),
+  status_change_reason: z.string().trim().optional(),
+  engineered_structure: z.boolean().optional(),
+  runway_length_m: z.number().positive().nullable().optional(),
+  runway_width_m: z.number().positive().nullable().optional(),
+  surface_type: z.string().trim().nullable().optional(),
+  surface_condition: z.enum(SURFACE_CONDITIONS).nullable().optional(),
+  flight_frequency: z.enum(FLIGHT_FREQUENCIES).nullable().optional(),
+  last_inspection_date: z.string().nullable().optional(),
+  airside_buildings: z.string().trim().nullable().optional(),
+  remarks: z.string().trim().nullable().optional(),
+  coordinates_lat: z.number().min(-90).max(90).nullable().optional(),
+  coordinates_lon: z.number().min(-180).max(180).nullable().optional(),
+});
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+    if (authResult instanceof NextResponse) return authResult;
+    const { session } = authResult;
+
+    const { id } = await params;
+    const { data, error: validationError } = await parseBody(request, updateSchema);
+    if (validationError) return validationError;
+
+    const { data: current, error: fetchErr } = await supabaseAdmin
+      .from('airstrips')
+      .select('status, name')
+      .eq('id', id)
+      .single();
+
+    if (fetchErr || !current) {
+      return NextResponse.json({ error: 'Airstrip not found' }, { status: 404 });
+    }
+
+    const statusChanged = !!data.status && data.status !== current.status;
+
+    // Require reason when status changes
+    if (statusChanged && !data.status_change_reason?.trim()) {
+      return NextResponse.json({ error: 'Reason is required when changing status', field: 'status_change_reason' }, { status: 400 });
+    }
+
+    // Check name uniqueness if changed
+    if (data.name && data.name.toLowerCase() !== current.name.toLowerCase()) {
+      const { data: existing } = await supabaseAdmin
+        .from('airstrips')
+        .select('id')
+        .ilike('name', data.name)
+        .neq('id', id)
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        return NextResponse.json({ error: 'An airstrip with this name already exists', field: 'name' }, { status: 409 });
+      }
+    }
+
+    const { status_change_reason, ...updateFields } = data;
+    const updatePayload = { ...updateFields, updated_by: session.user.id };
+
+    // Parallelize the update and status log insert
+    const updatePromise = supabaseAdmin
+      .from('airstrips')
+      .update(updatePayload)
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    const statusLogPromise = statusChanged
+      ? supabaseAdmin.from('airstrip_status_log').insert({
+          airstrip_id: id,
+          previous_status: current.status,
+          new_status: data.status!,
+          changed_by: session.user.id,
+          reason: status_change_reason || null,
+        })
+      : Promise.resolve(null);
+
+    const [{ data: airstrip, error: updateErr }] = await Promise.all([updatePromise, statusLogPromise]);
+    if (updateErr) throw updateErr;
+
+    return NextResponse.json({ airstrip });
+  } catch (error) {
+    logger.error({ err: error }, 'Update airstrip error');
+    return NextResponse.json({ error: 'Failed to update airstrip' }, { status: 500 });
   }
 }
