@@ -13,6 +13,7 @@ export default auth((req) => {
     pathname.startsWith('/api/push/') ||
     pathname.startsWith('/api/notifications/generate') ||
     pathname.startsWith('/api/webhooks/') ||
+    pathname.startsWith('/api/integrations/trello/webhook') ||
     pathname.startsWith('/api/ai/precompute-daily') ||
     pathname.startsWith('/api/cron/') ||
     pathname.startsWith('/api/tm/cron/') ||
