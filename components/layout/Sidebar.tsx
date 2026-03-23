@@ -25,6 +25,7 @@ import {
   ShoppingCart,
   CalendarDays,
   ChevronsLeft,
+  Gauge,
 } from 'lucide-react';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -77,6 +78,7 @@ function useTooltip() {
 const mainNavItems = [
   { href: '/', label: 'Mission Control', icon: LayoutDashboard, moduleSlug: 'briefing' },
   { href: '/intel', label: 'Agency Intel', icon: Activity, moduleSlug: 'agency-intel' },
+  { href: '/pulse/gpl/grid-health', label: 'Grid Health', icon: Gauge, moduleSlug: 'grid-health' },
   { href: '/tasks', label: 'Tasks', icon: CheckSquare, moduleSlug: 'tasks' },
   { href: '/procurement', label: 'Procurement', icon: ShoppingCart, moduleSlug: 'procurement' },
   { href: '/oversight', label: 'Oversight', icon: Eye, moduleSlug: 'oversight' },

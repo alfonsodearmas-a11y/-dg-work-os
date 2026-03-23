@@ -43,6 +43,7 @@ type SortOption = 'grade_asc' | 'grade_desc' | 'outages' | 'customers';
 
 interface FeederHealthTableProps {
   onFeederSelect?: (feederId: number) => void;
+  initialSubstationFilter?: string;
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -96,14 +97,21 @@ function TrendArrow({ trend }: { trend: TrendDirection }) {
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export default function FeederHealthTable({ onFeederSelect }: FeederHealthTableProps) {
+export default function FeederHealthTable({ onFeederSelect, initialSubstationFilter }: FeederHealthTableProps) {
   const [data, setData] = useState<FeedersResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [substationFilter, setSubstationFilter] = useState('');
+  const [substationFilter, setSubstationFilter] = useState(initialSubstationFilter ?? '');
   const [activeGrades, setActiveGrades] = useState<Set<FeederGrade>>(new Set(ALL_GRADES));
   const [sort, setSort] = useState<SortOption>('grade_asc');
+
+  // Sync substation filter when parent passes a new value (cross-tab navigation)
+  useEffect(() => {
+    if (initialSubstationFilter !== undefined) {
+      setSubstationFilter(initialSubstationFilter);
+    }
+  }, [initialSubstationFilter]);
 
   // Fetch all feeders once on mount
   useEffect(() => {

@@ -17,6 +17,7 @@ import { RefreshButton } from './RefreshButton';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import { MINISTRY_ROLES } from '@/lib/people-types';
 import type { MissionControlData } from '@/lib/data/mission-control';
+import { CompactGridCard } from '@/app/pulse/gpl/grid-health/components/TodayGrid';
 
 // ── Agency Config ────────────────────────────────────────────────────────────
 
@@ -215,6 +216,9 @@ export function MissionControlView({ data, briefing, userName }: Props) {
                 );
               })}
             </div>
+
+            {/* GPL Grid Health — compact card */}
+            <CompactGridCard />
 
             {/* Open Applications */}
             {(data.gplPendingApplications > 0 || data.gwiPendingApplications > 0) && (
