@@ -5,25 +5,24 @@ import { logger } from '@/lib/logger';
 import { trello, buildListMapping, resolveStage } from '@/lib/trello';
 import type { ProcurementStage } from '@/lib/trello';
 
+/** Default board — HECI Capital Projects */
+const DEFAULT_BOARD_ID = 'u9m0lBnP';
+
 /**
  * POST /api/integrations/trello/sync
  * Full sync: fetches all cards from Trello, upserts items, removes orphans.
- * Body: { boardId: string } — the Trello board ID
+ * Body is optional. Defaults to HECI board if no boardId provided.
  */
 export async function POST(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
   if (authResult instanceof NextResponse) return authResult;
 
-  let body: { boardId: string };
+  let boardId = DEFAULT_BOARD_ID;
   try {
-    body = await request.json();
+    const body = await request.json();
+    if (body?.boardId) boardId = body.boardId;
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const { boardId } = body;
-  if (!boardId) {
-    return NextResponse.json({ error: 'boardId is required' }, { status: 400 });
+    // No body or invalid JSON — use default
   }
 
   try {
@@ -36,7 +35,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Core sync logic — exported so the register endpoint can reuse it.
+ * Core sync logic.
  */
 export async function syncBoard(trelloBoardId: string) {
   // 1. Look up the board record
@@ -99,7 +98,6 @@ export async function syncBoard(trelloBoardId: string) {
       .eq('board_id', board.id)
       .not('trello_card_id', 'in', `(${trelloCardIds.join(',')})`);
   } else {
-    // Board is empty — remove all items for this board
     await supabaseAdmin
       .from('procurement_items')
       .delete()

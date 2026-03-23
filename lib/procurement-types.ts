@@ -63,6 +63,12 @@ export interface ProcurementPackage {
   agency_name: string;
   submitted_by_name: string;
   days_at_current_stage: number;
+  // Trello-sourced items
+  is_trello?: boolean;
+  trello_url?: string | null;
+  trello_labels?: { id: string; name: string; color: string | null }[];
+  trello_attachments_count?: number;
+  trello_comments_count?: number;
 }
 
 export interface ProcurementStageHistory {

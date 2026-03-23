@@ -512,3 +512,77 @@ export async function getStalledPackages(thresholdDays: number = STALLED_THRESHO
   const allPackages = enrichPackageRows(sortRowHistory(data || []));
   return allPackages.filter((pkg) => pkg.days_at_current_stage > thresholdDays);
 }
+
+// ── Trello-synced items ─────────────────────────────────────────────────
+
+/** Map Trello procurement_stage enum → native ProcurementStage */
+const TRELLO_STAGE_MAP: Record<string, ProcurementStage> = {
+  not_advertised: 'pre_advertisement',
+  advertised: 'advertised',
+  evaluation: 'evaluation',
+  nptab_no_objection: 'no_objection',
+  contract_awarded: 'awarded',
+};
+
+/**
+ * Fetch Trello-synced procurement items and return them shaped as ProcurementPackage[].
+ * Optional agency filter (matches procurement_boards.agency).
+ */
+export async function getTrelloItems(agency?: string): Promise<{ items: ProcurementPackage[]; lastSyncedAt: string | null }> {
+  let query = supabaseAdmin
+    .from('procurement_items')
+    .select('*, board:procurement_boards!inner(agency, board_name, last_synced_at)')
+    .order('last_activity_at', { ascending: false });
+
+  if (agency) {
+    query = query.eq('board.agency', agency.toUpperCase());
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    logger.warn({ err: error }, 'procurement: failed to fetch Trello items (table may not exist)');
+    return { items: [], lastSyncedAt: null };
+  }
+
+  let lastSyncedAt: string | null = null;
+
+  const items: ProcurementPackage[] = (data || []).map((row: Record<string, unknown>) => {
+    const board = row.board as { agency: string; board_name: string; last_synced_at: string | null } | null;
+    if (board?.last_synced_at && (!lastSyncedAt || board.last_synced_at > lastSyncedAt)) {
+      lastSyncedAt = board.last_synced_at;
+    }
+
+    const trelloStage = row.stage as string;
+    const nativeStage = TRELLO_STAGE_MAP[trelloStage] ?? 'pre_advertisement';
+    const lastActivity = row.last_activity_at as string | null;
+    const daysAtStage = lastActivity
+      ? Math.floor((Date.now() - new Date(lastActivity).getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+
+    return {
+      id: row.id as string,
+      agency: (board?.agency ?? 'HECI').toUpperCase(),
+      title: row.title as string,
+      nptab_number: null,
+      description: (row.description as string) || null,
+      estimated_value: 0,
+      procurement_method: 'open_tender' as const,
+      current_stage: nativeStage,
+      submitted_by: '',
+      oversight_project_id: null,
+      expected_delivery_date: (row.due_date as string) || null,
+      created_at: row.created_at as string,
+      updated_at: row.updated_at as string,
+      agency_name: agencyName((board?.agency ?? 'HECI').toUpperCase()),
+      submitted_by_name: 'Trello',
+      days_at_current_stage: daysAtStage,
+      is_trello: true,
+      trello_url: (row.trello_url as string) || null,
+      trello_labels: (row.labels as { id: string; name: string; color: string | null }[]) || [],
+      trello_attachments_count: (row.attachments_count as number) || 0,
+      trello_comments_count: (row.comments_count as number) || 0,
+    };
+  });
+
+  return { items, lastSyncedAt };
+}

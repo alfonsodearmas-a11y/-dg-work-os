@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { ArrowLeft, ShoppingCart, LayoutDashboard, BarChart3, Plus, Upload, Database, Trash2, Loader2, ClipboardCheck } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, LayoutDashboard, BarChart3, Plus, Upload, Database, Trash2, Loader2 } from 'lucide-react';
 import { Tabs, type Tab } from '@/components/ui/Tabs';
 import { ProcurementKanban } from '@/components/procurement/ProcurementKanban';
 import { ProcurementAnalytics } from '@/components/procurement/ProcurementAnalytics';
@@ -71,13 +71,6 @@ export default function ProcurementPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Link
-            href="/procurement/trello"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border border-navy-800 text-navy-600 hover:text-gold-500 hover:border-gold-500/30 transition-colors"
-          >
-            <ClipboardCheck className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Trello Sync</span>
-          </Link>
           {isDG && (
             <>
               <button

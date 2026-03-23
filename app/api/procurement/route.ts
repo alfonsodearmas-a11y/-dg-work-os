@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
-import { getAllPackages, getPackagesByAgency, getPipelineStats, createPackage } from '@/lib/procurement-queries';
+import { getAllPackages, getPackagesByAgency, getPipelineStats, createPackage, getTrelloItems } from '@/lib/procurement-queries';
 import { MINISTRY_ROLES } from '@/lib/people-types';
 import { METHOD_CONFIG, type ProcurementMethod } from '@/lib/procurement-types';
 import { AGENCY_CODES } from '@/lib/constants/agencies';
@@ -16,14 +16,22 @@ export async function GET() {
 
     const agencyFilter = isMinistry ? undefined : session.user.agency!;
 
-    const [packages, stats] = await Promise.all([
+    const [packages, stats, trelloResult] = await Promise.all([
       agencyFilter
         ? getPackagesByAgency(agencyFilter)
         : getAllPackages(),
       getPipelineStats(agencyFilter),
+      getTrelloItems(agencyFilter),
     ]);
 
-    return NextResponse.json({ packages, stats });
+    // Merge Trello items into the packages array
+    const allPackages = [...packages, ...trelloResult.items];
+
+    return NextResponse.json({
+      packages: allPackages,
+      stats,
+      trello_last_synced_at: trelloResult.lastSyncedAt,
+    });
   } catch (err: unknown) {
     const code = (err as { code?: string })?.code ?? '';
     const msg = (err as { message?: string })?.message ?? '';

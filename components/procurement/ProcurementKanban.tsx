@@ -17,11 +17,22 @@ import { useToast } from '@/components/ui/Toast';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SELECTABLE_AGENCIES } from '@/lib/constants/agencies';
+import { supabase } from '@/lib/db';
 import type { Role } from '@/lib/auth';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function relativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
 
 const LS_VIEW_KEY = 'dg-procurement-view';
 const BOARD_PAGE_SIZE = 10;
@@ -60,6 +71,8 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [agencyFilter, setAgencyFilter] = useState('');
+  const [trelloLastSyncedAt, setTrelloLastSyncedAt] = useState<string | null>(null);
+  const [trelloSyncing, setTrelloSyncing] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<ProcurementStage | null>('pre_advertisement');
@@ -85,6 +98,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
       const data = await res.json();
       setPackages(data.packages || []);
       setStats(data.stats || null);
+      setTrelloLastSyncedAt(data.trello_last_synced_at || null);
       setError(null);
     } catch (err) {
       console.error('Failed to fetch procurement data:', err);
@@ -108,6 +122,17 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
   useEffect(() => {
     if (refreshTrigger > 0) fetchData();
   }, [refreshTrigger, fetchData]);
+
+  // Supabase realtime: refetch when Trello-synced items change
+  useEffect(() => {
+    const channel = supabase
+      .channel('procurement_items_kanban')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'procurement_items' }, () => {
+        fetchData();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchData]);
 
   // Global dragend cleanup
   useEffect(() => {
@@ -387,6 +412,31 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
           </button>
         </div>
       </div>
+
+      {/* Trello sync indicator */}
+      {trelloLastSyncedAt && (
+        <div className="flex items-center gap-3 text-xs">
+          <span className="text-navy-600">
+            Trello synced: {relativeTime(trelloLastSyncedAt)}
+          </span>
+          <button
+            onClick={async () => {
+              setTrelloSyncing(true);
+              try {
+                await fetch('/api/integrations/trello/sync', { method: 'POST' });
+                await fetchData();
+              } finally {
+                setTrelloSyncing(false);
+              }
+            }}
+            disabled={trelloSyncing}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-navy-800 text-navy-600 hover:text-gold-500 hover:border-gold-500/30 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3 w-3 ${trelloSyncing ? 'animate-spin' : ''}`} />
+            {trelloSyncing ? 'Syncing…' : 'Sync Now'}
+          </button>
+        </div>
+      )}
 
       {/* Stats bar */}
       {stats && (
