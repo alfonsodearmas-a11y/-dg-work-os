@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Procurement Pipeline — User Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --navy-950: #0a1628;
+    --navy-900: #0f1d32;
+    --navy-850: #152541;
+    --navy-800: #1a2d4a;
+    --navy-700: #2d3a52;
+    --navy-600: #64748b;
+    --navy-400: #94a3b8;
+    --gold-500: #d4af37;
+    --gold-400: #e0c55b;
+    --gold-300: #ebd67e;
+    --success: #059669;
+    --warning: #d4af37;
+    --critical: #dc2626;
+    --amber: #f59e0b;
+    --white: #f8fafc;
+    --white-pure: #ffffff;
+  }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.6;
+    color: var(--white);
+    background: var(--navy-950);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── Cover Page ── */
+  .cover {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: linear-gradient(160deg, var(--navy-950) 0%, var(--navy-900) 40%, var(--navy-850) 100%);
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+  }
+
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -200px;
+    right: -200px;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .cover::after {
+    content: '';
+    position: absolute;
+    bottom: -150px;
+    left: -150px;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(212,175,55,0.05) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .cover-badge {
+    display: inline-block;
+    padding: 8px 24px;
+    border: 1px solid rgba(212,175,55,0.3);
+    border-radius: 100px;
+    font-size: 9pt;
+    font-weight: 500;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--gold-500);
+    margin-bottom: 48px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .cover h1 {
+    font-size: 38pt;
+    font-weight: 700;
+    color: var(--white-pure);
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .cover h1 span {
+    color: var(--gold-500);
+  }
+
+  .cover-subtitle {
+    font-size: 14pt;
+    font-weight: 300;
+    color: var(--navy-400);
+    margin-bottom: 60px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .cover-meta {
+    font-size: 9pt;
+    color: var(--navy-600);
+    letter-spacing: 1px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .cover-divider {
+    width: 80px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold-500), transparent);
+    margin: 0 auto 40px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Page Container ── */
+  .page {
+    padding: 56px 64px;
+    min-height: 100vh;
+    background: var(--navy-950);
+    position: relative;
+  }
+
+  .page::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--gold-500), var(--gold-300), var(--gold-500));
+    opacity: 0.4;
+  }
+
+  /* ── Section Headings ── */
+  h2 {
+    font-size: 18pt;
+    font-weight: 700;
+    color: var(--white-pure);
+    margin-top: 36px;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(212,175,55,0.2);
+    position: relative;
+  }
+
+  h2::before {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 48px;
+    height: 2px;
+    background: var(--gold-500);
+  }
+
+  h2:first-child {
+    margin-top: 0;
+  }
+
+  h3 {
+    font-size: 12pt;
+    font-weight: 600;
+    color: var(--gold-400);
+    margin-top: 24px;
+    margin-bottom: 10px;
+  }
+
+  /* ── Body Text ── */
+  p {
+    margin-bottom: 12px;
+    color: var(--navy-400);
+  }
+
+  strong {
+    color: var(--white);
+    font-weight: 600;
+  }
+
+  em {
+    color: var(--navy-400);
+    font-style: italic;
+  }
+
+  /* ── Pipeline Flow Diagram ── */
+  .pipeline-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin: 24px 0 28px;
+    padding: 20px 16px;
+    background: linear-gradient(135deg, rgba(26,39,68,0.8), rgba(15,29,50,0.9));
+    border-radius: 12px;
+    border: 1px solid rgba(212,175,55,0.15);
+  }
+
+  .pipeline-stage {
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 9.5pt;
+    font-weight: 600;
+    text-align: center;
+    color: var(--white);
+    background: var(--navy-800);
+    border: 1px solid var(--navy-700);
+    white-space: nowrap;
+  }
+
+  .pipeline-arrow {
+    color: var(--gold-500);
+    font-size: 14pt;
+    margin: 0 6px;
+    opacity: 0.6;
+  }
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 16px 0 24px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(45,58,82,0.6);
+  }
+
+  thead th {
+    background: linear-gradient(135deg, var(--navy-850), var(--navy-800));
+    color: var(--gold-400);
+    font-weight: 600;
+    font-size: 9pt;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid rgba(212,175,55,0.15);
+  }
+
+  thead th:first-child {
+    border-top-left-radius: 10px;
+  }
+
+  thead th:last-child {
+    border-top-right-radius: 10px;
+  }
+
+  tbody td {
+    padding: 11px 16px;
+    border-bottom: 1px solid rgba(45,58,82,0.4);
+    color: var(--navy-400);
+    font-size: 10pt;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  tbody tr:last-child td:first-child {
+    border-bottom-left-radius: 10px;
+  }
+
+  tbody tr:last-child td:last-child {
+    border-bottom-right-radius: 10px;
+  }
+
+  tbody tr {
+    background: rgba(15,29,50,0.5);
+  }
+
+  tbody tr:nth-child(even) {
+    background: rgba(21,37,65,0.4);
+  }
+
+  td strong {
+    color: var(--white);
+  }
+
+  /* ── Centered table cells ── */
+  .centered td:not(:first-child),
+  .centered th:not(:first-child) {
+    text-align: center;
+  }
+
+  /* ── Lists ── */
+  ul, ol {
+    margin: 8px 0 16px 24px;
+    color: var(--navy-400);
+  }
+
+  li {
+    margin-bottom: 6px;
+    padding-left: 4px;
+  }
+
+  li::marker {
+    color: var(--gold-500);
+  }
+
+  ol li::marker {
+    color: var(--gold-500);
+    font-weight: 600;
+  }
+
+  /* ── Callout Boxes ── */
+  .callout {
+    padding: 14px 20px;
+    border-radius: 10px;
+    margin: 16px 0;
+    font-size: 10pt;
+  }
+
+  .callout-permission {
+    background: linear-gradient(135deg, rgba(212,175,55,0.08), rgba(212,175,55,0.03));
+    border-left: 3px solid var(--gold-500);
+    color: var(--gold-300);
+  }
+
+  .callout-permission strong {
+    color: var(--gold-400);
+  }
+
+  .callout-info {
+    background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.03));
+    border-left: 3px solid #3b82f6;
+    color: #93c5fd;
+  }
+
+  .callout-info strong {
+    color: #bfdbfe;
+  }
+
+  .callout-warn {
+    background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.03));
+    border-left: 3px solid var(--amber);
+    color: #fcd34d;
+  }
+
+  .callout-warn strong {
+    color: #fde68a;
+  }
+
+  /* ── Color indicators ── */
+  .indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .indicator-green { background: var(--success); }
+  .indicator-amber { background: var(--amber); }
+  .indicator-red { background: var(--critical); }
+
+  /* ── Key Rules Box ── */
+  .rules-box {
+    background: linear-gradient(135deg, rgba(26,39,68,0.9), rgba(15,29,50,0.8));
+    border: 1px solid rgba(212,175,55,0.2);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin: 20px 0;
+  }
+
+  .rules-box h3 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    color: var(--gold-500);
+    font-size: 13pt;
+  }
+
+  .rule-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    gap: 12px;
+  }
+
+  .rule-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .rule-number {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    background: rgba(212,175,55,0.15);
+    border: 1px solid rgba(212,175,55,0.3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9pt;
+    font-weight: 700;
+    color: var(--gold-500);
+    margin-top: 1px;
+  }
+
+  .rule-text {
+    color: var(--navy-400);
+    font-size: 10pt;
+    line-height: 1.5;
+  }
+
+  .rule-text strong {
+    color: var(--white);
+  }
+
+  /* ── Section Number ── */
+  .section-num {
+    color: var(--gold-500);
+    font-weight: 700;
+    margin-right: 8px;
+    font-size: 18pt;
+    opacity: 0.5;
+  }
+
+  /* ── Footer ── */
+  .page-footer {
+    position: absolute;
+    bottom: 28px;
+    left: 64px;
+    right: 64px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 8pt;
+    color: var(--navy-700);
+    border-top: 1px solid rgba(45,58,82,0.3);
+    padding-top: 12px;
+  }
+
+  /* ── Utility ── */
+  .break-before { page-break-before: always; }
+  .break-after { page-break-after: always; }
+  .avoid-break { page-break-inside: avoid; }
+  .mt-0 { margin-top: 0; }
+  .mb-0 { margin-bottom: 0; }
+
+  /* ── Two-column layout ── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 16px 0;
+  }
+
+  .two-col .col {
+    background: rgba(15,29,50,0.5);
+    border: 1px solid rgba(45,58,82,0.4);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+
+  .two-col .col h3 {
+    margin-top: 0;
+    font-size: 11pt;
+  }
+
+  .two-col .col ul {
+    margin-bottom: 0;
+  }
+
+  /* ── Analytics feature cards ── */
+  .analytics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0;
+  }
+
+  .analytics-card {
+    background: linear-gradient(135deg, rgba(26,39,68,0.8), rgba(15,29,50,0.7));
+    border: 1px solid rgba(45,58,82,0.5);
+    border-radius: 12px;
+    padding: 20px 22px;
+  }
+
+  .analytics-card h4 {
+    font-size: 11pt;
+    font-weight: 700;
+    color: var(--white-pure);
+    margin-bottom: 4px;
+  }
+
+  .analytics-card .chart-type {
+    font-size: 8.5pt;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--gold-500);
+    margin-bottom: 10px;
+    opacity: 0.8;
+  }
+
+  .analytics-card p {
+    font-size: 9.5pt;
+    margin-bottom: 8px;
+    color: var(--navy-400);
+    line-height: 1.5;
+  }
+
+  .analytics-card .action-label {
+    font-size: 9pt;
+    font-weight: 600;
+    color: var(--gold-400);
+    margin-top: 12px;
+    margin-bottom: 4px;
+  }
+
+  .analytics-card ul {
+    margin: 4px 0 0 18px;
+    font-size: 9.5pt;
+  }
+
+  .analytics-card li {
+    margin-bottom: 3px;
+  }
+
+  .analytics-card.full-width {
+    grid-column: 1 / -1;
+  }
+
+  /* ── Stats metric boxes ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 20px 0;
+  }
+
+  .stat-box {
+    background: linear-gradient(135deg, rgba(26,39,68,0.9), rgba(15,29,50,0.8));
+    border: 1px solid rgba(45,58,82,0.5);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .stat-box .stat-label {
+    font-size: 8.5pt;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--navy-600);
+    margin-bottom: 6px;
+  }
+
+  .stat-box .stat-value {
+    font-size: 14pt;
+    font-weight: 700;
+    color: var(--white-pure);
+  }
+
+  .stat-box .stat-desc {
+    font-size: 8pt;
+    color: var(--navy-600);
+    margin-top: 4px;
+  }
+
+  /* ── TOC ── */
+  .toc {
+    margin: 32px 0;
+  }
+
+  .toc-item {
+    display: flex;
+    align-items: baseline;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(45,58,82,0.25);
+    text-decoration: none;
+  }
+
+  .toc-num {
+    color: var(--gold-500);
+    font-weight: 700;
+    font-size: 11pt;
+    width: 36px;
+    flex-shrink: 0;
+    opacity: 0.6;
+  }
+
+  .toc-label {
+    color: var(--white);
+    font-weight: 500;
+    font-size: 11pt;
+    flex-grow: 1;
+  }
+
+  .toc-dots {
+    flex-grow: 1;
+    border-bottom: 1px dotted var(--navy-700);
+    margin: 0 12px;
+    min-width: 40px;
+  }
+
+  .toc-page {
+    color: var(--navy-600);
+    font-size: 10pt;
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ COVER PAGE ═══════════════════ -->
+<div class="cover">
+  <div class="cover-badge">Ministry of Public Utilities &amp; Aviation</div>
+  <h1>Procurement <span>Pipeline</span></h1>
+  <p class="cover-subtitle">User Guide</p>
+  <div class="cover-divider"></div>
+  <p class="cover-meta">WORK OS &nbsp;&middot;&nbsp; MARCH 2026 &nbsp;&middot;&nbsp; INTERNAL USE ONLY</p>
+</div>
+
+<!-- ═══════════════════ TABLE OF CONTENTS ═══════════════════ -->
+<div class="page">
+  <h2 class="mt-0">Contents</h2>
+
+  <div class="toc">
+    <div class="toc-item">
+      <span class="toc-num">01</span>
+      <span class="toc-label">What Is the Procurement Pipeline?</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">3</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">02</span>
+      <span class="toc-label">Accessing the Module</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">3</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">03</span>
+      <span class="toc-label">Understanding the Kanban Board</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">3</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">04</span>
+      <span class="toc-label">Creating a New Package</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">5</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">05</span>
+      <span class="toc-label">Advancing a Package to the Next Stage</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">6</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">06</span>
+      <span class="toc-label">Viewing Package Details</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">6</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">07</span>
+      <span class="toc-label">Uploading Documents &amp; Adding Notes</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">7</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">08</span>
+      <span class="toc-label">Analytics — Pipeline Overview</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">8</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">09</span>
+      <span class="toc-label">Analytics — Reading the Charts</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">9</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">10</span>
+      <span class="toc-label">Analytics — Taking Action on Insights</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">10</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">11</span>
+      <span class="toc-label">Mobile Usage &amp; Key Rules</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">11</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">12</span>
+      <span class="toc-label">Quick Reference</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">12</span>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>Procurement Pipeline — User Guide</span>
+    <span>Ministry of Public Utilities &amp; Aviation</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ SECTION 1-3 ═══════════════════ -->
+<div class="page break-before">
+
+  <h2><span class="section-num">01</span> What Is the Procurement Pipeline?</h2>
+
+  <p>The Procurement Pipeline is a Kanban-style tracking board where each procurement package moves through six stages from left to right:</p>
+
+  <div class="pipeline-flow">
+    <div class="pipeline-stage">Draft</div>
+    <span class="pipeline-arrow">&#9654;</span>
+    <div class="pipeline-stage">Submitted</div>
+    <span class="pipeline-arrow">&#9654;</span>
+    <div class="pipeline-stage">Advertised</div>
+    <span class="pipeline-arrow">&#9654;</span>
+    <div class="pipeline-stage">Evaluation</div>
+    <span class="pipeline-arrow">&#9654;</span>
+    <div class="pipeline-stage">No Objection</div>
+    <span class="pipeline-arrow">&#9654;</span>
+    <div class="pipeline-stage">Awarded</div>
+  </div>
+
+  <p>Each package represents a single procurement activity (e.g., "Diesel Fuel Purchase for GPL" or "Terminal Renovation Contract for CJIA"). The system tracks how long each package has been at its current stage, flags stalled items, and maintains a permanent audit trail of every action taken.</p>
+
+  <h2><span class="section-num">02</span> Accessing the Module</h2>
+
+  <ol>
+    <li>Log in to Work OS with your <strong>Google Workspace account</strong>.</li>
+    <li>Click <strong>Procurement</strong> in the left sidebar (Shopping Cart icon).</li>
+  </ol>
+
+  <p>You will land on the <strong>Pipeline</strong> tab, which shows the Kanban board.</p>
+
+  <h2><span class="section-num">03</span> Understanding the Kanban Board</h2>
+
+  <h3>The Six Stages</h3>
+
+  <table class="avoid-break">
+    <thead>
+      <tr><th>Stage</th><th>What It Means</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Draft</strong></td><td>Package is being prepared. Not yet submitted for review.</td></tr>
+      <tr><td><strong>Submitted</strong></td><td>Package is complete and ready for the procurement process to begin.</td></tr>
+      <tr><td><strong>Advertised</strong></td><td>The tender has been publicly posted and is open for bids.</td></tr>
+      <tr><td><strong>Evaluation</strong></td><td>Bids have been received and are being assessed.</td></tr>
+      <tr><td><strong>No Objection</strong></td><td>Awaiting cabinet clearance before the contract can be awarded.</td></tr>
+      <tr><td><strong>Awarded</strong></td><td>Contract has been granted. This is the final stage.</td></tr>
+    </tbody>
+  </table>
+
+  <p>Packages can only move <strong>forward</strong> — they cannot go back to a previous stage.</p>
+
+  <h3>Reading a Card</h3>
+
+  <p>Each card on the board displays:</p>
+
+  <ul>
+    <li><strong>Title</strong> of the procurement package</li>
+    <li><strong>Agency badge</strong> (GPL, GWI, CJIA, or GCAA)</li>
+    <li><strong>Estimated value</strong> in GYD</li>
+    <li><strong>Procurement method</strong> (Open Tender, Selective Tender, Sole Source, or RFQ)</li>
+    <li><strong>Days at current stage</strong> — color-coded:
+      <ul>
+        <li><span class="indicator indicator-green"></span> <strong>Green</strong> = Less than 14 days (on track)</li>
+        <li><span class="indicator indicator-amber"></span> <strong>Amber</strong> = 14–29 days (approaching delay)</li>
+        <li><span class="indicator indicator-red"></span> <strong>Red</strong> = 30+ days (stalled — needs attention)</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h3>Filtering &amp; Stats</h3>
+
+  <p>Use the <strong>filter chips</strong> at the top to view packages for a specific agency or select <strong>All</strong>. The stats bar shows four summary numbers: <strong>Active Packages</strong>, <strong>Pipeline Value</strong>, <strong>Avg Days to Award</strong>, and <strong>Stalled</strong> count.</p>
+
+  <div class="page-footer">
+    <span>Procurement Pipeline — User Guide</span>
+    <span>Page 3</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ SECTION 4 ═══════════════════ -->
+<div class="page break-before">
+
+  <h2><span class="section-num">04</span> Creating a New Package</h2>
+
+  <div class="callout callout-permission">
+    <strong>Who can do this:</strong> Agency Admins only.
+  </div>
+
+  <ol>
+    <li>Click the <strong>"+ New Package"</strong> button in the top-right corner.</li>
+    <li>Fill in the form:
+      <ul>
+        <li><strong>Title</strong> — A clear name for the procurement (e.g., "Generator Parts – Canefield Station")</li>
+        <li><strong>Description</strong> — Details about what is being procured and why</li>
+        <li><strong>Agency</strong> — The agency this package belongs to</li>
+        <li><strong>Estimated Value</strong> — The budget for this procurement in GYD</li>
+        <li><strong>Procurement Method</strong> — Choose one of four options (see below)</li>
+        <li><strong>Expected Delivery Date</strong> (optional) — Target completion date</li>
+      </ul>
+    </li>
+    <li>Click <strong>Create Package</strong>.</li>
+  </ol>
+
+  <p>The package will appear in the <strong>Draft</strong> column.</p>
+
+  <h3>Procurement Methods</h3>
+
+  <table class="avoid-break">
+    <thead>
+      <tr><th>Method</th><th>Description</th><th>When to Use</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Open Tender</strong></td>
+        <td>Public competitive bidding</td>
+        <td>Standard procurement; maximum transparency</td>
+      </tr>
+      <tr>
+        <td><strong>Selective Tender</strong></td>
+        <td>Limited to pre-qualified suppliers</td>
+        <td>Specialized goods/services requiring vetted vendors</td>
+      </tr>
+      <tr>
+        <td><strong>Sole Source</strong></td>
+        <td>Single supplier, no competition</td>
+        <td>Emergencies or highly specialized needs</td>
+      </tr>
+      <tr>
+        <td><strong>Request for Quotation</strong></td>
+        <td>Quotation-based process</td>
+        <td>Lower-value purchases with known suppliers</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="page-footer">
+    <span>Procurement Pipeline — User Guide</span>
+    <span>Page 5</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ SECTION 5–6 ═══════════════════ -->
+<div class="page break-before">
+
+  <h2><span class="section-num">05</span> Advancing a Package to the Next Stage</h2>
+
+  <div class="callout callout-permission">
+    <strong>Who can do this:</strong> Agency Admins (own agency packages).
+  </div>
+
+  <div class="two-col">
+    <div class="col">
+      <h3>Option A: Drag and Drop</h3>
+      <p style="color: var(--navy-400); font-size: 10pt;">On a desktop computer, drag a card from one column and drop it into the <strong>next</strong> column. You cannot skip stages or move packages backward.</p>
+    </div>
+    <div class="col">
+      <h3>Option B: Detail Panel</h3>
+      <ol style="font-size: 10pt;">
+        <li>Click a card to open the detail panel.</li>
+        <li>Click <strong>"Advance to [Next Stage]"</strong>.</li>
+        <li>Add optional notes (recommended).</li>
+        <li>Confirm the advancement.</li>
+      </ol>
+    </div>
+  </div>
+
+  <p>The stage change is recorded permanently in the package's history with your name and a timestamp.</p>
+
+  <h2><span class="section-num">06</span> Viewing Package Details</h2>
+
+  <p>Click any card to open its <strong>Detail Panel</strong> on the right side. The panel contains four sections:</p>
+
+  <table class="avoid-break">
+    <thead>
+      <tr><th>Section</th><th>What You'll Find</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Stage Timeline</strong></td>
+        <td>A visual indicator showing where the package is in the pipeline, with completed stages highlighted.</td>
+      </tr>
+      <tr>
+        <td><strong>Package Info</strong></td>
+        <td>Title, description, agency, estimated value, procurement method, who submitted it, expected delivery date.</td>
+      </tr>
+      <tr>
+        <td><strong>Stage History</strong></td>
+        <td>A chronological log of every stage transition — from/to stage, who made the change, when, and any notes. <strong>This log is permanent and cannot be edited.</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Documents</strong></td>
+        <td>All files attached to the package (contracts, bid documents, evaluation reports, etc.).</td>
+      </tr>
+      <tr>
+        <td><strong>Notes</strong></td>
+        <td>An audit trail of comments from team members. <strong>Once posted, notes cannot be edited or removed.</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="page-footer">
+    <span>Procurement Pipeline — User Guide</span>
+    <span>Page 6</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ SECTION 7 ═══════════════════ -->
+<div class="page break-before">
+
+  <h2><span class="section-num">07</span> Uploading Documents &amp; Adding Notes</h2>
+
+  <h3>Uploading Documents</h3>
+
+  <div class="callout callout-permission">
+    <strong>Who can do this:</strong> Agency Admins (own agency packages).
+  </div>
+
+  <ol>
+    <li>Open the detail panel for a package.</li>
+    <li>Scroll to the <strong>Documents</strong> section.</li>
+    <li>Click <strong>Upload</strong> and select your file.</li>
+  </ol>
+
+  <table class="avoid-break" style="max-width: 420px;">
+    <thead>
+      <tr><th>Requirement</th><th>Details</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Supported formats</strong></td><td>PDF, DOCX, XLSX, JPEG, PNG</td></tr>
+      <tr><td><strong>Maximum file size</strong></td><td>10 MB per file</td></tr>
+    </tbody>
+  </table>
+
+  <p>Documents are stored securely and organized by agency and package. To download a document, click its name in the documents list.</p>
+
+  <h3>Adding Notes</h3>
+
+  <div class="callout callout-permission">
+    <strong>Who can do this:</strong> All authenticated users (for packages within your agency).
+  </div>
+
+  <ol>
+    <li>Open the detail panel for a package.</li>
+    <li>Scroll to the <strong>Notes</strong> section.</li>
+    <li>Type your note and click <strong>Send</strong>.</li>
+  </ol>
+
+  <p>Notes are timestamped with your name and <strong>cannot be edited or deleted</strong> after posting. Use notes to record decisions, flag concerns, or provide context for stage transitions.</p>
+
+  <div class="callout callout-info">
+    <strong>Tip:</strong> When advancing a package, always add a note explaining why. This builds a clear audit trail for compliance reviews.
+  </div>
+
+  <div class="page-footer">
+    <span>Procurement Pipeline — User Guide</span>
+    <span>Page 7</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ SECTION 8 — Analytics Overview ═══════════════════ -->
+<div class="page break-before">
+
+  <h2><span class="section-num">08</span> Analytics — Pipeline Overview</h2>
+
+  <p>The <strong>Analytics</strong> tab gives you a real-time view of procurement health across all agencies. Click the <strong>Analytics</strong> tab next to <strong>Pipeline</strong> to access it.</p>
+
+  <p>Analytics answers three critical questions that leadership needs to monitor at all times:</p>
+
+  <div class="rules-box" style="margin-top: 20px;">
+    <div class="rule-item">
+      <div class="rule-number" style="width: 30px; height: 30px; font-size: 10pt;">?</div>
+      <div class="rule-text"><strong>Where are things?</strong> — Which stages have the most packages, and which agencies are driving that volume?</div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-number" style="width: 30px; height: 30px; font-size: 10pt;">?</div>
+      <div class="rule-text"><strong>How long is it taking?</strong> — Where in the process are packages spending the most time, and is it getting better or worse?</div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-number" style="width: 30px; height: 30px; font-size: 10pt;">?</div>
+      <div class="rule-text"><strong>What is stuck?</strong> — Which high-value packages have stalled and need someone to intervene?</div>
+    </div>
+  </div>
+
+  <h3>Stats Bar</h3>
+
+  <p>At the top of the Analytics tab, four headline metrics give you an at-a-glance health check:</p>
+
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="stat-label">Active Packages</div>
+      <div class="stat-value">24</div>
+      <div class="stat-desc">Not yet awarded</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Pipeline Value</div>
+      <div class="stat-value">$1.2B</div>
+      <div class="stat-desc">Combined GYD value</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Avg to Award</div>
+      <div class="stat-value">42d</div>
+      <div class="stat-desc">Submission → Award</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Stalled</div>
+      <div class="stat-value">3</div>
+      <div class="stat-desc">30+ days at stage</div>
+    </div>
+  </div>
+
+  <p style="font-size: 9.5pt;"><em>The numbers above are illustrative. Your dashboard will show live data.</em></p>
+
+  <p>If the <strong>Stalled</strong> count is above zero, switch to the "What is stuck?" table immediately to identify which packages need attention.</p>
+
+  <div class="page-footer">
+    <span>Procurement Pipeline — User Guide</span>
+    <span>Page 8</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ SECTION 9 — Reading the Charts ═══════════════════ -->
+<div class="page break-before">
+
+  <h2><span class="section-num">09</span> Analytics — Reading the Charts</h2>
+
+  <div class="analytics-grid">
+
+    <div class="analytics-card">
+      <h4>Where Are Things?</h4>
+      <div class="chart-type">Stacked Bar Chart</div>
+      <p>Each bar represents a pipeline stage. Bars are color-segmented by agency (GPL, GWI, CJIA, GCAA), so you can see which agencies have the most packages at each stage.</p>
+      <p><strong>How to read it:</strong> A tall bar at "Evaluation" means many packages are waiting for bids to be assessed. If one agency's colour dominates that bar, the bottleneck is specific to them.</p>
+    </div>
+
+    <div class="analytics-card">
+      <h4>How Long Is It Taking?</h4>
+      <div class="chart-type">Horizontal Bar Chart</div>
+      <p>Each bar shows the <strong>average number of days</strong> packages spend at a given stage. Longer bars indicate slower stages in the process.</p>
+      <p><strong>How to read it:</strong> If "No Objection" has the longest bar, it means cabinet clearance is the biggest time cost. Compare bars over time to see if process improvements are working.</p>
+    </div>
+
+    <div class="analytics-card">
+      <h4>What Is Stuck?</h4>
+      <div class="chart-type">Alert Table</div>
+      <p>Lists every package that has been at its current stage for <strong>30 or more days</strong>, sorted by estimated value (highest first). Each row shows the package title, agency, stage, days stuck, and value.</p>
+      <p><strong>How to read it:</strong> This is your action list. High-value items at the top are your top priority. If the table is empty, the pipeline is healthy.</p>
+    </div>
+
+    <div class="analytics-card">
+      <h4>Pipeline Value</h4>
+      <div class="chart-type">Summary Statistics</div>
+      <p>Shows the total GYD value of all active (non-awarded) packages, broken down by stage. Gives you a financial view of where procurement dollars are sitting in the pipeline.</p>
+      <p><strong>How to read it:</strong> If the majority of pipeline value is concentrated in early stages, procurement is still ramping up. If it's concentrated at "No Objection," a large volume of spend is awaiting cabinet clearance.</p>
+    </div>
+
+  </div>
+
+  <div class="callout callout-info">
+    <strong>Filtering applies to analytics too.</strong> If you select a specific agency using the filter chips on the Pipeline tab, the Analytics tab will also filter to show only that agency's data. Use this to prepare for agency-specific reviews.
+  </div>
+
+  <div class="page-footer">
+    <span>Procurement Pipeline — User Guide</span>
+    <span>Page 9</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ SECTION 10 — Taking Action ═══════════════════ -->
+<div class="page break-before">
+
+  <h2><span class="section-num">10</span> Analytics — Taking Action on Insights</h2>
+
+  <p>The Analytics tab is not just for reporting — it should drive your weekly workflow. Below are common patterns and what to do about them.</p>
+
+  <table class="avoid-break">
+    <thead>
+      <tr><th style="width: 35%;">What You See</th><th style="width: 30%;">What It Means</th><th style="width: 35%;">What to Do</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Multiple packages stalled at "Evaluation"</strong></td>
+        <td>Bid assessments are backlogged — evaluation committees may be stretched or waiting on information.</td>
+        <td>Follow up with the evaluation committee. Check if terms of reference are complete and if assessors need support.</td>
+      </tr>
+      <tr>
+        <td><strong>"No Objection" bar is the longest</strong></td>
+        <td>Cabinet clearance is the slowest stage in the pipeline.</td>
+        <td>Ensure submission packages are complete before advancing. Coordinate with the Cabinet Secretary's office on scheduling.</td>
+      </tr>
+      <tr>
+        <td><strong>One agency has significantly more stalled packages</strong></td>
+        <td>That agency may have capacity issues or process gaps.</td>
+        <td>Schedule a review with the agency's procurement officer. Check if they need training or additional resources.</td>
+      </tr>
+      <tr>
+        <td><strong>Avg Days to Award is rising</strong></td>
+        <td>The overall procurement cycle is slowing down.</td>
+        <td>Compare stage durations to find the bottleneck. Address the slowest stage first — it has the most impact on total cycle time.</td>
+      </tr>
+      <tr>
+        <td><strong>High pipeline value at "Draft"</strong></td>
+        <td>Large procurement packages are being prepared but not yet submitted.</td>
+        <td>Check if drafts are blocked by missing information or approvals. Reach out to the submitting officers to unblock.</td>
+      </tr>
+      <tr>
+        <td><strong>Stalled table is empty</strong></td>
+        <td>No packages have been at the same stage for 30+ days.</td>
+        <td>The pipeline is healthy. Continue monitoring weekly.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-warn">
+    <strong>Recommended practice:</strong> Review the Analytics tab at the start of each week. Use the "What is stuck?" table as your meeting agenda for procurement follow-ups.
+  </div>
+
+  <div class="page-footer">
+    <span>Procurement Pipeline — User Guide</span>
+    <span>Page 10</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ SECTION 11 — Mobile & Rules ═══════════════════ -->
+<div class="page break-before">
+
+  <h2><span class="section-num">11</span> Mobile Usage &amp; Key Rules</h2>
+
+  <h3>Mobile Usage</h3>
+
+  <p>On mobile devices, the Kanban board automatically switches to a <strong>single-column view</strong> with a tab bar at the top to switch between stages. Drag-and-drop is not available on mobile — use the detail panel's <strong>Advance</strong> button instead.</p>
+
+  <p>All other features — viewing details, uploading documents, adding notes, and accessing analytics — work the same on mobile as on desktop.</p>
+
+  <h3 style="margin-top: 32px;">Key Rules</h3>
+
+  <div class="rules-box">
+    <div class="rule-item">
+      <div class="rule-number">1</div>
+      <div class="rule-text"><strong>Forward only.</strong> Packages can only advance to the next stage. They cannot be moved backward or skip stages.</div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-number">2</div>
+      <div class="rule-text"><strong>Everything is recorded.</strong> Every stage change, note, and document upload is logged with your name and a timestamp.</div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-number">3</div>
+      <div class="rule-text"><strong>Notes are permanent.</strong> Once you post a note, it cannot be edited or deleted. Double-check before submitting.</div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-number">4</div>
+      <div class="rule-text"><strong>30-day stall threshold.</strong> Any package sitting at the same stage for 30+ days will be flagged red on the board and appear in the "What is stuck?" analytics table.</div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-number">5</div>
+      <div class="rule-text"><strong>10 MB file limit.</strong> Keep uploaded documents under 10 MB. Accepted formats: PDF, DOCX, XLSX, JPEG, PNG.</div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>Procurement Pipeline — User Guide</span>
+    <span>Page 11</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ SECTION 12 — Quick Reference ═══════════════════ -->
+<div class="page break-before">
+
+  <h2><span class="section-num">12</span> Quick Reference</h2>
+
+  <table class="avoid-break">
+    <thead>
+      <tr><th>Task</th><th>Where</th><th>Who</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>View the pipeline</strong></td><td>Procurement &gt; Pipeline tab</td><td>Everyone</td></tr>
+      <tr><td><strong>Create a package</strong></td><td>"+ New Package" button</td><td>Agency Admin</td></tr>
+      <tr><td><strong>Move a package forward</strong></td><td>Drag-and-drop or Detail Panel &gt; Advance</td><td>Agency Admin</td></tr>
+      <tr><td><strong>Attach a document</strong></td><td>Detail Panel &gt; Documents &gt; Upload</td><td>Agency Admin</td></tr>
+      <tr><td><strong>Leave a note</strong></td><td>Detail Panel &gt; Notes</td><td>Everyone</td></tr>
+      <tr><td><strong>Review pipeline health</strong></td><td>Procurement &gt; Analytics tab</td><td>Everyone</td></tr>
+      <tr><td><strong>Find stalled packages</strong></td><td>Analytics &gt; "What is stuck?" table</td><td>Everyone</td></tr>
+      <tr><td><strong>Check stage bottlenecks</strong></td><td>Analytics &gt; "How long is it taking?" chart</td><td>Everyone</td></tr>
+      <tr><td><strong>Filter by agency</strong></td><td>Filter chips on Pipeline tab</td><td>Everyone</td></tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top: 64px; text-align: center; color: var(--navy-700); font-size: 9pt;">
+    <div style="width: 60px; height: 1px; background: rgba(212,175,55,0.3); margin: 0 auto 16px;"></div>
+    For technical issues or access requests, contact the system administrator.
+  </div>
+
+  <div class="page-footer">
+    <span>Procurement Pipeline — User Guide</span>
+    <span>Page 12</span>
+  </div>
+</div>
+
+</body>
+</html>
