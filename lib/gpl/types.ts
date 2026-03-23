@@ -269,3 +269,134 @@ export interface GPLChronicOutlierRow {
   resolved: boolean;
   resolved_date: string | null;
 }
+
+// ── Grid Health / Outage Types ──────────────────────────────────────────────
+
+export type FeederGrade = 'A' | 'B' | 'C' | 'D' | 'F';
+export type TrendDirection = 'improving' | 'worsening' | 'stable';
+
+export interface GplOutage {
+  id: number;
+  feeder_id: number;
+  date: string;
+  time_out: string | null;
+  time_in: string | null;
+  duration_minutes: number | null;
+  customers_affected: number | null;
+  mw_lost: number | null;
+  ens_mwh: number | null;
+  cause_detail: string | null;
+  status: string;
+  areas_affected: string | null;
+  feeder_code: string | null;
+  substation_code: string | null;
+  cause_category: string | null;
+  cause_subcategory: string | null;
+  root_cause: string | null;
+}
+
+export interface GplFeeder {
+  id: number;
+  code: string;
+  name: string;
+  substation_code: string;
+  area_served: string | null;
+  customer_count: number;
+}
+
+export interface GplSubstation {
+  id: number;
+  code: string;
+  name: string;
+}
+
+export interface GplCauseCode {
+  id: number;
+  category: string;
+  subcategory: string;
+  description: string | null;
+}
+
+export interface FeederHealth {
+  feeder_id: number;
+  feeder_code: string;
+  feeder_name: string;
+  substation_code: string;
+  area_served: string | null;
+  customer_count: number;
+  grade: FeederGrade;
+  score: number;
+  outages_30d: number;
+  avg_duration_min: number;
+  total_customer_minutes: number;
+  trend: TrendDirection;
+  last_outage: string | null;
+}
+
+export interface PulseScore {
+  overall: number;
+  frequency_score: number;
+  restoration_score: number;
+  impact_score: number;
+  outage_count_30d: number;
+  avg_restoration_min: number;
+  cmi_per_1000: number;
+}
+
+export interface MonthSubstationBreakdown {
+  substation_code: string;
+  outage_count: number;
+  total_duration_min: number;
+  customers_affected: number;
+}
+
+export interface MonthCauseBreakdown {
+  cause_subcategory: string;
+  count: number;
+  pct: number;
+}
+
+export interface MonthWorstFeeder {
+  feeder_code: string;
+  feeder_name: string;
+  outage_count: number;
+  total_duration_min: number;
+  customers_affected: number;
+}
+
+export interface MonthSummary {
+  month: string; // YYYY-MM
+  outage_count: number;
+  avg_duration_min: number;
+  total_customers_affected: number;
+  total_ens_mwh: number;
+  by_substation: MonthSubstationBreakdown[];
+  by_cause: MonthCauseBreakdown[];
+  worst_feeders: MonthWorstFeeder[];
+  vs_previous: {
+    outage_count_delta: number;
+    avg_duration_delta: number;
+    customers_affected_delta: number;
+  } | null;
+}
+
+export interface TodayOutage {
+  id: number;
+  feeder_id: number;
+  feeder_code: string;
+  feeder_name: string;
+  substation_code: string;
+  date: string;
+  time_out: string | null;
+  time_in: string | null;
+  duration_minutes: number | null;
+  customers_affected: number | null;
+  mw_lost: number | null;
+  ens_mwh: number | null;
+  cause_subcategory: string | null;
+  cause_detail: string | null;
+  status: string;
+  areas_affected: string | null;
+  feeder_grade: FeederGrade;
+  feeder_score: number;
+}
