@@ -14,6 +14,8 @@ import {
   PlaneLanding,
   Droplets,
   Shield,
+  Lightbulb,
+  Anchor,
   ChevronRight,
   ChevronDown,
   LogOut,
@@ -27,6 +29,7 @@ import {
   ChevronsLeft,
   Gauge,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useState, useRef, useCallback, useEffect, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import { signOut } from 'next-auth/react';
@@ -87,11 +90,23 @@ const mainNavItems = [
   { href: '/documents', label: 'Documents', icon: FileText, moduleSlug: 'documents' },
 ];
 
-const agencies = [
+type AgencyItem = {
+  code: string;
+  label: string;
+  name: string;
+  icon: LucideIcon;
+  moduleSlug: string;
+  href?: string;
+};
+
+const agencies: AgencyItem[] = [
   { code: 'gpl', label: 'GPL', name: 'Guyana Power & Light', icon: Zap, moduleSlug: 'gpl-deep-dive' },
   { code: 'cjia', label: 'CJIA', name: 'CJIA Airport', icon: Plane, moduleSlug: 'cjia-deep-dive' },
   { code: 'gwi', label: 'GWI', name: 'Guyana Water Inc.', icon: Droplets, moduleSlug: 'gwi-deep-dive' },
   { code: 'gcaa', label: 'GCAA', name: 'Civil Aviation', icon: Shield, moduleSlug: 'gcaa-deep-dive' },
+  { code: 'has', label: 'HAS', name: 'Hinterland Airstrips', icon: PlaneLanding, moduleSlug: 'airstrips', href: '/airstrips' },
+  { code: 'heci', label: 'HECI', name: 'Hinterland Electrification', icon: Lightbulb, moduleSlug: 'heci-deep-dive' },
+  { code: 'marad', label: 'MARAD', name: 'Maritime Administration', icon: Anchor, moduleSlug: 'marad-deep-dive' },
 ];
 
 const adminItems = [
@@ -152,7 +167,6 @@ export function Sidebar() {
   const filteredAdminItems = adminItems.filter(item => canAccess(item.moduleSlug));
 
   const gridHealthActive = pathname.startsWith('/pulse/gpl/grid-health');
-  const airstripsActive = pathname.startsWith('/airstrips');
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/login' });
@@ -256,7 +270,7 @@ export function Sidebar() {
           })}
 
           {/* Agencies Section */}
-          {(filteredAgencies.length > 0 || canAccess('airstrips')) && (
+          {filteredAgencies.length > 0 && (
             <div className="mt-8">
               {!collapsed && (
                 <button
@@ -277,7 +291,7 @@ export function Sidebar() {
                 <div className="space-y-0.5">
                   {filteredAgencies.map((agency) => {
                     const Icon = agency.icon;
-                    const href = `/intel/${agency.code}`;
+                    const href = agency.href ?? `/intel/${agency.code}`;
                     const active = pathname.startsWith(href);
                     // When viewing Grid Health, don't highlight the GPL agency link
                     const showActive = active && !(agency.code === 'gpl' && gridHealthActive);
@@ -311,19 +325,6 @@ export function Sidebar() {
                       </Fragment>
                     );
                   })}
-                  {canAccess('airstrips') && (
-                    <Link
-                      href="/airstrips"
-                      onClick={handleNavClick}
-                      className={`sidebar-item ${airstripsActive ? 'active' : ''} ${collapsed ? 'sidebar-item-collapsed' : ''}`}
-                      {...(airstripsActive ? { 'aria-current': 'page' as const } : {})}
-                      onMouseEnter={collapsed ? (e) => onEnter('Hinterland Airstrips', e.currentTarget) : undefined}
-                      onMouseLeave={collapsed ? onLeave : undefined}
-                    >
-                      <PlaneLanding className={`h-4 w-4 ${airstripsActive ? 'text-gold-500' : ''}`} aria-hidden="true" />
-                      {!collapsed && <span className="sidebar-label">Hinterland Airstrips</span>}
-                    </Link>
-                  )}
                 </div>
               )}
             </div>
