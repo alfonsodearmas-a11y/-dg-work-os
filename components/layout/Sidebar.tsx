@@ -85,7 +85,6 @@ const mainNavItems = [
   { href: '/meetings', label: 'Meetings', icon: Mic, moduleSlug: 'meetings' },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays, moduleSlug: 'calendar' },
   { href: '/documents', label: 'Documents', icon: FileText, moduleSlug: 'documents' },
-  { href: '/airstrips', label: 'Airstrips', icon: PlaneLanding, moduleSlug: 'airstrips' },
 ];
 
 const agencies = [
@@ -153,6 +152,7 @@ export function Sidebar() {
   const filteredAdminItems = adminItems.filter(item => canAccess(item.moduleSlug));
 
   const gridHealthActive = pathname.startsWith('/pulse/gpl/grid-health');
+  const airstripsActive = pathname.startsWith('/airstrips');
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/login' });
@@ -256,7 +256,7 @@ export function Sidebar() {
           })}
 
           {/* Agencies Section */}
-          {filteredAgencies.length > 0 && (
+          {(filteredAgencies.length > 0 || canAccess('airstrips')) && (
             <div className="mt-8">
               {!collapsed && (
                 <button
@@ -311,6 +311,19 @@ export function Sidebar() {
                       </Fragment>
                     );
                   })}
+                  {canAccess('airstrips') && (
+                    <Link
+                      href="/airstrips"
+                      onClick={handleNavClick}
+                      className={`sidebar-item ${airstripsActive ? 'active' : ''} ${collapsed ? 'sidebar-item-collapsed' : ''}`}
+                      {...(airstripsActive ? { 'aria-current': 'page' as const } : {})}
+                      onMouseEnter={collapsed ? (e) => onEnter('Hinterland Airstrips', e.currentTarget) : undefined}
+                      onMouseLeave={collapsed ? onLeave : undefined}
+                    >
+                      <PlaneLanding className={`h-4 w-4 ${airstripsActive ? 'text-gold-500' : ''}`} aria-hidden="true" />
+                      {!collapsed && <span className="sidebar-label">Hinterland Airstrips</span>}
+                    </Link>
+                  )}
                 </div>
               )}
             </div>

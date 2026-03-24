@@ -5,8 +5,15 @@
 export const AIRSTRIP_STATUSES = ['operational', 'limited', 'closed', 'under_rehabilitation', 'unknown'] as const;
 export const SURFACE_CONDITIONS = ['Good', 'Satisfactory', 'Poor'] as const;
 export const FLIGHT_FREQUENCIES = ['Low', 'Moderate', 'High'] as const;
-export const ACTIVITY_TYPES = ['weeding_cleaning', 'pothole_patching', 'other'] as const;
-export const VERIFICATION_METHODS = ['whatsapp_photo', 'physical_inspection', 'unverified'] as const;
+export const ACTIVITY_TYPES = [
+  'weeding_cleaning', 'pothole_patching', 'runway_resurfacing',
+  'drainage_clearing', 'lighting_papi', 'fencing_repairs',
+  'vegetation_management', 'marking_signage', 'threshold_overrun', 'other',
+] as const;
+export const VERIFICATION_METHODS = [
+  'physical_inspection', 'photo_verification', 'whatsapp_photo',
+  'contractor_report', 'aerial_survey', 'unverified', 'other',
+] as const;
 export const PHOTO_TYPES = ['verification', 'inspection', 'aerial', 'damage', 'general'] as const;
 export const VEGETATION_STATUSES = ['cleared', 'overgrown', 'partially_cleared'] as const;
 
@@ -42,16 +49,27 @@ export const FREQUENCY_CONFIG: Record<FlightFrequency, { label: string; color: s
   High:     { label: 'High',     color: '#10b981' },
 };
 
-export const ACTIVITY_CONFIG: Record<ActivityType, { label: string }> = {
-  weeding_cleaning:  { label: 'Weeding & Cleaning' },
-  pothole_patching:  { label: 'Pothole Patching' },
-  other:             { label: 'Other' },
+export const ACTIVITY_CONFIG: Record<string, { label: string }> = {
+  weeding_cleaning:      { label: 'Weeding & Cleaning' },
+  pothole_patching:      { label: 'Pothole Patching' },
+  runway_resurfacing:    { label: 'Runway Resurfacing' },
+  drainage_clearing:     { label: 'Drainage Clearing' },
+  lighting_papi:         { label: 'Lighting & PAPI Maintenance' },
+  fencing_repairs:       { label: 'Fencing Repairs' },
+  vegetation_management: { label: 'Vegetation Management' },
+  marking_signage:       { label: 'Marking & Signage' },
+  threshold_overrun:     { label: 'Threshold/Overrun Maintenance' },
+  other:                 { label: 'Other' },
 };
 
-export const VERIFICATION_CONFIG: Record<VerificationMethod, { label: string; color: string }> = {
-  whatsapp_photo:       { label: 'WhatsApp Photo',       color: '#60a5fa' },
+export const VERIFICATION_CONFIG: Record<string, { label: string; color: string }> = {
   physical_inspection:  { label: 'Physical Inspection',  color: '#10b981' },
+  photo_verification:   { label: 'Photo Verification',   color: '#60a5fa' },
+  whatsapp_photo:       { label: 'WhatsApp Photo',       color: '#60a5fa' },
+  contractor_report:    { label: 'Contractor Report',    color: '#d4af37' },
+  aerial_survey:        { label: 'Aerial Survey',        color: '#a78bfa' },
   unverified:           { label: 'Unverified',           color: '#dc2626' },
+  other:                { label: 'Other',                color: '#64748b' },
 };
 
 export const VEGETATION_CONFIG: Record<VegetationStatus, { label: string; color: string }> = {
@@ -150,6 +168,25 @@ export interface AirstripStatusLog {
   changed_by_name?: string;
   airstrip_name?: string;
 }
+
+// -- Dynamic option type (from airstrip_option_types table) -------------------
+
+export interface AirstripOption {
+  id: string;
+  category: string;
+  label: string;
+  value: string;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export type AirstripOptionCategory =
+  | 'activity_type'
+  | 'surface_type'
+  | 'verification_method'
+  | 'condition'
+  | 'status'
+  | 'flight_frequency';
 
 // -- Summary / analytics types ------------------------------------------------
 

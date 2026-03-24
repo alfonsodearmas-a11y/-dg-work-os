@@ -21,6 +21,7 @@ import type {
   AirstripInspection, AirstripStatusLog,
 } from '@/lib/airstrip-types';
 import AddEditAirstripModal from '@/components/airstrips/AddEditAirstripModal';
+import { useAirstripOptions } from '@/hooks/useAirstripOptions';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -445,6 +446,7 @@ function MaintenanceTab({ maintenance, photos, onLogMaintenance, onVerify }: {
   onLogMaintenance: () => void;
   onVerify: (id: string) => Promise<void>;
 }) {
+  const { labelFor: activityLabel } = useAirstripOptions('activity_type');
   const quarters = [...new Set(maintenance.map(m => m.quarter).filter((q): q is string => !!q))].sort().reverse();
   const [selectedQuarter, setSelectedQuarter] = useState(() => {
     const now = new Date();
@@ -513,7 +515,7 @@ function MaintenanceTab({ maintenance, photos, onLogMaintenance, onVerify }: {
                   <tr key={m.id} className="border-t border-navy-800/40">
                     <td className="px-3 py-2.5 text-xs text-slate-400">{formatDate(m.performed_date)}</td>
                     <td className="px-3 py-2.5 text-sm text-white">
-                      {ACTIVITY_CONFIG[m.activity_type]?.label || m.activity_type}
+                      {activityLabel(m.activity_type)}
                       {m.activity_description && <p className="text-xs text-navy-600 mt-0.5">{m.activity_description}</p>}
                     </td>
                     <td className="px-3 py-2.5 text-xs text-slate-400">{m.contractor_name || '—'}</td>
@@ -827,6 +829,9 @@ function ChangeStatusModal({ open, onClose, currentStatus, airstripId, onSaved }
 function LogMaintenanceModal({ open, onClose, airstripId, onSaved }: {
   open: boolean; onClose: () => void; airstripId: string; onSaved: () => void;
 }) {
+  const { options: activityOpts, loading: loadingAct } = useAirstripOptions('activity_type');
+  const { options: verifyOpts, loading: loadingVer } = useAirstripOptions('verification_method');
+
   const [activityType, setActivityType] = useState('');
   const [description, setDescription] = useState('');
   const [performedDate, setPerformedDate] = useState('');
@@ -845,6 +850,9 @@ function LogMaintenanceModal({ open, onClose, airstripId, onSaved }: {
   }, [open]);
 
   const quarter = performedDate ? getQuarter(performedDate) : '';
+
+  // Photo upload applies to photo-based verification methods
+  const showPhotoUpload = verificationMethod === 'whatsapp_photo' || verificationMethod === 'photo_verification';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -868,7 +876,7 @@ function LogMaintenanceModal({ open, onClose, airstripId, onSaved }: {
       const { maintenance } = await res.json();
 
       // 2. Upload photos if any
-      if (photoFiles.length > 0 && verificationMethod === 'whatsapp_photo') {
+      if (photoFiles.length > 0 && showPhotoUpload) {
         const formData = new FormData();
         photoFiles.forEach(f => formData.append('files', f));
         formData.append('photo_type', 'verification');
@@ -886,9 +894,9 @@ function LogMaintenanceModal({ open, onClose, airstripId, onSaved }: {
     <Modal open={open} onClose={onClose} title="Log Maintenance">
       <form onSubmit={handleSubmit} className="space-y-4">
         <Field label="Activity Type">
-          <select value={activityType} onChange={e => setActivityType(e.target.value)} className={selectClass} required>
-            <option value="">Select…</option>
-            {ACTIVITY_TYPES.map(t => <option key={t} value={t}>{ACTIVITY_CONFIG[t].label}</option>)}
+          <select value={activityType} onChange={e => setActivityType(e.target.value)} className={selectClass} required disabled={loadingAct}>
+            <option value="">{loadingAct ? 'Loading…' : 'Select…'}</option>
+            {activityOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </Field>
         {activityType === 'other' && (
@@ -906,12 +914,12 @@ function LogMaintenanceModal({ open, onClose, airstripId, onSaved }: {
           <input type="text" value={contractor} onChange={e => setContractor(e.target.value)} className={inputClass} placeholder="Contractor or team" />
         </Field>
         <Field label="Verification Method">
-          <select value={verificationMethod} onChange={e => setVerificationMethod(e.target.value)} className={selectClass} required>
-            <option value="">Select…</option>
-            {VERIFICATION_METHODS.map(v => <option key={v} value={v}>{VERIFICATION_CONFIG[v].label}</option>)}
+          <select value={verificationMethod} onChange={e => setVerificationMethod(e.target.value)} className={selectClass} required disabled={loadingVer}>
+            <option value="">{loadingVer ? 'Loading…' : 'Select…'}</option>
+            {verifyOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </Field>
-        {verificationMethod === 'whatsapp_photo' && (
+        {showPhotoUpload && (
           <Field label="Verification Photos">
             <input
               type="file"

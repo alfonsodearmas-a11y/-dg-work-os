@@ -1,23 +1,25 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   PlaneLanding, Search, Download, Plus, Upload,
   Check, Minus, ChevronUp, ChevronDown,
   LayoutGrid, List, AlertTriangle, RefreshCw, X, MapPin,
+  Wrench, ClipboardCheck, Loader2, ChevronRight,
 } from 'lucide-react';
 import {
   STATUS_CONFIG, CONDITION_CONFIG, FREQUENCY_CONFIG,
   AIRSTRIP_STATUSES, SURFACE_CONDITIONS, FLIGHT_FREQUENCIES,
 } from '@/lib/airstrip-types';
-import type { Airstrip } from '@/lib/airstrip-types';
+import type { Airstrip, AirstripMaintenanceLog } from '@/lib/airstrip-types';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { exportToCsv } from '@/lib/export-csv';
 import AddEditAirstripModal from '@/components/airstrips/AddEditAirstripModal';
 import BulkUploadAirstripsModal from '@/components/airstrips/BulkUploadAirstripsModal';
 import { SlidePanel } from '@/components/layout/SlidePanel';
+import { useAirstripOptions, prefetchAirstripOptions } from '@/hooks/useAirstripOptions';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -93,11 +95,620 @@ function ConfigBadge({ value, config }: { value: string | null; config: Record<s
   );
 }
 
-function DetailField({ label, children }: { label: string; children: React.ReactNode }) {
+function DetailField({ label, children, flash }: { label: string; children: React.ReactNode; flash?: boolean }) {
   return (
-    <div className="rounded-xl bg-navy-900/60 border border-navy-800/60 p-3">
-      <span className="text-xs text-navy-600 block mb-1">{label}</span>
+    <div className={`rounded-xl bg-navy-900/60 border p-3 transition-colors duration-300 ${flash ? 'border-emerald-500/50' : 'border-navy-800/60'}`}>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs text-navy-600">{label}</span>
+        {flash && <span className="text-[10px] text-emerald-400 font-medium animate-fade-in">Saved</span>}
+      </div>
       {children}
+    </div>
+  );
+}
+
+// ── Inline Editable Field ────────────────────────────────────────────────────
+
+function InlineEditText({
+  value, onSave, className, placeholder, mono,
+}: {
+  value: string | null; onSave: (val: string | null) => void; className?: string; placeholder?: string; mono?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value ?? '');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setDraft(value ?? ''); }, [value]);
+  useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+
+  const commit = () => {
+    setEditing(false);
+    const trimmed = draft.trim() || null;
+    if (trimmed !== (value ?? null)) onSave(trimmed);
+    else setDraft(value ?? '');
+  };
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        className={`bg-transparent border-b border-gold-500/50 text-sm text-white outline-none w-full py-0.5 ${mono ? 'font-mono' : ''} ${className ?? ''}`}
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setDraft(value ?? ''); setEditing(false); } }}
+        placeholder={placeholder}
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      className={`text-sm text-white hover:text-gold-500 transition-colors text-left cursor-text w-full ${mono ? 'font-mono' : ''} ${className ?? ''}`}
+      title="Click to edit"
+    >
+      {value || <span className="text-navy-600 italic">{placeholder ?? 'Not set'}</span>}
+    </button>
+  );
+}
+
+function InlineEditSelect({
+  value, options, onSave, placeholder,
+}: {
+  value: string | null; options: { value: string; label: string }[]; onSave: (val: string | null) => void; placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [open]);
+
+  const current = options.find(o => o.value === value);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="text-sm text-white hover:text-gold-500 transition-colors text-left cursor-pointer flex items-center gap-1"
+        title="Click to change"
+      >
+        {current?.label ?? value ?? <span className="text-navy-600 italic">{placeholder ?? 'Not set'}</span>}
+        <ChevronDown className={`h-3 w-3 text-navy-600 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 z-20 bg-navy-900 border border-navy-700 rounded-xl shadow-xl py-1 min-w-[160px] max-h-48 overflow-y-auto">
+          {options.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => { onSave(opt.value); setOpen(false); }}
+              className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${opt.value === value ? 'text-gold-500 bg-gold-500/10' : 'text-slate-300 hover:bg-navy-800 hover:text-white'}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InlineEditTextarea({
+  value, onSave, placeholder, rows,
+}: {
+  value: string | null; onSave: (val: string | null) => void; placeholder?: string; rows?: number;
+}) {
+  const [draft, setDraft] = useState(value ?? '');
+  const [focused, setFocused] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedValueRef = useRef(value);
+
+  useEffect(() => {
+    // Only update draft from prop when not focused (avoid overwriting while typing)
+    if (!focused) {
+      setDraft(value ?? '');
+      savedValueRef.current = value;
+    }
+  }, [value, focused]);
+
+  // Cleanup debounce on unmount
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+
+  const debouncedSave = useCallback((text: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const trimmed = text.trim() || null;
+      if (trimmed !== (savedValueRef.current ?? null)) {
+        savedValueRef.current = trimmed;
+        onSave(trimmed);
+      }
+    }, 800);
+  }, [onSave]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setDraft(e.target.value);
+    debouncedSave(e.target.value);
+  };
+
+  const handleBlur = () => {
+    setFocused(false);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const trimmed = draft.trim() || null;
+    if (trimmed !== (savedValueRef.current ?? null)) {
+      savedValueRef.current = trimmed;
+      onSave(trimmed);
+    }
+  };
+
+  return (
+    <textarea
+      className="w-full bg-transparent text-sm text-slate-300 placeholder:text-navy-600 outline-none resize-none border border-transparent hover:border-navy-700 focus:border-gold-500/50 rounded-lg px-2 py-1.5 transition-colors"
+      value={draft}
+      onChange={handleChange}
+      onFocus={() => setFocused(true)}
+      onBlur={handleBlur}
+      placeholder={placeholder}
+      rows={rows ?? 3}
+    />
+  );
+}
+
+// ── Drawer Log Maintenance Modal ─────────────────────────────────────────────
+
+function DrawerLogMaintenanceModal({
+  open, onClose, airstripId, onSaved,
+}: {
+  open: boolean; onClose: () => void; airstripId: string; onSaved: () => void;
+}) {
+  const { options: activityOpts, loading: loadingAct } = useAirstripOptions('activity_type');
+  const { options: verifyOpts, loading: loadingVer } = useAirstripOptions('verification_method');
+
+  const [activityType, setActivityType] = useState('');
+  const [description, setDescription] = useState('');
+  const [performedDate, setPerformedDate] = useState('');
+  const [contractor, setContractor] = useState('');
+  const [verificationMethod, setVerificationMethod] = useState('');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setActivityType(''); setDescription(''); setPerformedDate('');
+      setContractor(''); setVerificationMethod(''); setNotes('');
+    }
+  }, [open]);
+
+  const quarter = performedDate ? (() => {
+    const d = new Date(performedDate);
+    return `Q${Math.ceil((d.getMonth() + 1) / 3)} ${d.getFullYear()}`;
+  })() : '';
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!activityType || !performedDate || !verificationMethod) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/airstrips/${airstripId}/maintenance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          activity_type: activityType,
+          activity_description: activityType === 'other' ? description : null,
+          performed_date: performedDate,
+          contractor_name: contractor,
+          verification_method: verificationMethod,
+          notes,
+        }),
+      });
+      if (!res.ok) { const d = await res.json(); alert(d.error || 'Failed'); setSaving(false); return; }
+      onSaved();
+      onClose();
+    } catch { alert('Failed to log maintenance'); }
+    finally { setSaving(false); }
+  }
+
+  if (!open) return null;
+
+  const inputCls = 'w-full px-3 py-2 rounded-xl bg-navy-900 border border-navy-800 text-white text-sm placeholder:text-navy-600 focus:border-gold-500 focus:ring-1 focus:ring-gold-500/30 transition-colors';
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end md:items-center justify-center z-[60]" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="bg-navy-950 border border-navy-800 rounded-t-2xl md:rounded-2xl w-full md:max-w-lg max-h-[90vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-navy-800">
+          <h3 className="text-lg font-semibold text-white">Log Maintenance</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-navy-800 text-navy-600 hover:text-white transition-colors" aria-label="Close">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium text-navy-600 uppercase tracking-wide">Activity Type</span>
+            <select value={activityType} onChange={e => setActivityType(e.target.value)} className={inputCls} required disabled={loadingAct}>
+              <option value="">{loadingAct ? 'Loading…' : 'Select…'}</option>
+              {activityOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </label>
+          {activityType === 'other' && (
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium text-navy-600 uppercase tracking-wide">Description</span>
+              <textarea value={description} onChange={e => setDescription(e.target.value)} className={inputCls} rows={2} placeholder="Describe the activity" />
+            </label>
+          )}
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium text-navy-600 uppercase tracking-wide">Date Performed</span>
+            <input type="date" value={performedDate} onChange={e => setPerformedDate(e.target.value)} className={inputCls} required />
+          </label>
+          {quarter && <div className="text-xs text-navy-600">Quarter: <span className="text-slate-400">{quarter}</span></div>}
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium text-navy-600 uppercase tracking-wide">Contractor Name</span>
+            <input type="text" value={contractor} onChange={e => setContractor(e.target.value)} className={inputCls} placeholder="Contractor or team" />
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium text-navy-600 uppercase tracking-wide">Verification Method</span>
+            <select value={verificationMethod} onChange={e => setVerificationMethod(e.target.value)} className={inputCls} required disabled={loadingVer}>
+              <option value="">{loadingVer ? 'Loading…' : 'Select…'}</option>
+              {verifyOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium text-navy-600 uppercase tracking-wide">Notes</span>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} className={inputCls} rows={2} placeholder="Optional notes" />
+          </label>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="btn-navy px-4 py-2 text-sm">Cancel</button>
+            <button type="submit" disabled={saving || !activityType || !performedDate || !verificationMethod} className="btn-gold px-4 py-2 text-sm flex items-center gap-1.5 disabled:opacity-40">
+              {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Log Maintenance
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Airstrip Detail Drawer Content ───────────────────────────────────────────
+
+function AirstripDrawerContent({
+  airstrip,
+  onFieldSaved,
+}: {
+  airstrip: Airstrip;
+  onFieldSaved: (updated: Partial<Airstrip>) => void;
+}) {
+  const { options: conditionOpts } = useAirstripOptions('condition');
+  const { options: statusOpts } = useAirstripOptions('status');
+  const { options: frequencyOpts } = useAirstripOptions('flight_frequency');
+  const { options: surfaceOpts } = useAirstripOptions('surface_type');
+  const { labelFor: activityLabel } = useAirstripOptions('activity_type');
+  const { labelFor: verifyLabel } = useAirstripOptions('verification_method');
+
+  const [savedFlash, setSavedFlash] = useState<string>('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [maintenanceLogs, setMaintenanceLogs] = useState<AirstripMaintenanceLog[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(true);
+  const [logModalOpen, setLogModalOpen] = useState(false);
+  const [statusReasonModal, setStatusReasonModal] = useState<{ newStatus: string } | null>(null);
+  const [statusReason, setStatusReason] = useState('');
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => () => { if (flashTimerRef.current) clearTimeout(flashTimerRef.current); }, []);
+
+  const fetchLogs = useCallback(async () => {
+    setLoadingLogs(true);
+    try {
+      const res = await fetch(`/api/airstrips/${airstrip.id}/maintenance`);
+      if (res.ok) {
+        const json = await res.json();
+        setMaintenanceLogs((json.maintenance ?? []).slice(0, 5));
+      }
+    } catch { /* non-critical */ }
+    finally { setLoadingLogs(false); }
+  }, [airstrip.id]);
+
+  useEffect(() => { fetchLogs(); }, [fetchLogs]);
+
+  const flash = (field: string) => {
+    if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+    setSavedFlash(field);
+    flashTimerRef.current = setTimeout(() => setSavedFlash(''), 1500);
+  };
+
+  const saveField = async (updates: Record<string, unknown>, fieldName: string) => {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const res = await fetch(`/api/airstrips/${airstrip.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Save failed' }));
+        setSaveError(err.error || 'Save failed');
+        return;
+      }
+      const { airstrip: updated } = await res.json();
+      onFieldSaved(updated);
+      flash(fieldName);
+    } catch {
+      setSaveError('Network error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Save error banner */}
+      {saveError && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30">
+          <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
+          <span className="text-xs text-red-400 flex-1">{saveError}</span>
+          <button onClick={() => setSaveError(null)} className="text-red-400 hover:text-white"><X className="h-3 w-3" /></button>
+        </div>
+      )}
+
+      {/* Status / Condition / Frequency badges — clickable */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="space-y-1">
+          <span className="text-[10px] text-navy-600 uppercase tracking-wider block">Status</span>
+          <InlineEditSelect
+            value={airstrip.status}
+            options={statusOpts.length > 0 ? statusOpts.map(o => ({ value: o.value, label: o.label })) : AIRSTRIP_STATUSES.map(s => ({ value: s, label: STATUS_CONFIG[s].label }))}
+            onSave={(val) => {
+              if (val && val !== airstrip.status) {
+                setStatusReasonModal({ newStatus: val });
+                setStatusReason('');
+              }
+            }}
+          />
+        </div>
+        <div className="space-y-1">
+          <span className="text-[10px] text-navy-600 uppercase tracking-wider block">Condition</span>
+          <InlineEditSelect
+            value={airstrip.surface_condition}
+            options={conditionOpts.length > 0 ? conditionOpts.map(o => ({ value: o.value, label: o.label })) : SURFACE_CONDITIONS.map(c => ({ value: c, label: c }))}
+            onSave={(val) => saveField({ surface_condition: val }, 'surface_condition')}
+          />
+        </div>
+        <div className="space-y-1">
+          <span className="text-[10px] text-navy-600 uppercase tracking-wider block">Frequency</span>
+          <InlineEditSelect
+            value={airstrip.flight_frequency}
+            options={frequencyOpts.length > 0 ? frequencyOpts.map(o => ({ value: o.value, label: o.label })) : FLIGHT_FREQUENCIES.map(f => ({ value: f, label: f }))}
+            onSave={(val) => saveField({ flight_frequency: val }, 'flight_frequency')}
+          />
+        </div>
+      </div>
+
+      {/* Overdue inspection alert */}
+      {isOverdue(airstrip.last_inspection_date) && (
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-orange-500/10 border border-orange-500/30">
+          <AlertTriangle className="h-4 w-4 text-orange-400 shrink-0" />
+          <span className="text-xs text-orange-400">
+            Inspection overdue — last inspected {formatDate(airstrip.last_inspection_date)}
+          </span>
+        </div>
+      )}
+
+      {/* ── Infrastructure ── */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-semibold text-navy-600 uppercase tracking-wider">Runway & Infrastructure</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <DetailField label="Runway Length (m)" flash={savedFlash === 'runway_length_m'}>
+            <InlineEditText
+              value={airstrip.runway_length_m != null ? String(airstrip.runway_length_m) : null}
+              onSave={(val) => saveField({ runway_length_m: val ? Number(val) : null }, 'runway_length_m')}
+              placeholder="—"
+              mono
+            />
+          </DetailField>
+          <DetailField label="Runway Width (m)" flash={savedFlash === 'runway_width_m'}>
+            <InlineEditText
+              value={airstrip.runway_width_m != null ? String(airstrip.runway_width_m) : null}
+              onSave={(val) => saveField({ runway_width_m: val ? Number(val) : null }, 'runway_width_m')}
+              placeholder="—"
+              mono
+            />
+          </DetailField>
+          <DetailField label="Surface Type" flash={savedFlash === 'surface_type'}>
+            <InlineEditSelect
+              value={airstrip.surface_type}
+              options={surfaceOpts.length > 0 ? surfaceOpts.map(o => ({ value: o.value, label: o.label })) : []}
+              onSave={(val) => saveField({ surface_type: val }, 'surface_type')}
+              placeholder="Not set"
+            />
+          </DetailField>
+          <DetailField label="Engineered" flash={savedFlash === 'engineered_structure'}>
+            <button
+              type="button"
+              onClick={() => saveField({ engineered_structure: !airstrip.engineered_structure }, 'engineered_structure')}
+              className="text-sm flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+              title="Click to toggle"
+            >
+              {airstrip.engineered_structure
+                ? <><Check className="h-3.5 w-3.5 text-emerald-400" /><span className="text-emerald-400">Yes</span></>
+                : <><Minus className="h-3.5 w-3.5 text-navy-600" /><span className="text-navy-600">No</span></>
+              }
+            </button>
+          </DetailField>
+        </div>
+      </div>
+
+      {/* ── Operations ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-semibold text-navy-600 uppercase tracking-wider">Operations</h3>
+          <button
+            onClick={() => setLogModalOpen(true)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gold-500/10 border border-gold-500/30 text-gold-500 text-xs hover:bg-gold-500/20 transition-colors"
+          >
+            <Wrench className="h-3 w-3" /> Log Maintenance
+          </button>
+        </div>
+        <DetailField label="Last Inspection" flash={savedFlash === 'last_inspection_date'}>
+          <span className={`text-sm ${isOverdue(airstrip.last_inspection_date) ? 'text-orange-400' : 'text-white'}`}>
+            {isOverdue(airstrip.last_inspection_date) && <AlertTriangle className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />}
+            {formatDate(airstrip.last_inspection_date)}
+          </span>
+        </DetailField>
+
+        {/* Maintenance timeline */}
+        {loadingLogs ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-4 w-4 animate-spin text-navy-600" />
+          </div>
+        ) : maintenanceLogs.length > 0 ? (
+          <div className="space-y-0">
+            <span className="text-[10px] text-navy-600 uppercase tracking-wider">Recent Maintenance</span>
+            <div className="mt-2 space-y-1">
+              {maintenanceLogs.map(log => (
+                <div key={log.id} className="flex items-start gap-2 py-1.5 px-2 rounded-lg hover:bg-navy-900/40 transition-colors group">
+                  <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-navy-600 shrink-0 group-hover:bg-gold-500 transition-colors" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-white font-medium">{activityLabel(log.activity_type)}</span>
+                      {log.contractor_name && (
+                        <span className="text-[10px] text-navy-600">by {log.contractor_name}</span>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-navy-600">
+                      {formatDate(log.performed_date)}
+                      {log.verification_method && ` · ${verifyLabel(log.verification_method)}`}
+                    </span>
+                  </div>
+                  {log.verified && <Check className="h-3 w-3 text-emerald-400 mt-1 shrink-0" aria-label="Verified" />}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-navy-600 italic">No maintenance logged yet.</p>
+        )}
+      </div>
+
+      {/* ── Notes ── */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-semibold text-navy-600 uppercase tracking-wider">Notes</h3>
+        <DetailField label="Remarks" flash={savedFlash === 'remarks'}>
+          <InlineEditTextarea
+            value={airstrip.remarks}
+            onSave={(val) => saveField({ remarks: val }, 'remarks')}
+            placeholder="Add remarks..."
+            rows={3}
+          />
+        </DetailField>
+        <DetailField label="Airside Buildings" flash={savedFlash === 'airside_buildings'}>
+          <InlineEditTextarea
+            value={airstrip.airside_buildings}
+            onSave={(val) => saveField({ airside_buildings: val }, 'airside_buildings')}
+            placeholder="Describe airside buildings..."
+            rows={2}
+          />
+        </DetailField>
+      </div>
+
+      {/* ── Location ── */}
+      {(airstrip.coordinates_lat != null && airstrip.coordinates_lon != null) && (
+        <div className="space-y-3">
+          <h3 className="text-xs font-semibold text-navy-600 uppercase tracking-wider">Location</h3>
+          <div className="rounded-xl bg-navy-900/60 border border-navy-800/60 p-3 flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-navy-600 shrink-0" />
+            <span className="text-sm text-slate-400 font-mono">
+              {airstrip.coordinates_lat?.toFixed(4)}, {airstrip.coordinates_lon?.toFixed(4)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Full detail page link */}
+      <Link
+        href={`/airstrips/${airstrip.id}`}
+        className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-navy-900 border border-navy-800 hover:border-gold-500 text-slate-400 hover:text-white transition-colors text-xs"
+      >
+        <ClipboardCheck className="h-3.5 w-3.5" /> Inspections, Photos & History
+        <ChevronRight className="h-3 w-3 ml-auto" />
+      </Link>
+
+      {/* Saving indicator */}
+      {saving && (
+        <div className="flex items-center justify-center gap-2 text-xs text-navy-600">
+          <Loader2 className="h-3 w-3 animate-spin" /> Saving…
+        </div>
+      )}
+
+      {/* Log Maintenance modal (from drawer) */}
+      <DrawerLogMaintenanceModal
+        open={logModalOpen}
+        onClose={() => setLogModalOpen(false)}
+        airstripId={airstrip.id}
+        onSaved={() => { fetchLogs(); }}
+      />
+
+      {/* Status change reason modal */}
+      {statusReasonModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end md:items-center justify-center z-[60]" onClick={() => setStatusReasonModal(null)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="bg-navy-950 border border-navy-800 rounded-t-2xl md:rounded-2xl w-full md:max-w-sm"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-navy-800">
+              <h3 className="text-sm font-semibold text-white">Reason for Status Change</h3>
+              <button onClick={() => setStatusReasonModal(null)} className="p-1.5 rounded-lg hover:bg-navy-800 text-navy-600 hover:text-white transition-colors" aria-label="Close">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <textarea
+                className="w-full px-3 py-2 rounded-xl bg-navy-900 border border-navy-800 text-white text-sm placeholder:text-navy-600 focus:border-gold-500 focus:ring-1 focus:ring-gold-500/30 transition-colors"
+                value={statusReason}
+                onChange={e => setStatusReason(e.target.value)}
+                placeholder="Why is the status changing?"
+                rows={3}
+                autoFocus
+              />
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setStatusReasonModal(null)} className="btn-navy px-3 py-1.5 text-xs">Cancel</button>
+                <button
+                  onClick={() => {
+                    if (!statusReason.trim()) return;
+                    saveField({ status: statusReasonModal.newStatus, status_change_reason: statusReason.trim() }, 'status');
+                    setStatusReasonModal(null);
+                  }}
+                  disabled={!statusReason.trim()}
+                  className="btn-gold px-3 py-1.5 text-xs disabled:opacity-40"
+                >
+                  Change Status
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -194,6 +805,24 @@ export default function AirstripsPage() {
   }, [buildParams]);
 
   useEffect(() => { fetchAirstrips(); }, [fetchAirstrips]);
+
+  // Prefetch dropdown options on mount
+  useEffect(() => {
+    prefetchAirstripOptions(['activity_type', 'verification_method', 'condition', 'status', 'flight_frequency', 'surface_type']);
+  }, []);
+
+  // When a field is saved in the drawer, update the airstrip in local state
+  const handleDrawerFieldSaved = useCallback((updated: Partial<Airstrip>) => {
+    setData(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        airstrips: prev.airstrips.map(a =>
+          a.id === updated.id ? { ...a, ...updated } : a,
+        ),
+      };
+    });
+  }, []);
 
   // ── Sort handler ──
   function handleSort(field: SortField) {
@@ -504,94 +1133,10 @@ export default function AirstripsPage() {
         accentColor="from-gold-500/80 to-amber-600/80"
       >
         {selectedAirstrip && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-2 flex-wrap">
-              <ConfigBadge value={selectedAirstrip.status} config={STATUS_CONFIG} />
-              <ConfigBadge value={selectedAirstrip.surface_condition} config={CONDITION_CONFIG} />
-              {selectedAirstrip.flight_frequency && <ConfigBadge value={selectedAirstrip.flight_frequency} config={FREQUENCY_CONFIG} />}
-            </div>
-
-            {isOverdue(selectedAirstrip.last_inspection_date) && (
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-orange-500/10 border border-orange-500/30">
-                <AlertTriangle className="h-4 w-4 text-orange-400 shrink-0" />
-                <span className="text-xs text-orange-400">
-                  Inspection overdue — last inspected {formatDate(selectedAirstrip.last_inspection_date)}
-                </span>
-              </div>
-            )}
-
-            {/* Runway & Infrastructure */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold text-navy-600 uppercase tracking-wider">Runway & Infrastructure</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <DetailField label="Runway">
-                  <span className="text-sm text-white font-mono">{formatRunway(selectedAirstrip.runway_length_m, selectedAirstrip.runway_width_m)}</span>
-                </DetailField>
-                <DetailField label="Surface">
-                  <span className="text-sm text-white">{selectedAirstrip.surface_type || '—'}</span>
-                </DetailField>
-                <DetailField label="Engineered">
-                  <span className="text-sm flex items-center gap-1.5">
-                    {selectedAirstrip.engineered_structure
-                      ? <><Check className="h-3.5 w-3.5 text-emerald-400" /><span className="text-emerald-400">Yes</span></>
-                      : <><Minus className="h-3.5 w-3.5 text-navy-600" /><span className="text-navy-600">No</span></>
-                    }
-                  </span>
-                </DetailField>
-                <DetailField label="Flight Frequency">
-                  <ConfigBadge value={selectedAirstrip.flight_frequency} config={FREQUENCY_CONFIG} />
-                </DetailField>
-              </div>
-            </div>
-
-            {/* Operations */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold text-navy-600 uppercase tracking-wider">Operations</h3>
-              <DetailField label="Last Inspection">
-                <span className={`text-sm ${isOverdue(selectedAirstrip.last_inspection_date) ? 'text-orange-400' : 'text-white'}`}>
-                  {isOverdue(selectedAirstrip.last_inspection_date) && <AlertTriangle className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />}
-                  {formatDate(selectedAirstrip.last_inspection_date)}
-                </span>
-              </DetailField>
-            </div>
-
-            {/* Location */}
-            {(selectedAirstrip.coordinates_lat != null && selectedAirstrip.coordinates_lon != null) && (
-              <div className="space-y-3">
-                <h3 className="text-xs font-semibold text-navy-600 uppercase tracking-wider">Location</h3>
-                <div className="rounded-xl bg-navy-900/60 border border-navy-800/60 p-3 flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-navy-600 shrink-0" />
-                  <span className="text-sm text-slate-400 font-mono">
-                    {selectedAirstrip.coordinates_lat?.toFixed(4)}, {selectedAirstrip.coordinates_lon?.toFixed(4)}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Notes */}
-            {(selectedAirstrip.remarks || selectedAirstrip.airside_buildings) && (
-              <div className="space-y-3">
-                <h3 className="text-xs font-semibold text-navy-600 uppercase tracking-wider">Notes</h3>
-                {selectedAirstrip.remarks && (
-                  <DetailField label="Remarks">
-                    <span className="text-sm text-slate-300">{selectedAirstrip.remarks}</span>
-                  </DetailField>
-                )}
-                {selectedAirstrip.airside_buildings && (
-                  <DetailField label="Airside Buildings">
-                    <span className="text-sm text-slate-300">{selectedAirstrip.airside_buildings}</span>
-                  </DetailField>
-                )}
-              </div>
-            )}
-
-            <Link
-              href={`/airstrips/${selectedAirstrip.id}`}
-              className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-navy-900 border border-navy-800 hover:border-gold-500 text-slate-400 hover:text-white transition-colors text-sm"
-            >
-              View Full Details &rarr;
-            </Link>
-          </div>
+          <AirstripDrawerContent
+            airstrip={selectedAirstrip}
+            onFieldSaved={handleDrawerFieldSaved}
+          />
         )}
       </SlidePanel>
 

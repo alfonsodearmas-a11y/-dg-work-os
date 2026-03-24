@@ -5,6 +5,30 @@ import { logger } from '@/lib/logger';
 import { ACTIVITY_TYPES, VERIFICATION_METHODS } from '@/lib/airstrip-types';
 import type { ActivityType, VerificationMethod } from '@/lib/airstrip-types';
 
+// GET /api/airstrips/[id]/maintenance — list maintenance logs
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    if (authResult instanceof NextResponse) return authResult;
+
+    const { id } = await params;
+    const { data, error } = await supabaseAdmin
+      .from('airstrip_maintenance_log')
+      .select('*')
+      .eq('airstrip_id', id)
+      .order('performed_date', { ascending: false });
+
+    if (error) throw error;
+    return NextResponse.json({ maintenance: data ?? [] });
+  } catch (error) {
+    logger.error({ err: error }, 'Airstrip maintenance list error');
+    return NextResponse.json({ error: 'Failed to fetch maintenance logs' }, { status: 500 });
+  }
+}
+
 // POST /api/airstrips/[id]/maintenance — log maintenance activity
 export async function POST(
   request: NextRequest,
