@@ -93,6 +93,15 @@ function ConfigBadge({ value, config }: { value: string | null; config: Record<s
   );
 }
 
+function DetailField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl bg-navy-900/60 border border-navy-800/60 p-3">
+      <span className="text-xs text-navy-600 block mb-1">{label}</span>
+      {children}
+    </div>
+  );
+}
+
 // ── Summary Stat Card ────────────────────────────────────────────────────────
 
 function StatCard({ label, value, color, pulse }: { label: string; value: number; color: string; pulse?: boolean }) {
@@ -145,7 +154,7 @@ export default function AirstripsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
-  const [selectedAirstrip, setSelectedAirstrip] = useState<Airstrip | null>(null);
+  const [selectedAirstripId, setSelectedAirstripId] = useState<string | null>(null);
 
   // ── URL sync ──
   const buildParams = useCallback(() => {
@@ -210,6 +219,7 @@ export default function AirstripsPage() {
     () => [...new Set(airstrips.map(a => a.surface_type).filter(Boolean) as string[])].sort(),
     [airstrips],
   );
+  const selectedAirstrip = airstrips.find(a => a.id === selectedAirstripId) ?? null;
 
   // ── Render ──
   return (
@@ -424,7 +434,7 @@ export default function AirstripsPage() {
                   <tr
                     key={a.id}
                     className={`hover:bg-navy-900/40 cursor-pointer transition-colors border-t border-navy-800/40 ${selectedAirstrip?.id === a.id ? 'bg-gold-500/10' : ''}`}
-                    onClick={() => setSelectedAirstrip(a)}
+                    onClick={() => setSelectedAirstripId(a.id)}
                   >
                     <td className="px-3 py-2.5">
                       <span className="text-sm font-medium text-white hover:text-gold-500 transition-colors">{a.name}</span>
@@ -457,7 +467,7 @@ export default function AirstripsPage() {
               <button
                 key={a.id}
                 type="button"
-                onClick={() => setSelectedAirstrip(a)}
+                onClick={() => setSelectedAirstripId(a.id)}
                 className={`card-premium p-0 overflow-hidden group text-left w-full ${selectedAirstrip?.id === a.id ? 'ring-1 ring-gold-500/50' : ''}`}
               >
                 <div className="p-4 space-y-2.5">
@@ -487,115 +497,102 @@ export default function AirstripsPage() {
       {/* Detail Drawer */}
       <SlidePanel
         isOpen={!!selectedAirstrip}
-        onClose={() => setSelectedAirstrip(null)}
+        onClose={() => setSelectedAirstripId(null)}
         title={selectedAirstrip?.name || ''}
         subtitle={`Region ${selectedAirstrip?.region}`}
         icon={PlaneLanding}
         accentColor="from-gold-500/80 to-amber-600/80"
       >
-        {selectedAirstrip && (() => {
-          const a = selectedAirstrip;
-          const overdue = isOverdue(a.last_inspection_date);
-          return (
-            <div className="space-y-6">
-              {/* Status Badges */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <ConfigBadge value={a.status} config={STATUS_CONFIG} />
-                <ConfigBadge value={a.surface_condition} config={CONDITION_CONFIG} />
-                {a.flight_frequency && <ConfigBadge value={a.flight_frequency} config={FREQUENCY_CONFIG} />}
-              </div>
-
-              {overdue && (
-                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-orange-500/10 border border-orange-500/30">
-                  <AlertTriangle className="h-4 w-4 text-orange-400 shrink-0" />
-                  <span className="text-xs text-orange-400">
-                    Inspection overdue — last inspected {formatDate(a.last_inspection_date)}
-                  </span>
-                </div>
-              )}
-
-              {/* Runway & Infrastructure */}
-              <div className="space-y-3">
-                <h3 className="text-xs font-semibold text-navy-600 uppercase tracking-wider">Runway & Infrastructure</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl bg-navy-900/60 border border-navy-800/60 p-3">
-                    <span className="text-xs text-navy-600 block mb-1">Runway</span>
-                    <span className="text-sm text-white font-mono">{formatRunway(a.runway_length_m, a.runway_width_m)}</span>
-                  </div>
-                  <div className="rounded-xl bg-navy-900/60 border border-navy-800/60 p-3">
-                    <span className="text-xs text-navy-600 block mb-1">Surface</span>
-                    <span className="text-sm text-white">{a.surface_type || '—'}</span>
-                  </div>
-                  <div className="rounded-xl bg-navy-900/60 border border-navy-800/60 p-3">
-                    <span className="text-xs text-navy-600 block mb-1">Engineered</span>
-                    <span className="text-sm flex items-center gap-1.5">
-                      {a.engineered_structure
-                        ? <><Check className="h-3.5 w-3.5 text-emerald-400" /><span className="text-emerald-400">Yes</span></>
-                        : <><Minus className="h-3.5 w-3.5 text-navy-600" /><span className="text-navy-600">No</span></>
-                      }
-                    </span>
-                  </div>
-                  <div className="rounded-xl bg-navy-900/60 border border-navy-800/60 p-3">
-                    <span className="text-xs text-navy-600 block mb-1">Flight Frequency</span>
-                    <ConfigBadge value={a.flight_frequency} config={FREQUENCY_CONFIG} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Operations */}
-              <div className="space-y-3">
-                <h3 className="text-xs font-semibold text-navy-600 uppercase tracking-wider">Operations</h3>
-                <div className="rounded-xl bg-navy-900/60 border border-navy-800/60 p-3">
-                  <span className="text-xs text-navy-600 block mb-1">Last Inspection</span>
-                  <span className={`text-sm ${overdue ? 'text-orange-400' : 'text-white'}`}>
-                    {overdue && <AlertTriangle className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />}
-                    {formatDate(a.last_inspection_date)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Location */}
-              {(a.coordinates_lat != null && a.coordinates_lon != null) && (
-                <div className="space-y-3">
-                  <h3 className="text-xs font-semibold text-navy-600 uppercase tracking-wider">Location</h3>
-                  <div className="rounded-xl bg-navy-900/60 border border-navy-800/60 p-3 flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-navy-600 shrink-0" />
-                    <span className="text-sm text-slate-400 font-mono">
-                      {a.coordinates_lat?.toFixed(4)}, {a.coordinates_lon?.toFixed(4)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Notes */}
-              {(a.remarks || a.airside_buildings) && (
-                <div className="space-y-3">
-                  <h3 className="text-xs font-semibold text-navy-600 uppercase tracking-wider">Notes</h3>
-                  {a.remarks && (
-                    <div className="rounded-xl bg-navy-900/60 border border-navy-800/60 p-3">
-                      <span className="text-xs text-navy-600 block mb-1">Remarks</span>
-                      <span className="text-sm text-slate-300">{a.remarks}</span>
-                    </div>
-                  )}
-                  {a.airside_buildings && (
-                    <div className="rounded-xl bg-navy-900/60 border border-navy-800/60 p-3">
-                      <span className="text-xs text-navy-600 block mb-1">Airside Buildings</span>
-                      <span className="text-sm text-slate-300">{a.airside_buildings}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* View Full Details */}
-              <Link
-                href={`/airstrips/${a.id}`}
-                className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-navy-900 border border-navy-800 hover:border-gold-500 text-slate-400 hover:text-white transition-colors text-sm"
-              >
-                View Full Details &rarr;
-              </Link>
+        {selectedAirstrip && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-2 flex-wrap">
+              <ConfigBadge value={selectedAirstrip.status} config={STATUS_CONFIG} />
+              <ConfigBadge value={selectedAirstrip.surface_condition} config={CONDITION_CONFIG} />
+              {selectedAirstrip.flight_frequency && <ConfigBadge value={selectedAirstrip.flight_frequency} config={FREQUENCY_CONFIG} />}
             </div>
-          );
-        })()}
+
+            {isOverdue(selectedAirstrip.last_inspection_date) && (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-orange-500/10 border border-orange-500/30">
+                <AlertTriangle className="h-4 w-4 text-orange-400 shrink-0" />
+                <span className="text-xs text-orange-400">
+                  Inspection overdue — last inspected {formatDate(selectedAirstrip.last_inspection_date)}
+                </span>
+              </div>
+            )}
+
+            {/* Runway & Infrastructure */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-navy-600 uppercase tracking-wider">Runway & Infrastructure</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <DetailField label="Runway">
+                  <span className="text-sm text-white font-mono">{formatRunway(selectedAirstrip.runway_length_m, selectedAirstrip.runway_width_m)}</span>
+                </DetailField>
+                <DetailField label="Surface">
+                  <span className="text-sm text-white">{selectedAirstrip.surface_type || '—'}</span>
+                </DetailField>
+                <DetailField label="Engineered">
+                  <span className="text-sm flex items-center gap-1.5">
+                    {selectedAirstrip.engineered_structure
+                      ? <><Check className="h-3.5 w-3.5 text-emerald-400" /><span className="text-emerald-400">Yes</span></>
+                      : <><Minus className="h-3.5 w-3.5 text-navy-600" /><span className="text-navy-600">No</span></>
+                    }
+                  </span>
+                </DetailField>
+                <DetailField label="Flight Frequency">
+                  <ConfigBadge value={selectedAirstrip.flight_frequency} config={FREQUENCY_CONFIG} />
+                </DetailField>
+              </div>
+            </div>
+
+            {/* Operations */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-navy-600 uppercase tracking-wider">Operations</h3>
+              <DetailField label="Last Inspection">
+                <span className={`text-sm ${isOverdue(selectedAirstrip.last_inspection_date) ? 'text-orange-400' : 'text-white'}`}>
+                  {isOverdue(selectedAirstrip.last_inspection_date) && <AlertTriangle className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />}
+                  {formatDate(selectedAirstrip.last_inspection_date)}
+                </span>
+              </DetailField>
+            </div>
+
+            {/* Location */}
+            {(selectedAirstrip.coordinates_lat != null && selectedAirstrip.coordinates_lon != null) && (
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold text-navy-600 uppercase tracking-wider">Location</h3>
+                <div className="rounded-xl bg-navy-900/60 border border-navy-800/60 p-3 flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-navy-600 shrink-0" />
+                  <span className="text-sm text-slate-400 font-mono">
+                    {selectedAirstrip.coordinates_lat?.toFixed(4)}, {selectedAirstrip.coordinates_lon?.toFixed(4)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Notes */}
+            {(selectedAirstrip.remarks || selectedAirstrip.airside_buildings) && (
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold text-navy-600 uppercase tracking-wider">Notes</h3>
+                {selectedAirstrip.remarks && (
+                  <DetailField label="Remarks">
+                    <span className="text-sm text-slate-300">{selectedAirstrip.remarks}</span>
+                  </DetailField>
+                )}
+                {selectedAirstrip.airside_buildings && (
+                  <DetailField label="Airside Buildings">
+                    <span className="text-sm text-slate-300">{selectedAirstrip.airside_buildings}</span>
+                  </DetailField>
+                )}
+              </div>
+            )}
+
+            <Link
+              href={`/airstrips/${selectedAirstrip.id}`}
+              className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-navy-900 border border-navy-800 hover:border-gold-500 text-slate-400 hover:text-white transition-colors text-sm"
+            >
+              View Full Details &rarr;
+            </Link>
+          </div>
+        )}
       </SlidePanel>
 
       {/* Add Airstrip Modal */}
