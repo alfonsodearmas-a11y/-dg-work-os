@@ -18,6 +18,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { exportToCsv } from '@/lib/export-csv';
 import AddEditAirstripModal from '@/components/airstrips/AddEditAirstripModal';
 import BulkUploadAirstripsModal from '@/components/airstrips/BulkUploadAirstripsModal';
+import { AirstripBulkActionBar } from '@/components/airstrips/AirstripBulkActionBar';
 import { SlidePanel } from '@/components/layout/SlidePanel';
 import { useAirstripOptions, prefetchAirstripOptions } from '@/hooks/useAirstripOptions';
 
@@ -767,6 +768,31 @@ export default function AirstripsPage() {
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [selectedAirstripId, setSelectedAirstripId] = useState<string | null>(null);
 
+  // ── Multi-select state ──
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const selectionMode = selectedIds.size > 0;
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback((ids: string[]) => {
+    setSelectedIds(prev => {
+      const allSelected = ids.every(id => prev.has(id));
+      if (allSelected) return new Set();
+      return new Set(ids);
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
   // ── URL sync ──
   const buildParams = useCallback(() => {
     const p = new URLSearchParams();
@@ -824,6 +850,38 @@ export default function AirstripsPage() {
     });
   }, []);
 
+  // ── Bulk update handler ──
+  const handleBulkUpdate = useCallback(async (updates: Record<string, unknown>, reason?: string) => {
+    const idSet = new Set(selectedIds);
+    const ids = Array.from(idSet);
+
+    // Optimistic update — Set.has is O(1) vs Array.includes O(n)
+    setData(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        airstrips: prev.airstrips.map(a =>
+          idSet.has(a.id) ? { ...a, ...updates } as Airstrip : a,
+        ),
+      };
+    });
+    clearSelection();
+
+    try {
+      const res = await fetch('/api/airstrips/bulk', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ airstripIds: ids, updates, reason }),
+      });
+      if (!res.ok) {
+        // Revert on failure — refetch
+        fetchAirstrips();
+      }
+    } catch {
+      fetchAirstrips();
+    }
+  }, [selectedIds, clearSelection, fetchAirstrips]);
+
   // ── Sort handler ──
   function handleSort(field: SortField) {
     if (sort === field) {
@@ -833,6 +891,16 @@ export default function AirstripsPage() {
       setDir('asc');
     }
   }
+
+  // Clear selection when filters change (skip initial mount)
+  const filterKey = `${search}|${region}|${status}|${condition}|${frequency}`;
+  const prevFilterKeyRef = useRef(filterKey);
+  useEffect(() => {
+    if (prevFilterKeyRef.current !== filterKey) {
+      clearSelection();
+      prevFilterKeyRef.current = filterKey;
+    }
+  }, [filterKey, clearSelection]);
 
   function clearFilters() {
     setSearch(''); setRegion(''); setStatus(''); setCondition(''); setFrequency('');
@@ -849,6 +917,11 @@ export default function AirstripsPage() {
     [airstrips],
   );
   const selectedAirstrip = airstrips.find(a => a.id === selectedAirstripId) ?? null;
+  const allSelected = React.useMemo(
+    () => airstrips.length > 0 && airstrips.every(a => selectedIds.has(a.id)),
+    [airstrips, selectedIds],
+  );
+  const airstripIds = React.useMemo(() => airstrips.map(a => a.id), [airstrips]);
 
   // ── Render ──
   return (
@@ -969,6 +1042,11 @@ export default function AirstripsPage() {
                 {airstrips.length} result{airstrips.length !== 1 ? 's' : ''}
               </span>
             )}
+            {selectionMode && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gold-500/20 border border-gold-500/40 text-xs text-gold-500 font-medium">
+                {selectedIds.size} of {airstrips.length} selected
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -1039,6 +1117,15 @@ export default function AirstripsPage() {
           <table className="table-premium min-w-full">
             <thead>
               <tr>
+                <th className="w-10 px-3 py-3">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={() => toggleSelectAll(airstripIds)}
+                    aria-label="Select all airstrips"
+                    className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer"
+                  />
+                </th>
                 <th className="px-3 py-3 text-left text-xs">
                   <SortHeader label="Airstrip" field="name" currentSort={sort} currentDir={dir} onSort={handleSort} />
                 </th>
@@ -1059,12 +1146,24 @@ export default function AirstripsPage() {
             <tbody>
               {airstrips.map((a) => {
                 const overdue = isOverdue(a.last_inspection_date);
+                const isChecked = selectedIds.has(a.id);
                 return (
                   <tr
                     key={a.id}
-                    className={`hover:bg-navy-900/40 cursor-pointer transition-colors border-t border-navy-800/40 ${selectedAirstrip?.id === a.id ? 'bg-gold-500/10' : ''}`}
+                    className={`hover:bg-navy-900/40 cursor-pointer transition-colors border-t border-navy-800/40 ${
+                      isChecked ? 'border-l-2 border-l-gold-500 !bg-[#1e2d4a]' : ''
+                    } ${selectedAirstrip?.id === a.id && !isChecked ? 'bg-gold-500/10' : ''}`}
                     onClick={() => setSelectedAirstripId(a.id)}
                   >
+                    <td className="w-10 px-3 py-2.5" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleSelect(a.id)}
+                        aria-label={`Select ${a.name}`}
+                        className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer"
+                      />
+                    </td>
                     <td className="px-3 py-2.5">
                       <span className="text-sm font-medium text-white hover:text-gold-500 transition-colors">{a.name}</span>
                     </td>
@@ -1092,32 +1191,51 @@ export default function AirstripsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {airstrips.map(a => {
             const overdue = isOverdue(a.last_inspection_date);
+            const isChecked = selectedIds.has(a.id);
             return (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => setSelectedAirstripId(a.id)}
-                className={`card-premium p-0 overflow-hidden group text-left w-full ${selectedAirstrip?.id === a.id ? 'ring-1 ring-gold-500/50' : ''}`}
-              >
-                <div className="p-4 space-y-2.5">
-                  <h3 className="font-semibold text-white text-sm group-hover:text-gold-500 transition-colors">{a.name}</h3>
-
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-navy-800 text-xs font-medium text-white">
-                      Region {a.region}
-                    </span>
-                    <ConfigBadge value={a.status} config={STATUS_CONFIG} />
-                    <ConfigBadge value={a.surface_condition} config={CONDITION_CONFIG} />
-                  </div>
-
-                  <div className="text-xs text-slate-400">
-                    <span className={overdue ? 'text-orange-400' : ''}>
-                      {overdue && <AlertTriangle className="inline h-3 w-3 mr-1 -mt-0.5" />}
-                      Inspected: {formatDate(a.last_inspection_date)}
-                    </span>
-                  </div>
+              <div key={a.id} className="relative group">
+                {/* Checkbox overlay */}
+                <div
+                  className={`absolute left-2 top-2 z-10 transition-opacity ${
+                    selectionMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => toggleSelect(a.id)}
+                    onClick={e => e.stopPropagation()}
+                    aria-label={`Select ${a.name}`}
+                    className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer"
+                  />
                 </div>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedAirstripId(a.id)}
+                  className={`card-premium p-0 overflow-hidden text-left w-full transition-all ${
+                    isChecked ? 'ring-1 ring-gold-500/40 border-l-2 border-l-gold-500 !bg-[#1e2d4a]' : ''
+                  } ${selectedAirstrip?.id === a.id && !isChecked ? 'ring-1 ring-gold-500/50' : ''}`}
+                >
+                  <div className="p-4 space-y-2.5">
+                    <h3 className="font-semibold text-white text-sm group-hover:text-gold-500 transition-colors">{a.name}</h3>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-navy-800 text-xs font-medium text-white">
+                        Region {a.region}
+                      </span>
+                      <ConfigBadge value={a.status} config={STATUS_CONFIG} />
+                      <ConfigBadge value={a.surface_condition} config={CONDITION_CONFIG} />
+                    </div>
+
+                    <div className="text-xs text-slate-400">
+                      <span className={overdue ? 'text-orange-400' : ''}>
+                        {overdue && <AlertTriangle className="inline h-3 w-3 mr-1 -mt-0.5" />}
+                        Inspected: {formatDate(a.last_inspection_date)}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              </div>
             );
           })}
         </div>
@@ -1153,6 +1271,13 @@ export default function AirstripsPage() {
         open={bulkUploadOpen}
         onClose={() => setBulkUploadOpen(false)}
         onImported={fetchAirstrips}
+      />
+
+      {/* Bulk Action Bar */}
+      <AirstripBulkActionBar
+        count={selectedIds.size}
+        onClear={clearSelection}
+        onBulkUpdate={handleBulkUpdate}
       />
     </div>
   );
