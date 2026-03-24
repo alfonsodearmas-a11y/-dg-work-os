@@ -80,7 +80,8 @@ export async function POST(request: NextRequest) {
     }
 
     // DG must provide a valid agency; agency_admin uses their own
-    const packageAgency = session.user.role === 'dg' ? agency : session.user.agency;
+    // (session.user.agency is already normalized to uppercase in auth.ts)
+    const packageAgency = session.user.role === 'dg' ? agency?.toUpperCase() : session.user.agency;
     if (!packageAgency || !AGENCY_CODES.includes(packageAgency as typeof AGENCY_CODES[number])) {
       return NextResponse.json({ error: 'A valid agency is required' }, { status: 400 });
     }

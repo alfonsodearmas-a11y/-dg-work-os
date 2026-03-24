@@ -272,7 +272,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token.userId) {
         session.user.id = token.userId;
         session.user.role = token.role;
-        session.user.agency = token.agency;
+        // Normalize agency to uppercase to match AGENCY_CODES — DB stores lowercase
+        session.user.agency = token.agency?.toUpperCase() ?? null;
       }
       return session;
     },
