@@ -16,6 +16,7 @@ export default auth((req) => {
     pathname.startsWith('/api/integrations/trello/webhook') ||
     pathname.startsWith('/api/ai/precompute-daily') ||
     pathname.startsWith('/api/cron/') ||
+    pathname.startsWith('/api/oversight/sync') ||
     pathname.startsWith('/api/tm/cron/') ||
     pathname.startsWith('/serwist') ||
     pathname.startsWith('/upload')

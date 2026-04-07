@@ -21,6 +21,7 @@ import { ProjectSlidePanel, OversightProjectTable } from '@/components/oversight
 import { TimelineView } from '@/components/oversight/TimelineView';
 import { PortfolioSummarySection } from '@/components/oversight/PortfolioSummary';
 import { AlertsTabContent } from '@/components/oversight/AlertsTab';
+import { MinistryDashboard } from '@/components/oversight/MinistryDashboard';
 
 // ── Bulk Action Bar ────────────────────────────────────────────────────────
 
@@ -324,6 +325,11 @@ export default function OversightPage() {
             icon: Building2,
             badge: psipSummary?.total_projects ?? undefined,
           } satisfies Tab,
+          {
+            id: 'ministry',
+            label: 'Ministry Dashboard',
+            icon: BarChart3,
+          } satisfies Tab,
         ]}
         activeTab={activeTab}
         onChange={(tabId) => setActiveTab(tabId as TabMode)}
@@ -443,6 +449,11 @@ export default function OversightPage() {
           )}
         </>
       )}
+
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* TAB: MINISTRY DASHBOARD (synced from ministry oversight dashboard) */}
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'ministry' && <MinistryDashboard />}
 
       </>}
 

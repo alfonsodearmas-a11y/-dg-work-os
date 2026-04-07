@@ -104,7 +104,60 @@ export interface SavedFilter {
 }
 
 export type ViewMode = 'list' | 'timeline';
-export type TabMode = 'alerts' | 'projects';
+export type TabMode = 'alerts' | 'projects' | 'ministry';
+
+// ── Ministry Oversight Types (synced from ministry dashboard) ─────────────
+
+export interface OversightProject {
+  id: string;
+  project_id: number;
+  project_reference: string | null;
+  executing_agency: string;
+  sub_agency: string;
+  project_name: string;
+  region: number | null;
+  tender_board_type: string | null;
+  contract_value_total: number | null;
+  contract_lots: { contractor: string; value: number }[];
+  contractors: string[];
+  project_end_date: string | null;
+  project_status: string;
+  completion_percent: number;
+  has_images: number;
+  last_synced_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OversightAgencyBreakdown {
+  agency: string;
+  count: number;
+  total_value: number;
+  avg_completion: number;
+}
+
+export interface OversightSummary {
+  total_projects: number;
+  total_contract_value: number;
+  avg_completion: number;
+  by_status: Record<string, number>;
+  by_agency: OversightAgencyBreakdown[];
+}
+
+export const OVERSIGHT_STATUS_OPTIONS = [
+  'DELAYED', 'ON_TRACK', 'COMPLETED', 'NOT_STARTED', 'COMMENCED', 'AWARDED',
+];
+
+export const OVERSIGHT_STATUS_COLORS: Record<string, string> = {
+  DELAYED: '#dc2626',
+  ON_TRACK: '#059669',
+  COMPLETED: '#3b82f6',
+  NOT_STARTED: '#64748b',
+  COMMENCED: '#d4af37',
+  AWARDED: '#8b5cf6',
+};
+
+export const SUB_AGENCY_OPTIONS = ['GPL', 'GWI', 'GCAA', 'CJIA', 'MARAD', 'HECI', 'HAS'];
 
 // ── Constants ──────────────────────────────────────────────────────────────
 

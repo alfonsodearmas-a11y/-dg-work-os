@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { HEALTH_DOT } from './types';
+import { HEALTH_DOT, OVERSIGHT_STATUS_COLORS } from './types';
 
 export function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
@@ -40,6 +40,18 @@ export function ProgressBar({ pct }: { pct: number }) {
       </div>
       <span className="text-xs text-slate-400 w-8 text-right">{safePct}%</span>
     </div>
+  );
+}
+
+export function OversightStatusBadge({ status }: { status: string }) {
+  const color = OVERSIGHT_STATUS_COLORS[status] || '#64748b';
+  return (
+    <span
+      className="px-2 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap"
+      style={{ backgroundColor: `${color}20`, color, borderColor: `${color}40` }}
+    >
+      {status.replace(/_/g, ' ')}
+    </span>
   );
 }
 
