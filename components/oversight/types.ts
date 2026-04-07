@@ -125,6 +125,8 @@ export interface OversightProject {
   completion_percent: number;
   has_images: number;
   last_synced_at: string | null;
+  is_resolved: boolean;
+  resolved_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -142,6 +144,40 @@ export interface OversightSummary {
   avg_completion: number;
   by_status: Record<string, number>;
   by_agency: OversightAgencyBreakdown[];
+}
+
+export interface DelayedSummary {
+  total_delayed: number;
+  total_contract_value: number;
+  avg_completion: number;
+  past_deadline_count: number;
+  within_deadline_count: number;
+  no_date_count: number;
+  by_agency: OversightAgencyBreakdown[];
+  completion_bands: Record<'0_25' | '26_50' | '51_75' | '76_100', number>;
+}
+
+export type DeadlineBadgeType = 'overdue' | 'at-risk' | 'on-track' | 'no-date';
+
+export function getDeadlineBadge(endDate: string | null): {
+  type: DeadlineBadgeType;
+  label: string;
+  variant: 'danger' | 'warning' | 'success' | 'default';
+} {
+  if (!endDate) return { type: 'no-date', label: 'No Date', variant: 'default' };
+  const end = new Date(endDate + 'T00:00:00');
+  const now = new Date();
+  const diffDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return { type: 'overdue', label: `${Math.abs(diffDays)}d overdue`, variant: 'danger' };
+  if (diffDays <= 30) return { type: 'at-risk', label: `${diffDays}d left`, variant: 'warning' };
+  return { type: 'on-track', label: `${diffDays}d left`, variant: 'success' };
+}
+
+export function getDaysOverdue(endDate: string | null): number | null {
+  if (!endDate) return null;
+  const end = new Date(endDate + 'T00:00:00');
+  const diff = Math.ceil((new Date().getTime() - end.getTime()) / (1000 * 60 * 60 * 24));
+  return diff > 0 ? diff : 0;
 }
 
 export const OVERSIGHT_STATUS_OPTIONS = [

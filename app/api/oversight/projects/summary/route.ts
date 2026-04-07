@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
-import { getOversightSummary } from '@/lib/oversight-queries';
+import { getDelayedSummary } from '@/lib/oversight-queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +16,7 @@ export async function GET() {
     agencyFilter = userAgency || undefined;
   }
 
-  const summary = await getOversightSummary(agencyFilter);
+  const summary = await getDelayedSummary(agencyFilter);
 
   return NextResponse.json(summary);
 }

@@ -327,8 +327,8 @@ export default function OversightPage() {
           } satisfies Tab,
           {
             id: 'ministry',
-            label: 'Ministry Dashboard',
-            icon: BarChart3,
+            label: 'Delayed Projects',
+            icon: AlertTriangle,
           } satisfies Tab,
         ]}
         activeTab={activeTab}

@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { HEALTH_DOT, OVERSIGHT_STATUS_COLORS } from './types';
+import { HEALTH_DOT, OVERSIGHT_STATUS_COLORS, getDeadlineBadge } from './types';
+import { Badge } from '@/components/ui/Badge';
 
 export function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
@@ -53,6 +54,11 @@ export function OversightStatusBadge({ status }: { status: string }) {
       {status.replace(/_/g, ' ')}
     </span>
   );
+}
+
+export function DeadlineBadge({ endDate }: { endDate: string | null }) {
+  const badge = getDeadlineBadge(endDate);
+  return <Badge variant={badge.variant}>{badge.label}</Badge>;
 }
 
 export function OversightKpiCard({ label, value, sub }: { label: string; value: string; sub?: string }) {

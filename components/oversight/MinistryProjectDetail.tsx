@@ -5,10 +5,12 @@ import {
   ImageIcon, Clock, Briefcase,
 } from 'lucide-react';
 import { SlidePanel } from '@/components/layout/SlidePanel';
-import { fmtCurrency, fmtDate, fmtRegion, type OversightProject } from './types';
-import { ProgressBar, OversightStatusBadge } from './shared';
+import { fmtCurrency, fmtDate, fmtRegion, getDaysOverdue, type OversightProject } from './types';
+import { DeadlineBadge } from './shared';
 
-function DetailRow({ label, value, icon: Icon }: { label: string; value: React.ReactNode; icon?: React.ComponentType<{ className?: string }> }) {
+function DetailRow({ label, value, icon: Icon }: {
+  label: string; value: React.ReactNode; icon?: React.ComponentType<{ className?: string }>;
+}) {
   return (
     <div className="flex items-start gap-3 py-2">
       {Icon && <Icon className="h-4 w-4 text-navy-600 mt-0.5 shrink-0" />}
@@ -20,16 +22,38 @@ function DetailRow({ label, value, icon: Icon }: { label: string; value: React.R
   );
 }
 
+function CompletionRing({ pct }: { pct: number }) {
+  const radius = 35;
+  const circumference = 2 * Math.PI * radius;
+  const filled = (pct / 100) * circumference;
+  const color = pct >= 80 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div className="relative w-20 h-20">
+      <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r={radius} fill="none" stroke="#1e293b" strokeWidth="6" />
+        <circle
+          cx="40" cy="40" r={radius} fill="none"
+          stroke={color} strokeWidth="6" strokeLinecap="round"
+          strokeDasharray={`${filled} ${circumference - filled}`}
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-xl font-bold text-white">
+        {Math.round(pct)}%
+      </span>
+    </div>
+  );
+}
+
 export function MinistryProjectDetail({
-  project,
-  onClose,
+  project, onClose,
 }: {
-  project: OversightProject | null;
-  onClose: () => void;
+  project: OversightProject | null; onClose: () => void;
 }) {
   if (!project) return null;
 
   const lots = project.contract_lots || [];
+  const daysOverdue = getDaysOverdue(project.project_end_date);
 
   return (
     <SlidePanel
@@ -38,14 +62,23 @@ export function MinistryProjectDetail({
       title={project.project_name}
       subtitle={`${project.sub_agency} · #${project.project_id}`}
       icon={Building2}
-      accentColor="from-gold-500/30 to-amber-600/30"
+      accentColor="from-red-500/30 to-amber-600/30"
     >
       <div className="space-y-5">
-        {/* Status + Completion */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <OversightStatusBadge status={project.project_status} />
-          <div className="flex-1 min-w-[120px]">
-            <ProgressBar pct={project.completion_percent} />
+        {/* Completion ring + deadline */}
+        <div className="flex items-center gap-4">
+          <CompletionRing pct={project.completion_percent} />
+          <div>
+            <DeadlineBadge endDate={project.project_end_date} />
+            {daysOverdue !== null && daysOverdue > 0 && (
+              <p className="text-sm text-red-400 font-medium mt-1.5">{daysOverdue} days overdue</p>
+            )}
+            {daysOverdue === 0 && project.project_end_date && (
+              <p className="text-sm text-slate-400 mt-1.5">Within deadline</p>
+            )}
+            {daysOverdue === null && (
+              <p className="text-sm text-navy-600 mt-1.5">No end date set</p>
+            )}
           </div>
         </div>
 
@@ -56,8 +89,8 @@ export function MinistryProjectDetail({
             <p className="text-white text-lg font-bold mt-1">{fmtCurrency(project.contract_value_total)}</p>
           </div>
           <div className="bg-navy-900 border border-navy-800 rounded-xl p-3">
-            <p className="text-navy-600 text-xs uppercase tracking-wider">Completion</p>
-            <p className="text-white text-lg font-bold mt-1">{project.completion_percent}%</p>
+            <p className="text-navy-600 text-xs uppercase tracking-wider">End Date</p>
+            <p className="text-white text-lg font-bold mt-1">{fmtDate(project.project_end_date)}</p>
           </div>
         </div>
 
@@ -117,7 +150,9 @@ export function MinistryProjectDetail({
         {project.last_synced_at && (
           <div className="flex items-center gap-2 text-xs text-navy-600">
             <Clock className="h-3 w-3" />
-            Last synced: {new Date(project.last_synced_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            Last synced: {new Date(project.last_synced_at).toLocaleString('en-GB', {
+              day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+            })}
           </div>
         )}
       </div>

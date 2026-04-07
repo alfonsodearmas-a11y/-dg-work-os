@@ -25,12 +25,11 @@ const ProjectSchema = z.object({
     contractor: z.string(),
     value: z.number(),
   })).optional().default([]),
-  // Fallback for single-contractor projects
   contractor: z.string().optional().nullable(),
   contract_value: z.number().optional().nullable(),
   project_end_date: z.string().optional().nullable(),
-  project_status: z.string().optional().default('NOT_STARTED'),
-  completion_percent: z.number().int().min(0).max(100).optional().default(0),
+  project_status: z.string().optional().default('DELAYED'),
+  completion_percent: z.number().min(0).max(100).optional().default(0),
   has_images: z.number().int().optional().default(0),
 });
 
@@ -50,7 +49,6 @@ export async function POST(request: NextRequest) {
   const now = new Date().toISOString();
 
   const rows = projects.map((p) => {
-    // Build contract_lots — use explicit lots if provided, else fallback to single contractor/value
     let lots = p.contract_lots;
     if ((!lots || lots.length === 0) && p.contractor && p.contract_value) {
       lots = [{ contractor: p.contractor, value: p.contract_value }];
@@ -71,27 +69,44 @@ export async function POST(request: NextRequest) {
       contract_lots: lots,
       contractors: contractors.length > 0 ? contractors : null,
       project_end_date: p.project_end_date ?? null,
-      project_status: p.project_status,
+      project_status: 'DELAYED',
       completion_percent: p.completion_percent,
       has_images: p.has_images,
       last_synced_at: now,
+      is_resolved: false,
+      resolved_at: null,
     };
   });
 
-  const { error } = await supabaseAdmin
+  const { error: upsertError } = await supabaseAdmin
     .from('projects_oversight')
     .upsert(rows, { onConflict: 'project_id' });
 
-  if (error) {
-    logger.error({ error }, 'Oversight sync upsert failed');
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  if (upsertError) {
+    logger.error({ error: upsertError }, 'Oversight sync upsert failed');
+    return NextResponse.json({ success: false, error: upsertError.message }, { status: 500 });
   }
 
-  logger.info({ count: rows.length }, 'Oversight sync completed');
+  // Mark projects not in this payload as resolved (no longer delayed)
+  const syncedIds = rows.map((r) => r.project_id);
+  const { data: resolvedRows, error: resolveError } = await supabaseAdmin
+    .from('projects_oversight')
+    .update({ is_resolved: true, resolved_at: now })
+    .eq('is_resolved', false)
+    .not('project_id', 'in', `(${syncedIds.join(',')})`)
+    .select('id');
+
+  if (resolveError) {
+    logger.error({ error: resolveError }, 'Oversight resolution marking failed');
+  }
+
+  const resolvedCount = resolvedRows?.length ?? 0;
+  logger.info({ synced: rows.length, resolved: resolvedCount }, 'Oversight sync completed');
 
   return NextResponse.json({
     success: true,
     synced: rows.length,
+    resolved: resolvedCount,
     timestamp: now,
   });
 }
