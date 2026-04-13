@@ -9,56 +9,66 @@ import { CHART_TOOLTIP_STYLE, CHART_AXIS_LINE, chartResponsive } from '@/lib/cha
 import { AGENCY_HEX_COLORS } from '@/lib/constants/agencies';
 import type { DelayedProjectWithComputed } from '@/lib/delayed-projects/types';
 import { fmtCurrency } from '@/components/oversight/types';
+import { getShortName } from '@/lib/delayed-projects/short-names';
+import { AgencyBadge } from './shared';
 
-interface RiskScatterPlotProps {
+interface RiskExposureScatterProps {
   projects: DelayedProjectWithComputed[];
   isMobile: boolean;
 }
 
 interface ScatterPoint {
-  x: number;
-  y: number;
-  z: number;
+  x: number;          // days overdue
+  y: number;          // remaining value (dollars)
+  z: number;          // bubble size (contract value dollars)
   agency: string;
   name: string;
+  shortName: string;
+  contractor: string;
   id: string;
-  value: number;
 }
 
-export function RiskScatterPlot({ projects, isMobile }: RiskScatterPlotProps) {
+export function RiskExposureScatter({ projects, isMobile }: RiskExposureScatterProps) {
   const resp = useMemo(() => chartResponsive(isMobile), [isMobile]);
 
-  const { plotData, noDateProjects } = useMemo(() => {
+  const { plotData, unplottable, presentAgencies } = useMemo(() => {
     const plot: ScatterPoint[] = [];
-    const noDate: DelayedProjectWithComputed[] = [];
+    const noPlot: DelayedProjectWithComputed[] = [];
+    const agencySet = new Set<string>();
 
     for (const p of projects) {
-      if (p.days_overdue === null) {
-        noDate.push(p);
+      if (p.days_overdue === null || p.contract_value === 0) {
+        noPlot.push(p);
       } else {
+        agencySet.add(p.sub_agency);
         plot.push({
           x: p.days_overdue,
-          y: p.completion_percent,
-          z: Math.max(p.contract_value / 100, 100000), // min size
+          y: p.remaining_value / 100,
+          z: Math.max(p.contract_value / 100, 100000),
           agency: p.sub_agency,
           name: p.project_name,
+          shortName: getShortName(p.project_name),
+          contractor: p.contractors || 'Unknown',
           id: p.id,
-          value: p.contract_value / 100,
         });
       }
     }
 
-    return { plotData: plot, noDateProjects: noDate };
+    const legend = Array.from(agencySet)
+      .filter(a => a in AGENCY_HEX_COLORS)
+      .map(a => ({ agency: a, color: AGENCY_HEX_COLORS[a] }));
+
+    return { plotData: plot, unplottable: noPlot, presentAgencies: legend };
   }, [projects]);
 
-  if (plotData.length === 0 && noDateProjects.length === 0) return null;
+  if (plotData.length === 0 && unplottable.length === 0) return null;
 
   return (
     <div className="card-premium p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-white">Risk Map</h3>
+        <h3 className="text-sm font-semibold text-white">Risk Exposure</h3>
         <div className="flex items-center gap-3 flex-wrap">
-          {Object.entries(AGENCY_HEX_COLORS).slice(0, 7).map(([agency, color]) => (
+          {presentAgencies.map(({ agency, color }) => (
             <span key={agency} className="flex items-center gap-1 text-[10px] text-slate-400">
               <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
               {agency}
@@ -68,13 +78,13 @@ export function RiskScatterPlot({ projects, isMobile }: RiskScatterPlotProps) {
       </div>
 
       <p className="text-[10px] text-navy-600">
-        X: Days Overdue &middot; Y: Completion % &middot; Bubble size: Contract Value
+        X: Days Overdue &middot; Y: Remaining Value &middot; Bubble size: Contract Value
       </p>
 
       {plotData.length > 0 && (
         <div className={resp.heightClass}>
           <ResponsiveContainer width="100%" height="100%">
-            <ScatterChart margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+            <ScatterChart margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_AXIS_LINE.stroke} />
               <XAxis
                 type="number"
@@ -87,16 +97,16 @@ export function RiskScatterPlot({ projects, isMobile }: RiskScatterPlotProps) {
               <YAxis
                 type="number"
                 dataKey="y"
-                name="Completion %"
-                domain={[0, 100]}
+                name="Remaining Value"
                 tick={resp.axisTick}
                 stroke={CHART_AXIS_LINE.stroke}
-                width={40}
-                label={{ value: 'Completion %', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 10 }}
+                width={isMobile ? 60 : 80}
+                tickFormatter={(v: number) => fmtCurrency(v)}
+                label={{ value: 'Remaining Value', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 10, dx: -4 }}
               />
               <ZAxis type="number" dataKey="z" range={[40, 400]} />
               <Tooltip
-                content={<CustomTooltip />}
+                content={<ScatterTooltip />}
                 cursor={{ strokeDasharray: '3 3', stroke: '#d4af37', strokeOpacity: 0.3 }}
               />
               <Scatter data={plotData} fillOpacity={0.7}>
@@ -115,20 +125,21 @@ export function RiskScatterPlot({ projects, isMobile }: RiskScatterPlotProps) {
         </div>
       )}
 
-      {/* No-date projects callout */}
-      {noDateProjects.length > 0 && (
-        <div className="p-3 bg-navy-950/60 rounded-lg border border-navy-800">
-          <p className="text-xs text-slate-500 mb-2">
-            {noDateProjects.length} projects with no end date (not plotted)
+      {/* Unplottable projects callout */}
+      {unplottable.length > 0 && (
+        <div className="p-3 bg-navy-950/60 rounded-lg border border-amber-500/20">
+          <p className="text-xs text-amber-400/80 mb-2">
+            {unplottable.length} project{unplottable.length !== 1 ? 's' : ''} not plotted (missing end date or contract value)
           </p>
           <div className="flex flex-wrap gap-1.5">
-            {noDateProjects.slice(0, 8).map((p) => (
-              <span key={p.id} className="text-[10px] text-slate-400 bg-navy-800/60 px-2 py-0.5 rounded">
-                {p.project_name.slice(0, 30)}...
+            {unplottable.slice(0, 8).map((p) => (
+              <span key={p.id} className="inline-flex items-center gap-1 text-[10px] bg-navy-800/60 px-2 py-0.5 rounded">
+                <AgencyBadge agency={p.sub_agency} />
+                <span className="text-slate-400">{getShortName(p.project_name)}</span>
               </span>
             ))}
-            {noDateProjects.length > 8 && (
-              <span className="text-[10px] text-navy-600">+{noDateProjects.length - 8} more</span>
+            {unplottable.length > 8 && (
+              <span className="text-[10px] text-navy-600">+{unplottable.length - 8} more</span>
             )}
           </div>
         </div>
@@ -137,20 +148,20 @@ export function RiskScatterPlot({ projects, isMobile }: RiskScatterPlotProps) {
   );
 }
 
-function CustomTooltip({ active, payload }: { active?: boolean; payload?: { payload: ScatterPoint }[] }) {
+function ScatterTooltip({ active, payload }: { active?: boolean; payload?: { payload: ScatterPoint }[] }) {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
   return (
     <div style={CHART_TOOLTIP_STYLE.contentStyle} className="p-3 space-y-1">
-      <p className="text-sm font-medium text-white">{d.name}</p>
-      <p className="text-xs text-slate-400">{d.agency}</p>
+      <p className="text-sm font-medium text-white">{d.shortName}</p>
+      <p className="text-xs text-slate-400">{d.contractor}</p>
       <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs mt-1">
+        <span className="text-slate-400">Remaining Value</span>
+        <span className="text-white font-medium">{fmtCurrency(d.y)}</span>
         <span className="text-slate-400">Days Overdue</span>
         <span className="text-white font-medium">{d.x.toLocaleString()}</span>
-        <span className="text-slate-400">Completion</span>
-        <span className="text-white font-medium">{d.y}%</span>
-        <span className="text-slate-400">Contract Value</span>
-        <span className="text-white font-medium">{fmtCurrency(d.value)}</span>
+        <span className="text-slate-400">Agency</span>
+        <span className="text-white font-medium">{d.agency}</span>
       </div>
     </div>
   );

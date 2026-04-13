@@ -87,6 +87,27 @@ export function DeltaIndicator({ delta, stalledWeeks }: { delta: number | null; 
 
 export { ProgressBar as CompletionBar } from '@/components/oversight/shared';
 
+// ── Risk Tier Hex Colors (for inline styles like border-left) ──────────────
+
+export const RISK_TIER_HEX: Record<RiskTier, string> = {
+  HIGH: '#dc2626',
+  MEDIUM: '#d4af37',
+  LOW: '#2d3a52',
+};
+
+// ── Exposure / Proportion Bar ──────────────────────────────────────────────
+
+export function ExposureBar({ pct }: { pct: number }) {
+  return (
+    <div className="flex-1 h-1.5 bg-navy-800 rounded-full overflow-hidden" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
+      <div
+        className="h-full rounded-full bg-gradient-to-r from-gold-500 to-amber-500/60"
+        style={{ width: `${Math.min(Math.max(pct, 0), 100)}%` }}
+      />
+    </div>
+  );
+}
+
 // ── KPI Card ────────────────────────────────────────────────────────────────
 
 export function WarRoomKpiCard({ label, value, sub, accent, bgAccent, alert, icon: Icon }: {
