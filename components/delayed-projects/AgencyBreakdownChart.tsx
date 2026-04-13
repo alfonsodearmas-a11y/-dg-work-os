@@ -50,6 +50,7 @@ export function AgencyBreakdownChart({ agencies, isMobile }: AgencyBreakdownChar
               />
               <Tooltip
                 {...CHART_TOOLTIP_STYLE}
+                itemStyle={{ color: '#f1f5f9' }}
                 formatter={(value: number, name: string) => [
                   `${value.toFixed(1)}%`,
                   name === 'completion' ? 'Completed' : 'Remaining',
@@ -68,42 +69,40 @@ export function AgencyBreakdownChart({ agencies, isMobile }: AgencyBreakdownChar
       </div>
 
       {/* Table */}
-      <div className="card-premium p-5">
-        <h3 className="text-sm font-semibold text-white mb-4">Agency Summary</h3>
-        <div className="overflow-x-auto">
-          <table className="table-premium w-full text-sm">
-            <thead>
-              <tr>
-                <th className="text-left">Agency</th>
-                <th className="text-right"># Projects</th>
-                <th className="text-right">Total Value</th>
-                <th className="text-right">Avg Completion</th>
-                <th className="text-right">Avg Overdue</th>
+      <div className="card-premium p-4">
+        <h3 className="text-sm font-semibold text-white mb-3">Agency Summary</h3>
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-navy-800">
+              <th className="text-left text-gold-500 font-semibold pb-2 pr-2">Agency</th>
+              <th className="text-right text-gold-500 font-semibold pb-2 px-1">Proj</th>
+              <th className="text-right text-gold-500 font-semibold pb-2 px-1">Value</th>
+              <th className="text-right text-gold-500 font-semibold pb-2 px-1">Compl.</th>
+              <th className="text-right text-gold-500 font-semibold pb-2 pl-1">Overdue</th>
+            </tr>
+          </thead>
+          <tbody>
+            {agencies.map((a) => (
+              <tr key={a.agency} className="border-b border-navy-800/40">
+                <td className="py-1.5 pr-2">
+                  <span className="flex items-center gap-1.5">
+                    <span
+                      className="w-2 h-2 rounded-sm shrink-0"
+                      style={{ backgroundColor: AGENCY_HEX_COLORS[a.agency] || '#64748b' }}
+                    />
+                    <span className="text-white whitespace-nowrap">{a.agency}</span>
+                  </span>
+                </td>
+                <td className="text-right text-white tabular-nums py-1.5 px-1">{a.count}</td>
+                <td className="text-right text-white tabular-nums py-1.5 px-1 whitespace-nowrap">{fmtCurrency(a.total_value / 100)}</td>
+                <td className="text-right text-white tabular-nums py-1.5 px-1">{a.avg_completion}%</td>
+                <td className="text-right text-slate-400 tabular-nums py-1.5 pl-1 whitespace-nowrap">
+                  {a.avg_days_overdue > 0 ? `${a.avg_days_overdue}d` : '-'}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {agencies.map((a) => (
-                <tr key={a.agency}>
-                  <td>
-                    <span className="flex items-center gap-2">
-                      <span
-                        className="w-2.5 h-2.5 rounded-sm shrink-0"
-                        style={{ backgroundColor: AGENCY_HEX_COLORS[a.agency] || '#64748b' }}
-                      />
-                      <span className="text-white">{a.agency}</span>
-                    </span>
-                  </td>
-                  <td className="text-right text-white tabular-nums">{a.count}</td>
-                  <td className="text-right text-white tabular-nums">{fmtCurrency(a.total_value / 100)}</td>
-                  <td className="text-right text-white tabular-nums">{a.avg_completion}%</td>
-                  <td className="text-right text-slate-400 tabular-nums">
-                    {a.avg_days_overdue > 0 ? `${a.avg_days_overdue}d` : '-'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

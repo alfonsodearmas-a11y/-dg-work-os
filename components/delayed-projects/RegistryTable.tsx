@@ -2,7 +2,7 @@
 
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { DelayedProjectWithComputed } from '@/lib/delayed-projects/types';
-import { fmtCurrency, fmtDate } from '@/components/oversight/types';
+import { fmtCurrency } from '@/components/oversight/types';
 import { RiskTierBadge, AgencyBadge, DaysOverdueBadge, DeltaIndicator, CompletionBar } from './shared';
 import { Spinner } from '@/components/ui/Spinner';
 
@@ -21,15 +21,13 @@ interface RegistryTableProps {
 
 const COLUMNS = [
   { key: 'risk', label: 'Risk', sortable: false, width: 'w-16' },
-  { key: 'name', label: 'Project', sortable: true, width: 'flex-1 min-w-[180px]' },
+  { key: 'name', label: 'Project', sortable: true, width: 'flex-1 min-w-[200px]' },
   { key: 'agency', label: 'Agency', sortable: true, width: 'w-20' },
-  { key: 'region', label: 'Region', sortable: true, width: 'w-16' },
+  { key: 'region', label: 'Rgn', sortable: true, width: 'w-14' },
   { key: 'value', label: 'Value', sortable: true, width: 'w-24' },
   { key: 'completion', label: 'Completion', sortable: true, width: 'w-28' },
   { key: 'delta', label: '\u0394', sortable: false, width: 'w-16' },
   { key: 'overdue', label: 'Overdue', sortable: false, width: 'w-20' },
-  { key: 'contractor', label: 'Contractor', sortable: false, width: 'w-32' },
-  { key: 'end_date', label: 'End Date', sortable: true, width: 'w-24' },
 ];
 
 export function RegistryTable({
@@ -119,8 +117,6 @@ export function RegistryTable({
                 <td><CompletionBar pct={p.completion_percent} /></td>
                 <td><DeltaIndicator delta={p.delta_completion} stalledWeeks={p.stalled_weeks} /></td>
                 <td><DaysOverdueBadge days={p.days_overdue} /></td>
-                <td className="text-slate-400 truncate max-w-[120px]" title={p.contractors || ''}>{p.contractors || '-'}</td>
-                <td className="text-slate-400 tabular-nums whitespace-nowrap">{fmtDate(p.project_end_date)}</td>
               </tr>
             ))}
           </tbody>

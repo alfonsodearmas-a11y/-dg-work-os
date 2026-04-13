@@ -89,6 +89,14 @@ export type DelayedProjectWithComputed = DelayedProject & ComputedFields;
 
 // ── API Response Types ───────────────────────────────────────────────────────
 
+export interface KpiProjectRef {
+  name: string;
+  agency: string;
+  completion: number;
+  days_overdue: number;
+  remaining_value: number;
+}
+
 export interface WarRoomSummary {
   total_projects: number;
   total_contract_value: number; // cents
@@ -101,6 +109,10 @@ export interface WarRoomSummary {
   weekly_movement: WeeklyMovement | null;
   last_upload_date: string | null;
   snapshot_count: number;
+  // Popover enrichment data
+  longest_overdue_project: KpiProjectRef | null;
+  critical_projects: KpiProjectRef[];
+  top_exposure_projects: KpiProjectRef[];
 }
 
 export interface AgencyBreakdown {

@@ -83,13 +83,13 @@ export function RegistryFilters({ filters, onChange, onClear }: RegistryFiltersP
 
       {/* Search */}
       <div className="relative flex-1 min-w-[160px] max-w-[280px]">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-navy-600" />
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-navy-600 pointer-events-none" />
         <input
           type="text"
           placeholder="Search projects..."
           value={filters.search}
           onChange={(e) => onChange({ search: e.target.value })}
-          className="input-premium w-full pl-9 py-2 text-sm"
+          className="input-premium w-full !pl-8 py-2 text-sm"
         />
       </div>
 

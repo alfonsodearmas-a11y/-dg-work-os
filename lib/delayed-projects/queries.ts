@@ -157,7 +157,7 @@ export async function getProjects(
 export async function getSummary(agencyFilter?: string): Promise<WarRoomSummary> {
   let query = supabaseAdmin
     .from('delayed_projects')
-    .select('id, sub_agency, region, contract_value, completion_percent, project_end_date, status');
+    .select('id, sub_agency, region, contract_value, completion_percent, project_end_date, status, project_name');
   if (agencyFilter) query = query.eq('sub_agency', agencyFilter);
 
   const { data: rows, error } = await query;
@@ -175,6 +175,12 @@ export async function getSummary(agencyFilter?: string): Promise<WarRoomSummary>
   let criticalCount = 0;
   let longestOverdue = 0;
 
+  // Popover enrichment data
+  type PRef = { name: string; agency: string; completion: number; days_overdue: number; remaining_value: number };
+  let longestOverdueProject: PRef | null = null;
+  const criticalProjects: PRef[] = [];
+  const topExposure: PRef[] = []; // maintain top 5 by remaining_value
+
   const agencyMap = new Map<string, { count: number; total_value: number; total_completion: number; total_overdue: number; overdue_count: number }>();
   const regionMap = new Map<string, { count: number; total_exposure: number; high_count: number }>();
 
@@ -185,11 +191,25 @@ export async function getSummary(agencyFilter?: string): Promise<WarRoomSummary>
     const daysOverdue = computeDaysOverdue(p.project_end_date);
     const riskTier = computeRiskTier(p.project_end_date, pct);
 
+    const ref: PRef = {
+      name: p.project_name || 'Unknown',
+      agency: p.sub_agency,
+      completion: pct,
+      days_overdue: daysOverdue ?? 0,
+      remaining_value: remaining,
+    };
+
     totalValue += cv;
     totalExposure += remaining;
     totalCompletion += pct;
-    if (riskTier === 'HIGH') criticalCount++;
-    if (daysOverdue !== null && daysOverdue > longestOverdue) longestOverdue = daysOverdue;
+    if (riskTier === 'HIGH') { criticalCount++; criticalProjects.push(ref); }
+    if (daysOverdue !== null && daysOverdue > longestOverdue) { longestOverdue = daysOverdue; longestOverdueProject = ref; }
+    // Maintain top 5 by remaining_value (O(n) instead of sort-then-slice)
+    if (topExposure.length < 5 || remaining > topExposure[topExposure.length - 1].remaining_value) {
+      topExposure.push(ref);
+      topExposure.sort((a, b) => b.remaining_value - a.remaining_value);
+      if (topExposure.length > 5) topExposure.pop();
+    }
 
     // Agency breakdown
     const ae = agencyMap.get(p.sub_agency) || { count: 0, total_value: 0, total_completion: 0, total_overdue: 0, overdue_count: 0 };
@@ -251,6 +271,9 @@ export async function getSummary(agencyFilter?: string): Promise<WarRoomSummary>
     weekly_movement: weeklyMovement,
     last_upload_date: lastUploadDate,
     snapshot_count: snapshotCount || 0,
+    longest_overdue_project: longestOverdueProject,
+    critical_projects: criticalProjects,
+    top_exposure_projects: topExposure,
   };
 }
 
@@ -267,6 +290,9 @@ function emptySummary(): WarRoomSummary {
     weekly_movement: null,
     last_upload_date: null,
     snapshot_count: 0,
+    longest_overdue_project: null,
+    critical_projects: [],
+    top_exposure_projects: [],
   };
 }
 

@@ -13,7 +13,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
 import { fmtCurrency } from '@/components/oversight/types';
 import type { WarRoomSummary } from '@/lib/delayed-projects/types';
-import { WarRoomKpiCard } from './shared';
+import { HoverPreview } from '@/components/ui/HoverPreview';
+import { WarRoomKpiCard, AgencyBadge } from './shared';
 import { UploadModal } from './UploadModal';
 import { RiskOverviewTab } from './RiskOverviewTab';
 import { ProjectRegistryTab } from './ProjectRegistryTab';
@@ -175,14 +176,31 @@ export function WarRoomPage() {
               accent="text-gold-400"
               bgAccent="bg-gold-500/15"
             />
-            <WarRoomKpiCard
-              label="Financial Exposure"
-              value={fmtCurrency(summary!.total_exposure / 100)}
-              icon={DollarSign}
-              accent="text-amber-400"
-              bgAccent="bg-amber-500/15"
-              alert
-            />
+            <HoverPreview
+              delay={200}
+              preview={
+                <div className="space-y-2">
+                  <p className="text-xs text-gold-500 font-semibold mb-2">Top Exposure Projects</p>
+                  {summary!.top_exposure_projects.map((p, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      <AgencyBadge agency={p.agency} />
+                      <span className="text-white truncate flex-1">{p.name}</span>
+                      <span className="text-amber-400 font-medium tabular-nums">{fmtCurrency(p.remaining_value / 100)}</span>
+                    </div>
+                  ))}
+                  {summary!.top_exposure_projects.length === 0 && <p className="text-xs text-slate-500">No data</p>}
+                </div>
+              }
+            >
+              <WarRoomKpiCard
+                label="Financial Exposure"
+                value={fmtCurrency(summary!.total_exposure / 100)}
+                icon={DollarSign}
+                accent="text-amber-400"
+                bgAccent="bg-amber-500/15"
+                alert
+              />
+            </HoverPreview>
             <WarRoomKpiCard
               label="Avg. Completion"
               value={`${summary!.avg_completion}%`}
@@ -190,21 +208,54 @@ export function WarRoomPage() {
               accent="text-blue-400"
               bgAccent="bg-blue-500/15"
             />
-            <WarRoomKpiCard
-              label="Critical Projects"
-              value={summary!.critical_count.toLocaleString()}
-              icon={Gauge}
-              accent={summary!.critical_count > 0 ? 'text-red-400' : 'text-emerald-400'}
-              bgAccent={summary!.critical_count > 0 ? 'bg-red-500/15' : 'bg-emerald-500/15'}
-              alert={summary!.critical_count > 0}
-            />
-            <WarRoomKpiCard
-              label="Longest Overdue"
-              value={summary!.longest_overdue > 0 ? `${summary!.longest_overdue}d` : '-'}
-              icon={Clock}
-              accent={summary!.longest_overdue > 365 ? 'text-red-400' : 'text-amber-400'}
-              bgAccent={summary!.longest_overdue > 365 ? 'bg-red-500/15' : 'bg-amber-500/15'}
-            />
+            <HoverPreview
+              delay={200}
+              preview={
+                <div className="space-y-2">
+                  <p className="text-xs text-red-400 font-semibold mb-2">HIGH Risk Projects</p>
+                  {summary!.critical_projects.map((p, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      <AgencyBadge agency={p.agency} />
+                      <span className="text-white truncate flex-1">{p.name}</span>
+                      <span className="text-red-400 tabular-nums">{p.days_overdue}d</span>
+                    </div>
+                  ))}
+                  {summary!.critical_projects.length === 0 && <p className="text-xs text-slate-500">None</p>}
+                </div>
+              }
+            >
+              <WarRoomKpiCard
+                label="Critical Projects"
+                value={summary!.critical_count.toLocaleString()}
+                icon={Gauge}
+                accent={summary!.critical_count > 0 ? 'text-red-400' : 'text-emerald-400'}
+                bgAccent={summary!.critical_count > 0 ? 'bg-red-500/15' : 'bg-emerald-500/15'}
+                alert={summary!.critical_count > 0}
+              />
+            </HoverPreview>
+            <HoverPreview
+              delay={200}
+              preview={
+                summary!.longest_overdue_project ? (
+                  <div className="space-y-1">
+                    <p className="text-xs text-amber-400 font-semibold mb-2">Most Overdue Project</p>
+                    <p className="text-sm text-white font-medium">{summary!.longest_overdue_project.name}</p>
+                    <div className="flex items-center gap-3 text-xs text-slate-400">
+                      <AgencyBadge agency={summary!.longest_overdue_project.agency} />
+                      <span>{summary!.longest_overdue_project.completion}% complete</span>
+                    </div>
+                  </div>
+                ) : <p className="text-xs text-slate-500">No data</p>
+              }
+            >
+              <WarRoomKpiCard
+                label="Longest Overdue"
+                value={summary!.longest_overdue > 0 ? `${summary!.longest_overdue}d` : '-'}
+                icon={Clock}
+                accent={summary!.longest_overdue > 365 ? 'text-red-400' : 'text-amber-400'}
+                bgAccent={summary!.longest_overdue > 365 ? 'bg-red-500/15' : 'bg-amber-500/15'}
+              />
+            </HoverPreview>
           </div>
 
           {/* Tabs */}

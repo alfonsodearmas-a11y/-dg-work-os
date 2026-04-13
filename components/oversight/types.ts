@@ -225,7 +225,8 @@ export { PROJECT_STATUS_VARIANTS as STATUS_STYLES, HEALTH_DOT } from '@/lib/cons
 
 export function formatCurrency(value: number | null) {
   if (value === null || value === undefined) return '-';
-  if (value > 1e11) return '-';
+  if (value > 1e15) return '-';
+  if (value >= 1e12) return `$${(value / 1e12).toFixed(1)}T`;
   if (value >= 1e9) return `$${(value / 1e9).toFixed(1)}B`;
   if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
   if (value >= 1e3) return `$${(value / 1e3).toFixed(0)}K`;
@@ -238,7 +239,8 @@ export function fmtCurrency(value: number | string | null | undefined, allowZero
   if (isNaN(num)) return 'N/A';
   if (num === 0) return allowZero ? '$0' : 'N/A';
   if (num < 0) return 'N/A';
-  if (num > 1e11) return 'N/A';
+  if (num > 1e15) return 'N/A';
+  if (num >= 1e12) return `$${(num / 1e12).toFixed(1)}T`;
   if (num >= 1e9) return `$${(num / 1e9).toFixed(1)}B`;
   if (num >= 1e6) return `$${(num / 1e6).toFixed(1)}M`;
   if (num >= 1e3) return `$${(num / 1e3).toFixed(1)}K`;
