@@ -7,6 +7,7 @@ import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { CHART_TOOLTIP_STYLE } from '@/lib/chart-styles';
 import type { ProjectDetail } from '@/lib/delayed-projects/types';
 import { fmtCurrency, fmtDate, fmtRegion } from '@/components/oversight/types';
+import { getShortName } from '@/lib/delayed-projects/short-names';
 import {
   RiskTierBadge, AgencyBadge, DaysOverdueBadge,
   CompletionBar, InterventionTypeBadge, InterventionStatusBadge,
@@ -39,7 +40,7 @@ export function ProjectDetailPanel({ projectId, onClose }: ProjectDetailPanelPro
     <SlidePanel
       isOpen={!!projectId}
       onClose={onClose}
-      title={detail?.project_name || 'Project Details'}
+      title={detail ? getShortName(detail.project_name) : 'Project Details'}
       subtitle={detail ? `${detail.sub_agency} · ${detail.project_reference}` : undefined}
       icon={Eye}
       accentColor="gold"
@@ -56,7 +57,7 @@ export function ProjectDetailPanel({ projectId, onClose }: ProjectDetailPanelPro
           <div className="flex items-center gap-2 flex-wrap">
             <RiskTierBadge tier={detail.risk_tier} />
             <AgencyBadge agency={detail.sub_agency} />
-            <DaysOverdueBadge days={detail.days_overdue} />
+            <DaysOverdueBadge endDate={detail.project_end_date} />
           </div>
 
           {/* Completion */}

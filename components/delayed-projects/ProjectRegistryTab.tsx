@@ -12,9 +12,10 @@ import { ProjectDetailPanel } from './ProjectDetailPanel';
 interface ProjectRegistryTabProps {
   isMobile: boolean;
   onRefresh: () => void;
+  onLogIntervention?: (projectId: string, projectName: string) => void;
 }
 
-export function ProjectRegistryTab({ isMobile, onRefresh }: ProjectRegistryTabProps) {
+export function ProjectRegistryTab({ isMobile, onRefresh, onLogIntervention }: ProjectRegistryTabProps) {
   const searchParams = useSearchParams();
   const { effectiveUser } = useEffectiveUser();
 
@@ -33,7 +34,7 @@ export function ProjectRegistryTab({ isMobile, onRefresh }: ProjectRegistryTabPr
     return f;
   });
 
-  const [sort, setSort] = useState({ field: searchParams.get('sort') || 'value', dir: (searchParams.get('sort_dir') || 'desc') as 'asc' | 'desc' });
+  const [sort, setSort] = useState({ field: searchParams.get('sort') || 'remaining_value', dir: (searchParams.get('sort_dir') || 'desc') as 'asc' | 'desc' });
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
   const [projects, setProjects] = useState<DelayedProjectWithComputed[]>([]);
   const [total, setTotal] = useState(0);
@@ -136,6 +137,7 @@ export function ProjectRegistryTab({ isMobile, onRefresh }: ProjectRegistryTabPr
         sort={sort}
         onSort={handleSort}
         onSelectProject={(p) => setSelectedProjectId(p.id)}
+        onLogIntervention={onLogIntervention ? (p) => onLogIntervention(p.id, p.project_name) : undefined}
         page={page}
         totalPages={totalPages}
         total={total}

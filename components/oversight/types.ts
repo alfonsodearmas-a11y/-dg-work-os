@@ -170,14 +170,15 @@ export function getDeadlineBadge(endDate: string | null): {
   const diffDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   if (diffDays < 0) return { type: 'overdue', label: `${Math.abs(diffDays)}d overdue`, variant: 'danger' };
   if (diffDays <= 30) return { type: 'at-risk', label: `${diffDays}d left`, variant: 'warning' };
-  return { type: 'on-track', label: `${diffDays}d left`, variant: 'success' };
+  const dateLabel = end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return { type: 'on-track', label: `Ends ${dateLabel}`, variant: 'success' };
 }
 
 export function getDaysOverdue(endDate: string | null): number | null {
   if (!endDate) return null;
   const end = new Date(endDate + 'T00:00:00');
   const diff = Math.ceil((new Date().getTime() - end.getTime()) / (1000 * 60 * 60 * 24));
-  return diff > 0 ? diff : 0;
+  return diff; // negative = future, 0 = today, positive = overdue
 }
 
 export const OVERSIGHT_STATUS_OPTIONS = [

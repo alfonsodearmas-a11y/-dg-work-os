@@ -43,7 +43,7 @@ export interface Intervention {
 
 // ── Enums ────────────────────────────────────────────────────────────────────
 
-export type RiskTier = 'HIGH' | 'MEDIUM' | 'LOW';
+export type RiskTier = 'HIGH' | 'MEDIUM' | 'LOW' | 'NO_DATA';
 
 export type InterventionType =
   | 'SITE_VISIT'
@@ -208,15 +208,18 @@ export function computeRemainingValue(contractValue: number, completionPercent: 
   return Math.round(contractValue * (1 - completionPercent / 100));
 }
 
-export function computeRiskTier(endDate: string | null, completionPercent: number): RiskTier {
+export function computeRiskTier(endDate: string | null, completionPercent: number, contractValue?: number): RiskTier {
+  // Missing data = NO_DATA
+  if (endDate === null || (contractValue !== undefined && contractValue === 0)) return 'NO_DATA';
+
   const daysOverdue = computeDaysOverdue(endDate);
+  if (daysOverdue === null) return 'NO_DATA';
 
-  // No end date = MEDIUM by default
-  if (daysOverdue === null) return 'MEDIUM';
+  const isOverdue = daysOverdue > 0;
+  const isLowCompletion = completionPercent < 50;
 
-  if (daysOverdue > 180 && completionPercent < 50) return 'HIGH';
-  if (daysOverdue < 30 && completionPercent > 75) return 'LOW';
-  if (completionPercent < 50 || daysOverdue > 90) return 'MEDIUM';
+  if (isOverdue && isLowCompletion) return 'HIGH';
+  if (isOverdue || isLowCompletion) return 'MEDIUM';
   return 'LOW';
 }
 
@@ -229,7 +232,7 @@ export function enrichProject(
     ...project,
     days_overdue: computeDaysOverdue(project.project_end_date),
     remaining_value: computeRemainingValue(project.contract_value, project.completion_percent),
-    risk_tier: computeRiskTier(project.project_end_date, project.completion_percent),
+    risk_tier: computeRiskTier(project.project_end_date, project.completion_percent, project.contract_value),
     delta_completion: deltaCompletion,
     stalled_weeks: stalledWeeks,
   };

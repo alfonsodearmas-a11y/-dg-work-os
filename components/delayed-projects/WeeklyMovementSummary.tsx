@@ -2,6 +2,7 @@
 
 import { TrendingUp, TrendingDown, Minus, PlusCircle, MinusCircle } from 'lucide-react';
 import type { WeeklyMovement } from '@/lib/delayed-projects/types';
+import { getShortName } from '@/lib/delayed-projects/short-names';
 import { AgencyBadge } from './shared';
 
 interface WeeklyMovementSummaryProps {
@@ -44,7 +45,7 @@ export function WeeklyMovementSummary({ movement }: WeeklyMovementSummaryProps) 
                 {movement.top_movers.map((d) => (
                   <div key={d.project_id} className="flex items-center gap-2 text-xs">
                     <AgencyBadge agency={d.sub_agency} />
-                    <span className="text-white truncate flex-1">{d.project_name}</span>
+                    <span className="text-white truncate flex-1">{getShortName(d.project_name)}</span>
                     <span className="text-emerald-400 font-medium tabular-nums">+{d.delta.toFixed(1)}%</span>
                   </div>
                 ))}
@@ -58,7 +59,7 @@ export function WeeklyMovementSummary({ movement }: WeeklyMovementSummaryProps) 
                 {movement.top_stalls.map((d) => (
                   <div key={d.project_id} className="flex items-center gap-2 text-xs">
                     <AgencyBadge agency={d.sub_agency} />
-                    <span className="text-white truncate flex-1">{d.project_name}</span>
+                    <span className="text-white truncate flex-1">{getShortName(d.project_name)}</span>
                     <span className="text-slate-500 tabular-nums">{d.current_pct}%</span>
                   </div>
                 ))}

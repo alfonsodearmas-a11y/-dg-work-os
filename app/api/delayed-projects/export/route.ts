@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       p.region || '',
       fmtCurrency(p.contract_value / 100),
       p.completion_percent,
-      p.days_overdue ?? 'N/A',
+      p.days_overdue !== null ? Math.max(p.days_overdue, 0) : 'N/A',
       p.risk_tier,
       `"${(p.contractors || '').replace(/"/g, '""')}"`,
       fmtDate(p.project_end_date),

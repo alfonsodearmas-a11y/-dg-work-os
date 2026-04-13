@@ -29,6 +29,7 @@ const RISK_TIERS: { value: RiskTier; label: string; activeClass: string }[] = [
   { value: 'HIGH', label: 'High', activeClass: 'bg-red-500/20 text-red-400 border-red-500/30' },
   { value: 'MEDIUM', label: 'Medium', activeClass: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
   { value: 'LOW', label: 'Low', activeClass: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
+  { value: 'NO_DATA', label: 'No Data', activeClass: 'bg-slate-500/20 text-slate-400 border-slate-500/30' },
 ];
 
 export function RegistryFilters({ filters, onChange, onClear }: RegistryFiltersProps) {

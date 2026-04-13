@@ -116,10 +116,15 @@ export async function getProjects(
   countQuery = applyFilters(countQuery);
   dataQuery = applyFilters(dataQuery);
 
-  const sortField = filters.sort || 'contract_value';
+  const sortField = filters.sort || 'remaining_value';
   const sortDir = filters.sort_dir || 'desc';
-  const dbColumn = SORT_MAP[sortField] || sortField;
-  dataQuery = dataQuery.order(dbColumn, { ascending: sortDir === 'asc', nullsFirst: false });
+  const COMPUTED_SORTS = new Set(['remaining_value', 'risk', 'overdue']);
+  const isComputedSort = COMPUTED_SORTS.has(sortField);
+
+  if (!isComputedSort) {
+    const dbColumn = SORT_MAP[sortField] || sortField;
+    dataQuery = dataQuery.order(dbColumn, { ascending: sortDir === 'asc', nullsFirst: false });
+  }
   dataQuery = dataQuery.range(offset, offset + limit - 1);
 
   const [countResult, dataResult] = await Promise.all([countQuery, dataQuery]);
@@ -138,6 +143,19 @@ export async function getProjects(
     const delta = snap ? Number(p.completion_percent) - snap.completion_percent : null;
     return enrichProject(p, delta);
   });
+
+  // Post-enrichment sort for computed fields
+  if (isComputedSort) {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    if (sortField === 'remaining_value') {
+      enriched.sort((a, b) => dir * (a.remaining_value - b.remaining_value));
+    } else if (sortField === 'risk') {
+      const RISK_ORDER: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2, NO_DATA: 3 };
+      enriched.sort((a, b) => dir * ((RISK_ORDER[a.risk_tier] ?? 4) - (RISK_ORDER[b.risk_tier] ?? 4)));
+    } else if (sortField === 'overdue') {
+      enriched.sort((a, b) => dir * ((a.days_overdue ?? -Infinity) - (b.days_overdue ?? -Infinity)));
+    }
+  }
 
   // Risk tier is computed, not stored — filter post-query and adjust total
   if (filters.risk_tiers?.length) {
@@ -189,7 +207,7 @@ export async function getSummary(agencyFilter?: string): Promise<WarRoomSummary>
     const pct = Number(p.completion_percent) || 0;
     const remaining = computeRemainingValue(cv, pct);
     const daysOverdue = computeDaysOverdue(p.project_end_date);
-    const riskTier = computeRiskTier(p.project_end_date, pct);
+    const riskTier = computeRiskTier(p.project_end_date, pct, cv);
 
     const ref: PRef = {
       name: p.project_name || 'Unknown',

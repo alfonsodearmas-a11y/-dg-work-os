@@ -13,12 +13,14 @@ const RISK_STYLES: Record<RiskTier, string> = {
   HIGH: 'bg-red-500/20 text-red-400 border-red-500/30',
   MEDIUM: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
   LOW: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  NO_DATA: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
 };
 
 export function RiskTierBadge({ tier }: { tier: RiskTier }) {
+  const label = tier === 'NO_DATA' ? 'NO DATA' : tier;
   return (
     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap ${RISK_STYLES[tier]}`}>
-      {tier}
+      {label}
     </span>
   );
 }
@@ -41,18 +43,32 @@ export function AgencyBadge({ agency }: { agency: string }) {
 
 // ── Days Overdue Badge ──────────────────────────────────────────────────────
 
-export function DaysOverdueBadge({ days }: { days: number | null }) {
-  if (days === null) {
+export function DaysOverdueBadge({ endDate }: { endDate: string | null }) {
+  if (!endDate) {
     return <span className="text-xs text-slate-500">No date</span>;
   }
-  if (days === 0) {
-    return <span className="text-xs text-emerald-400">On time</span>;
+  const end = new Date(endDate + 'T00:00:00');
+  const diff = Math.ceil((new Date().getTime() - end.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diff <= 0) {
+    const label = end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    return <span className="text-xs text-blue-400">Ends {label}</span>;
   }
 
   let color = 'text-slate-400';
+  if (diff > 365) color = 'text-red-400 font-semibold';
+  else if (diff > 90) color = 'text-amber-400';
+
+  return <span className={`text-xs tabular-nums ${color}`}>{diff.toLocaleString()}d</span>;
+}
+
+// ── Days Value (for averages, not per-project end dates) ────────────────────
+
+export function DaysValue({ days }: { days: number }) {
+  if (days === 0) return <span className="text-xs text-emerald-400">0d</span>;
+  let color = 'text-slate-400';
   if (days > 365) color = 'text-red-400 font-semibold';
   else if (days > 90) color = 'text-amber-400';
-
   return <span className={`text-xs tabular-nums ${color}`}>{days.toLocaleString()}d</span>;
 }
 
@@ -93,6 +109,7 @@ export const RISK_TIER_HEX: Record<RiskTier, string> = {
   HIGH: '#dc2626',
   MEDIUM: '#d4af37',
   LOW: '#2d3a52',
+  NO_DATA: '#64748b',
 };
 
 // ── Exposure / Proportion Bar ──────────────────────────────────────────────

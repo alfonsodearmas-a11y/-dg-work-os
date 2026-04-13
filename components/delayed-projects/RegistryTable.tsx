@@ -1,8 +1,9 @@
 'use client';
 
-import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import type { DelayedProjectWithComputed } from '@/lib/delayed-projects/types';
 import { fmtCurrency } from '@/components/oversight/types';
+import { getShortName } from '@/lib/delayed-projects/short-names';
 import { RiskTierBadge, AgencyBadge, DaysOverdueBadge, DeltaIndicator, CompletionBar } from './shared';
 import { Spinner } from '@/components/ui/Spinner';
 
@@ -12,6 +13,7 @@ interface RegistryTableProps {
   sort: { field: string; dir: 'asc' | 'desc' };
   onSort: (field: string) => void;
   onSelectProject: (project: DelayedProjectWithComputed) => void;
+  onLogIntervention?: (project: DelayedProjectWithComputed) => void;
   page: number;
   totalPages: number;
   total: number;
@@ -20,18 +22,19 @@ interface RegistryTableProps {
 }
 
 const COLUMNS = [
-  { key: 'risk', label: 'Risk', sortable: false, width: 'w-16' },
+  { key: 'risk', label: 'Risk', sortable: true, width: 'w-16' },
   { key: 'name', label: 'Project', sortable: true, width: 'flex-1 min-w-[200px]' },
   { key: 'agency', label: 'Agency', sortable: true, width: 'w-20' },
   { key: 'region', label: 'Rgn', sortable: true, width: 'w-14' },
   { key: 'value', label: 'Value', sortable: true, width: 'w-24' },
   { key: 'completion', label: 'Completion', sortable: true, width: 'w-28' },
   { key: 'delta', label: '\u0394', sortable: false, width: 'w-16' },
-  { key: 'overdue', label: 'Overdue', sortable: false, width: 'w-20' },
+  { key: 'overdue', label: 'Overdue', sortable: true, width: 'w-20' },
+  { key: 'action', label: '', sortable: false, width: 'w-16' },
 ];
 
 export function RegistryTable({
-  projects, loading, sort, onSort, onSelectProject,
+  projects, loading, sort, onSort, onSelectProject, onLogIntervention,
   page, totalPages, total, onPageChange, isMobile,
 }: RegistryTableProps) {
   if (loading) {
@@ -62,11 +65,11 @@ export function RegistryTable({
               <RiskTierBadge tier={p.risk_tier} />
               <AgencyBadge agency={p.sub_agency} />
             </div>
-            <p className="text-sm text-white font-medium line-clamp-2">{p.project_name}</p>
+            <p className="text-sm text-white font-medium line-clamp-2" title={p.project_name}>{getShortName(p.project_name)}</p>
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-400">{fmtCurrency(p.contract_value / 100)}</span>
               <CompletionBar pct={p.completion_percent} />
-              <DaysOverdueBadge days={p.days_overdue} />
+              <DaysOverdueBadge endDate={p.project_end_date} />
             </div>
           </button>
         ))}
@@ -108,7 +111,7 @@ export function RegistryTable({
                 <td><RiskTierBadge tier={p.risk_tier} /></td>
                 <td>
                   <span className="text-white font-medium line-clamp-1" title={p.project_name}>
-                    {p.project_name}
+                    {getShortName(p.project_name)}
                   </span>
                 </td>
                 <td><AgencyBadge agency={p.sub_agency} /></td>
@@ -116,7 +119,16 @@ export function RegistryTable({
                 <td className="text-white tabular-nums">{fmtCurrency(p.contract_value / 100)}</td>
                 <td><CompletionBar pct={p.completion_percent} /></td>
                 <td><DeltaIndicator delta={p.delta_completion} stalledWeeks={p.stalled_weeks} /></td>
-                <td><DaysOverdueBadge days={p.days_overdue} /></td>
+                <td><DaysOverdueBadge endDate={p.project_end_date} /></td>
+                <td>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onLogIntervention?.(p); }}
+                    className="btn-navy px-2 py-1 text-[10px] flex items-center gap-1"
+                    title="Log intervention"
+                  >
+                    <Plus className="h-3 w-3" /> Log
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

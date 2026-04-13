@@ -2,46 +2,39 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  AlertTriangle, Clock, CheckCircle, Users, Plus,
+  AlertTriangle, Plus,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import { fmtDate } from '@/components/oversight/types';
+import { getShortName } from '@/lib/delayed-projects/short-names';
 import type {
-  Intervention, InterventionSummary, DelayedProjectWithComputed,
+  Intervention, DelayedProjectWithComputed,
   InterventionStatus,
 } from '@/lib/delayed-projects/types';
 import {
-  WarRoomKpiCard, AgencyBadge, InterventionTypeBadge,
+  AgencyBadge, InterventionTypeBadge,
   InterventionStatusBadge, DaysOverdueBadge,
 } from './shared';
-import { InterventionModal } from './InterventionModal';
 
-interface InterventionsTabProps {
+interface InterventionSectionProps {
   isMobile: boolean;
   onRefresh: () => void;
+  onLogIntervention: (projectId: string, projectName: string) => void;
 }
 
-export function InterventionsTab({ isMobile, onRefresh }: InterventionsTabProps) {
-  const [summary, setSummary] = useState<InterventionSummary | null>(null);
+export function InterventionsTab({ isMobile, onRefresh, onLogIntervention }: InterventionSectionProps) {
   const [interventions, setInterventions] = useState<(Intervention & { project_name?: string; sub_agency?: string })[]>([]);
   const [unattended, setUnattended] = useState<DelayedProjectWithComputed[]>([]);
+  const [totalProjects, setTotalProjects] = useState(0);
   const [loading, setLoading] = useState(true);
-
-  // Modal state
-  const [showModal, setShowModal] = useState(false);
-  const [modalProjectId, setModalProjectId] = useState('');
-  const [modalProjectName, setModalProjectName] = useState('');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [summaryRes, listRes, projectsRes] = await Promise.all([
-        fetch('/api/delayed-projects/interventions?summary=true'),
+      const [listRes, projectsRes] = await Promise.all([
         fetch('/api/delayed-projects/interventions?limit=500'),
         fetch('/api/delayed-projects?limit=200'),
       ]);
-
-      if (summaryRes.ok) setSummary(await summaryRes.json());
 
       let allInterventions: (Intervention & { project_name?: string; sub_agency?: string })[] = [];
       if (listRes.ok) {
@@ -53,6 +46,7 @@ export function InterventionsTab({ isMobile, onRefresh }: InterventionsTabProps)
       if (projectsRes.ok) {
         const data = await projectsRes.json();
         const allProjects: DelayedProjectWithComputed[] = data.projects || [];
+        setTotalProjects(allProjects.length);
         const projectIdsWithInterventions = new Set(
           allInterventions.map((inv) => inv.project_id),
         );
@@ -66,17 +60,6 @@ export function InterventionsTab({ isMobile, onRefresh }: InterventionsTabProps)
     fetchData();
   }, [fetchData]);
 
-  function handleLogIntervention(projectId: string, projectName: string) {
-    setModalProjectId(projectId);
-    setModalProjectName(projectName);
-    setShowModal(true);
-  }
-
-  function handleCreated() {
-    fetchData();
-    onRefresh();
-  }
-
   async function handleStatusChange(interventionId: string, newStatus: InterventionStatus) {
     try {
       const res = await fetch(`/api/delayed-projects/interventions/${interventionId}`, {
@@ -87,6 +70,14 @@ export function InterventionsTab({ isMobile, onRefresh }: InterventionsTabProps)
       if (res.ok) fetchData();
     } catch {}
   }
+
+  // Expose refetch so parent can call after logging an intervention
+  useEffect(() => {
+    // Re-fetch when parent triggers a refresh (e.g. after logging an intervention)
+    const handler = () => fetchData();
+    window.addEventListener('intervention-created', handler);
+    return () => window.removeEventListener('intervention-created', handler);
+  }, [fetchData]);
 
   if (loading) {
     return (
@@ -103,78 +94,41 @@ export function InterventionsTab({ isMobile, onRefresh }: InterventionsTabProps)
 
   return (
     <div className="space-y-5">
-      {/* Intervention Modal */}
-      <InterventionModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        onCreated={handleCreated}
-        projectId={modalProjectId}
-        projectName={modalProjectName}
-      />
-
-      {/* KPI Summary Strip */}
-      {summary && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <WarRoomKpiCard
-            label="Total Interventions"
-            value={summary.total.toLocaleString()}
-            icon={CheckCircle}
-            accent="text-blue-400"
-            bgAccent="bg-blue-500/15"
-          />
-          <WarRoomKpiCard
-            label="Pending Follow-ups"
-            value={(summary.pending + summary.in_progress).toLocaleString()}
-            icon={Clock}
-            accent="text-amber-400"
-            bgAccent="bg-amber-500/15"
-          />
-          <WarRoomKpiCard
-            label="Overdue Follow-ups"
-            value={summary.overdue.toLocaleString()}
-            icon={AlertTriangle}
-            accent={summary.overdue > 0 ? 'text-red-400' : 'text-emerald-400'}
-            bgAccent={summary.overdue > 0 ? 'bg-red-500/15' : 'bg-emerald-500/15'}
-            alert={summary.overdue > 0}
-          />
-          <WarRoomKpiCard
-            label="Unattended Projects"
-            value={summary.projects_with_zero.toLocaleString()}
-            icon={Users}
-            accent={summary.projects_with_zero > 0 ? 'text-red-400' : 'text-emerald-400'}
-            bgAccent={summary.projects_with_zero > 0 ? 'bg-red-500/15' : 'bg-emerald-500/15'}
-            alert={summary.projects_with_zero > 5}
-            sub={summary.projects_with_zero > 0 ? 'Zero interventions logged' : 'All projects covered'}
-          />
-        </div>
-      )}
-
-      {/* Unattended Projects Callout */}
-      {unattended.length > 0 && (
-        <div className="card-premium p-5 border-red-500/20">
+      {/* Unattended Projects Banner */}
+      {unattended.length > 0 ? (
+        <div className="rounded-xl border-2 border-red-500/40 bg-red-500/5 p-5">
           <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="h-4 w-4 text-red-400" />
+            <AlertTriangle className="h-5 w-5 text-red-400" />
             <h3 className="text-sm font-semibold text-red-400">
-              Unattended Projects ({unattended.length})
+              {unattended.length} of {totalProjects} projects have zero interventions logged
             </h3>
           </div>
-          <p className="text-xs text-slate-400 mb-3">
-            These delayed projects have zero interventions logged — nobody is tracking action on them.
+          <p className="text-xs text-slate-400 mb-4">
+            Nobody is tracking action on these delayed projects. Log an intervention to begin accountability tracking.
           </p>
-          <div className="space-y-2 max-h-48 overflow-y-auto">
+          <div className="space-y-2">
             {unattended.map((p) => (
               <div key={p.id} className="flex items-center gap-2 p-2 bg-navy-950/40 rounded-lg">
                 <AgencyBadge agency={p.sub_agency} />
-                <span className="text-xs text-white truncate flex-1">{p.project_name}</span>
-                <DaysOverdueBadge days={p.days_overdue} />
+                <span className="text-xs text-white truncate flex-1" title={p.project_name}>{getShortName(p.project_name)}</span>
+                <span className="text-xs text-slate-400 tabular-nums shrink-0">{p.completion_percent}%</span>
+                <DaysOverdueBadge endDate={p.project_end_date} />
                 <button
-                  onClick={() => handleLogIntervention(p.id, p.project_name)}
+                  onClick={() => onLogIntervention(p.id, p.project_name)}
                   className="btn-navy px-2 py-1 text-[10px] flex items-center gap-1 shrink-0"
                 >
                   <Plus className="h-3 w-3" /> Log
                 </button>
               </div>
             ))}
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-xl border-2 border-emerald-500/40 bg-emerald-500/5 p-5">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-emerald-400">
+              All projects have at least one intervention logged.
+            </span>
           </div>
         </div>
       )}
@@ -190,7 +144,7 @@ export function InterventionsTab({ isMobile, onRefresh }: InterventionsTabProps)
             No interventions logged yet. Use the &quot;Log&quot; button above to record the first intervention.
           </p>
         ) : (
-          <div className="space-y-3 max-h-96 overflow-y-auto">
+          <div className="space-y-3">
             {interventions.map((inv) => (
               <div key={inv.id} className="flex gap-3 p-3 bg-navy-950/40 rounded-lg border border-navy-800/60">
                 <div className="shrink-0 pt-0.5">
@@ -203,7 +157,7 @@ export function InterventionsTab({ isMobile, onRefresh }: InterventionsTabProps)
                     {inv.project_name && (
                       <span className="text-[10px] text-navy-600">
                         {inv.sub_agency && <AgencyBadge agency={inv.sub_agency} />}
-                        {' '}{inv.project_name}
+                        {' '}{getShortName(inv.project_name)}
                       </span>
                     )}
                   </div>
@@ -263,7 +217,7 @@ export function InterventionsTab({ isMobile, onRefresh }: InterventionsTabProps)
                     return (
                       <tr key={inv.id} className={isOverdue ? 'bg-red-500/5' : ''}>
                         <td className="text-white text-xs truncate max-w-[150px]">
-                          {inv.project_name || '-'}
+                          {inv.project_name ? getShortName(inv.project_name) : '-'}
                         </td>
                         <td><InterventionTypeBadge type={inv.intervention_type} /></td>
                         <td className="text-slate-400 text-xs">{inv.assigned_to || '-'}</td>

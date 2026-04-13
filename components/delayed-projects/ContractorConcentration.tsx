@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { AGENCY_HEX_COLORS } from '@/lib/constants/agencies';
 import { fmtCurrency } from '@/components/oversight/types';
 import type { DelayedProjectWithComputed } from '@/lib/delayed-projects/types';
-import { DaysOverdueBadge, ExposureBar } from './shared';
+import { DaysValue, ExposureBar } from './shared';
 
 interface ContractorConcentrationProps {
   projects: DelayedProjectWithComputed[];
@@ -34,7 +34,7 @@ export function ContractorConcentration({ projects, isMobile }: ContractorConcen
       const entry = map.get(key) || { count: 0, agencies: new Set(), overdueSum: 0, overdueCount: 0, exposure: 0 };
       entry.count++;
       entry.agencies.add(p.sub_agency);
-      if (p.days_overdue !== null) {
+      if (p.days_overdue !== null && p.days_overdue > 0) {
         entry.overdueSum += p.days_overdue;
         entry.overdueCount++;
       }
@@ -96,7 +96,7 @@ export function ContractorConcentration({ projects, isMobile }: ContractorConcen
                     />
                   ))}
                 </div>
-                <DaysOverdueBadge days={g.avgDaysOverdue} />
+                <DaysValue days={g.avgDaysOverdue} />
               </div>
               <div className="flex items-center gap-2">
                 <ExposureBar pct={(g.totalExposure / maxExposure) * 100} />
@@ -152,7 +152,7 @@ export function ContractorConcentration({ projects, isMobile }: ContractorConcen
                   </div>
                 </td>
                 <td className="text-right py-2 px-2">
-                  <DaysOverdueBadge days={g.avgDaysOverdue} />
+                  <DaysValue days={g.avgDaysOverdue} />
                 </td>
                 <td className="py-2 pl-2">
                   <div className="flex items-center gap-2">
