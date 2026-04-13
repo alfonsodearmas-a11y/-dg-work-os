@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
-import { getDelayedSummary } from '@/lib/oversight-queries';
+import { getSummary } from '@/lib/delayed-projects/queries';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 
@@ -16,7 +16,6 @@ export async function GET() {
     agencyFilter = userAgency || undefined;
   }
 
-  const summary = await getDelayedSummary(agencyFilter);
-
+  const summary = await getSummary(agencyFilter);
   return NextResponse.json(summary);
 }
