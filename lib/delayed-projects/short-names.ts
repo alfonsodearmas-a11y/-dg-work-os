@@ -67,7 +67,7 @@ const KNOWN_SHORT_NAMES: [string, string][] = [
 // Pre-lowercase keys to avoid repeated toLowerCase() in the hot path.
 const SORTED_SHORT_NAMES = [...KNOWN_SHORT_NAMES]
   .sort((a, b) => b[0].length - a[0].length)
-  .map(([key, val]) => [key.toLowerCase(), val] as const);
+  .map(([key, val]): [string, string] => [key.toLowerCase(), val]);
 
 // ── Leading prefixes to strip ──────────────────────────────────────────────
 

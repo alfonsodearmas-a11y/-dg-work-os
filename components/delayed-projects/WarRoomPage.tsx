@@ -273,8 +273,6 @@ export function WarRoomPage() {
 
           {/* Section 2: Intervention Accountability */}
           <InterventionsTab
-            isMobile={isMobile}
-            onRefresh={handleRefresh}
             interventionSummary={interventionSummary}
           />
 

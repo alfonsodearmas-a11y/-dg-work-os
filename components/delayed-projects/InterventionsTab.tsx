@@ -17,8 +17,6 @@ import {
 } from './shared';
 
 interface InterventionSectionProps {
-  isMobile: boolean;
-  onRefresh: () => void;
   interventionSummary: InterventionSummary | null;
 }
 
@@ -34,7 +32,7 @@ const BANNER_TEXT_STYLES = {
   clear: 'text-emerald-400',
 } as const;
 
-export function InterventionsTab({ isMobile, onRefresh, interventionSummary }: InterventionSectionProps) {
+export function InterventionsTab({ interventionSummary }: InterventionSectionProps) {
   const [interventions, setInterventions] = useState<(Intervention & { project_name?: string; sub_agency?: string })[]>([]);
   const [loading, setLoading] = useState(true);
 
