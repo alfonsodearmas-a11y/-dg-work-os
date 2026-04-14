@@ -220,8 +220,8 @@ export function MissionControlView({ data, briefing, userName }: Props) {
             {/* GPL Grid Health — compact card */}
             <CompactGridCard />
 
-            {/* Open Applications */}
-            {(data.gplPendingApplications > 0 || data.gwiPendingApplications > 0) && (
+            {/* Open Applications — ministry only (agency users get Access Denied on /applications) */}
+            {isMinistry && (data.gplPendingApplications > 0 || data.gwiPendingApplications > 0) && (
               <Link
                 href="/applications"
                 className="block rounded-xl border border-gold-500/20 bg-gradient-to-br from-[#1a2744] to-[#0f1d35] p-4 hover:border-gold-500/40 transition-colors group"

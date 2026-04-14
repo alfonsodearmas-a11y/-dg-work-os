@@ -1,23 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProjectsList } from '@/lib/project-queries';
 import { requireRole } from '@/lib/auth-helpers';
+import { getViewAsAgencyScope } from '@/lib/scoped-query';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
     const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
     if (authResult instanceof NextResponse) return authResult;
+    const { session } = authResult;
 
     const p = request.nextUrl.searchParams;
+
+    // Enforce agency scoping for non-ministry users
+    const scope = getViewAsAgencyScope(session, null, null);
 
     const agencies = p.get('agencies') ? p.get('agencies')!.split(',').filter(Boolean) : undefined;
     const statuses = p.get('statuses') ? p.get('statuses')!.split(',').filter(Boolean) : undefined;
     const regions = p.get('regions') ? p.get('regions')!.split(',').filter(Boolean) : undefined;
     const healths = p.get('healths') ? p.get('healths')!.split(',').filter(Boolean) : undefined;
 
+    // Non-ministry users: enforce their agency, ignore client filter
+    // Ministry users: respect client-provided agency filter
+    const enforcedAgency = scope ? scope.toUpperCase() : (p.get('agency') || undefined);
+
     const { projects, total } = await getProjectsList({
-      agencies,
-      agency: p.get('agency') || undefined,
+      agencies: scope ? undefined : agencies,
+      agency: enforcedAgency,
       statuses,
       status: p.get('status') || undefined,
       regions,

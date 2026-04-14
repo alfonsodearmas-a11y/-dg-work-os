@@ -17,6 +17,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SELECTABLE_AGENCIES } from '@/lib/constants/agencies';
+import { MINISTRY_ROLES } from '@/lib/people-types';
 import { supabase } from '@/lib/db';
 import type { Role } from '@/lib/auth';
 
@@ -352,6 +353,10 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
   const userRole = session?.user?.role;
   const userAgency = session?.user?.agency;
   const isDraggable = canDrag(userRole);
+  const isMinistry = MINISTRY_ROLES.includes(userRole || '');
+  const visibleAgencies = isMinistry
+    ? SELECTABLE_AGENCIES
+    : SELECTABLE_AGENCIES.filter(a => a.toLowerCase() === (userAgency || '').toLowerCase());
 
   return (
     <div className="space-y-4">
@@ -368,7 +373,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
           >
             All
           </button>
-          {SELECTABLE_AGENCIES.map((agency) => (
+          {visibleAgencies.map((agency) => (
             <button
               key={agency}
               onClick={() => setAgencyFilter(agencyFilter === agency ? '' : agency)}

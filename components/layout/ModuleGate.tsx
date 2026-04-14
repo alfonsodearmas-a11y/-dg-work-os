@@ -14,6 +14,8 @@ const ROUTE_MODULE_MAP: [string, string][] = [
   ['/intel/cjia', 'cjia-deep-dive'],
   ['/intel/gwi', 'gwi-deep-dive'],
   ['/intel/gcaa', 'gcaa-deep-dive'],
+  ['/intel/heci', 'agency-intel'],
+  ['/intel/marad', 'agency-intel'],
   ['/intel', 'agency-intel'],
   ['/tasks', 'tasks'],
   ['/oversight', 'oversight'],
@@ -23,6 +25,9 @@ const ROUTE_MODULE_MAP: [string, string][] = [
   ['/documents', 'documents'],
   ['/applications', 'applications'],
   ['/procurement', 'procurement'],
+  ['/projects', 'projects'],
+  ['/airstrips', 'airstrips'],
+  ['/pulse/gpl/grid-health', 'grid-health'],
   ['/admin/people', 'people'],
   ['/admin', 'settings'],
 ];

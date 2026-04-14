@@ -14,6 +14,7 @@ import { NewTaskModal } from './NewTaskModal';
 import { CreateEventModal } from '@/components/calendar/CreateEventModal';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
+import { MINISTRY_ROLES } from '@/lib/people-types';
 import { useViewAsFetch } from '@/hooks/useViewAsFetch';
 import { useBoardReducer, COLUMNS } from '@/hooks/useBoardReducer';
 import { BoardSelectionProvider, useSelection } from './BoardSelectionContext';
@@ -117,11 +118,15 @@ function KanbanBoardInner() {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const res = await fetch('/api/tasks/users');
+      const isMinistry = MINISTRY_ROLES.includes(effectiveUser.role);
+      const url = isMinistry
+        ? '/api/tasks/users'
+        : `/api/tasks/users?agency=${encodeURIComponent(effectiveUser.agency || '')}`;
+      const res = await fetch(url);
       const data = await res.json();
       if (data.users) dispatch({ type: 'SET_USERS', users: data.users });
     } catch {}
-  }, [dispatch]);
+  }, [dispatch, effectiveUser.role, effectiveUser.agency]);
 
   useEffect(() => {
     fetchTasks();
@@ -584,7 +589,7 @@ function KanbanBoardInner() {
         isMobile={isMobile}
         title={state.newTitle}
         description={state.newDescription}
-        agency={state.newAgency}
+        agency={state.newAgency || (effectiveUser.agency?.toUpperCase() ?? '')}
         priority={state.newPriority}
         dueDate={state.newDueDate}
         assignee={state.newAssignee}
@@ -592,6 +597,8 @@ function KanbanBoardInner() {
         templates={state.templates}
         showTemplates={state.showTemplates}
         creating={state.creatingTask}
+        lockedAgency={MINISTRY_ROLES.includes(effectiveUser.role) ? null : effectiveUser.agency}
+        selfAssignOnly={effectiveUser.role === 'officer'}
         onTitleChange={(v) => dispatch({ type: 'SET_NEW_TITLE', title: v })}
         onDescriptionChange={(v) => dispatch({ type: 'SET_NEW_DESCRIPTION', description: v })}
         onAgencyChange={(v) => dispatch({ type: 'SET_NEW_AGENCY', agency: v })}

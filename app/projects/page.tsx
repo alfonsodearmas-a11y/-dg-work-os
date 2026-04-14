@@ -1129,9 +1129,11 @@ export default function ProjectsPage() {
           <button onClick={handleRefresh} className="btn-navy flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2" aria-label="Refresh">
             <RefreshCw className="h-4 w-4" aria-hidden="true" /><span className="hidden md:inline">Refresh</span>
           </button>
-          <button onClick={() => setShowUpload(true)} className="btn-gold flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2" aria-label="Upload Excel">
-            <Upload className="h-4 w-4" aria-hidden="true" /><span className="hidden md:inline">Upload Excel</span>
-          </button>
+          {MINISTRY_ROLES.includes(userRole) && (
+            <button onClick={() => setShowUpload(true)} className="btn-gold flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2" aria-label="Upload Excel">
+              <Upload className="h-4 w-4" aria-hidden="true" /><span className="hidden md:inline">Upload Excel</span>
+            </button>
+          )}
         </div>
       </div>
 

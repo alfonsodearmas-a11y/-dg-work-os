@@ -4,7 +4,7 @@ import { useRef, useEffect } from 'react';
 import { Plus, X, FileText, Loader2 } from 'lucide-react';
 import { TaskTemplate } from '@/lib/task-types';
 
-const AGENCIES = ['GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'HAS', 'Hinterland', 'Ministry'];
+const ALL_AGENCIES = ['GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'HAS', 'Hinterland', 'Ministry'];
 const PRIORITIES = ['critical', 'high', 'medium', 'low'] as const;
 
 interface UserOption {
@@ -27,6 +27,10 @@ interface NewTaskModalProps {
   templates: TaskTemplate[];
   showTemplates: boolean;
   creating: boolean;
+  /** When set, the agency field is locked to this value (non-ministry users). */
+  lockedAgency?: string | null;
+  /** When true, the assignee dropdown is hidden — tasks auto-assign to self. */
+  selfAssignOnly?: boolean;
   onTitleChange: (v: string) => void;
   onDescriptionChange: (v: string) => void;
   onAgencyChange: (v: string) => void;
@@ -52,6 +56,8 @@ export function NewTaskModal({
   templates,
   showTemplates,
   creating,
+  lockedAgency,
+  selfAssignOnly,
   onTitleChange,
   onDescriptionChange,
   onAgencyChange,
@@ -159,18 +165,24 @@ export function NewTaskModal({
       />
 
       <div className={`grid gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-2 sm:grid-cols-4'}`}>
-        <select
-          value={agency}
-          onChange={(e) => onAgencyChange(e.target.value)}
-          aria-label="Agency"
-          className="px-3 py-2.5 rounded-lg bg-navy-950 border border-navy-800 text-white text-sm focus:outline-none focus:border-gold-500"
-          style={{ minHeight: isMobile ? 44 : undefined }}
-        >
-          <option value="">No Agency</option>
-          {AGENCIES.map((a) => (
-            <option key={a} value={a}>{a}</option>
-          ))}
-        </select>
+        {lockedAgency ? (
+          <div className="px-3 py-2.5 rounded-lg bg-navy-950 border border-navy-800 text-white text-sm opacity-75 cursor-not-allowed">
+            {lockedAgency.toUpperCase()}
+          </div>
+        ) : (
+          <select
+            value={agency}
+            onChange={(e) => onAgencyChange(e.target.value)}
+            aria-label="Agency"
+            className="px-3 py-2.5 rounded-lg bg-navy-950 border border-navy-800 text-white text-sm focus:outline-none focus:border-gold-500"
+            style={{ minHeight: isMobile ? 44 : undefined }}
+          >
+            <option value="">No Agency</option>
+            {ALL_AGENCIES.map((a) => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </select>
+        )}
 
         <select
           value={priority}
@@ -193,18 +205,24 @@ export function NewTaskModal({
           style={{ minHeight: isMobile ? 44 : undefined }}
         />
 
-        <select
-          value={assignee}
-          onChange={(e) => onAssigneeChange(e.target.value)}
-          aria-label="Assignee"
-          className="px-3 py-2.5 rounded-lg bg-navy-950 border border-navy-800 text-white text-sm focus:outline-none focus:border-gold-500"
-          style={{ minHeight: isMobile ? 44 : undefined }}
-        >
-          <option value="">Assign to me</option>
-          {users.map((u) => (
-            <option key={u.id} value={u.id}>{u.name}{u.agency ? ` (${u.agency})` : ''}</option>
-          ))}
-        </select>
+        {selfAssignOnly ? (
+          <div className="px-3 py-2.5 rounded-lg bg-navy-950 border border-navy-800 text-white text-sm opacity-75 cursor-not-allowed">
+            Assigned to you
+          </div>
+        ) : (
+          <select
+            value={assignee}
+            onChange={(e) => onAssigneeChange(e.target.value)}
+            aria-label="Assignee"
+            className="px-3 py-2.5 rounded-lg bg-navy-950 border border-navy-800 text-white text-sm focus:outline-none focus:border-gold-500"
+            style={{ minHeight: isMobile ? 44 : undefined }}
+          >
+            <option value="">Assign to me</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>{u.name}{u.agency ? ` (${u.agency})` : ''}</option>
+            ))}
+          </select>
+        )}
       </div>
     </div>
   );

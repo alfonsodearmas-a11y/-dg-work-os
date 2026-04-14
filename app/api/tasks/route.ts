@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireRole, canAssignTasks } from '@/lib/auth-helpers';
+import { MINISTRY_ROLES } from '@/lib/people-types';
 import { supabaseAdmin } from '@/lib/db';
 import { insertNotification } from '@/lib/notifications';
 import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
@@ -99,10 +100,27 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   const { data, error: validationError } = await parseBody(request, createTaskSchema);
   if (validationError) return validationError;
 
+  const isMinistry = MINISTRY_ROLES.includes(session.user.role);
+
+  // Officers cannot assign to others
   let ownerId = session.user.id;
   if (data.assignee_id && canAssignTasks(session.user.role)) {
+    // Non-ministry users can only assign to users within their own agency
+    if (!isMinistry && session.user.agency) {
+      const { data: assigneeUser } = await supabaseAdmin
+        .from('users')
+        .select('agency')
+        .eq('id', data.assignee_id)
+        .single();
+      if (assigneeUser && assigneeUser.agency?.toLowerCase() !== session.user.agency?.toLowerCase()) {
+        return apiError('Cannot assign tasks to users outside your agency', 403);
+      }
+    }
     ownerId = data.assignee_id;
   }
+
+  // Non-ministry users: force agency to their own
+  const taskAgency = isMinistry ? (data.agency || null) : (session.user.agency?.toUpperCase() || data.agency || null);
 
   const { data: task, error } = await supabaseAdmin
     .from('tasks')
@@ -112,7 +130,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       status: data.status || 'new',
       priority: data.priority || 'medium',
       due_date: data.due_date || null,
-      agency: data.agency || null,
+      agency: taskAgency,
       role: data.role || null,
       owner_user_id: ownerId,
       assigned_by_user_id: data.assignee_id && canAssignTasks(session.user.role) ? session.user.id : null,
