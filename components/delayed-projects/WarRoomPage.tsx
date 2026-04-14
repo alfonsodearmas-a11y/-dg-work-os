@@ -276,6 +276,7 @@ export function WarRoomPage() {
             isMobile={isMobile}
             onRefresh={handleRefresh}
             onLogIntervention={handleLogIntervention}
+            interventionSummary={interventionSummary}
           />
 
           {/* Section 3: Reference Panels */}

@@ -21,7 +21,7 @@ interface RegistryTableProps {
   isMobile: boolean;
 }
 
-const COLUMNS = [
+const ALL_COLUMNS = [
   { key: 'risk', label: 'Risk', sortable: true, width: 'w-16' },
   { key: 'name', label: 'Project', sortable: true, width: 'flex-1 min-w-[200px]' },
   { key: 'agency', label: 'Agency', sortable: true, width: 'w-20' },
@@ -30,6 +30,7 @@ const COLUMNS = [
   { key: 'completion', label: 'Completion', sortable: true, width: 'w-28' },
   { key: 'delta', label: '\u0394', sortable: false, width: 'w-16' },
   { key: 'overdue', label: 'Overdue', sortable: true, width: 'w-20' },
+  { key: 'interventions', label: 'Int.', sortable: true, width: 'w-14' },
   { key: 'action', label: '', sortable: false, width: 'w-16' },
 ];
 
@@ -51,6 +52,12 @@ export function RegistryTable({
     );
   }
 
+  // Conditionally show delta column only when meaningful data exists
+  const showDelta = projects.some((p) => p.delta_completion !== null);
+  const COLUMNS = showDelta
+    ? ALL_COLUMNS
+    : ALL_COLUMNS.filter((c) => c.key !== 'delta');
+
   // Mobile: card layout
   if (isMobile) {
     return (
@@ -70,6 +77,11 @@ export function RegistryTable({
               <span className="text-slate-400">{fmtCurrency(p.contract_value / 100)}</span>
               <CompletionBar pct={p.completion_percent} />
               <DaysOverdueBadge endDate={p.project_end_date} />
+              <span className={`text-[10px] tabular-nums font-medium ${
+                p.intervention_count === 0 ? 'text-red-400' : 'text-emerald-400'
+              }`}>
+                {p.intervention_count === 0 ? '0 int.' : `${p.intervention_count} int.`}
+              </span>
             </div>
           </button>
         ))}
@@ -118,8 +130,15 @@ export function RegistryTable({
                 <td className="text-slate-400 tabular-nums">{p.region || '-'}</td>
                 <td className="text-white tabular-nums">{fmtCurrency(p.contract_value / 100)}</td>
                 <td><CompletionBar pct={p.completion_percent} /></td>
-                <td><DeltaIndicator delta={p.delta_completion} stalledWeeks={p.stalled_weeks} /></td>
+                {showDelta && <td><DeltaIndicator delta={p.delta_completion} stalledWeeks={p.stalled_weeks} /></td>}
                 <td><DaysOverdueBadge endDate={p.project_end_date} /></td>
+                <td>
+                  <span className={`text-xs tabular-nums font-medium ${
+                    p.intervention_count === 0 ? 'text-red-400' : 'text-emerald-400'
+                  }`}>
+                    {p.intervention_count}
+                  </span>
+                </td>
                 <td>
                   <button
                     onClick={(e) => { e.stopPropagation(); onLogIntervention?.(p); }}

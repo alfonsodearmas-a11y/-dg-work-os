@@ -118,7 +118,7 @@ export async function getProjects(
 
   const sortField = filters.sort || 'remaining_value';
   const sortDir = filters.sort_dir || 'desc';
-  const COMPUTED_SORTS = new Set(['remaining_value', 'risk', 'overdue']);
+  const COMPUTED_SORTS = new Set(['remaining_value', 'risk', 'overdue', 'interventions']);
   const isComputedSort = COMPUTED_SORTS.has(sortField);
 
   if (!isComputedSort) {
@@ -134,14 +134,24 @@ export async function getProjects(
 
   const rawProjects = (dataResult.data || []) as DelayedProject[];
 
-  // Get latest snapshot map for delta computation
-  const snapshotMap = await getLatestSnapshotMap();
+  // Get latest snapshot map and intervention counts in parallel
+  const [snapshotMap, interventionData] = await Promise.all([
+    getLatestSnapshotMap(),
+    supabaseAdmin.from('interventions').select('project_id'),
+  ]);
+
+  // Build per-project intervention count map
+  const interventionCountMap = new Map<string, number>();
+  for (const row of interventionData.data || []) {
+    interventionCountMap.set(row.project_id, (interventionCountMap.get(row.project_id) || 0) + 1);
+  }
 
   // Risk tier filtering happens post-query since it's computed
   let enriched = rawProjects.map((p) => {
     const snap = snapshotMap.get(p.id);
     const delta = snap ? Number(p.completion_percent) - snap.completion_percent : null;
-    return enrichProject(p, delta);
+    const intCount = interventionCountMap.get(p.id) || 0;
+    return enrichProject(p, delta, null, intCount);
   });
 
   // Post-enrichment sort for computed fields
@@ -154,6 +164,8 @@ export async function getProjects(
       enriched.sort((a, b) => dir * ((RISK_ORDER[a.risk_tier] ?? 4) - (RISK_ORDER[b.risk_tier] ?? 4)));
     } else if (sortField === 'overdue') {
       enriched.sort((a, b) => dir * ((a.days_overdue ?? -Infinity) - (b.days_overdue ?? -Infinity)));
+    } else if (sortField === 'interventions') {
+      enriched.sort((a, b) => dir * (a.intervention_count - b.intervention_count));
     }
   }
 
@@ -581,7 +593,7 @@ export async function getInterventionSummary(): Promise<InterventionSummary> {
 
   if (error) {
     logger.error({ error }, 'Failed to fetch intervention summary');
-    return { total: 0, pending: 0, in_progress: 0, completed: 0, overdue: 0, projects_with_zero: 0 };
+    return { total: 0, pending: 0, in_progress: 0, completed: 0, overdue: 0, projects_with_zero: 0, total_projects: 0 };
   }
 
   const rows = interventions || [];
@@ -604,6 +616,7 @@ export async function getInterventionSummary(): Promise<InterventionSummary> {
     completed,
     overdue,
     projects_with_zero: (totalProjects || 0) - projectsWithInterventions.size,
+    total_projects: totalProjects || 0,
   };
 }
 

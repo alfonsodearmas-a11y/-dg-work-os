@@ -1,56 +1,41 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import {
-  AlertTriangle, Plus,
-} from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import { fmtDate } from '@/components/oversight/types';
 import { getShortName } from '@/lib/delayed-projects/short-names';
 import type {
-  Intervention, DelayedProjectWithComputed,
+  Intervention,
+  InterventionSummary,
   InterventionStatus,
 } from '@/lib/delayed-projects/types';
 import {
   AgencyBadge, InterventionTypeBadge,
-  InterventionStatusBadge, DaysOverdueBadge,
+  InterventionStatusBadge,
 } from './shared';
 
 interface InterventionSectionProps {
   isMobile: boolean;
   onRefresh: () => void;
   onLogIntervention: (projectId: string, projectName: string) => void;
+  interventionSummary: InterventionSummary | null;
 }
 
-export function InterventionsTab({ isMobile, onRefresh, onLogIntervention }: InterventionSectionProps) {
+export function InterventionsTab({ isMobile, onRefresh, interventionSummary }: InterventionSectionProps) {
   const [interventions, setInterventions] = useState<(Intervention & { project_name?: string; sub_agency?: string })[]>([]);
-  const [unattended, setUnattended] = useState<DelayedProjectWithComputed[]>([]);
-  const [totalProjects, setTotalProjects] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  const unattendedCount = interventionSummary?.projects_with_zero ?? 0;
+  const totalProjects = interventionSummary?.total_projects ?? 0;
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [listRes, projectsRes] = await Promise.all([
-        fetch('/api/delayed-projects/interventions?limit=500'),
-        fetch('/api/delayed-projects?limit=200'),
-      ]);
-
-      let allInterventions: (Intervention & { project_name?: string; sub_agency?: string })[] = [];
-      if (listRes.ok) {
-        const data = await listRes.json();
-        allInterventions = data.interventions || [];
-        setInterventions(allInterventions);
-      }
-
-      if (projectsRes.ok) {
-        const data = await projectsRes.json();
-        const allProjects: DelayedProjectWithComputed[] = data.projects || [];
-        setTotalProjects(allProjects.length);
-        const projectIdsWithInterventions = new Set(
-          allInterventions.map((inv) => inv.project_id),
-        );
-        setUnattended(allProjects.filter((p) => !projectIdsWithInterventions.has(p.id)));
+      const res = await fetch('/api/delayed-projects/interventions?limit=500');
+      if (res.ok) {
+        const data = await res.json();
+        setInterventions(data.interventions || []);
       }
     } catch {}
     setLoading(false);
@@ -92,46 +77,28 @@ export function InterventionsTab({ isMobile, onRefresh, onLogIntervention }: Int
     inv.status === 'PENDING' || inv.status === 'IN_PROGRESS' || inv.status === 'OVERDUE',
   );
 
+  const bannerCritical = unattendedCount > totalProjects / 2;
+  const bannerCls = bannerCritical
+    ? { border: 'border-red-500/40 bg-red-500/5', text: 'text-red-400' }
+    : { border: 'border-amber-500/40 bg-amber-500/5', text: 'text-amber-400' };
+
   return (
     <div className="space-y-5">
-      {/* Unattended Projects Banner */}
-      {unattended.length > 0 ? (
-        <div className="rounded-xl border-2 border-red-500/40 bg-red-500/5 p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="h-5 w-5 text-red-400" />
-            <h3 className="text-sm font-semibold text-red-400">
-              {unattended.length} of {totalProjects} projects have zero interventions logged
-            </h3>
-          </div>
-          <p className="text-xs text-slate-400 mb-4">
-            Nobody is tracking action on these delayed projects. Log an intervention to begin accountability tracking.
+      {/* Intervention Accountability Banner */}
+      {unattendedCount > 0 ? (
+        <div className={`rounded-xl border-2 p-4 flex items-center gap-3 ${bannerCls.border}`}>
+          <AlertTriangle className={`h-5 w-5 shrink-0 ${bannerCls.text}`} />
+          <p className={`text-sm font-medium ${bannerCls.text}`}>
+            {unattendedCount} of {totalProjects} projects have zero interventions logged
           </p>
-          <div className="space-y-2">
-            {unattended.map((p) => (
-              <div key={p.id} className="flex items-center gap-2 p-2 bg-navy-950/40 rounded-lg">
-                <AgencyBadge agency={p.sub_agency} />
-                <span className="text-xs text-white truncate flex-1" title={p.project_name}>{getShortName(p.project_name)}</span>
-                <span className="text-xs text-slate-400 tabular-nums shrink-0">{p.completion_percent}%</span>
-                <DaysOverdueBadge endDate={p.project_end_date} />
-                <button
-                  onClick={() => onLogIntervention(p.id, p.project_name)}
-                  className="btn-navy px-2 py-1 text-[10px] flex items-center gap-1 shrink-0"
-                >
-                  <Plus className="h-3 w-3" /> Log
-                </button>
-              </div>
-            ))}
-          </div>
         </div>
-      ) : (
-        <div className="rounded-xl border-2 border-emerald-500/40 bg-emerald-500/5 p-5">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-emerald-400">
-              All projects have at least one intervention logged.
-            </span>
-          </div>
+      ) : totalProjects > 0 ? (
+        <div className="rounded-xl border-2 border-emerald-500/40 bg-emerald-500/5 p-4 flex items-center gap-2">
+          <span className="text-sm font-semibold text-emerald-400">
+            All projects have at least one intervention logged.
+          </span>
         </div>
-      )}
+      ) : null}
 
       {/* Intervention Timeline */}
       <div className="card-premium p-5">

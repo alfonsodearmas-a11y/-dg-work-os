@@ -34,7 +34,7 @@ export function ProjectRegistryTab({ isMobile, onRefresh, onLogIntervention }: P
     return f;
   });
 
-  const [sort, setSort] = useState({ field: searchParams.get('sort') || 'remaining_value', dir: (searchParams.get('sort_dir') || 'desc') as 'asc' | 'desc' });
+  const [sort, setSort] = useState({ field: searchParams.get('sort') || 'risk', dir: (searchParams.get('sort_dir') || 'asc') as 'asc' | 'desc' });
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
   const [projects, setProjects] = useState<DelayedProjectWithComputed[]>([]);
   const [total, setTotal] = useState(0);

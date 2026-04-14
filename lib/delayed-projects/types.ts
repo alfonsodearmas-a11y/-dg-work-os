@@ -83,6 +83,7 @@ export interface ComputedFields {
   risk_tier: RiskTier;
   delta_completion: number | null;
   stalled_weeks: number | null;
+  intervention_count: number;
 }
 
 export type DelayedProjectWithComputed = DelayedProject & ComputedFields;
@@ -168,6 +169,7 @@ export interface InterventionSummary {
   completed: number;
   overdue: number;
   projects_with_zero: number;
+  total_projects: number;
 }
 
 export interface ProjectDetail extends DelayedProjectWithComputed {
@@ -227,6 +229,7 @@ export function enrichProject(
   project: DelayedProject,
   deltaCompletion: number | null = null,
   stalledWeeks: number | null = null,
+  interventionCount: number = 0,
 ): DelayedProjectWithComputed {
   return {
     ...project,
@@ -235,5 +238,6 @@ export function enrichProject(
     risk_tier: computeRiskTier(project.project_end_date, project.completion_percent, project.contract_value),
     delta_completion: deltaCompletion,
     stalled_weeks: stalledWeeks,
+    intervention_count: interventionCount,
   };
 }
