@@ -63,11 +63,15 @@ const KNOWN_SHORT_NAMES: [string, string][] = [
   ['GWI Corporate Complex', 'GWI Corporate Complex'],
 ];
 
-// Sort by key length descending so longer (more specific) matches win
-const SORTED_SHORT_NAMES = [...KNOWN_SHORT_NAMES].sort((a, b) => b[0].length - a[0].length);
+// Sort by key length descending so longer (more specific) matches win.
+// Pre-lowercase keys to avoid repeated toLowerCase() in the hot path.
+const SORTED_SHORT_NAMES = [...KNOWN_SHORT_NAMES]
+  .sort((a, b) => b[0].length - a[0].length)
+  .map(([key, val]) => [key.toLowerCase(), val] as const);
 
 // ── Leading prefixes to strip ──────────────────────────────────────────────
 
+// Pre-compute [lowerPrefix, originalLength] to avoid repeated toLowerCase() calls
 const STRIP_PREFIXES = [
   'Design, Supply and Commissioning of ',
   'Design Supply and Commissioning of ',
@@ -95,7 +99,7 @@ const STRIP_PREFIXES = [
   'Metering Programme: ',
   'Infrastructure Development Phase 2 – ',
   'Infrastructure Development Phase 2 - ',
-];
+].map(p => ({ lower: p.toLowerCase(), len: p.length }));
 
 // ── Region abbreviation patterns ───────────────────────────────────────────
 
@@ -120,18 +124,19 @@ export function getShortName(fullName: string): string {
   const lower = normalized.toLowerCase();
 
   // Substring match against known map (longest key wins)
-  for (const [key, shortName] of SORTED_SHORT_NAMES) {
-    if (lower.includes(key.toLowerCase())) {
+  for (const [lowerKey, shortName] of SORTED_SHORT_NAMES) {
+    if (lower.includes(lowerKey)) {
       return shortName;
     }
   }
 
   // Fallback: strip prefixes and abbreviate regions
   let name = normalized;
+  const nameLower = name.toLowerCase();
 
-  for (const prefix of STRIP_PREFIXES) {
-    if (name.toLowerCase().startsWith(prefix.toLowerCase())) {
-      name = name.slice(prefix.length);
+  for (const { lower: lowerPrefix, len } of STRIP_PREFIXES) {
+    if (nameLower.startsWith(lowerPrefix)) {
+      name = name.slice(len);
       break;
     }
   }

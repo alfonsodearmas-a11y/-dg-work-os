@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AlertTriangle, MessageSquare } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { fmtDate } from '@/components/oversight/types';
 import { getShortName } from '@/lib/delayed-projects/short-names';
 import type {
@@ -18,9 +19,20 @@ import {
 interface InterventionSectionProps {
   isMobile: boolean;
   onRefresh: () => void;
-  onLogIntervention: (projectId: string, projectName: string) => void;
   interventionSummary: InterventionSummary | null;
 }
+
+const BANNER_STYLES = {
+  critical: 'bg-red-500/5 border-red-500/30 backdrop-blur-xl',
+  warning: 'bg-amber-500/5 border-amber-500/30 backdrop-blur-xl',
+  clear: 'bg-emerald-500/5 border-emerald-500/30 backdrop-blur-xl',
+} as const;
+
+const BANNER_TEXT_STYLES = {
+  critical: 'text-red-400',
+  warning: 'text-amber-400',
+  clear: 'text-emerald-400',
+} as const;
 
 export function InterventionsTab({ isMobile, onRefresh, interventionSummary }: InterventionSectionProps) {
   const [interventions, setInterventions] = useState<(Intervention & { project_name?: string; sub_agency?: string })[]>([]);
@@ -80,35 +92,23 @@ export function InterventionsTab({ isMobile, onRefresh, interventionSummary }: I
   const ratio = totalProjects > 0 ? unattendedCount / totalProjects : 0;
   const bannerSeverity = ratio > 0.5 ? 'critical' : ratio > 0 ? 'warning' : 'clear';
 
-  const bannerStyles = {
-    critical: 'bg-red-500/5 border-red-500/30 backdrop-blur-xl',
-    warning: 'bg-amber-500/5 border-amber-500/30 backdrop-blur-xl',
-    clear: 'bg-emerald-500/5 border-emerald-500/30 backdrop-blur-xl',
-  };
-
-  const bannerTextStyles = {
-    critical: 'text-red-400',
-    warning: 'text-amber-400',
-    clear: 'text-emerald-400',
-  };
-
   return (
     <div className="space-y-5">
       {/* Intervention Accountability Banner */}
       {unattendedCount > 0 ? (
-        <div className={`rounded-xl border p-5 flex items-center gap-4 transition-all duration-500 ${bannerStyles[bannerSeverity]}`}>
-          <AlertTriangle className={`h-6 w-6 shrink-0 ${bannerTextStyles[bannerSeverity]}`} />
+        <div className={`rounded-xl border p-5 flex items-center gap-4 transition-all duration-500 ${BANNER_STYLES[bannerSeverity]}`}>
+          <AlertTriangle className={`h-6 w-6 shrink-0 ${BANNER_TEXT_STYLES[bannerSeverity]}`} />
           <div>
-            <p className={`font-serif text-xl leading-tight ${bannerTextStyles[bannerSeverity]}`}>
+            <p className={`font-serif text-xl leading-tight ${BANNER_TEXT_STYLES[bannerSeverity]}`}>
               {unattendedCount} of {totalProjects}
             </p>
-            <p className={`text-sm font-medium ${bannerTextStyles[bannerSeverity]} opacity-80`}>
+            <p className={`text-sm font-medium ${BANNER_TEXT_STYLES[bannerSeverity]} opacity-80`}>
               projects have zero interventions logged
             </p>
           </div>
         </div>
       ) : totalProjects > 0 ? (
-        <div className={`rounded-xl border p-5 flex items-center gap-3 ${bannerStyles.clear}`}>
+        <div className={`rounded-xl border p-5 flex items-center gap-3 ${BANNER_STYLES.clear}`}>
           <span className="font-serif text-lg text-emerald-400">
             All projects have at least one intervention logged.
           </span>
@@ -122,15 +122,11 @@ export function InterventionsTab({ isMobile, onRefresh, interventionSummary }: I
         </div>
 
         {interventions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="w-12 h-12 rounded-xl bg-navy-800/50 flex items-center justify-center mb-4">
-              <MessageSquare className="w-6 h-6 text-navy-600" />
-            </div>
-            <p className="text-sm text-slate-500 font-medium mb-1">No Interventions Yet</p>
-            <p className="text-xs text-navy-600 max-w-xs">
-              Use the &quot;+ Log&quot; button on any project above to record the first intervention.
-            </p>
-          </div>
+          <EmptyState
+            icon={<div className="w-12 h-12 rounded-xl bg-navy-800/50 flex items-center justify-center"><MessageSquare className="w-6 h-6" /></div>}
+            title="No Interventions Yet"
+            description='Use the "+ Log" button on any project above to record the first intervention.'
+          />
         ) : (
           <div className="space-y-3">
             {interventions.map((inv) => (

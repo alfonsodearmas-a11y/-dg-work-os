@@ -41,6 +41,14 @@ export function AgencyBadge({ agency }: { agency: string }) {
   );
 }
 
+// ── Shared overdue color logic ──────────────────────────────────────────────
+
+function daysOverdueColor(days: number): string {
+  if (days > 365) return 'text-red-400 font-bold';
+  if (days > 90) return 'text-amber-400 font-semibold';
+  return 'text-slate-400';
+}
+
 // ── Days Overdue Badge ──────────────────────────────────────────────────────
 
 export function DaysOverdueBadge({ endDate }: { endDate: string | null }) {
@@ -55,21 +63,14 @@ export function DaysOverdueBadge({ endDate }: { endDate: string | null }) {
     return <span className="text-xs text-blue-400">Ends {label}</span>;
   }
 
-  let color = 'text-slate-400';
-  if (diff > 365) color = 'text-red-400 font-bold';
-  else if (diff > 90) color = 'text-amber-400 font-semibold';
-
-  return <span className={`text-xs tabular-nums ${color}`}>{diff.toLocaleString()}d</span>;
+  return <span className={`text-xs tabular-nums ${daysOverdueColor(diff)}`}>{diff.toLocaleString()}d</span>;
 }
 
 // ── Days Value (for averages, not per-project end dates) ────────────────────
 
 export function DaysValue({ days }: { days: number }) {
   if (days === 0) return <span className="text-xs text-emerald-400">0d</span>;
-  let color = 'text-slate-400';
-  if (days > 365) color = 'text-red-400 font-bold';
-  else if (days > 90) color = 'text-amber-400 font-semibold';
-  return <span className={`text-xs tabular-nums ${color}`}>{days.toLocaleString()}d</span>;
+  return <span className={`text-xs tabular-nums ${daysOverdueColor(days)}`}>{days.toLocaleString()}d</span>;
 }
 
 // ── Delta Indicator ─────────────────────────────────────────────────────────

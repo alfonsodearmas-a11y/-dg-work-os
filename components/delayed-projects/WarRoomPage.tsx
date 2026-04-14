@@ -275,7 +275,6 @@ export function WarRoomPage() {
           <InterventionsTab
             isMobile={isMobile}
             onRefresh={handleRefresh}
-            onLogIntervention={handleLogIntervention}
             interventionSummary={interventionSummary}
           />
 
