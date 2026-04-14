@@ -7,7 +7,7 @@ import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { CHART_TOOLTIP_STYLE } from '@/lib/chart-styles';
 import type { ProjectDetail } from '@/lib/delayed-projects/types';
 import { fmtCurrency, fmtDate, fmtRegion } from '@/components/oversight/types';
-import { getShortName } from '@/lib/delayed-projects/short-names';
+import { getShortName, sanitizeContractors } from '@/lib/delayed-projects/short-names';
 import {
   RiskTierBadge, AgencyBadge, DaysOverdueBadge,
   CompletionBar, InterventionTypeBadge, InterventionStatusBadge,
@@ -80,7 +80,7 @@ export function ProjectDetailPanel({ projectId, onClose }: ProjectDetailPanelPro
             <DetailItem label="Financial Exposure" value={fmtCurrency(detail.remaining_value / 100)} />
             <DetailItem label="Region" value={fmtRegion(detail.region)} />
             <DetailItem label="End Date" value={fmtDate(detail.project_end_date)} />
-            <DetailItem label="Contractor(s)" value={detail.contractors || '-'} span2 />
+            <DetailItem label="Contractor(s)" value={sanitizeContractors(detail.contractors) || '-'} span2 />
             <DetailItem label="Tender Board" value={detail.tender_board_type || '-'} />
             <DetailItem label="Status" value={detail.status} />
           </div>

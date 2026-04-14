@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { AGENCY_HEX_COLORS } from '@/lib/constants/agencies';
 import { fmtCurrency } from '@/components/oversight/types';
 import type { DelayedProjectWithComputed } from '@/lib/delayed-projects/types';
+import { sanitizeContractors } from '@/lib/delayed-projects/short-names';
 import { DaysValue, ExposureBar } from './shared';
 
 interface ContractorConcentrationProps {
@@ -30,7 +31,7 @@ export function ContractorConcentration({ projects, isMobile }: ContractorConcen
     }>();
 
     for (const p of projects) {
-      const key = p.contractors?.trim() || 'Unknown Contractor';
+      const key = sanitizeContractors(p.contractors) || 'Unknown Contractor';
       const entry = map.get(key) || { count: 0, agencies: new Set(), overdueSum: 0, overdueCount: 0, exposure: 0 };
       entry.count++;
       entry.agencies.add(p.sub_agency);
@@ -90,7 +91,7 @@ export function ContractorConcentration({ projects, isMobile }: ContractorConcen
                   {g.agencies.map(a => (
                     <span
                       key={a}
-                      className="w-3 h-3 rounded-full border border-navy-900"
+                      className="w-4 h-4 rounded-full ring-1 ring-navy-900 shadow-sm"
                       style={{ backgroundColor: AGENCY_HEX_COLORS[a] || '#64748b' }}
                       title={a}
                     />
@@ -144,7 +145,7 @@ export function ContractorConcentration({ projects, isMobile }: ContractorConcen
                     {g.agencies.map(a => (
                       <span
                         key={a}
-                        className="w-3.5 h-3.5 rounded-full border border-navy-900 shrink-0"
+                        className="w-5 h-5 rounded-full ring-1 ring-navy-900 shadow-sm shrink-0"
                         style={{ backgroundColor: AGENCY_HEX_COLORS[a] || '#64748b' }}
                         title={a}
                       />

@@ -66,13 +66,13 @@ export function RegistryTable({
           <button
             key={p.id}
             onClick={() => onSelectProject(p)}
-            className="w-full text-left card-premium p-4 space-y-2"
+            className="w-full text-left rounded-xl p-4 space-y-2 bg-[rgba(255,255,255,0.03)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] hover:border-gold-500/30 transition-all"
           >
             <div className="flex items-center gap-2">
               <RiskTierBadge tier={p.risk_tier} />
               <AgencyBadge agency={p.sub_agency} />
             </div>
-            <p className="text-sm text-white font-medium line-clamp-2" title={p.project_name}>{getShortName(p.project_name)}</p>
+            <p className="text-sm text-white font-semibold" title={p.project_name}>{getShortName(p.project_name)}</p>
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-400">{fmtCurrency(p.contract_value / 100)}</span>
               <CompletionBar pct={p.completion_percent} />
@@ -93,20 +93,24 @@ export function RegistryTable({
   // Desktop: table
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto rounded-xl border border-navy-800">
+      <div className="overflow-x-auto overflow-y-auto max-h-[70vh] rounded-xl border border-navy-800">
         <table className="table-premium w-full text-sm">
-          <thead>
+          <thead className="sticky top-0 z-10" style={{ background: 'linear-gradient(135deg, #1a2744 0%, #2d3a52 100%)' }}>
             <tr>
               {COLUMNS.map((col) => (
                 <th
                   key={col.key}
-                  className={`text-left ${col.width} ${col.sortable ? 'cursor-pointer hover:text-white select-none' : ''}`}
+                  className={`text-left ${col.width} ${col.sortable ? 'cursor-pointer select-none' : ''} text-[11px] uppercase tracking-wider`}
                   onClick={col.sortable ? () => onSort(col.key) : undefined}
                 >
                   <span className="flex items-center gap-1">
-                    {col.label}
+                    <span className={sort.field === col.key ? 'text-gold-500' : 'text-gold-500/70'}>
+                      {col.label}
+                    </span>
                     {col.sortable && sort.field === col.key && (
-                      sort.dir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                      sort.dir === 'asc'
+                        ? <ChevronUp className="h-3 w-3 text-gold-500" />
+                        : <ChevronDown className="h-3 w-3 text-gold-500" />
                     )}
                   </span>
                 </th>
@@ -122,7 +126,7 @@ export function RegistryTable({
               >
                 <td><RiskTierBadge tier={p.risk_tier} /></td>
                 <td>
-                  <span className="text-white font-medium line-clamp-1" title={p.project_name}>
+                  <span className="text-white font-semibold whitespace-normal">
                     {getShortName(p.project_name)}
                   </span>
                 </td>
@@ -133,7 +137,7 @@ export function RegistryTable({
                 {showDelta && <td><DeltaIndicator delta={p.delta_completion} stalledWeeks={p.stalled_weeks} /></td>}
                 <td><DaysOverdueBadge endDate={p.project_end_date} /></td>
                 <td>
-                  <span className={`text-xs tabular-nums font-medium ${
+                  <span className={`text-xs tabular-nums font-semibold ${
                     p.intervention_count === 0 ? 'text-red-400' : 'text-emerald-400'
                   }`}>
                     {p.intervention_count}
@@ -142,7 +146,7 @@ export function RegistryTable({
                 <td>
                   <button
                     onClick={(e) => { e.stopPropagation(); onLogIntervention?.(p); }}
-                    className="btn-navy px-2 py-1 text-[10px] flex items-center gap-1"
+                    className="btn-gold px-2 py-1 text-[10px] flex items-center gap-1"
                     title="Log intervention"
                   >
                     <Plus className="h-3 w-3" /> Log

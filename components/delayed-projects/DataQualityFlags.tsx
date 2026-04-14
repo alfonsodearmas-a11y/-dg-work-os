@@ -101,11 +101,11 @@ function FlagSection({ category }: { category: FlagCategory }) {
           hasItems ? 'hover:bg-navy-900/50 cursor-pointer' : 'cursor-default opacity-50'
         }`}
       >
-        <Icon className={`w-3.5 h-3.5 shrink-0 ${hasItems ? 'text-orange-400' : 'text-slate-600'}`} />
+        <Icon className={`w-4 h-4 shrink-0 ${hasItems ? 'text-orange-400' : 'text-slate-600'}`} />
         <span className={`text-xs flex-1 ${hasItems ? 'text-white' : 'text-slate-600'}`}>
           {category.label}
         </span>
-        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+        <span className={`text-xs font-semibold min-w-[1.5rem] text-center px-1.5 py-0.5 rounded-full ${
           hasItems ? 'bg-red-500/20 text-red-400' : 'bg-navy-800 text-navy-600'
         }`}>
           {category.items.length}
@@ -120,7 +120,7 @@ function FlagSection({ category }: { category: FlagCategory }) {
           {category.items.map((item) => (
             <div key={item.id} className="flex items-center gap-1.5 py-0.5">
               <AgencyBadge agency={item.agency} />
-              <span className="text-[10px] text-slate-400 truncate" title={item.name}>
+              <span className="text-xs text-slate-400" title={item.name}>
                 {item.shortName}
               </span>
             </div>

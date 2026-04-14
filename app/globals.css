@@ -41,6 +41,7 @@ html {
   --color-foreground: var(--foreground);
   --font-sans: var(--font-outfit), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: var(--font-jetbrains), 'JetBrains Mono', 'Fira Code', monospace;
+  --font-serif: var(--font-dm-serif), 'DM Serif Display', Georgia, serif;
 
   /* Custom colors for Tailwind */
   --color-navy-950: #0a1628;

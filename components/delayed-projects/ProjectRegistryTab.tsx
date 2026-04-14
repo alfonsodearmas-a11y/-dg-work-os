@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import { Download } from 'lucide-react';
 import type { DelayedProjectWithComputed, RiskTier } from '@/lib/delayed-projects/types';
+import { getShortName } from '@/lib/delayed-projects/short-names';
 import { RegistryFilters, DEFAULT_FILTERS, type FilterState } from './RegistryFilters';
 import { RegistryTable } from './RegistryTable';
 import { ProjectDetailPanel } from './ProjectDetailPanel';
@@ -137,7 +138,7 @@ export function ProjectRegistryTab({ isMobile, onRefresh, onLogIntervention }: P
         sort={sort}
         onSort={handleSort}
         onSelectProject={(p) => setSelectedProjectId(p.id)}
-        onLogIntervention={onLogIntervention ? (p) => onLogIntervention(p.id, p.project_name) : undefined}
+        onLogIntervention={onLogIntervention ? (p) => onLogIntervention(p.id, getShortName(p.project_name)) : undefined}
         page={page}
         totalPages={totalPages}
         total={total}

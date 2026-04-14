@@ -79,7 +79,7 @@ export function InterventionModal({ isOpen, onClose, onCreated, projectId, proje
         <div className="flex items-center justify-between px-6 py-4 border-b border-navy-800">
           <div>
             <h2 className="text-lg font-semibold text-white">Log Intervention</h2>
-            <p className="text-xs text-navy-600 truncate max-w-[300px]">{projectName}</p>
+            <p className="text-xs text-navy-600">{projectName}</p>
           </div>
           <button onClick={onClose} className="text-navy-600 hover:text-white" aria-label="Close">
             <X className="h-5 w-5" />
