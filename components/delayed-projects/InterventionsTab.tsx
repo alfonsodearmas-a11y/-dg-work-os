@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { AlertTriangle, MessageSquare } from 'lucide-react';
+import { AlertTriangle, MessageSquare, Trash2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
+import { useToast } from '@/components/ui/Toast';
 import { fmtDate } from '@/components/oversight/types';
 import { getShortName } from '@/lib/delayed-projects/short-names';
 import type {
@@ -32,9 +34,25 @@ const BANNER_TEXT_STYLES = {
   clear: 'text-emerald-400',
 } as const;
 
+function DeleteButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="p-1 rounded text-navy-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+      aria-label="Delete intervention"
+    >
+      <Trash2 className="h-3.5 w-3.5" />
+    </button>
+  );
+}
+
 export function InterventionsTab({ interventionSummary }: InterventionSectionProps) {
+  const { effectiveUser } = useEffectiveUser();
+  const { toast } = useToast();
   const [interventions, setInterventions] = useState<(Intervention & { project_name?: string; sub_agency?: string })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; description: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const unattendedCount = interventionSummary?.projects_with_zero ?? 0;
   const totalProjects = interventionSummary?.total_projects ?? 0;
@@ -64,6 +82,35 @@ export function InterventionsTab({ interventionSummary }: InterventionSectionPro
       });
       if (res.ok) fetchData();
     } catch {}
+  }
+
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/delayed-projects/interventions/${deleteTarget.id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        await fetchData();
+        window.dispatchEvent(new Event('intervention-deleted'));
+      } else {
+        const err = await res.json().catch(() => null);
+        toast.error(err?.error || 'Failed to delete intervention');
+      }
+    } catch {
+      toast.error('Failed to delete intervention');
+    }
+    setDeleting(false);
+    setDeleteTarget(null);
+  }
+
+  function canDelete(inv: Intervention): boolean {
+    const isDG = effectiveUser.role === 'dg';
+    const isCreator =
+      inv.created_by === effectiveUser.name ||
+      inv.created_by === effectiveUser.email;
+    return isDG || isCreator;
   }
 
   // Expose refetch so parent can call after logging an intervention
@@ -151,9 +198,8 @@ export function InterventionsTab({ interventionSummary }: InterventionSectionPro
                     <span>{new Date(inv.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                   </div>
                 </div>
-                {/* Quick status change */}
-                {inv.status !== 'COMPLETED' && (
-                  <div className="shrink-0">
+                <div className="shrink-0 flex items-center gap-1.5">
+                  {inv.status !== 'COMPLETED' && (
                     <select
                       value={inv.status}
                       onChange={(e) => handleStatusChange(inv.id, e.target.value as InterventionStatus)}
@@ -164,8 +210,11 @@ export function InterventionsTab({ interventionSummary }: InterventionSectionPro
                       <option value="COMPLETED">Completed</option>
                       <option value="OVERDUE">Overdue</option>
                     </select>
-                  </div>
-                )}
+                  )}
+                  {canDelete(inv) && (
+                    <DeleteButton onClick={() => setDeleteTarget({ id: inv.id, description: inv.description })} />
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -185,6 +234,7 @@ export function InterventionsTab({ interventionSummary }: InterventionSectionPro
                   <th className="text-left">Assigned</th>
                   <th className="text-left">Due Date</th>
                   <th className="text-left">Status</th>
+                  <th className="w-8"></th>
                 </tr>
               </thead>
               <tbody>
@@ -207,11 +257,48 @@ export function InterventionsTab({ interventionSummary }: InterventionSectionPro
                           {inv.due_date ? fmtDate(inv.due_date) : '-'}
                         </td>
                         <td><InterventionStatusBadge status={inv.status} /></td>
+                        <td>
+                          {canDelete(inv) && (
+                            <DeleteButton onClick={() => setDeleteTarget({ id: inv.id, description: inv.description })} />
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-navy-900 border border-navy-800 rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="px-6 py-4 border-b border-navy-800">
+              <h2 className="text-lg font-semibold text-white">Delete Intervention</h2>
+            </div>
+            <div className="px-6 py-5 space-y-3">
+              <p className="text-sm text-slate-300">Delete this intervention? This cannot be undone.</p>
+              <p className="text-xs text-navy-600 line-clamp-2">&ldquo;{deleteTarget.description}&rdquo;</p>
+            </div>
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-navy-800">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+                className="btn-navy px-4 py-2 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={deleting}
+                className="px-4 py-2 text-sm rounded-lg bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {deleting && <Spinner size="sm" />}
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -65,6 +65,13 @@ export function WarRoomPage() {
     fetchAll().finally(() => setLoading(false));
   }, [fetchAll]);
 
+  // Refresh summary when an intervention is deleted from within InterventionsTab
+  useEffect(() => {
+    const handler = () => fetchAll();
+    window.addEventListener('intervention-deleted', handler);
+    return () => window.removeEventListener('intervention-deleted', handler);
+  }, [fetchAll]);
+
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchAll();

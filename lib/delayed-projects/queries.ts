@@ -586,6 +586,29 @@ export async function updateInterventionStatus(
   return row as Intervention;
 }
 
+export async function getIntervention(id: string): Promise<Intervention | null> {
+  const { data, error } = await supabaseAdmin
+    .from('interventions')
+    .select()
+    .eq('id', id)
+    .single();
+
+  if (error) return null;
+  return data as Intervention;
+}
+
+export async function deleteIntervention(id: string): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('interventions')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    logger.error({ error }, 'Failed to delete intervention');
+    throw new Error(error.message);
+  }
+}
+
 export async function getInterventionSummary(): Promise<InterventionSummary> {
   const { data: interventions, error } = await supabaseAdmin
     .from('interventions')
