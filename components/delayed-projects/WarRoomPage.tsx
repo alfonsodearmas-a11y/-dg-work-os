@@ -128,7 +128,7 @@ export function WarRoomPage() {
             <Eye className="h-4 w-4 md:h-5 md:w-5 text-gold-500" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-xl md:text-2xl font-serif text-white">Delayed Projects Oversight</h1>
+            <h1 className="text-xl md:text-2xl font-serif font-normal text-white">Delayed Projects Oversight</h1>
             <p className="text-navy-600 text-xs md:text-sm truncate">
               Intervention Tracking & Risk Intelligence
               {summary?.last_upload_date && (

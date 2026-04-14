@@ -97,7 +97,7 @@ export function InterventionsTab({ interventionSummary }: InterventionSectionPro
         <div className={`rounded-xl border p-5 flex items-center gap-4 transition-all duration-500 ${BANNER_STYLES[bannerSeverity]}`}>
           <AlertTriangle className={`h-6 w-6 shrink-0 ${BANNER_TEXT_STYLES[bannerSeverity]}`} />
           <div>
-            <p className={`font-serif text-xl leading-tight ${BANNER_TEXT_STYLES[bannerSeverity]}`}>
+            <p className={`font-serif font-normal text-xl leading-tight ${BANNER_TEXT_STYLES[bannerSeverity]}`}>
               {unattendedCount} of {totalProjects}
             </p>
             <p className={`text-sm font-medium ${BANNER_TEXT_STYLES[bannerSeverity]} opacity-80`}>
@@ -107,7 +107,7 @@ export function InterventionsTab({ interventionSummary }: InterventionSectionPro
         </div>
       ) : totalProjects > 0 ? (
         <div className={`rounded-xl border p-5 flex items-center gap-3 ${BANNER_STYLES.clear}`}>
-          <span className="font-serif text-lg text-emerald-400">
+          <span className="font-serif font-normal text-lg text-emerald-400">
             All projects have at least one intervention logged.
           </span>
         </div>

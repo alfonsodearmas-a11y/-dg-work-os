@@ -180,7 +180,7 @@ export function WarRoomKpiCard({ label, value, sub, accent, bgAccent, alert, ico
       <div className={`w-10 h-10 rounded-lg ${bgAccent} flex items-center justify-center mb-3`}>
         <Icon className={`w-[18px] h-[18px] ${accent}`} />
       </div>
-      <p className="font-serif text-2xl text-white tracking-tight leading-none mb-1">{value}</p>
+      <p className="font-serif font-normal text-2xl text-white tracking-tight leading-none mb-1">{value}</p>
       <p className="text-[10px] uppercase tracking-[0.15em] text-navy-600 font-semibold">{label}</p>
       {sub && <p className="text-[10px] text-navy-600 mt-0.5">{sub}</p>}
     </div>
