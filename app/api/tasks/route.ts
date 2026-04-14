@@ -113,7 +113,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         .eq('id', data.assignee_id)
         .single();
       if (assigneeUser && assigneeUser.agency?.toLowerCase() !== session.user.agency?.toLowerCase()) {
-        return apiError('Cannot assign tasks to users outside your agency', 403);
+        return apiError('FORBIDDEN', 'Cannot assign tasks to users outside your agency', 403);
       }
     }
     ownerId = data.assignee_id;
