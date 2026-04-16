@@ -43,6 +43,22 @@ export const METHOD_CONFIG: Record<ProcurementMethod, { label: string }> = {
   request_for_quotation: { label: 'Request for Quotation' },
 };
 
+// -- PSIP sync -------------------------------------------------------------
+
+export const PSIP_AGENCY = 'GWI' as const;
+export const PSIP_REF_PATTERN = /^[HCU]-\d{3}$/;
+
+export const EMPTY_PSIP_FIELDS = {
+  psip_ref: null,
+  date_first_advertised: null,
+  tender_closing_date: null,
+  date_eval_submitted_mtb: null,
+  date_eval_submitted_nptab: null,
+  date_of_award: null,
+  psip_remarks: null,
+  psip_last_synced_at: null,
+} as const;
+
 // -- Entity interfaces ------------------------------------------------------
 
 export interface ProcurementPackage {
@@ -59,6 +75,15 @@ export interface ProcurementPackage {
   expected_delivery_date: string | null;
   created_at: string;
   updated_at: string;
+  // PSIP sync fields (GWI)
+  psip_ref: string | null;
+  date_first_advertised: string | null;
+  tender_closing_date: string | null;
+  date_eval_submitted_mtb: string | null;
+  date_eval_submitted_nptab: string | null;
+  date_of_award: string | null;
+  psip_remarks: string | null;
+  psip_last_synced_at: string | null;
   // Computed / joined fields
   agency_name: string;
   submitted_by_name: string;

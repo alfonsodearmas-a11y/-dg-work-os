@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { ArrowLeft, ShoppingCart, LayoutDashboard, BarChart3, Plus, Upload } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, LayoutDashboard, BarChart3, Plus, Upload, RefreshCw } from 'lucide-react';
 import { Tabs, type Tab } from '@/components/ui/Tabs';
 import { ProcurementKanban } from '@/components/procurement/ProcurementKanban';
 import { ProcurementAnalytics } from '@/components/procurement/ProcurementAnalytics';
 import { ProcurementNewPackageForm } from '@/components/procurement/ProcurementNewPackageForm';
 import { BulkUploadModal } from '@/components/procurement/BulkUploadModal';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { canAccessPsipSync } from '@/lib/auth-helpers';
 
 const tabs: Tab[] = [
   { id: 'pipeline', label: 'Pipeline', icon: LayoutDashboard },
@@ -25,6 +26,7 @@ export default function ProcurementPage() {
 
   const userRole = session?.user?.role;
   const canCreate = userRole === 'dg' || userRole === 'agency_admin';
+  const canPsipSync = userRole ? canAccessPsipSync(userRole, session?.user?.agency ?? null) : false;
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -47,6 +49,15 @@ export default function ProcurementPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {canPsipSync && (
+            <Link
+              href="/procurement/psip-sync"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-navy-800 text-navy-600 hover:text-gold-500 hover:border-gold-500/30 transition-colors"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span className="hidden sm:inline">PSIP Sync</span>
+            </Link>
+          )}
           {canCreate && (
             <>
               <button

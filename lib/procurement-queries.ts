@@ -10,11 +10,11 @@ import type {
   ProcurementMethod,
   PipelineStats,
 } from '@/lib/procurement-types';
-import { PROCUREMENT_STAGES } from '@/lib/procurement-types';
+import { PROCUREMENT_STAGES, EMPTY_PSIP_FIELDS } from '@/lib/procurement-types';
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
-const PACKAGE_COLUMNS = 'id, agency, title, nptab_number, description, estimated_value, procurement_method, current_stage, submitted_by, oversight_project_id, expected_delivery_date, created_at, updated_at';
+const PACKAGE_COLUMNS = 'id, agency, title, nptab_number, description, estimated_value, procurement_method, current_stage, submitted_by, oversight_project_id, expected_delivery_date, created_at, updated_at, psip_ref, date_first_advertised, tender_closing_date, date_eval_submitted_mtb, date_eval_submitted_nptab, date_of_award, psip_remarks, psip_last_synced_at';
 
 const PACKAGE_SELECT = `${PACKAGE_COLUMNS}, submitter:users!procurement_packages_submitted_by_fkey(name), latest_history:procurement_stage_history!procurement_stage_history_package_id_fkey(changed_at)`;
 
@@ -68,6 +68,14 @@ function enrichPackage(
     expected_delivery_date: (row.expected_delivery_date as string) || null,
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
+    psip_ref: (row.psip_ref as string) || null,
+    date_first_advertised: (row.date_first_advertised as string) || null,
+    tender_closing_date: (row.tender_closing_date as string) || null,
+    date_eval_submitted_mtb: (row.date_eval_submitted_mtb as string) || null,
+    date_eval_submitted_nptab: (row.date_eval_submitted_nptab as string) || null,
+    date_of_award: (row.date_of_award as string) || null,
+    psip_remarks: (row.psip_remarks as string) || null,
+    psip_last_synced_at: (row.psip_last_synced_at as string) || null,
     agency_name: agencyName(row.agency as string),
     submitted_by_name: submitterName,
     days_at_current_stage: computeDaysAtStage(latestChangedAt, row.created_at as string),
@@ -313,6 +321,24 @@ export async function updatePackageStage(
 
   const row = updateResult.data as Record<string, unknown>;
   return enrichPackage(row, resolveJoinedName(row.submitter), new Date().toISOString());
+}
+
+/**
+ * Set or clear the PSIP ref on a package. Returns { conflict: true } when
+ * another row in the same agency already uses the ref.
+ */
+export async function updatePackagePsipRef(
+  packageId: string,
+  psipRef: string | null,
+): Promise<{ conflict: boolean }> {
+  const { error } = await supabaseAdmin
+    .from('procurement_packages')
+    .update({ psip_ref: psipRef })
+    .eq('id', packageId);
+
+  if (!error) return { conflict: false };
+  if ((error as { code?: string }).code === '23505') return { conflict: true };
+  throw error;
 }
 
 /**
@@ -573,6 +599,7 @@ export async function getTrelloItems(agency?: string): Promise<{ items: Procurem
       expected_delivery_date: (row.due_date as string) || null,
       created_at: row.created_at as string,
       updated_at: row.updated_at as string,
+      ...EMPTY_PSIP_FIELDS,
       agency_name: agencyName((board?.agency ?? 'HECI').toUpperCase()),
       submitted_by_name: 'Trello',
       days_at_current_stage: daysAtStage,

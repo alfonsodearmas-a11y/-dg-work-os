@@ -1,9 +1,10 @@
 'use client';
 
 import { ExternalLink, Paperclip, MessageSquare, Calendar } from 'lucide-react';
-import { ProcurementPackage, METHOD_CONFIG } from '@/lib/procurement-types';
+import { ProcurementPackage, METHOD_CONFIG, PSIP_AGENCY } from '@/lib/procurement-types';
 import { AgencyBadge } from './AgencyBadge';
 import { DaysAtStageIndicator } from './DaysAtStageIndicator';
+import { PsipRefBadge } from './PsipRefBadge';
 
 const TRELLO_LABEL_COLORS: Record<string, string> = {
   green: 'bg-emerald-500/25 text-emerald-300',
@@ -20,6 +21,16 @@ const TRELLO_LABEL_COLORS: Record<string, string> = {
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+function closingBadgeStyles(dateStr: string): string {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const closing = new Date(dateStr + 'T00:00:00');
+  const diffDays = Math.floor((closing.getTime() - today.getTime()) / 86_400_000);
+  if (diffDays < 0) return 'bg-red-500/15 text-red-300 border-red-500/30';
+  if (diffDays <= 7) return 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+  return 'bg-navy-800 text-slate-400 border-navy-700';
 }
 
 interface ProcurementCardProps {
@@ -76,6 +87,20 @@ export function ProcurementCard({ pkg, onClick, isDragging, canDrag = true, onDr
         </p>
       )}
       {!pkg.nptab_number && <div className={isMobile ? 'mb-2' : 'mb-1.5'} />}
+
+      {pkg.agency.toUpperCase() === PSIP_AGENCY && (pkg.psip_ref || (pkg.current_stage === 'advertised' && pkg.tender_closing_date)) && (
+        <div className="flex items-center flex-wrap gap-1.5 mb-2">
+          {pkg.psip_ref && <PsipRefBadge psipRef={pkg.psip_ref} size="xs" />}
+          {pkg.current_stage === 'advertised' && pkg.tender_closing_date && (
+            <span
+              className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${closingBadgeStyles(pkg.tender_closing_date)}`}
+              title={`Tender closes ${formatDate(pkg.tender_closing_date)}`}
+            >
+              Closes {formatDate(pkg.tender_closing_date)}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Trello labels */}
       {isTrello && pkg.trello_labels && pkg.trello_labels.length > 0 && (

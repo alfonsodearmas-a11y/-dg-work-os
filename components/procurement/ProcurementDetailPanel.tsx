@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import {
   Package, MessageSquare, Send, FileText, Upload, Download,
-  ArrowRight, Trash2, Loader2,
+  ArrowRight, Trash2, Loader2, Link2, Check,
 } from 'lucide-react';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
 import { SlidePanel } from '@/components/layout/SlidePanel';
@@ -14,6 +14,7 @@ import { AgencyBadge } from './AgencyBadge';
 import { ProcurementStageIndicator } from './ProcurementStageIndicator';
 import { ProcurementStageBadge } from './ProcurementStageBadge';
 import { DaysAtStageIndicator } from './DaysAtStageIndicator';
+import { PsipRefBadge } from './PsipRefBadge';
 import type {
   ProcurementPackage,
   ProcurementStageHistory,
@@ -25,6 +26,8 @@ import {
   PROCUREMENT_STAGES,
   STAGE_CONFIG,
   METHOD_CONFIG,
+  PSIP_AGENCY,
+  PSIP_REF_PATTERN,
 } from '@/lib/procurement-types';
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -77,6 +80,10 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const [editingPsipRef, setEditingPsipRef] = useState(false);
+  const [psipRefDraft, setPsipRefDraft] = useState('');
+  const [savingPsipRef, setSavingPsipRef] = useState(false);
+
   // ── Data fetching ──────────────────────────────────────────────────────
 
   const fetchPackage = useCallback(async () => {
@@ -109,6 +116,8 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
       setSelectedStage(null);
       setAdvanceNotes('');
       setConfirmingDelete(false);
+      setEditingPsipRef(false);
+      setPsipRefDraft('');
     }
   }, [isOpen, packageId, fetchPackage]);
 
@@ -228,6 +237,35 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
     }
   };
 
+  const handleSavePsipRef = async () => {
+    if (!packageId) return;
+    const trimmed = psipRefDraft.trim().toUpperCase();
+    if (trimmed && !PSIP_REF_PATTERN.test(trimmed)) {
+      toast.error('PSIP ref must look like H-001, C-015, or U-004');
+      return;
+    }
+    setSavingPsipRef(true);
+    try {
+      const res = await fetch(`/api/procurement/${packageId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ psip_ref: trimmed || null }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || 'Failed to save PSIP ref');
+        return;
+      }
+      toast.success(trimmed ? `PSIP ref set to ${trimmed}` : 'PSIP ref cleared');
+      setEditingPsipRef(false);
+      fetchPackage();
+    } catch {
+      toast.error('Network error');
+    } finally {
+      setSavingPsipRef(false);
+    }
+  };
+
   // ── Render ─────────────────────────────────────────────────────────────
 
   return (
@@ -292,6 +330,105 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
               <span>{format(parseISO(pkg.created_at), 'MMM d, yyyy')}</span>
             </div>
           </div>
+
+          {pkg.agency.toUpperCase() === PSIP_AGENCY && (
+            <>
+              <div className="border-t border-navy-800" />
+              <div>
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2 mb-4">
+                  <Link2 className="h-4 w-4 text-gold-500" />
+                  PSIP
+                  {pkg.psip_last_synced_at && (
+                    <span
+                      className="text-[10px] font-normal text-navy-600"
+                      title={format(parseISO(pkg.psip_last_synced_at), 'PPpp')}
+                    >
+                      synced {formatDistanceToNow(parseISO(pkg.psip_last_synced_at), { addSuffix: true })}
+                    </span>
+                  )}
+                </h3>
+
+                {/* PSIP ref — editable */}
+                <div className="mb-4">
+                  <label className="block text-[11px] uppercase tracking-wider text-navy-600 mb-1">
+                    PSIP ref
+                  </label>
+                  {editingPsipRef && canModify ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={psipRefDraft}
+                        onChange={(e) => setPsipRefDraft(e.target.value)}
+                        placeholder="H-001"
+                        maxLength={6}
+                        autoFocus
+                        className="w-32 px-3 py-1.5 bg-navy-900 border border-navy-800 rounded-lg text-white text-sm focus:outline-none focus:border-gold-500 uppercase placeholder:normal-case placeholder:text-navy-600"
+                      />
+                      <button
+                        onClick={handleSavePsipRef}
+                        disabled={savingPsipRef}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gold-500 text-navy-950 hover:bg-[#e5c348] disabled:opacity-50 transition-colors"
+                      >
+                        {savingPsipRef ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Check className="h-3.5 w-3.5" />
+                        )}
+                        Save
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingPsipRef(false);
+                          setPsipRefDraft('');
+                        }}
+                        className="px-3 py-1.5 rounded-lg text-xs text-slate-400 border border-navy-800 hover:border-navy-700 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      {pkg.psip_ref ? (
+                        <PsipRefBadge psipRef={pkg.psip_ref} />
+                      ) : (
+                        <span className="text-xs text-navy-600 italic">Not linked</span>
+                      )}
+                      {canModify && (
+                        <button
+                          onClick={() => {
+                            setEditingPsipRef(true);
+                            setPsipRefDraft(pkg.psip_ref ?? '');
+                          }}
+                          className="text-[11px] text-gold-500 hover:underline"
+                        >
+                          {pkg.psip_ref ? 'Edit' : 'Add'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Milestone dates */}
+                <div className="grid grid-cols-2 gap-x-3 gap-y-2 mb-4">
+                  <PsipDate label="Advertised"       value={pkg.date_first_advertised} />
+                  <PsipDate label="Tender closed"    value={pkg.tender_closing_date} />
+                  <PsipDate label="Eval → MTB"       value={pkg.date_eval_submitted_mtb} />
+                  <PsipDate label="Eval → NPTAB"     value={pkg.date_eval_submitted_nptab} />
+                  <PsipDate label="Date of award"    value={pkg.date_of_award} />
+                </div>
+
+                {/* Remarks */}
+                {pkg.psip_remarks && (
+                  <div>
+                    <div className="text-[11px] uppercase tracking-wider text-navy-600 mb-1">Remarks</div>
+                    <p className="text-xs text-slate-300 whitespace-pre-line leading-relaxed">
+                      {pkg.psip_remarks}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           {/* ── 2. Advance stage action ─────────────────────────────────── */}
           {canAdvance && availableStages.length > 0 && (
@@ -610,6 +747,19 @@ export function ProcurementDetailPanel({ packageId, isOpen, onClose, onDeleted }
         </div>
       )}
     </SlidePanel>
+  );
+}
+
+// ── PSIP date cell ───────────────────────────────────────────────────────
+
+function PsipDate({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div>
+      <div className="text-[11px] uppercase tracking-wider text-navy-600">{label}</div>
+      <div className="text-sm text-white">
+        {value ? format(parseISO(value), 'd MMM yyyy') : <span className="text-navy-600">—</span>}
+      </div>
+    </div>
   );
 }
 
