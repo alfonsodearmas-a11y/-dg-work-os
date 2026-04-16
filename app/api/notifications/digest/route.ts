@@ -28,7 +28,14 @@ interface NotifRow {
 // Sends daily digest emails to users with digest-eligible notifications.
 // ---------------------------------------------------------------------------
 
+// Vercel crons use GET — export the same handler for both methods
+export { handleDigest as GET };
+
 export async function POST(request: NextRequest) {
+  return handleDigest(request);
+}
+
+async function handleDigest(request: NextRequest) {
   try {
     // Auth: cron secret OR DG role
     if (!isCronAuthorized(request)) {

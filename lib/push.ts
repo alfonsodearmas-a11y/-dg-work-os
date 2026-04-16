@@ -1,7 +1,7 @@
 import webpush from 'web-push';
 import { supabaseAdmin } from './db';
 import type { Notification } from './notifications';
-import { getPreferences } from './notifications';
+import { getPreferences, TYPE_TO_PREFERENCE, CATEGORY_TO_PREFERENCE } from './notifications';
 import { logger } from '@/lib/logger';
 
 // --- VAPID configuration (lazy init to avoid build-time errors) ---
@@ -215,27 +215,11 @@ export async function sendPushForNotification(notification: Notification): Promi
   if (prefs.do_not_disturb) return false;
   if (isInQuietHours(prefs)) return false;
 
-  // Check preference for this notification type
-  const typeToPreference: Record<string, keyof typeof prefs> = {
-    meeting_reminder_24h: 'meeting_reminder_24h',
-    meeting_reminder_1h: 'meeting_reminder_1h',
-    meeting_reminder_15m: 'meeting_reminder_15m',
-    meeting_starting: 'meeting_reminder_15m',
-    meeting_minutes_ready: 'meeting_minutes_ready',
-    task_due_tomorrow: 'task_due_reminders',
-    task_due_today: 'task_due_reminders',
-    task_overdue: 'task_overdue_alerts',
-  };
-  const prefKey = typeToPreference[notification.type];
+  // Check type-level and category-level preferences (maps imported from notifications.ts)
+  const prefKey = TYPE_TO_PREFERENCE[notification.type];
   if (prefKey && !prefs[prefKey]) return false;
 
-  // Category-level preference check for new notification types
-  const categoryToPreference: Record<string, keyof typeof prefs> = {
-    projects: 'projects_enabled',
-    kpi: 'kpi_enabled',
-    oversight: 'oversight_enabled',
-  };
-  const catPrefKey = categoryToPreference[notification.category];
+  const catPrefKey = CATEGORY_TO_PREFERENCE[notification.category];
   if (catPrefKey && !prefs[catPrefKey]) return false;
 
   // Rate limit

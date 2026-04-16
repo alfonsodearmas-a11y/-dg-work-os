@@ -1,5 +1,6 @@
 import { supabaseAdmin } from './db';
 import { fetchWeekEvents } from './google-calendar';
+import { MINISTRY_ROLES } from './people-types';
 import { logger } from '@/lib/logger';
 
 // --- Types ---
@@ -130,11 +131,12 @@ export async function getUnreadCount(userId: string): Promise<number> {
   return count || 0;
 }
 
-export async function markAsRead(notificationId: string): Promise<void> {
+export async function markAsRead(notificationId: string, userId: string): Promise<void> {
   const { error } = await supabaseAdmin
     .from('notifications')
     .update({ read_at: new Date().toISOString() })
-    .eq('id', notificationId);
+    .eq('id', notificationId)
+    .eq('user_id', userId);
   if (error) throw error;
 }
 
@@ -147,11 +149,12 @@ export async function markAllRead(userId: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function dismissNotification(notificationId: string): Promise<void> {
+export async function dismissNotification(notificationId: string, userId: string): Promise<void> {
   const { error } = await supabaseAdmin
     .from('notifications')
     .update({ dismissed_at: new Date().toISOString() })
-    .eq('id', notificationId);
+    .eq('id', notificationId)
+    .eq('user_id', userId);
   if (error) throw error;
 }
 
@@ -164,11 +167,12 @@ export async function dismissAll(userId: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function markDelivered(notificationId: string): Promise<void> {
+export async function markDelivered(notificationId: string, userId: string): Promise<void> {
   const { error } = await supabaseAdmin
     .from('notifications')
     .update({ delivered_at: new Date().toISOString() })
-    .eq('id', notificationId);
+    .eq('id', notificationId)
+    .eq('user_id', userId);
   if (error) throw error;
 }
 
@@ -195,7 +199,54 @@ type InsertNotificationInput = Omit<Notification, 'id' | 'delivered_at' | 'read_
   metadata?: Record<string, unknown>;
 };
 
+// Maps from notification type/category → user preference key (shared with push.ts)
+export const TYPE_TO_PREFERENCE: Record<string, keyof NotificationPrefs> = {
+  meeting_reminder_24h: 'meeting_reminder_24h',
+  meeting_reminder_1h: 'meeting_reminder_1h',
+  meeting_reminder_15m: 'meeting_reminder_15m',
+  meeting_starting: 'meeting_reminder_15m',
+  meeting_minutes_ready: 'meeting_minutes_ready',
+  task_due_tomorrow: 'task_due_reminders',
+  task_due_today: 'task_due_reminders',
+  task_overdue: 'task_overdue_alerts',
+};
+
+export const CATEGORY_TO_PREFERENCE: Record<string, keyof NotificationPrefs> = {
+  projects: 'projects_enabled',
+  kpi: 'kpi_enabled',
+  oversight: 'oversight_enabled',
+};
+
+// Short-lived preference cache to avoid N+1 lookups within a single generateAll() cycle
+const _prefsCache = new Map<string, { prefs: NotificationPrefs; ts: number }>();
+const PREFS_CACHE_TTL_MS = 30_000;
+
+function getCachedPreferences(userId: string): NotificationPrefs | undefined {
+  const entry = _prefsCache.get(userId);
+  if (entry && Date.now() - entry.ts < PREFS_CACHE_TTL_MS) return entry.prefs;
+  _prefsCache.delete(userId);
+  return undefined;
+}
+
 export async function insertNotification(n: InsertNotificationInput): Promise<Notification | null> {
+  // Check user preferences before inserting (cached within generateAll cycle)
+  try {
+    let prefs = getCachedPreferences(n.user_id);
+    if (!prefs) {
+      prefs = await getPreferences(n.user_id);
+      _prefsCache.set(n.user_id, { prefs, ts: Date.now() });
+    }
+    if (prefs.do_not_disturb) return null;
+
+    const typePref = TYPE_TO_PREFERENCE[n.type];
+    if (typePref && prefs[typePref] === false) return null;
+
+    const catPref = CATEGORY_TO_PREFERENCE[n.category || ''];
+    if (catPref && prefs[catPref] === false) return null;
+  } catch (err) {
+    logger.error({ err, userId: n.user_id }, 'insertNotification: preference check failed, proceeding with insert');
+  }
+
   if (await exists(n.type, n.reference_id || '', n.scheduled_for)) {
     return null;
   }
@@ -218,12 +269,24 @@ export async function insertNotification(n: InsertNotificationInput): Promise<No
 
 // --- Meeting notification generation ---
 
-export async function generateMeetingNotifications(userId: string): Promise<{ count: number; notifications: Notification[] }> {
+export async function generateMeetingNotifications(userId: string, ctx?: GenerateContext): Promise<{ count: number; notifications: Notification[] }> {
   const created: Notification[] = [];
 
   try {
-    // Only fetch events for the next 25 hours instead of the full week
-    const events = await fetchWeekEvents(undefined, { hoursAhead: 25 });
+    // Only generate for users with a connected Google Calendar
+    const { data: token } = await supabaseAdmin
+      .from('integration_tokens')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('provider', 'google_calendar')
+      .maybeSingle();
+
+    if (!token) {
+      return { count: 0, notifications: [] };
+    }
+
+    // Fetch events from this user's calendar
+    const events = await fetchWeekEvents(userId, { hoursAhead: 25 });
     const now = new Date();
     const cutoff = new Date(now.getTime() + 25 * 60 * 60 * 1000); // next 25 hours
 
@@ -318,15 +381,25 @@ function formatMeetingBody(event: { location?: string | null; attendees?: Array<
 
 // --- Task notification generation ---
 
-export async function generateTaskNotifications(userId: string): Promise<{ count: number; notifications: Notification[] }> {
+export async function generateTaskNotifications(userId: string, ctx?: GenerateContext): Promise<{ count: number; notifications: Notification[] }> {
   const created: Notification[] = [];
 
   try {
+    const role = ctx?.role ?? (await supabaseAdmin.from('users').select('role').eq('id', userId).single()).data?.role;
+
     // Fetch tasks from native tasks table
-    const { data: tasks, error: tasksErr } = await supabaseAdmin
+    let taskQuery = supabaseAdmin
       .from('tasks')
-      .select('id, title, agency, due_date, status')
+      .select('id, title, agency, due_date, status, owner_user_id, assigned_by_user_id')
       .neq('status', 'done');
+
+    // Non-executive users only see tasks they own or assigned
+    const isExecutive = role && MINISTRY_ROLES.includes(role);
+    if (!isExecutive) {
+      taskQuery = taskQuery.or(`owner_user_id.eq.${userId},assigned_by_user_id.eq.${userId}`);
+    }
+
+    const { data: tasks, error: tasksErr } = await taskQuery;
 
     if (tasksErr) throw tasksErr;
 
@@ -446,6 +519,13 @@ export async function generateMinutesReadyNotifications(userId: string): Promise
 
 export type GenerateResult = { count: number; notifications: Notification[] };
 
+/** User context fetched once in generateAll() and passed to each generator. */
+export interface GenerateContext {
+  userId: string;
+  role: string;
+  prefs: NotificationPrefs;
+}
+
 export async function generateAll(userId: string): Promise<{
   meetings: number;
   tasks: number;
@@ -456,6 +536,18 @@ export async function generateAll(userId: string): Promise<{
   taskBridge: number;
   allNotifications: Notification[];
 }> {
+  // Fetch user context once — avoids N+1 role/preference lookups across generators
+  const [{ data: userRow }, prefs] = await Promise.all([
+    supabaseAdmin.from('users').select('role').eq('id', userId).single(),
+    getPreferences(userId),
+  ]);
+
+  const ctx: GenerateContext = {
+    userId,
+    role: userRow?.role ?? 'officer',
+    prefs,
+  };
+
   // Import new generators dynamically to avoid circular deps
   const [
     { generateProjectNotifications },
@@ -470,13 +562,13 @@ export async function generateAll(userId: string): Promise<{
   ]);
 
   const [meetingResult, taskResult, minutesResult, projectResult, kpiResult, oversightResult, taskBridgeResult] = await Promise.all([
-    generateMeetingNotifications(userId),
-    generateTaskNotifications(userId),
+    generateMeetingNotifications(userId, ctx),
+    generateTaskNotifications(userId, ctx),
     generateMinutesReadyNotifications(userId),
-    generateProjectNotifications(userId),
-    generateKpiNotifications(userId),
-    generateOversightNotifications(userId),
-    generateTaskBridgeNotifications(userId),
+    generateProjectNotifications(ctx),
+    generateKpiNotifications(ctx),
+    generateOversightNotifications(ctx),
+    generateTaskBridgeNotifications(ctx),
   ]);
 
   return {

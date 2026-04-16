@@ -1,6 +1,7 @@
 import { insertNotification } from '../notifications';
-import type { Notification, GenerateResult } from '../notifications';
+import type { Notification, GenerateResult, GenerateContext } from '../notifications';
 import { query } from '../db-pg';
+import { MINISTRY_ROLES } from '../people-types';
 import { logger } from '@/lib/logger';
 
 const BRIDGE_TYPES: Record<string, { notifType: string; priority: 'low' | 'medium' | 'high' | 'urgent'; actionRequired: boolean }> = {
@@ -9,7 +10,11 @@ const BRIDGE_TYPES: Record<string, { notifType: string; priority: 'low' | 'mediu
   extension_requested: { notifType: 'tm_extension_requested', priority: 'medium', actionRequired: true },
 };
 
-export async function generateTaskBridgeNotifications(userId: string): Promise<GenerateResult> {
+export async function generateTaskBridgeNotifications(ctx: GenerateContext): Promise<GenerateResult> {
+  if (!MINISTRY_ROLES.includes(ctx.role)) {
+    return { count: 0, notifications: [] };
+  }
+
   const created: Notification[] = [];
   const today = new Date();
   const morningSlot = `${today.toISOString().split('T')[0]}T08:00:00.000Z`;
@@ -44,7 +49,7 @@ export async function generateTaskBridgeNotifications(userId: string): Promise<G
       if (row.message) bodyParts.push(row.message);
 
       const inserted = await insertNotification({
-        user_id: userId,
+        user_id: ctx.userId,
         type: config.notifType,
         title: `${row.type === 'task_overdue' ? 'Task overdue' : row.type === 'task_submitted' ? 'Task submitted' : 'Extension requested'}: ${taskTitle}`,
         body: bodyParts.join(' — '),

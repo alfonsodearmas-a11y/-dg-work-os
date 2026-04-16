@@ -1,9 +1,14 @@
 import { insertNotification } from '../notifications';
-import type { Notification, GenerateResult } from '../notifications';
+import type { Notification, GenerateResult, GenerateContext } from '../notifications';
 import { getDelayedProjects, getProjectsList } from '../project-queries';
+import { MINISTRY_ROLES } from '../people-types';
 import { logger } from '@/lib/logger';
 
-export async function generateProjectNotifications(userId: string): Promise<GenerateResult> {
+export async function generateProjectNotifications(ctx: GenerateContext): Promise<GenerateResult> {
+  if (!MINISTRY_ROLES.includes(ctx.role)) {
+    return { count: 0, notifications: [] };
+  }
+
   const created: Notification[] = [];
   const today = new Date();
   const morningSlot = `${today.toISOString().split('T')[0]}T08:00:00.000Z`;
@@ -14,7 +19,7 @@ export async function generateProjectNotifications(userId: string): Promise<Gene
     for (const p of delayed) {
       if (p.days_overdue > 3) continue;
       const inserted = await insertNotification({
-        user_id: userId,
+        user_id: ctx.userId,
         type: 'project_newly_delayed',
         title: `Project delayed: ${p.project_name || 'Unnamed'}`,
         body: `${p.executing_agency || 'Unknown agency'} — ${p.days_overdue} day${p.days_overdue !== 1 ? 's' : ''} overdue (${p.completion_pct}% complete)`,
@@ -48,7 +53,7 @@ export async function generateProjectNotifications(userId: string): Promise<Gene
       if (daysLeft < 0 || daysLeft > 30) continue;
 
       const inserted = await insertNotification({
-        user_id: userId,
+        user_id: ctx.userId,
         type: 'project_stalled',
         title: `Project at risk: ${p.project_name || 'Unnamed'}`,
         body: `${p.completion_pct}% complete with ${daysLeft} days remaining — ${p.executing_agency || 'Unknown'}`,

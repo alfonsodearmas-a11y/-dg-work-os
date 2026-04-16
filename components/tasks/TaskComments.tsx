@@ -60,17 +60,6 @@ function renderCommentBody(body: string, userMap: UserMap) {
   );
 }
 
-/** Extract all @[userId] tokens from raw text */
-function extractMentionIds(text: string): string[] {
-  const ids: string[] = [];
-  const regex = /@\[([0-9a-f-]{36})\]/g;
-  let match;
-  while ((match = regex.exec(text)) !== null) {
-    if (!ids.includes(match[1])) ids.push(match[1]);
-  }
-  return ids;
-}
-
 export function TaskComments({ taskId, users }: TaskCommentsProps) {
   const { data: session } = useSession();
   const [comments, setComments] = useState<Comment[]>([]);
@@ -154,8 +143,6 @@ export function TaskComments({ taskId, users }: TaskCommentsProps) {
     if (!trimmed || submitting) return;
 
     const rawBody = draftToRaw(trimmed);
-    const mentionedUserIds = extractMentionIds(rawBody);
-
     setSubmitting(true);
     try {
       const res = await fetch(`/api/tasks/${taskId}/comments`, {
@@ -168,19 +155,7 @@ export function TaskComments({ taskId, users }: TaskCommentsProps) {
         setComments((prev) => [...prev, json.data]);
         setDraft('');
         setMentions(new Map());
-
-        // Fire-and-forget mention notifications
-        if (mentionedUserIds.length > 0) {
-          fetch('/api/tasks/mention-notify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              commentId: json.data.id,
-              taskId,
-              mentionedUserIds,
-            }),
-          }).catch(() => {});
-        }
+        // Mention notifications are sent server-side by the comments route
       } else {
         console.error('[TaskComments] Failed to post comment:', json.error || json.message || res.status);
       }

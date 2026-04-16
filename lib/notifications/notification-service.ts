@@ -7,6 +7,7 @@ import {
   type ImportanceTier,
 } from './classify-tier';
 import { DEFAULT_EVENT_PREFERENCES, type EventPrefEntry } from '@/lib/notifications';
+import { sendInstantEmailForNotification } from './send-instant-email';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -290,6 +291,13 @@ export async function createNotification(
       { notificationId: inserted.id, recipientId, eventType, tier: importanceTier },
       'Notification created',
     );
+
+    // 8. Fire-and-forget instant email (non-blocking)
+    if (prefs.email === 'instant' && inserted) {
+      sendInstantEmailForNotification(inserted as NotificationRow).catch((err) =>
+        logger.error({ err, notificationId: inserted.id }, 'Inline instant email failed'),
+      );
+    }
 
     return inserted as NotificationRow;
   } catch (err) {

@@ -56,19 +56,19 @@ export const PATCH = withErrorHandler(async (request: NextRequest) => {
 
   switch (data!.action) {
     case 'mark_read':
-      await markAsRead(data!.id!);
+      await markAsRead(data!.id!, userId);
       break;
     case 'mark_all_read':
       await markAllRead(userId);
       break;
     case 'dismiss':
-      await dismissNotification(data!.id!);
+      await dismissNotification(data!.id!, userId);
       break;
     case 'dismiss_all':
       await dismissAll(userId);
       break;
     case 'delivered':
-      await markDelivered(data!.id!);
+      await markDelivered(data!.id!, userId);
       break;
   }
 

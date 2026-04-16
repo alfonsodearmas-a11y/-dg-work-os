@@ -47,6 +47,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [toasts, setToasts] = useState<Notification[]>([]);
   const toastTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  // Track known IDs so dedup happens outside state updaters (updaters must be pure)
+  const knownIds = useRef(new Set<string>());
 
   // Listen for navigate messages from service worker (push notification clicks)
   useEffect(() => {
@@ -68,8 +70,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       const res = await fetch('/api/notifications');
       if (!res.ok) return;
       const data = await res.json();
-      setNotifications(data.notifications || []);
+      const fetched: Notification[] = data.notifications || [];
+      setNotifications(fetched);
       setUnreadCount(data.unread_count || 0);
+      knownIds.current = new Set(fetched.map((n: Notification) => n.id));
     } catch {
       // silently fail
     }
@@ -145,19 +149,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }, [userId]);
 
   const deliverNotification = useCallback((notif: Notification) => {
-    // Add to notifications list
-    setNotifications(prev => {
-      if (prev.some(n => n.id === notif.id)) return prev;
-      return [notif, ...prev];
-    });
+    // Dedup via ref (outside state updaters to keep them pure)
+    if (knownIds.current.has(notif.id)) return;
+    knownIds.current.add(notif.id);
+
+    setNotifications(prev => [notif, ...prev]);
     setUnreadCount(prev => prev + 1);
 
     // Show toast (max 3)
-    setToasts(prev => {
-      if (prev.some(t => t.id === notif.id)) return prev;
-      const next = [notif, ...prev].slice(0, 3);
-      return next;
-    });
+    setToasts(prev => [notif, ...prev].slice(0, 3));
 
     // Auto-dismiss toast after 5s
     const timer = setTimeout(() => {
@@ -212,6 +212,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const dismissAllNotifications = useCallback(async () => {
     setNotifications([]);
     setUnreadCount(0);
+    knownIds.current.clear();
 
     try {
       await fetch('/api/notifications', {

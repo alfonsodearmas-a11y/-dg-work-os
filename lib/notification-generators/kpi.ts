@@ -1,9 +1,14 @@
 import { insertNotification } from '../notifications';
-import type { Notification, GenerateResult } from '../notifications';
+import type { Notification, GenerateResult, GenerateContext } from '../notifications';
 import { query } from '../db-pg';
+import { MINISTRY_ROLES } from '../people-types';
 import { logger } from '@/lib/logger';
 
-export async function generateKpiNotifications(userId: string): Promise<GenerateResult> {
+export async function generateKpiNotifications(ctx: GenerateContext): Promise<GenerateResult> {
+  if (!MINISTRY_ROLES.includes(ctx.role)) {
+    return { count: 0, notifications: [] };
+  }
+
   const created: Notification[] = [];
   const today = new Date();
   const morningSlot = `${today.toISOString().split('T')[0]}T08:00:00.000Z`;
@@ -21,7 +26,7 @@ export async function generateKpiNotifications(userId: string): Promise<Generate
         : 'medium' as const;
 
       const inserted = await insertNotification({
-        user_id: userId,
+        user_id: ctx.userId,
         type: 'kpi_threshold_breach',
         title: `${alert.agency} alert: ${alert.metric_name}`,
         body: alert.message,
@@ -65,7 +70,7 @@ export async function generateKpiNotifications(userId: string): Promise<Generate
         if (daysSince <= 2) continue;
 
         const inserted = await insertNotification({
-          user_id: userId,
+          user_id: ctx.userId,
           type: 'kpi_data_stale',
           title: `${ag.name} data is ${daysSince} days old`,
           body: `Last data entry was ${new Date(lastDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}. Data entry may be needed.`,

@@ -1,7 +1,8 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { insertNotification } from '../notifications';
-import type { Notification, GenerateResult } from '../notifications';
+import type { Notification, GenerateResult, GenerateContext } from '../notifications';
+import { MINISTRY_ROLES } from '../people-types';
 import { logger } from '@/lib/logger';
 
 interface OversightProject {
@@ -38,7 +39,11 @@ function formatValue(val: number | null | undefined): string {
   return `$${val.toLocaleString()}`;
 }
 
-export async function generateOversightNotifications(userId: string): Promise<GenerateResult> {
+export async function generateOversightNotifications(ctx: GenerateContext): Promise<GenerateResult> {
+  if (!MINISTRY_ROLES.includes(ctx.role)) {
+    return { count: 0, notifications: [] };
+  }
+
   const created: Notification[] = [];
   const today = new Date();
   const morningSlot = `${today.toISOString().split('T')[0]}T08:00:00.000Z`;
@@ -62,7 +67,7 @@ export async function generateOversightNotifications(userId: string): Promise<Ge
       if (summary.endingSoon > 0) parts.push(`${summary.endingSoon} ending soon`);
 
       const inserted = await insertNotification({
-        user_id: userId,
+        user_id: ctx.userId,
         type: 'oversight_overdue_summary',
         title: `Oversight: ${parts.join(', ')}`,
         body: `${data.overdue.length + data.atRisk.length + data.endingSoon.length} projects need attention across the portfolio`,
@@ -93,7 +98,7 @@ export async function generateOversightNotifications(userId: string): Promise<Ge
 
     for (const p of highValueAtRisk) {
       const inserted = await insertNotification({
-        user_id: userId,
+        user_id: ctx.userId,
         type: 'oversight_at_risk',
         title: `At risk: ${p.projectName || 'Unnamed project'}`,
         body: `${p.subAgency || p.executingAgency || 'Unknown'} — ${formatValue(p.contractValue)} — ${p.daysRemaining ?? '?'} days remaining`,

@@ -37,6 +37,7 @@ export function entityUrl(notif: {
 }
 
 export function isCronAuthorized(request: NextRequest): boolean {
-  const secret = request.headers.get('x-cron-secret');
+  const secret = request.headers.get('x-cron-secret')
+    || request.headers.get('authorization')?.replace('Bearer ', '');
   return !!secret && !!process.env.CRON_SECRET && secret === process.env.CRON_SECRET;
 }

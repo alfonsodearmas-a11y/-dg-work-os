@@ -17,6 +17,14 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/notifications/send-email",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/notifications/digest",
+      "schedule": "0 11 * * *"
+    },
+    {
       "path": "/api/tm/cron/overdue",
       "schedule": "0 6 * * *"
     },
