@@ -18,7 +18,7 @@
     },
     {
       "path": "/api/notifications/send-email",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 9 * * *"
     },
     {
       "path": "/api/notifications/digest",
