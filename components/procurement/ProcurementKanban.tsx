@@ -3,13 +3,17 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { AlertTriangle, Package, ChevronDown, LayoutGrid, List } from 'lucide-react';
+import Link from 'next/link';
+import { Award } from 'lucide-react';
 import {
   TENDER_STAGES,
+  KANBAN_STAGES,
   STAGE_CONFIG,
   type Tender,
   type TenderStage,
   type PipelineStats,
 } from '@/lib/tender/types';
+import { fmtDate } from '@/lib/format';
 import { ProcurementCard } from './ProcurementCard';
 import { ProcurementDetailPanel } from './ProcurementDetailPanel';
 import { ProcurementListView } from './ProcurementListView';
@@ -23,7 +27,14 @@ import type { Role } from '@/lib/auth';
 
 const LS_VIEW_KEY = 'dg-procurement-view';
 const BOARD_PAGE_SIZE = 10;
-const INITIAL_COLUMN_PAGES = Object.fromEntries(TENDER_STAGES.map((s) => [s, 1])) as Record<TenderStage, number>;
+const INITIAL_COLUMN_PAGES = Object.fromEntries(KANBAN_STAGES.map((s) => [s, 1])) as Record<TenderStage, number>;
+
+interface AwardedSincePayload {
+  previous_upload_at: string | null;
+  previous_upload_id: string | null;
+  count: number;
+  tenders: Tender[];
+}
 
 function canDrag(role: Role | undefined): boolean {
   return role === 'agency_admin' || role === 'dg';
@@ -45,6 +56,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
 
   const [tenders, setTenders] = useState<Tender[]>([]);
   const [stats, setStats] = useState<PipelineStats | null>(null);
+  const [awardedSince, setAwardedSince] = useState<AwardedSincePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [agencyFilter, setAgencyFilter] = useState('');
@@ -69,6 +81,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
       const data = await res.json();
       setTenders(data.tenders || []);
       setStats(data.stats || null);
+      setAwardedSince(data.awarded_since || null);
       setError(null);
     } catch (err) {
       console.error('Failed to fetch tenders:', err);
@@ -99,9 +112,12 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
   useEffect(() => { localStorage.setItem(LS_VIEW_KEY, viewMode); }, [viewMode]);
   useEffect(() => { setColumnPages(INITIAL_COLUMN_PAGES); }, [agencyFilter, viewMode]);
 
+  // Default board + list hide the Award stage. Awarded tenders live in
+  // /procurement/archive. The agency filter still applies as before.
   const filtered = useMemo(() => {
-    if (!agencyFilter) return tenders;
-    return tenders.filter((t) => t.agency.toUpperCase() === agencyFilter.toUpperCase());
+    const activeOnly = tenders.filter((t) => t.stage !== 'award');
+    if (!agencyFilter) return activeOnly;
+    return activeOnly.filter((t) => t.agency.toUpperCase() === agencyFilter.toUpperCase());
   }, [tenders, agencyFilter]);
 
   const byStage = useMemo(() => {
@@ -109,13 +125,13 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
       design: [], advertised: [], evaluation: [], awaiting_award: [], award: [],
     };
     for (const t of filtered) grouped[t.stage].push(t);
-    for (const s of TENDER_STAGES) grouped[s] = sortTenders(grouped[s]);
+    for (const s of KANBAN_STAGES) grouped[s] = sortTenders(grouped[s]);
     return grouped;
   }, [filtered]);
 
   const visibleByStage = useMemo(() => {
     const result = {} as Record<TenderStage, Tender[]>;
-    for (const s of TENDER_STAGES) result[s] = byStage[s].slice(0, columnPages[s] * BOARD_PAGE_SIZE);
+    for (const s of KANBAN_STAGES) result[s] = byStage[s].slice(0, columnPages[s] * BOARD_PAGE_SIZE);
     return result;
   }, [byStage, columnPages]);
 
@@ -247,6 +263,40 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
         </div>
       </div>
 
+      {awardedSince && (awardedSince.count > 0 || stats) && (
+        <Link
+          href={awardedSince.count > 0 ? `/procurement/archive?since=${encodeURIComponent(awardedSince.previous_upload_at || '')}` : '/procurement/archive'}
+          className="block group"
+        >
+          <div className="rounded-xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 p-4 hover:border-emerald-500/50 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
+                <Award className="h-5 w-5 text-emerald-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                {awardedSince.count > 0 ? (
+                  <>
+                    <p className="text-sm font-semibold text-white">
+                      <span className="text-emerald-400">{awardedSince.count}</span>{' '}
+                      {awardedSince.count === 1 ? 'tender' : 'tenders'} awarded since{' '}
+                      {awardedSince.previous_upload_at ? fmtDate(awardedSince.previous_upload_at) : 'the last upload'}
+                    </p>
+                    <p className="text-xs text-navy-600 mt-0.5 group-hover:text-emerald-300/70 transition-colors">View the Awarded Archive →</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-semibold text-white">
+                      {stats?.by_stage.award.count ?? 0} awarded tenders on file
+                    </p>
+                    <p className="text-xs text-navy-600 mt-0.5 group-hover:text-emerald-300/70 transition-colors">Nothing new this cycle · Browse the Awarded Archive →</p>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </Link>
+      )}
+
       {stats && (
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-navy-900 rounded-xl border border-navy-800 p-3"><div className="text-navy-600 text-xs mb-1">Active</div><div className="text-white text-lg font-bold">{stats.total_active}</div></div>
@@ -260,7 +310,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
         <ProcurementListView tenders={filtered} onSelect={setSelectedTenderId} />
       ) : isMobile ? (
         <div className="space-y-2">
-          {TENDER_STAGES.map((stage) => {
+          {KANBAN_STAGES.map((stage) => {
             const config = STAGE_CONFIG[stage];
             const all = byStage[stage];
             const visible = visibleByStage[stage];
@@ -304,7 +354,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
         </div>
       ) : (
         <div className="flex gap-4 overflow-x-auto pb-4">
-          {TENDER_STAGES.map((stage) => (
+          {KANBAN_STAGES.map((stage) => (
             <div key={stage} className="flex-1 min-w-[240px] max-w-[280px]">
               <ProcurementColumn
                 stage={stage}

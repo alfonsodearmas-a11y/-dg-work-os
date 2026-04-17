@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import {
   Package, MessageSquare, Send, FileText, Upload, Download,
-  ArrowRight, Trash2, Loader2, History, Repeat, AlertTriangle,
+  ArrowRight, Trash2, Loader2, History, Repeat, AlertTriangle, Award, HelpCircle,
 } from 'lucide-react';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
 import { SlidePanel } from '@/components/layout/SlidePanel';
@@ -256,6 +256,16 @@ export function ProcurementDetailPanel({ tenderId, isOpen, onClose, onDeleted }:
                       <AlertTriangle className="h-3 w-3" /> See Remarks
                     </span>
                   )}
+                  {tender.stage_source === 'inferred_from_dates' && (
+                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30" title="Stage inferred from dates (status col was blank or a flag)">
+                      <HelpCircle className="h-3 w-3" /> Inferred
+                    </span>
+                  )}
+                  {tender.first_appearance_already_awarded && (
+                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" title="Tender first appeared already at Award — true transition date unknown">
+                      <Award className="h-3 w-3" /> Inherited Award
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -296,7 +306,18 @@ export function ProcurementDetailPanel({ tenderId, isOpen, onClose, onDeleted }:
                   <DateCell label="Tender closed"     value={tender.date_closed} />
                   <DateCell label="Eval → MTB/RTB"    value={tender.date_eval_sent_mtb_rtb} />
                   <DateCell label="Eval → NPTAB"      value={tender.date_eval_sent_nptab} />
-                  <DateCell label="Date of award"     value={tender.date_of_award} />
+                  <DateCell label="Date of award (PSIP col I)" value={tender.date_of_award} />
+                  {tender.awarded_at && (
+                    <div>
+                      <div className="text-[11px] uppercase tracking-wider text-navy-600">Awarded at (ingest)</div>
+                      <div className="text-sm text-white">
+                        {format(parseISO(tender.awarded_at), 'd MMM yyyy · HH:mm')}
+                        {tender.first_appearance_already_awarded && (
+                          <span className="text-[10px] text-emerald-300 ml-1">(first seen already awarded)</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

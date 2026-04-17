@@ -1,6 +1,6 @@
 'use client';
 
-import { ExternalLink, Repeat, AlertTriangle } from 'lucide-react';
+import { ExternalLink, Repeat, AlertTriangle, HelpCircle, Award } from 'lucide-react';
 import { METHOD_CONFIG, type Tender } from '@/lib/tender/types';
 import { AgencyBadge } from './AgencyBadge';
 import { DaysAtStageIndicator } from './DaysAtStageIndicator';
@@ -59,7 +59,7 @@ export function ProcurementCard({ tender, onClick, isDragging, canDrag = true, o
       )}
 
       {/* Flag badges */}
-      {(tender.is_rollover || tender.has_exception) && (
+      {(tender.is_rollover || tender.has_exception || tender.stage_source === 'inferred_from_dates' || tender.first_appearance_already_awarded) && (
         <div className="flex flex-wrap gap-1 mb-1.5">
           {tender.is_rollover && (
             <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30" title="Rollover from prior fiscal year">
@@ -71,6 +71,18 @@ export function ProcurementCard({ tender, onClick, isDragging, canDrag = true, o
             <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-500/30" title="See remarks for non-standard state">
               <AlertTriangle className="h-2.5 w-2.5" />
               See Remarks
+            </span>
+          )}
+          {tender.stage_source === 'inferred_from_dates' && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30" title="Stage inferred from dates (status column was blank or a flag)">
+              <HelpCircle className="h-2.5 w-2.5" />
+              Inferred
+            </span>
+          )}
+          {tender.first_appearance_already_awarded && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" title="Tender first appeared already at Award stage — true transition date is unknown">
+              <Award className="h-2.5 w-2.5" />
+              Inherited
             </span>
           )}
         </div>

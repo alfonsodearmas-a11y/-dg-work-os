@@ -29,6 +29,7 @@ const TENDER_COLUMNS = [
   'remarks',
   'missing_from_last_upload',
   'first_seen_upload_id', 'last_seen_upload_id',
+  'awarded_at', 'first_appearance_already_awarded',
   'created_at', 'updated_at',
 ].join(', ');
 
@@ -83,6 +84,8 @@ function enrichTender(row: Record<string, unknown>, latestChangeAt: string | nul
     missing_from_last_upload: Boolean(row.missing_from_last_upload),
     first_seen_upload_id: (row.first_seen_upload_id as string) ?? null,
     last_seen_upload_id: (row.last_seen_upload_id as string) ?? null,
+    awarded_at: (row.awarded_at as string) ?? null,
+    first_appearance_already_awarded: Boolean(row.first_appearance_already_awarded),
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
     agency_name: agencyName(row.agency as string),
@@ -209,6 +212,12 @@ export async function createManualTender(input: {
   remarks?: string;
   created_by: string;
 }): Promise<Tender> {
+  // Award-tracking: manual creation at stage=award stamps awarded_at=now
+  // and flags first_appearance_already_awarded (we can't know the real
+  // transition date for a manually-logged award).
+  const nowIso = new Date().toISOString();
+  const alreadyAwarded = input.stage === 'award';
+
   const { data, error } = await supabaseAdmin
     .from('tender')
     .insert({
@@ -224,6 +233,8 @@ export async function createManualTender(input: {
       is_rollover: input.is_rollover ?? false,
       has_exception: input.has_exception ?? false,
       remarks: input.remarks ?? null,
+      awarded_at: alreadyAwarded ? nowIso : null,
+      first_appearance_already_awarded: alreadyAwarded,
     })
     .select(TENDER_COLUMNS)
     .single();
@@ -240,6 +251,16 @@ export async function createManualTender(input: {
     upload_id: null,
     changed_by: input.created_by,
   });
+  if (alreadyAwarded) {
+    await supabaseAdmin.from('tender_field_change').insert({
+      tender_id: tender.id,
+      field_name: 'awarded_at',
+      old_value: null,
+      new_value: nowIso,
+      upload_id: null,
+      changed_by: input.created_by,
+    });
+  }
   return tender;
 }
 
@@ -251,7 +272,7 @@ export async function updateTenderStage(
 ): Promise<Tender> {
   const { data: current, error: fetchError } = await supabaseAdmin
     .from('tender')
-    .select('stage')
+    .select('stage, awarded_at')
     .eq('id', tenderId)
     .single();
   if (fetchError || !current) throw fetchError || new Error('Tender not found');
@@ -263,10 +284,21 @@ export async function updateTenderStage(
     return enrichTender(again.data as unknown as Record<string, unknown>, null);
   }
 
+  // Award-tracking on manual advance: stamp awarded_at on first transition
+  // into award; never overwrite if already set.
+  const existingAwardedAt = (current.awarded_at as string | null) ?? null;
+  const transitioningToAward = newStage === 'award' && fromStage !== 'award' && !existingAwardedAt;
+  const nowIso = new Date().toISOString();
+  const updatePayload: Record<string, unknown> = {
+    stage: newStage,
+    stage_source: 'manual_override',
+  };
+  if (transitioningToAward) updatePayload.awarded_at = nowIso;
+
   const [updateResult] = await Promise.all([
     supabaseAdmin
       .from('tender')
-      .update({ stage: newStage, stage_source: 'manual_override' })
+      .update(updatePayload)
       .eq('id', tenderId)
       .select(TENDER_COLUMNS)
       .single(),
@@ -280,8 +312,18 @@ export async function updateTenderStage(
     }),
   ]);
   if (updateResult.error) throw updateResult.error;
+  if (transitioningToAward) {
+    await supabaseAdmin.from('tender_field_change').insert({
+      tender_id: tenderId,
+      field_name: 'awarded_at',
+      old_value: null,
+      new_value: nowIso,
+      upload_id: null,
+      changed_by: userId,
+    });
+  }
   const row = updateResult.data as unknown as Record<string, unknown>;
-  return enrichTender(row, new Date().toISOString());
+  return enrichTender(row, nowIso);
 
   // Note: `note` is currently unused; reserved for the optional change annotation
   //       in a future iteration. Silencing lint via an explicit use below.
@@ -409,4 +451,70 @@ export async function listMissingTenders(agency?: string): Promise<Tender[]> {
   return listTenders({ agency, includeMissing: true }).then((all) =>
     all.filter((t) => t.missing_from_last_upload),
   );
+}
+
+// ── Awarded archive + banner ──────────────────────────────────────────────────
+
+export interface AwardedSince {
+  // Timestamp of the upload treated as "previous" — everything awarded after
+  // this point counts. Null when there isn't a comparable previous upload
+  // (first upload ever, or no uploads yet).
+  previous_upload_at: string | null;
+  previous_upload_id: string | null;
+  // Count and list of awarded tenders whose awarded_at is strictly AFTER
+  // previous_upload_at. When previous_upload_at is null the count is 0 and
+  // the UI should fall back to rendering the current-awarded total (see
+  // `getPipelineStats`).
+  count: number;
+  tenders: Tender[];
+}
+
+export async function getAwardedSinceLastUpload(opts: { agency?: string } = {}): Promise<AwardedSince> {
+  // Pick the 2nd-most-recent applied upload as the reference. If only one
+  // applied upload exists, we have no "since" benchmark — return null so
+  // the UI renders a static total.
+  const { data: uploads } = await supabaseAdmin
+    .from('upload')
+    .select('id, uploaded_at')
+    .eq('status', 'applied')
+    .order('uploaded_at', { ascending: false })
+    .limit(2);
+  const list = (uploads || []) as Array<{ id: string; uploaded_at: string }>;
+  if (list.length < 2) {
+    return { previous_upload_at: null, previous_upload_id: null, count: 0, tenders: [] };
+  }
+  const ref = list[1];
+
+  let query = supabaseAdmin
+    .from('tender')
+    .select(TENDER_COLUMNS)
+    .eq('stage', 'award')
+    .gt('awarded_at', ref.uploaded_at)
+    .order('awarded_at', { ascending: false });
+  if (opts.agency) query = query.eq('agency', opts.agency.toUpperCase());
+
+  const { data, error } = await query;
+  if (error) throw error;
+  const rows = (data || []) as unknown as Record<string, unknown>[];
+  const tenders = rows.map((r) => enrichTender(r, null));
+  return {
+    previous_upload_at: ref.uploaded_at,
+    previous_upload_id: ref.id,
+    count: tenders.length,
+    tenders,
+  };
+}
+
+export async function listAwardedTenders(opts: { agency?: string } = {}): Promise<Tender[]> {
+  let query = supabaseAdmin
+    .from('tender')
+    .select(TENDER_COLUMNS)
+    .eq('stage', 'award')
+    .eq('missing_from_last_upload', false)
+    .order('awarded_at', { ascending: false, nullsFirst: false });
+  if (opts.agency) query = query.eq('agency', opts.agency.toUpperCase());
+  const { data, error } = await query;
+  if (error) throw error;
+  const rows = (data || []) as unknown as Record<string, unknown>[];
+  return rows.map((r) => enrichTender(r, null));
 }

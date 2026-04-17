@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import {
   ArrowLeft, ShoppingCart, LayoutDashboard, BarChart3, Plus, Upload,
-  Inbox, TrendingUp, EyeOff,
+  Inbox, TrendingUp, EyeOff, Award,
 } from 'lucide-react';
 import { Tabs, type Tab } from '@/components/ui/Tabs';
 import { ProcurementKanban } from '@/components/procurement/ProcurementKanban';
@@ -45,6 +45,10 @@ export default function ProcurementPage() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <Link href="/procurement/archive" className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-navy-800 text-navy-600 hover:text-gold-500 hover:border-gold-500/30 transition-colors">
+            <Award className="h-4 w-4" />
+            <span>Archive</span>
+          </Link>
           <Link href="/procurement/changes" className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-navy-800 text-navy-600 hover:text-gold-500 hover:border-gold-500/30 transition-colors">
             <TrendingUp className="h-4 w-4" />
             <span>What Moved</span>

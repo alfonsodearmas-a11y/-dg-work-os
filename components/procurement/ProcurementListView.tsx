@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { ChevronUp, ChevronDown, Repeat, AlertTriangle } from 'lucide-react';
+import { ChevronUp, ChevronDown, Repeat, AlertTriangle, HelpCircle, Award } from 'lucide-react';
 import {
   METHOD_CONFIG,
   TENDER_STAGES,
@@ -119,8 +119,14 @@ export function ProcurementListView({ tenders, onSelect }: ProcurementListViewPr
               <div className="px-3 py-2.5"><DaysAtStageIndicator days={t.days_at_current_stage} /></div>
               <div className="px-3 py-2.5">
                 <div className="flex items-center gap-1">
-                  {t.is_rollover && <span title="Rollover"><Repeat className="h-3 w-3 text-amber-400" /></span>}
-                  {t.has_exception && <span title="See Remarks"><AlertTriangle className="h-3 w-3 text-orange-400" /></span>}
+                  {t.is_rollover && <span title="Rollover from prior fiscal year"><Repeat className="h-3 w-3 text-amber-400" /></span>}
+                  {t.has_exception && <span title="See Remarks for non-standard state"><AlertTriangle className="h-3 w-3 text-orange-400" /></span>}
+                  {t.stage_source === 'inferred_from_dates' && (
+                    <span title="Stage inferred from dates (status col was blank / flag)"><HelpCircle className="h-3 w-3 text-sky-400" /></span>
+                  )}
+                  {t.first_appearance_already_awarded && (
+                    <span title="First appeared already awarded — true transition date unknown"><Award className="h-3 w-3 text-emerald-400" /></span>
+                  )}
                 </div>
               </div>
               <div className="px-3 py-2.5"><span className="text-[11px] text-navy-600">{fmtRelativeTime(t.updated_at)}</span></div>
@@ -135,6 +141,8 @@ export function ProcurementListView({ tenders, onSelect }: ProcurementListViewPr
                   <DaysAtStageIndicator days={t.days_at_current_stage} />
                   {t.is_rollover && <Repeat className="h-3 w-3 text-amber-400" />}
                   {t.has_exception && <AlertTriangle className="h-3 w-3 text-orange-400" />}
+                  {t.stage_source === 'inferred_from_dates' && <HelpCircle className="h-3 w-3 text-sky-400" />}
+                  {t.first_appearance_already_awarded && <Award className="h-3 w-3 text-emerald-400" />}
                 </div>
               </div>
             </div>

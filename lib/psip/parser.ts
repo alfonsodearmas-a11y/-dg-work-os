@@ -3,20 +3,28 @@
 // Walks the `PSIP Monitoring Form` sheet of the weekly MPUA PSIP xlsx and
 // produces a flat list of parsed tenders ready for identity resolution.
 //
-// Rules implemented (design doc §4, §6.1, §6.2):
+// Rules implemented (see docs/procurement-audit-and-rebuild-plan.md §8):
 //   - Programme (3-digit) and sub-programme (7-digit) header rows drive
 //     agency attribution and scope.
 //   - Sub-programmes 2606600 (Lethem) and 2606700 (HECI) are excluded —
 //     those live in Trello.
 //   - Parent rows with line-item codes in col A collapse into
 //     `programme_activity` when they have children; parents with no
-//     children become tenders themselves.
-//   - Divider rows (B starts with "Rollover:" / "New:" / "Summary:") are
-//     skipped.
-//   - `Public Tender` → `open_tender` (Q3); `Nil` method rows skipped (Q2).
-//   - Status col: lowercase `award` → `Award`; `Rollover` → is_rollover flag;
-//     `See Remarks` → has_exception flag; blank/flag cases infer stage from
-//     date columns.
+//     children become tenders themselves (programme_activity stays NULL —
+//     the parent has no super-parent context).
+//   - Divider rows ("Rollover:" / "New:" / "New" / "Summary:") are skipped.
+//   - After `Summary:`, every subsequent non-blank row is treated as part
+//     of the rollup block (fixes the 6 MARAD phantoms at R246–R251).
+//   - Method filter: only Open Tender / Public Tender enter the pipeline.
+//     `Public Tender` → `open_tender`. Every other method (Quotation,
+//     Sole Source, Restrictive, Comm.Participation, Nil, blank) is
+//     excluded at ingest.
+//   - Stage resolution:
+//       • col J is a real stage → use it (status_column).
+//       • col J is `Rollover` or `See Remarks` → flag + infer from dates
+//         (inferred_from_dates; "Nothing → Design" fallback).
+//       • col J blank + no dates → route to review queue with
+//         review_reason='ambiguous_stage' (never silently defaulted).
 //   - Programme-344 duplicates (same description under bare `344` header and
 //     under a sub-programme) → earlier copy dropped.
 
@@ -66,19 +74,27 @@ function agencyFor(
 
 // ── Method normalization ──────────────────────────────────────────────────────
 
-function normalizeMethod(raw: string): { method: TenderMethod | null; skip: boolean; normalized_public: boolean } {
+type MethodDisposition =
+  | { kind: 'accepted'; method: 'open_tender'; normalized_public: boolean }
+  | { kind: 'excluded_method'; raw: string }       // valid non-Open method per the enum
+  | { kind: 'skipped_nil' }                         // explicit "Nil"
+  | { kind: 'blank' };                              // empty cell — rejected per the method filter
+
+function normalizeMethod(raw: string): MethodDisposition {
   const v = raw.trim().toLowerCase().replace(/\s+/g, ' ');
-  if (!v) return { method: null, skip: false, normalized_public: false };
-  if (v === 'nil') return { method: null, skip: true, normalized_public: false };
-  if (v === 'open tender') return { method: 'open_tender', skip: false, normalized_public: false };
-  if (v === 'public tender') return { method: 'open_tender', skip: false, normalized_public: true };
-  if (v === 'quotation') return { method: 'quotation', skip: false, normalized_public: false };
-  if (v === 'sole source' || v === 'sole-source') return { method: 'sole_source', skip: false, normalized_public: false };
-  if (v === 'restrictive') return { method: 'restrictive', skip: false, normalized_public: false };
+  if (!v) return { kind: 'blank' };
+  if (v === 'nil') return { kind: 'skipped_nil' };
+  if (v === 'open tender') return { kind: 'accepted', method: 'open_tender', normalized_public: false };
+  if (v === 'public tender') return { kind: 'accepted', method: 'open_tender', normalized_public: true };
+  // All remaining valid methods are excluded at ingest per the method filter.
+  if (v === 'quotation') return { kind: 'excluded_method', raw: 'Quotation' };
+  if (v === 'sole source' || v === 'sole-source') return { kind: 'excluded_method', raw: 'Sole Source' };
+  if (v === 'restrictive') return { kind: 'excluded_method', raw: 'Restrictive' };
   if (v === 'comm.participation' || v === 'comm participation' || v === 'community participation') {
-    return { method: 'comm_participation', skip: false, normalized_public: false };
+    return { kind: 'excluded_method', raw: 'Comm.Participation' };
   }
-  return { method: null, skip: false, normalized_public: false };
+  // Unknown / typo'd values — exclude rather than silently drop.
+  return { kind: 'excluded_method', raw };
 }
 
 // ── Stage resolution ──────────────────────────────────────────────────────────
@@ -105,6 +121,15 @@ function inferStageFromDates(
   return 'design';
 }
 
+interface StageResolution {
+  stage: TenderStage;
+  stageSource: TenderStageSource;
+  isRollover: boolean;
+  hasException: boolean;
+  normalizedLowercase: boolean;
+  needsStageReview: boolean;
+}
+
 function resolveStage(
   statusRaw: string,
   dates: {
@@ -114,7 +139,7 @@ function resolveStage(
     evalNptab: string | null;
     award: string | null;
   },
-): { stage: TenderStage; stageSource: TenderStageSource; isRollover: boolean; hasException: boolean; normalizedLowercase: boolean } {
+): StageResolution {
   const raw = statusRaw.trim();
   // Normalize lowercase 'award' → 'Award' (row 187 in current sheet).
   let normalized = raw;
@@ -122,6 +147,10 @@ function resolveStage(
   if (raw === 'award') {
     normalized = 'Award';
     normalizedLowercase = true;
+  }
+  // Typo tolerance: "Awaitng Award" → "Awaiting Award".
+  if (/^awaitng/i.test(normalized)) {
+    normalized = normalized.replace(/^awaitng/i, 'Awaiting');
   }
 
   if (normalized in PIPELINE_STAGES) {
@@ -131,17 +160,38 @@ function resolveStage(
       isRollover: false,
       hasException: false,
       normalizedLowercase,
+      needsStageReview: false,
     };
   }
 
-  // Rollover / See Remarks / blank → infer.
+  const isRollover = /^rollover$/i.test(normalized);
+  const hasException = /^see remarks$/i.test(normalized);
+
+  const hasAnyDate = Boolean(dates.adv || dates.closed || dates.evalMtb || dates.evalNptab || dates.award);
+
+  // col J blank AND no dates → route to review queue with ambiguous_stage.
+  // Flag rows (Rollover / See Remarks) still get inference fallback to Design
+  // since the human-written flag is itself a signal.
+  if (!normalized && !hasAnyDate) {
+    return {
+      stage: 'design', // provisional — row will be queued for review, not ingested
+      stageSource: 'inferred_from_dates',
+      isRollover: false,
+      hasException: false,
+      normalizedLowercase,
+      needsStageReview: true,
+    };
+  }
+
+  // Rollover / See Remarks / blank-with-dates → infer from dates.
   const stage = inferStageFromDates(dates.adv, dates.closed, dates.evalMtb, dates.evalNptab, dates.award);
   return {
     stage,
     stageSource: 'inferred_from_dates',
-    isRollover: normalized === 'Rollover',
-    hasException: normalized === 'See Remarks',
+    isRollover,
+    hasException,
     normalizedLowercase,
+    needsStageReview: false,
   };
 }
 
@@ -176,7 +226,10 @@ function textOrNull(raw: unknown): string | null {
 const PROGRAMME_CODE_RE = /^3\d{2}$/;
 const SUB_PROGRAMME_CODE_RE = /^\d{7}$/;
 const LINE_ITEM_CODE_RE = /^([HCU]-?\d+|PO-\d+)/i;
-const DIVIDER_RE = /^(Rollover:|New:|Summary:|Sub-Total|Total)/i;
+// Bare-word dividers ("New", "Rollover") without a trailing colon appear in
+// the sheet too — e.g. R105 "New" in the 2026 workbook. Absorb both forms.
+const DIVIDER_RE = /^(Rollover:?|New:?|Summary:|Sub-Total|Total)$/i;
+const SUMMARY_HEADER_RE = /^Summary:$/i;
 const MINISTRY_BANNER_RE = /^MINISTRY/i;
 
 interface RawRow {
@@ -215,6 +268,9 @@ export function parsePsipWorkbook(data: ArrayBuffer | Buffer): ParseResult {
     programme_header_dupes: 0,
     skipped_nil_method: 0,
     skipped_dividers: 0,
+    skipped_summary_rollup: 0,
+    excluded_method_filter: 0,
+    queued_for_stage_review: 0,
     normalized_public_tender: 0,
     normalized_lowercase_award: 0,
     stages_inferred_from_dates: 0,
@@ -271,6 +327,11 @@ export function parsePsipWorkbook(data: ArrayBuffer | Buffer): ParseResult {
   let currentProgramme: string | null = null;
   let currentSub: string | null = null;
   let currentSubExcluded = false;
+  // Summary-rollup absorption. Turns on when we see "Summary:" in col B;
+  // every subsequent row is discarded until a new programme/sub-programme
+  // header or a fully blank row pulls us out. Fixes the 6 MARAD phantoms
+  // at rows 246-251 of the 2026 workbook.
+  let inSummaryRollup = false;
   // Pending parent: materializes only if no children arrive before the next
   // programme/sub/parent row.
   let pendingParent: {
@@ -278,15 +339,32 @@ export function parsePsipWorkbook(data: ArrayBuffer | Buffer): ParseResult {
     children: number;
   } | null = null;
 
+  const tallyBuilt = (built: ReturnType<typeof buildTenderFromRow>) => {
+    if (built === 'excluded') stats.excluded_lethem_heci++;
+    else if (built === 'skipped_nil') stats.skipped_nil_method++;
+    else if (built === 'excluded_method') stats.excluded_method_filter++;
+    else if (built) {
+      if (built.needs_stage_review) stats.queued_for_stage_review++;
+      candidates.push(built);
+    }
+  };
+
   const flushPendingParent = () => {
     if (!pendingParent) return;
     if (pendingParent.children === 0) {
-      // Parent becomes its own tender.
-      const built = buildTenderFromRow(pendingParent.row, currentProgramme, currentSub, null, pendingParent.row.B, stats);
-      if (built === 'excluded') stats.excluded_lethem_heci++;
-      else if (built === 'skipped_nil') stats.skipped_nil_method++;
-      else if (built) {
-        candidates.push(built);
+      // Parent becomes its own tender. programme_activity stays NULL —
+      // a parent without children has no super-parent context. Echoing
+      // the row's own description would be noise.
+      const built = buildTenderFromRow(
+        pendingParent.row,
+        currentProgramme,
+        currentSub,
+        null,
+        null,
+        stats,
+      );
+      tallyBuilt(built);
+      if (built && built !== 'excluded' && built !== 'skipped_nil' && built !== 'excluded_method') {
         stats.parents_self_as_tender++;
       }
     } else {
@@ -302,6 +380,7 @@ export function parsePsipWorkbook(data: ArrayBuffer | Buffer): ParseResult {
       currentProgramme = r.A;
       currentSub = null;
       currentSubExcluded = false;
+      inSummaryRollup = false;
       continue;
     }
     // Sub-programme header (7-digit).
@@ -309,6 +388,19 @@ export function parsePsipWorkbook(data: ArrayBuffer | Buffer): ParseResult {
       flushPendingParent();
       currentSub = r.A;
       currentSubExcluded = r.A === '2606600' || r.A === '2606700';
+      inSummaryRollup = false;
+      continue;
+    }
+    // Summary-rollup entry.
+    if (r.B && SUMMARY_HEADER_RE.test(r.B) && !r.A) {
+      flushPendingParent();
+      inSummaryRollup = true;
+      stats.skipped_summary_rollup++;
+      continue;
+    }
+    // Absorption mode: inside the rollup, drop every content-bearing row.
+    if (inSummaryRollup) {
+      stats.skipped_summary_rollup++;
       continue;
     }
     // Ministry banner line.
@@ -321,8 +413,9 @@ export function parsePsipWorkbook(data: ArrayBuffer | Buffer): ParseResult {
       continue;
     }
 
-    // Divider rows.
-    if (r.B && DIVIDER_RE.test(r.B) && !r.A) {
+    // Divider rows — colon or no colon ("Rollover:", "New", etc.) as long
+    // as col A is empty and the row has no method/status signal.
+    if (r.B && DIVIDER_RE.test(r.B) && !r.A && !r.D && !r.statusRaw) {
       stats.skipped_dividers++;
       continue;
     }
@@ -339,9 +432,7 @@ export function parsePsipWorkbook(data: ArrayBuffer | Buffer): ParseResult {
       if (pendingParent) pendingParent.children++;
       const activity = pendingParent ? pendingParent.row.B : null;
       const built = buildTenderFromRow(r, currentProgramme, currentSub, null, activity, stats);
-      if (built === 'excluded') stats.excluded_lethem_heci++;
-      else if (built === 'skipped_nil') stats.skipped_nil_method++;
-      else if (built) candidates.push(built);
+      tallyBuilt(built);
       continue;
     }
   }
@@ -376,6 +467,13 @@ export function parsePsipWorkbook(data: ArrayBuffer | Buffer): ParseResult {
 
 // ── Builder ───────────────────────────────────────────────────────────────────
 
+type BuildOutcome =
+  | ParsedTender
+  | 'excluded'
+  | 'skipped_nil'
+  | 'excluded_method'
+  | null;
+
 function buildTenderFromRow(
   r: RawRow,
   programmeCode: string | null,
@@ -383,7 +481,7 @@ function buildTenderFromRow(
   _reserved: null,
   programmeActivity: string | null,
   stats: ParseStats,
-): ParsedTender | 'excluded' | 'skipped_nil' | null {
+): BuildOutcome {
   const agency = agencyFor(programmeCode, subProgrammeCode);
   if (!agency) {
     // Programme-344 bare-header rows (no sub-programme) describe RFPs that
@@ -399,9 +497,12 @@ function buildTenderFromRow(
     return 'excluded';
   }
 
-  // Normalize method.
+  // Normalize method. Method filter is strict: Open / Public only.
   const methodResult = normalizeMethod(r.D);
-  if (methodResult.skip) return 'skipped_nil';
+  if (methodResult.kind === 'skipped_nil') return 'skipped_nil';
+  if (methodResult.kind === 'excluded_method' || methodResult.kind === 'blank') {
+    return 'excluded_method';
+  }
   if (methodResult.normalized_public) stats.normalized_public_tender++;
 
   const stageResolution = resolveStage(r.statusRaw, {
@@ -440,6 +541,7 @@ function buildTenderFromRow(
     implementation_status_pct: r.implPct,
     remarks: r.remarks,
     raw_row: r.raw,
+    needs_stage_review: stageResolution.needsStageReview,
   };
 }
 
@@ -466,6 +568,10 @@ function buildSyntheticBareAgencyTender(
     award: r.dateAward,
   });
   const methodResult = normalizeMethod(r.D);
+  // If the bare-344 row survives (no dup match later), method filter applies.
+  // Coerce the method field to a valid enum value only for the accepted case;
+  // otherwise leave null and let the dedup path drop it.
+  const method = methodResult.kind === 'accepted' ? methodResult.method : null;
   return {
     row_number: r.rowNumber,
     description,
@@ -476,7 +582,7 @@ function buildSyntheticBareAgencyTender(
     line_item_code: LINE_ITEM_CODE_RE.test(r.A) ? r.A : null,
     stage: stageResolution.stage,
     stage_source: stageResolution.stageSource,
-    method: methodResult.method,
+    method,
     is_rollover: stageResolution.isRollover,
     has_exception: stageResolution.hasException,
     date_advertised: r.dateAdv,
@@ -490,5 +596,6 @@ function buildSyntheticBareAgencyTender(
     implementation_status_pct: r.implPct,
     remarks: r.remarks,
     raw_row: r.raw,
+    needs_stage_review: stageResolution.needsStageReview,
   };
 }

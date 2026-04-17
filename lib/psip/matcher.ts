@@ -15,6 +15,7 @@ import type {
   MatchResult,
   MatchStats,
   ParsedTender,
+  ReviewReason,
 } from './types';
 import { normalizeDescription } from './parser';
 
@@ -71,6 +72,8 @@ export interface ExistingTenderSnapshot {
   implementation_end_date: string | null;
   implementation_status_pct: number | null;
   remarks: string | null;
+  awarded_at: string | null;
+  first_appearance_already_awarded: boolean;
 }
 
 // ── Similarity ────────────────────────────────────────────────────────────────
@@ -158,6 +161,19 @@ export interface MatchPlan {
   missing: ExistingTenderSnapshot[];
 }
 
+function pushReview(
+  results: MatchResult[],
+  stats: MatchStats,
+  inc: ParsedTender,
+  candidates: Array<{ tender_id: string; score: number; description: string }>,
+  reason: ReviewReason,
+) {
+  results.push({ kind: 'review', incoming: inc, candidates, review_reason: reason });
+  stats.review_queue++;
+  if (reason === 'ambiguous_match') stats.review_queue_ambiguous_match++;
+  else stats.review_queue_ambiguous_stage++;
+}
+
 export function matchTenders(
   incoming: ParsedTender[],
   existing: ExistingTenderSnapshot[],
@@ -180,11 +196,23 @@ export function matchTenders(
     updated: 0,
     updated_field_changes: 0,
     review_queue: 0,
+    review_queue_ambiguous_match: 0,
+    review_queue_ambiguous_stage: 0,
     high_confidence_matches: 0,
     missing: 0,
   };
 
   for (const inc of incoming) {
+    // Ambiguous-stage rows (col J blank + no dates) short-circuit to review.
+    // They don't enter the match/update path because we have no reliable
+    // stage to propagate. If the row later gets stage data in the
+    // spreadsheet, the fuzzy matcher will find the existing review row's
+    // eventual tender on the next upload.
+    if (inc.needs_stage_review) {
+      pushReview(results, stats, inc, [], 'ambiguous_stage');
+      continue;
+    }
+
     const key = scopeKey(inc);
     const scoped = byScope.get(key) ?? [];
 
@@ -233,22 +261,11 @@ export function matchTenders(
           const exactCode = tied.find((s) => s.snap.line_item_code === inc.line_item_code);
           if (exactCode) chosen = exactCode.snap;
           else {
-            // Send to review to be safe.
-            results.push({
-              kind: 'review',
-              incoming: inc,
-              candidates: tied.map((s) => ({ tender_id: s.snap.id, score: s.score, description: s.snap.description })),
-            });
-            stats.review_queue++;
+            pushReview(results, stats, inc, tied.map((s) => ({ tender_id: s.snap.id, score: s.score, description: s.snap.description })), 'ambiguous_match');
             continue;
           }
         } else {
-          results.push({
-            kind: 'review',
-            incoming: inc,
-            candidates: tied.map((s) => ({ tender_id: s.snap.id, score: s.score, description: s.snap.description })),
-          });
-          stats.review_queue++;
+          pushReview(results, stats, inc, tied.map((s) => ({ tender_id: s.snap.id, score: s.score, description: s.snap.description })), 'ambiguous_match');
           continue;
         }
       }
@@ -269,8 +286,7 @@ export function matchTenders(
 
     if (top.score >= MATCH_THRESHOLD_REVIEW) {
       const topCandidates = scored.slice(0, 3).map((s) => ({ tender_id: s.snap.id, score: s.score, description: s.snap.description }));
-      results.push({ kind: 'review', incoming: inc, candidates: topCandidates });
-      stats.review_queue++;
+      pushReview(results, stats, inc, topCandidates, 'ambiguous_match');
       continue;
     }
 

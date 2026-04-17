@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { MINISTRY_ROLES } from '@/lib/people-types';
-import { listTenders, createManualTender, getPipelineStats } from '@/lib/tender/queries';
+import { listTenders, createManualTender, getPipelineStats, getAwardedSinceLastUpload } from '@/lib/tender/queries';
 import {
   AGENCY_CODES,
   METHOD_CONFIG,
@@ -21,12 +21,13 @@ export async function GET() {
     const isMinistry = MINISTRY_ROLES.includes(session.user.role);
     const agencyFilter = isMinistry ? undefined : session.user.agency ?? undefined;
 
-    const [tenders, stats] = await Promise.all([
+    const [tenders, stats, awardedSince] = await Promise.all([
       listTenders({ agency: agencyFilter }),
       getPipelineStats(agencyFilter),
+      getAwardedSinceLastUpload({ agency: agencyFilter }),
     ]);
 
-    return NextResponse.json({ tenders, stats });
+    return NextResponse.json({ tenders, stats, awarded_since: awardedSince });
   } catch (err: unknown) {
     const code = (err as { code?: string })?.code ?? '';
     const msg = (err as { message?: string })?.message ?? '';

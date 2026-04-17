@@ -54,7 +54,14 @@ export interface ParsedTender {
   implementation_status_pct: number | null;
   remarks: string | null;
   raw_row: Record<string, string | number | null>;
+  // Set when col J is blank AND all date columns are blank AND the row has
+  // a valid description + Open/Public method. These rows are routed to the
+  // review queue with review_reason='ambiguous_stage' rather than silently
+  // defaulted to Design. See docs/procurement-audit-and-rebuild-plan.md §11-1.
+  needs_stage_review?: boolean;
 }
+
+export type ReviewReason = 'ambiguous_match' | 'ambiguous_stage';
 
 export interface ParseStats {
   total_rows_scanned: number;
@@ -63,6 +70,9 @@ export interface ParseStats {
   programme_header_dupes: number;
   skipped_nil_method: number;
   skipped_dividers: number;
+  skipped_summary_rollup: number;
+  excluded_method_filter: number;
+  queued_for_stage_review: number;
   normalized_public_tender: number;
   normalized_lowercase_award: number;
   stages_inferred_from_dates: number;
@@ -92,6 +102,7 @@ export interface MatchResult {
   score?: number;
   candidates?: Array<{ tender_id: string; score: number; description: string }>;
   field_diffs?: Array<{ field: string; old: unknown; new: unknown }>;
+  review_reason?: ReviewReason;
 }
 
 export interface MatchStats {
@@ -99,6 +110,8 @@ export interface MatchStats {
   updated: number;
   updated_field_changes: number;
   review_queue: number;
+  review_queue_ambiguous_match: number;
+  review_queue_ambiguous_stage: number;
   high_confidence_matches: number;
   missing: number;
 }

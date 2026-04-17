@@ -20,9 +20,15 @@ interface Filters {
   stages: TenderStage[];
 }
 
+interface AwardedSincePayload {
+  previous_upload_at: string | null;
+  count: number;
+}
+
 export function ProcurementAnalytics() {
   const [tenders, setTenders] = useState<Tender[]>([]);
   const [stats, setStats] = useState<PipelineStats | null>(null);
+  const [awardedSince, setAwardedSince] = useState<AwardedSincePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<Filters>({ agencies: [], methods: [], stages: [] });
 
@@ -33,6 +39,7 @@ export function ProcurementAnalytics() {
       const data = await res.json();
       setTenders(data.tenders || []);
       setStats(data.stats || null);
+      setAwardedSince(data.awarded_since || null);
     } finally {
       setLoading(false);
     }
@@ -88,13 +95,14 @@ export function ProcurementAnalytics() {
   }, [filtered]);
 
   const flagCounts = useMemo(() => {
-    let rollover = 0, exception = 0, inferred = 0;
+    let rollover = 0, exception = 0, inferred = 0, inheritedAwarded = 0;
     for (const t of filtered) {
       if (t.is_rollover) rollover++;
       if (t.has_exception) exception++;
       if (t.stage_source === 'inferred_from_dates') inferred++;
+      if (t.first_appearance_already_awarded) inheritedAwarded++;
     }
-    return { rollover, exception, inferred };
+    return { rollover, exception, inferred, inheritedAwarded };
   }, [filtered]);
 
   const stalled = useMemo(() => {
@@ -148,7 +156,7 @@ export function ProcurementAnalytics() {
       </div>
 
       {/* KPIs (counts only — no dollar totals) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="bg-navy-900 rounded-xl border border-navy-800 p-3">
           <div className="text-navy-600 text-xs mb-1">Total tenders</div>
           <div className="text-white text-2xl font-bold">{filtered.length}</div>
@@ -156,6 +164,10 @@ export function ProcurementAnalytics() {
         <div className="bg-navy-900 rounded-xl border border-navy-800 p-3">
           <div className="text-navy-600 text-xs mb-1">Active</div>
           <div className="text-white text-2xl font-bold">{stats?.total_active ?? filtered.filter((t) => t.stage !== 'award').length}</div>
+        </div>
+        <div className="bg-navy-900 rounded-xl border border-navy-800 p-3">
+          <div className="text-navy-600 text-xs mb-1">Awarded since last upload</div>
+          <div className={`text-2xl font-bold ${awardedSince && awardedSince.count > 0 ? 'text-emerald-400' : 'text-white'}`}>{awardedSince?.count ?? 0}</div>
         </div>
         <div className="bg-navy-900 rounded-xl border border-navy-800 p-3">
           <div className="text-navy-600 text-xs mb-1">Stalled ≥30d</div>
@@ -234,7 +246,7 @@ export function ProcurementAnalytics() {
 
         <div className="bg-navy-900 rounded-xl border border-navy-800 p-4">
           <h3 className="text-sm font-semibold text-white mb-4">Flags</h3>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-4 gap-3">
             <div className="text-center">
               <div className="text-2xl font-bold text-amber-300">{flagCounts.rollover}</div>
               <div className="text-[11px] text-navy-600 mt-1">Rollover</div>
@@ -244,8 +256,12 @@ export function ProcurementAnalytics() {
               <div className="text-[11px] text-navy-600 mt-1">See Remarks</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-slate-400">{flagCounts.inferred}</div>
+              <div className="text-2xl font-bold text-sky-300">{flagCounts.inferred}</div>
               <div className="text-[11px] text-navy-600 mt-1">Stage Inferred</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-emerald-300">{flagCounts.inheritedAwarded}</div>
+              <div className="text-[11px] text-navy-600 mt-1">Inherited Award</div>
             </div>
           </div>
         </div>

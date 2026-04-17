@@ -8,22 +8,25 @@
 import { supabaseAdmin } from '@/lib/db';
 import { parsePsipWorkbook } from './parser';
 import { matchTenders, type ExistingTenderSnapshot, DIFFABLE_FIELDS } from './matcher';
-import type { MatchResult, ParseResult, ParsedTender } from './types';
+import type { MatchResult, ParseResult, ParsedTender, ReviewReason } from './types';
 
 export interface PreviewOutcome {
   upload_id: string;
+  uploaded_at: string;
   parse_stats: ParseResult['stats'];
   match_stats: {
     new: number;
     updated: number;
     updated_field_changes: number;
     review_queue: number;
+    review_queue_ambiguous_match: number;
+    review_queue_ambiguous_stage: number;
     high_confidence_matches: number;
     missing: number;
   };
   new_tenders: ParsedTender[];
   updated_tenders: Array<{ existing_tender_id: string; incoming: ParsedTender; field_diffs: MatchResult['field_diffs']; score: number }>;
-  review_items: Array<{ id: string; incoming: ParsedTender; candidates: MatchResult['candidates'] }>;
+  review_items: Array<{ id: string; incoming: ParsedTender; candidates: MatchResult['candidates']; review_reason: ReviewReason }>;
   missing_tenders: ExistingTenderSnapshot[];
 }
 
@@ -53,33 +56,34 @@ export async function previewPsipUpload(buffer: Buffer, ctx: IngestContext): Pro
         ...plan.stats,
       },
     })
-    .select('id')
+    .select('id, uploaded_at')
     .single();
   if (uploadErr || !uploadRow) throw uploadErr || new Error('Failed to insert upload row');
 
-  // Persist review queue rows.
-  const reviewInserts = plan.results
-    .filter((r) => r.kind === 'review')
-    .map((r) => ({
-      upload_id: uploadRow.id,
-      incoming_row: r.incoming as unknown as Record<string, unknown>,
-      candidate_tender_ids: (r.candidates ?? []).map((c) => c.tender_id),
-      scores: Object.fromEntries((r.candidates ?? []).map((c) => [c.tender_id, c.score])),
-      status: 'pending' as const,
-    }));
+  // Persist review queue rows with review_reason so the UI can split
+  // ambiguous-match from ambiguous-stage reviews.
+  const reviewResults = plan.results.filter((r) => r.kind === 'review');
+  const reviewInserts = reviewResults.map((r) => ({
+    upload_id: uploadRow.id,
+    incoming_row: r.incoming as unknown as Record<string, unknown>,
+    candidate_tender_ids: (r.candidates ?? []).map((c) => c.tender_id),
+    scores: Object.fromEntries((r.candidates ?? []).map((c) => [c.tender_id, c.score])),
+    status: 'pending' as const,
+    review_reason: (r.review_reason ?? 'ambiguous_match') as ReviewReason,
+  }));
 
   let reviewItems: PreviewOutcome['review_items'] = [];
   if (reviewInserts.length > 0) {
     const { data: inserted, error: revErr } = await supabaseAdmin
       .from('tender_match_review')
       .insert(reviewInserts)
-      .select('id, incoming_row, candidate_tender_ids, scores');
+      .select('id, incoming_row, candidate_tender_ids, scores, review_reason');
     if (revErr) throw revErr;
-    const reviewResults = plan.results.filter((r) => r.kind === 'review');
     reviewItems = (inserted || []).map((row: Record<string, unknown>, i) => ({
       id: row.id as string,
       incoming: reviewResults[i].incoming,
       candidates: reviewResults[i].candidates,
+      review_reason: (row.review_reason as ReviewReason) || 'ambiguous_match',
     }));
   }
 
@@ -95,6 +99,7 @@ export async function previewPsipUpload(buffer: Buffer, ctx: IngestContext): Pro
 
   return {
     upload_id: uploadRow.id as string,
+    uploaded_at: uploadRow.uploaded_at as string,
     parse_stats: parse.stats,
     match_stats: plan.stats,
     new_tenders: newTenders,
@@ -111,13 +116,27 @@ export async function applyPsipUpload(uploadId: string, buffer: Buffer, userId: 
   updated: number;
   updated_field_changes: number;
   review_queue: number;
+  review_queue_ambiguous_match: number;
+  review_queue_ambiguous_stage: number;
   missing: number;
 }> {
+  // Fetch upload.uploaded_at so awarded_at can be stamped with the upload
+  // timestamp (not the apply-time now()). This matters when preview and
+  // apply are separated by minutes/hours.
+  const { data: uploadMeta, error: uploadMetaErr } = await supabaseAdmin
+    .from('upload')
+    .select('uploaded_at')
+    .eq('id', uploadId)
+    .single();
+  if (uploadMetaErr || !uploadMeta) throw uploadMetaErr || new Error('Upload not found');
+  const uploadedAt = uploadMeta.uploaded_at as string;
+
   // Re-parse + re-match to ensure the preview wasn't drifted. This also guards
   // against applying an upload whose preview-time state no longer matches.
   const parse = parsePsipWorkbook(buffer);
   const existing = await fetchExistingSnapshots();
   const plan = matchTenders(parse.tenders, existing);
+  const snapshotById = new Map(existing.map((e) => [e.id, e]));
 
   let newCount = 0;
   let updatedCount = 0;
@@ -125,7 +144,7 @@ export async function applyPsipUpload(uploadId: string, buffer: Buffer, userId: 
 
   for (const r of plan.results) {
     if (r.kind === 'new') {
-      const inserted = await insertNewTender(r.incoming, uploadId);
+      const inserted = await insertNewTender(r.incoming, uploadId, uploadedAt);
       if (inserted) {
         await supabaseAdmin.from('tender_field_change').insert({
           tender_id: inserted,
@@ -135,12 +154,32 @@ export async function applyPsipUpload(uploadId: string, buffer: Buffer, userId: 
           upload_id: uploadId,
           changed_by: userId,
         });
+        // Stamp first-Award field_change when incoming is already at award.
+        if (r.incoming.stage === 'award') {
+          await supabaseAdmin.from('tender_field_change').insert({
+            tender_id: inserted,
+            field_name: 'awarded_at',
+            old_value: null,
+            new_value: uploadedAt,
+            upload_id: uploadId,
+            changed_by: userId,
+          });
+        }
         newCount++;
       }
     } else if (r.kind === 'update' && r.existing_tender_id && r.field_diffs) {
-      await applyUpdate(r.existing_tender_id, r.incoming, r.field_diffs, uploadId, userId);
+      const previous = snapshotById.get(r.existing_tender_id) || null;
+      const extraChanges = await applyUpdate(
+        r.existing_tender_id,
+        r.incoming,
+        r.field_diffs,
+        uploadId,
+        userId,
+        uploadedAt,
+        previous,
+      );
       updatedCount++;
-      fieldChangeCount += r.field_diffs.length;
+      fieldChangeCount += r.field_diffs.length + extraChanges;
     }
     // REVIEW rows are left as pending tender_match_review entries for human resolution.
   }
@@ -185,6 +224,8 @@ export async function applyPsipUpload(uploadId: string, buffer: Buffer, userId: 
     updated: updatedCount,
     updated_field_changes: fieldChangeCount,
     review_queue: plan.stats.review_queue,
+    review_queue_ambiguous_match: plan.stats.review_queue_ambiguous_match,
+    review_queue_ambiguous_stage: plan.stats.review_queue_ambiguous_stage,
     missing: plan.missing.length,
   };
 }
@@ -212,13 +253,22 @@ async function fetchExistingSnapshots(): Promise<ExistingTenderSnapshot[]> {
       date_advertised, date_closed, date_eval_sent_mtb_rtb,
       date_eval_sent_nptab, date_of_award,
       contractor, implementation_start_date, implementation_end_date,
-      implementation_status_pct, remarks
+      implementation_status_pct, remarks,
+      awarded_at, first_appearance_already_awarded
     `);
   if (error) throw error;
   return ((data || []) as unknown) as ExistingTenderSnapshot[];
 }
 
-async function insertNewTender(inc: ParsedTender, uploadId: string): Promise<string | null> {
+async function insertNewTender(
+  inc: ParsedTender,
+  uploadId: string,
+  uploadedAt: string,
+): Promise<string | null> {
+  // Award-tracking: stamp awarded_at with the upload timestamp whenever a
+  // tender is first ingested at stage='award'. Flag first_appearance_already_awarded
+  // so the UI can honestly render "we don't know the true transition date".
+  const alreadyAwarded = inc.stage === 'award';
   const { data, error } = await supabaseAdmin
     .from('tender')
     .insert({
@@ -248,6 +298,8 @@ async function insertNewTender(inc: ParsedTender, uploadId: string): Promise<str
       first_seen_upload_id: uploadId,
       last_seen_upload_id: uploadId,
       missing_from_last_upload: false,
+      awarded_at: alreadyAwarded ? uploadedAt : null,
+      first_appearance_already_awarded: alreadyAwarded,
     })
     .select('id')
     .single();
@@ -261,7 +313,9 @@ async function applyUpdate(
   diffs: NonNullable<MatchResult['field_diffs']>,
   uploadId: string,
   userId: string,
-): Promise<void> {
+  uploadedAt: string,
+  existing: ExistingTenderSnapshot | null,
+): Promise<number> {
   // Build the update payload from the parsed tender (only diffed fields).
   const updatePayload: Record<string, unknown> = {
     last_seen_upload_id: uploadId,
@@ -273,6 +327,28 @@ async function applyUpdate(
     if (diffFields.has(field)) {
       updatePayload[field] = (inc as unknown as Record<string, unknown>)[field];
     }
+  }
+
+  // Award-tracking: stamp awarded_at on first observation of stage='award'
+  // and NEVER overwrite it afterwards. The stage diff (if present) already
+  // takes care of the stage transition; we just need to stamp the timestamp.
+  let extraChangeCount = 0;
+  const stageDiff = diffs.find((d) => d.field === 'stage');
+  const transitioningToAward = stageDiff && stageDiff.new === 'award' && stageDiff.old !== 'award';
+  const existingAwardedAt = existing?.awarded_at ?? null;
+  if (transitioningToAward && !existingAwardedAt) {
+    updatePayload.awarded_at = uploadedAt;
+    // Don't flip first_appearance_already_awarded here — it's only true when
+    // the tender's first-ever row was already Award.
+    await supabaseAdmin.from('tender_field_change').insert({
+      tender_id: tenderId,
+      field_name: 'awarded_at',
+      old_value: null,
+      new_value: uploadedAt,
+      upload_id: uploadId,
+      changed_by: userId,
+    });
+    extraChangeCount++;
   }
 
   const { error: upErr } = await supabaseAdmin
@@ -293,4 +369,6 @@ async function applyUpdate(
     const { error: chErr } = await supabaseAdmin.from('tender_field_change').insert(changeRows);
     if (chErr) throw chErr;
   }
+
+  return extraChangeCount;
 }

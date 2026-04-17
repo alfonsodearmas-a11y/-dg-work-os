@@ -21,6 +21,16 @@ export const TENDER_STAGES: readonly TenderStage[] = [
   'award',
 ] as const;
 
+// Stages shown on the default /procurement board and list view. The
+// `award` stage lives in /procurement/archive instead — the landing
+// surface is about active procurement, not completed awards.
+export const KANBAN_STAGES: readonly TenderStage[] = [
+  'design',
+  'advertised',
+  'evaluation',
+  'awaiting_award',
+] as const;
+
 export const STAGE_CONFIG: Record<TenderStage, { label: string; color: string; description: string }> = {
   design:         { label: 'Design',         color: '#94a3b8', description: 'Not yet advertised; planning stage' },
   advertised:     { label: 'Advertised',     color: '#60a5fa', description: 'Tender advertised publicly' },
@@ -93,6 +103,8 @@ export interface Tender {
   missing_from_last_upload: boolean;
   first_seen_upload_id: string | null;
   last_seen_upload_id: string | null;
+  awarded_at: string | null;
+  first_appearance_already_awarded: boolean;
   created_at: string;
   updated_at: string;
   // Derived
