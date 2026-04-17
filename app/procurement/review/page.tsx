@@ -1,0 +1,135 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { ArrowLeft, Inbox, Check, Plus, SkipForward } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
+
+interface ReviewRow {
+  id: string;
+  upload_id: string;
+  incoming_row: {
+    description?: string;
+    agency?: string;
+    stage?: string;
+    programme_activity?: string | null;
+    [k: string]: unknown;
+  };
+  status: string;
+  candidates: Array<{
+    tender_id: string;
+    score: number;
+    snapshot: { id: string; description: string; agency: string; stage: string } | null;
+  }>;
+}
+
+export default function ReviewPage() {
+  const { toast } = useToast();
+  const [reviews, setReviews] = useState<ReviewRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    const res = await fetch('/api/procurement/review');
+    if (res.ok) {
+      const data = await res.json();
+      setReviews(data.reviews || []);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const resolve = async (id: string, action: 'match' | 'create' | 'skip', tenderId?: string) => {
+    const res = await fetch(`/api/procurement/review/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, tender_id: tenderId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error || 'Failed');
+      return;
+    }
+    toast.success(`Resolved as ${action}`);
+    setReviews((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3">
+        <Link href="/procurement" className="p-2 rounded-lg text-navy-600 hover:text-white hover:bg-navy-900 transition-colors" aria-label="Back">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <div className="flex-1">
+          <h1 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
+            <Inbox className="h-5 w-5 text-gold-500" /> Review Queue
+          </h1>
+          <p className="text-xs md:text-sm text-navy-600">Ambiguous matches from recent uploads. Match, create, or skip.</p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="h-20 bg-navy-900 rounded-xl border border-navy-800 animate-pulse" />
+      ) : reviews.length === 0 ? (
+        <div className="rounded-xl border border-navy-800 bg-navy-900/40 p-10 text-center">
+          <p className="text-sm text-navy-600">No pending review items.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {reviews.map((r) => {
+            const inc = r.incoming_row;
+            return (
+              <div key={r.id} className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+                <div className="mb-3">
+                  <div className="text-[11px] uppercase tracking-wider text-amber-300 mb-1">Incoming row</div>
+                  <div className="text-sm text-white">{inc.description || '(no description)'}</div>
+                  <div className="text-xs text-navy-600 mt-1">
+                    {inc.agency} · {inc.stage} · {inc.programme_activity || '(no activity)'}
+                  </div>
+                </div>
+                <div className="mb-3">
+                  <div className="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Candidates</div>
+                  {r.candidates.length === 0 && <div className="text-xs text-navy-600">(none)</div>}
+                  <div className="space-y-2">
+                    {r.candidates.map((c) => {
+                      const snap = c.snapshot;
+                      if (!snap) return null;
+                      return (
+                        <div key={c.tender_id} className="flex items-center justify-between gap-3 bg-navy-900/50 rounded-lg px-3 py-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm text-slate-300 truncate">{snap.description}</div>
+                            <div className="text-[10px] text-navy-600">{snap.agency} · {snap.stage} · score {c.score.toFixed(2)}</div>
+                          </div>
+                          <button
+                            onClick={() => resolve(r.id, 'match', c.tender_id)}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors"
+                          >
+                            <Check className="h-3 w-3" /> Match
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 pt-2 border-t border-amber-500/20">
+                  <button
+                    onClick={() => resolve(r.id, 'create')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30 hover:bg-blue-500/30 transition-colors"
+                  >
+                    <Plus className="h-3 w-3" /> Create new
+                  </button>
+                  <button
+                    onClick={() => resolve(r.id, 'skip')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 border border-navy-800 hover:border-navy-700 transition-colors"
+                  >
+                    <SkipForward className="h-3 w-3" /> Skip
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

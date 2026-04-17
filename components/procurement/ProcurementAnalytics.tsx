@@ -2,35 +2,26 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Package } from 'lucide-react';
-import { Spinner } from '@/components/ui/Spinner';
-import { useIsMobile } from '@/hooks/useIsMobile';
-import { AnalyticsKpiRow } from './analytics/AnalyticsKpiRow';
-import { AnalyticsPipelineFunnel } from './analytics/AnalyticsPipelineFunnel';
-import { AnalyticsAgencyBreakdown } from './analytics/AnalyticsAgencyBreakdown';
-import { AnalyticsStalledPanel } from './analytics/AnalyticsStalledPanel';
-import { AnalyticsTimeInStage } from './analytics/AnalyticsTimeInStage';
-import { AnalyticsMethodDistribution } from './analytics/AnalyticsMethodDistribution';
-import { AnalyticsCompletionRate } from './analytics/AnalyticsCompletionRate';
-import type { ProcurementPackage, PipelineStats, ProcurementStage, ProcurementMethod } from '@/lib/procurement-types';
-import { PROCUREMENT_STAGES } from '@/lib/procurement-types';
-
-// ── Filter types ────────────────────────────────────────────────────────
+import {
+  TENDER_STAGES,
+  STAGE_CONFIG,
+  METHOD_CONFIG,
+  type Tender,
+  type TenderStage,
+  type TenderMethod,
+  type PipelineStats,
+} from '@/lib/tender/types';
+import { AgencyBadge } from './AgencyBadge';
+import { DaysAtStageIndicator } from './DaysAtStageIndicator';
 
 interface Filters {
   agencies: string[];
-  methods: ProcurementMethod[];
-  stages: ProcurementStage[];
+  methods: TenderMethod[];
+  stages: TenderStage[];
 }
 
-interface ProcurementAnalyticsProps {
-  onPackageClick?: (packageId: string) => void;
-}
-
-// ── Component ───────────────────────────────────────────────────────────
-
-export function ProcurementAnalytics({ onPackageClick }: ProcurementAnalyticsProps) {
-  const isMobile = useIsMobile();
-  const [packages, setPackages] = useState<ProcurementPackage[]>([]);
+export function ProcurementAnalytics() {
+  const [tenders, setTenders] = useState<Tender[]>([]);
   const [stats, setStats] = useState<PipelineStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<Filters>({ agencies: [], methods: [], stages: [] });
@@ -40,10 +31,8 @@ export function ProcurementAnalytics({ onPackageClick }: ProcurementAnalyticsPro
       const res = await fetch('/api/procurement');
       if (!res.ok) return;
       const data = await res.json();
-      setPackages(data.packages || []);
+      setTenders(data.tenders || []);
       setStats(data.stats || null);
-    } catch {
-      // Silently fail — analytics are non-critical
     } finally {
       setLoading(false);
     }
@@ -51,96 +40,79 @@ export function ProcurementAnalytics({ onPackageClick }: ProcurementAnalyticsPro
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // ── Derived filtered data ──────────────────────────────────────────
-
-  const filteredPackages = useMemo(() => {
+  const filtered = useMemo(() => {
     const { agencies, methods, stages } = filters;
-    if (agencies.length === 0 && methods.length === 0 && stages.length === 0) return packages;
-    return packages.filter((p) =>
-      (agencies.length === 0 || agencies.includes(p.agency.toUpperCase())) &&
-      (methods.length === 0 || methods.includes(p.procurement_method)) &&
-      (stages.length === 0 || stages.includes(p.current_stage))
+    if (agencies.length === 0 && methods.length === 0 && stages.length === 0) return tenders;
+    return tenders.filter(
+      (t) =>
+        (agencies.length === 0 || agencies.includes(t.agency.toUpperCase())) &&
+        (methods.length === 0 || (t.method ? methods.includes(t.method) : false)) &&
+        (stages.length === 0 || stages.includes(t.stage)),
     );
-  }, [packages, filters]);
+  }, [tenders, filters]);
 
-  const filteredStats = useMemo((): PipelineStats | null => {
-    if (!stats && filteredPackages.length === 0) return null;
-    // Recompute stats from filtered packages
-    const by_stage = Object.fromEntries(
-      PROCUREMENT_STAGES.map((s) => [s, { count: 0, total_value: 0 }]),
-    ) as PipelineStats['by_stage'];
-
-    let totalActive = 0;
-    let totalValue = 0;
-    let stalledCount = 0;
-
-    for (const pkg of filteredPackages) {
-      by_stage[pkg.current_stage].count++;
-      by_stage[pkg.current_stage].total_value += pkg.estimated_value;
-      if (pkg.current_stage !== 'awarded') {
-        totalActive++;
-        totalValue += pkg.estimated_value;
-      }
-      if (pkg.current_stage !== 'awarded' && pkg.days_at_current_stage > 30) {
-        stalledCount++;
-      }
-    }
-
-    return {
-      total_active: totalActive,
-      total_value: totalValue,
-      avg_days_to_award: stats?.avg_days_to_award ?? 0,
-      stalled_count: stalledCount,
-      by_stage,
-    };
-  }, [filteredPackages, stats]);
-
-  // Discover agencies present in data
   const availableAgencies = useMemo(() => {
     const set = new Set<string>();
-    packages.forEach((p) => set.add(p.agency.toUpperCase()));
+    tenders.forEach((t) => set.add(t.agency.toUpperCase()));
     return Array.from(set).sort();
-  }, [packages]);
+  }, [tenders]);
 
-  // ── Filter bar handlers ────────────────────────────────────────────
+  const toggleAgency = (a: string) =>
+    setFilters((f) => ({ ...f, agencies: f.agencies.includes(a) ? f.agencies.filter((x) => x !== a) : [...f.agencies, a] }));
 
-  const toggleAgency = (agency: string) => {
-    setFilters((f) => ({
-      ...f,
-      agencies: f.agencies.includes(agency)
-        ? f.agencies.filter((a) => a !== agency)
-        : [...f.agencies, agency],
-    }));
-  };
+  // Count-based aggregations.
+  const byStage = useMemo(() => {
+    const counts = Object.fromEntries(TENDER_STAGES.map((s) => [s, 0])) as Record<TenderStage, number>;
+    for (const t of filtered) counts[t.stage]++;
+    return counts;
+  }, [filtered]);
 
-  const clearFilters = () => setFilters({ agencies: [], methods: [], stages: [] });
-  const hasFilters = filters.agencies.length > 0 || filters.methods.length > 0 || filters.stages.length > 0;
+  const byAgency = useMemo(() => {
+    const m: Record<string, { active: number; award: number; stalled: number }> = {};
+    for (const t of filtered) {
+      if (!m[t.agency]) m[t.agency] = { active: 0, award: 0, stalled: 0 };
+      if (t.stage === 'award') m[t.agency].award++;
+      else m[t.agency].active++;
+      if (t.stage !== 'award' && t.days_at_current_stage >= 30) m[t.agency].stalled++;
+    }
+    return Object.entries(m).sort((a, b) => b[1].active - a[1].active);
+  }, [filtered]);
 
-  // ── Loading ────────────────────────────────────────────────────────
+  const byMethod = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const t of filtered) {
+      const label = t.method ? METHOD_CONFIG[t.method].label : '(no method)';
+      m[label] = (m[label] ?? 0) + 1;
+    }
+    return Object.entries(m).sort((a, b) => b[1] - a[1]);
+  }, [filtered]);
+
+  const flagCounts = useMemo(() => {
+    let rollover = 0, exception = 0, inferred = 0;
+    for (const t of filtered) {
+      if (t.is_rollover) rollover++;
+      if (t.has_exception) exception++;
+      if (t.stage_source === 'inferred_from_dates') inferred++;
+    }
+    return { rollover, exception, inferred };
+  }, [filtered]);
+
+  const stalled = useMemo(() => {
+    return filtered
+      .filter((t) => t.stage !== 'award' && t.days_at_current_stage >= 30)
+      .sort((a, b) => b.days_at_current_stage - a.days_at_current_stage)
+      .slice(0, 10);
+  }, [filtered]);
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        {/* KPI skeleton */}
-        <div className="grid grid-cols-3 gap-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-24 bg-navy-900 rounded-xl border border-navy-800 animate-pulse" />
-          ))}
-        </div>
-        {/* Chart skeleton */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-          <div className="lg:col-span-3 h-72 bg-navy-900 rounded-xl border border-navy-800 animate-pulse" />
-          <div className="lg:col-span-2 h-72 bg-navy-900 rounded-xl border border-navy-800 animate-pulse" />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="h-64 bg-navy-900 rounded-xl border border-navy-800 animate-pulse" />
-          <div className="h-64 bg-navy-900 rounded-xl border border-navy-800 animate-pulse" />
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-56 bg-navy-900 rounded-xl border border-navy-800 animate-pulse" />)}
       </div>
     );
   }
 
-  if (packages.length === 0) {
+  if (tenders.length === 0) {
     return (
       <div className="flex items-center justify-center py-16">
         <div className="text-center">
@@ -153,65 +125,148 @@ export function ProcurementAnalytics({ onPackageClick }: ProcurementAnalyticsPro
     );
   }
 
-  return (
-    <div className="space-y-4 md:space-y-5">
+  const total = filtered.length || 1;
 
-      {/* ── Row 1: Filter bar ─────────────────────────────────────── */}
+  return (
+    <div className="space-y-4">
+      {/* Filter bar */}
       <div className="flex items-center gap-2 flex-wrap">
-        {availableAgencies.map((agency) => {
-          const active = filters.agencies.includes(agency);
+        {availableAgencies.map((a) => {
+          const active = filters.agencies.includes(a);
           return (
             <button
-              key={agency}
-              onClick={() => toggleAgency(agency)}
+              key={a}
+              onClick={() => toggleAgency(a)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                active
-                  ? 'bg-gold-500/20 text-gold-500 border-gold-500/30'
-                  : 'bg-navy-900 text-navy-600 border-navy-800 hover:text-white hover:border-navy-700'
+                active ? 'bg-gold-500/20 text-gold-500 border-gold-500/30' : 'bg-navy-900 text-navy-600 border-navy-800 hover:text-white hover:border-navy-700'
               }`}
             >
-              {agency}
+              {a === 'HINTERLAND_AIRSTRIPS' ? 'Airstrips' : a}
             </button>
           );
         })}
-        {hasFilters && (
-          <button
-            onClick={clearFilters}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium text-navy-600 hover:text-red-400 transition-colors"
-          >
-            Clear
-          </button>
-        )}
       </div>
 
-      {/* ── Row 2: KPI Summary Cards ──────────────────────────────── */}
-      <AnalyticsKpiRow stats={filteredStats} />
-
-      {/* ── Row 3: Pipeline Funnel + Agency Breakdown ─────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 md:gap-4">
-        <div className="lg:col-span-3">
-          <AnalyticsPipelineFunnel stats={filteredStats} isMobile={isMobile} />
+      {/* KPIs (counts only — no dollar totals) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-navy-900 rounded-xl border border-navy-800 p-3">
+          <div className="text-navy-600 text-xs mb-1">Total tenders</div>
+          <div className="text-white text-2xl font-bold">{filtered.length}</div>
         </div>
-        <div className="lg:col-span-2">
-          <AnalyticsAgencyBreakdown packages={filteredPackages} />
+        <div className="bg-navy-900 rounded-xl border border-navy-800 p-3">
+          <div className="text-navy-600 text-xs mb-1">Active</div>
+          <div className="text-white text-2xl font-bold">{stats?.total_active ?? filtered.filter((t) => t.stage !== 'award').length}</div>
+        </div>
+        <div className="bg-navy-900 rounded-xl border border-navy-800 p-3">
+          <div className="text-navy-600 text-xs mb-1">Stalled ≥30d</div>
+          <div className={`text-2xl font-bold ${stalled.length > 0 ? 'text-red-400' : 'text-white'}`}>{stalled.length}</div>
+        </div>
+        <div className="bg-navy-900 rounded-xl border border-navy-800 p-3">
+          <div className="text-navy-600 text-xs mb-1">Inferred stages</div>
+          <div className={`text-2xl font-bold ${flagCounts.inferred > 0 ? 'text-amber-400' : 'text-white'}`}>{flagCounts.inferred}</div>
         </div>
       </div>
 
-      {/* ── Row 4: Stuck Packages + Time in Stage ─────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
-        <AnalyticsStalledPanel
-          packages={filteredPackages}
-          onPackageClick={onPackageClick}
-          isMobile={isMobile}
-        />
-        <AnalyticsTimeInStage packages={filteredPackages} isMobile={isMobile} />
+      {/* Pipeline shape (counts) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-navy-900 rounded-xl border border-navy-800 p-4">
+          <h3 className="text-sm font-semibold text-white mb-4">Pipeline Shape</h3>
+          <div className="space-y-2.5">
+            {TENDER_STAGES.map((s) => {
+              const count = byStage[s];
+              const pct = Math.round((count / total) * 100);
+              return (
+                <div key={s}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-slate-300">{STAGE_CONFIG[s].label}</span>
+                    <span className="text-xs text-navy-600">{count}</span>
+                  </div>
+                  <div className="h-2 bg-navy-800 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: STAGE_CONFIG[s].color }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="bg-navy-900 rounded-xl border border-navy-800 p-4">
+          <h3 className="text-sm font-semibold text-white mb-4">Agency Breakdown</h3>
+          <div className="space-y-2">
+            {byAgency.map(([agency, counts]) => (
+              <div key={agency} className="flex items-center justify-between text-xs">
+                <AgencyBadge agency={agency} />
+                <div className="flex items-center gap-3 text-navy-600">
+                  <span title="Active">{counts.active} active</span>
+                  {counts.stalled > 0 && <span title="Stalled" className="text-red-400">{counts.stalled} stalled</span>}
+                  <span title="Awarded">{counts.award} awarded</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* ── Row 5: Method Distribution + Completion Rate ──────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
-        <AnalyticsMethodDistribution packages={filteredPackages} isMobile={isMobile} />
-        <AnalyticsCompletionRate packages={filteredPackages} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-navy-900 rounded-xl border border-navy-800 p-4">
+          <h3 className="text-sm font-semibold text-white mb-4">Procurement Method</h3>
+          {byMethod.length === 0 ? (
+            <p className="text-xs text-navy-600">No method data.</p>
+          ) : (
+            <div className="space-y-2">
+              {byMethod.map(([label, count]) => {
+                const pct = Math.round((count / total) * 100);
+                return (
+                  <div key={label}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-slate-300">{label}</span>
+                      <span className="text-xs text-navy-600">{count} · {pct}%</span>
+                    </div>
+                    <div className="h-1.5 bg-navy-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-gold-500/70 rounded-full" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-navy-900 rounded-xl border border-navy-800 p-4">
+          <h3 className="text-sm font-semibold text-white mb-4">Flags</h3>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-amber-300">{flagCounts.rollover}</div>
+              <div className="text-[11px] text-navy-600 mt-1">Rollover</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-300">{flagCounts.exception}</div>
+              <div className="text-[11px] text-navy-600 mt-1">See Remarks</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-slate-400">{flagCounts.inferred}</div>
+              <div className="text-[11px] text-navy-600 mt-1">Stage Inferred</div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {stalled.length > 0 && (
+        <div className="bg-navy-900 rounded-xl border border-navy-800 p-4">
+          <h3 className="text-sm font-semibold text-white mb-4">Stalled (≥30 days)</h3>
+          <div className="space-y-1.5">
+            {stalled.map((t) => (
+              <div key={t.id} className="flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <AgencyBadge agency={t.agency} />
+                  <span className="text-slate-300 truncate">{t.description}</span>
+                </div>
+                <DaysAtStageIndicator days={t.days_at_current_stage} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

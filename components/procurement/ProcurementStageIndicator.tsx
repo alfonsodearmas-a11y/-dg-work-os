@@ -1,24 +1,23 @@
 'use client';
 
-import { ProcurementStage, PROCUREMENT_STAGES, STAGE_CONFIG } from '@/lib/procurement-types';
+import { STAGE_CONFIG, TENDER_STAGES, type TenderStage } from '@/lib/tender/types';
 
 interface ProcurementStageIndicatorProps {
-  currentStage: ProcurementStage;
+  currentStage: TenderStage;
 }
 
 export function ProcurementStageIndicator({ currentStage }: ProcurementStageIndicatorProps) {
-  const currentIdx = PROCUREMENT_STAGES.indexOf(currentStage);
+  const currentIdx = TENDER_STAGES.indexOf(currentStage);
 
   return (
     <div className="flex items-center gap-0">
-      {PROCUREMENT_STAGES.map((stage, idx) => {
+      {TENDER_STAGES.map((stage, idx) => {
         const isPast = idx < currentIdx;
         const isCurrent = idx === currentIdx;
         const config = STAGE_CONFIG[stage];
 
         return (
           <div key={stage} className="flex items-center">
-            {/* Circle */}
             <div
               className="rounded-full shrink-0"
               style={{
@@ -33,8 +32,7 @@ export function ProcurementStageIndicator({ currentStage }: ProcurementStageIndi
               }}
               title={config.label}
             />
-            {/* Connecting line (between circles, not after the last one) */}
-            {idx < PROCUREMENT_STAGES.length - 1 && (
+            {idx < TENDER_STAGES.length - 1 && (
               <div
                 className="shrink-0"
                 style={{

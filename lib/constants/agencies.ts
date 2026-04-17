@@ -1,19 +1,21 @@
 /** Canonical list of agency codes — single source of truth for all filters and dropdowns */
-export const AGENCY_CODES = ['GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'HAS', 'MOPUA'] as const;
+export const AGENCY_CODES = ['MPUA', 'GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'HINTERLAND_AIRSTRIPS', 'HAS', 'MOPUA'] as const;
 
-/** Agency codes excluding MOPUA — for user-facing filters and dropdowns */
-export const SELECTABLE_AGENCIES = AGENCY_CODES.filter(c => c !== 'MOPUA');
+/** Agency codes excluding internal-only slots — for user-facing filters and dropdowns */
+export const SELECTABLE_AGENCIES = AGENCY_CODES.filter(c => c !== 'MOPUA' && c !== 'HAS');
 
 /** Agency code → full display name mapping */
 export const AGENCY_NAMES: Record<string, string> = {
+  MPUA: 'Ministry of Public Utilities and Aviation',
   GPL: 'Guyana Power & Light',
   GWI: 'Guyana Water Inc.',
   HECI: 'Hinterland Electrification Company Inc.',
   CJIA: 'Cheddi Jagan International Airport',
   MARAD: 'Maritime Administration Department',
   GCAA: 'Guyana Civil Aviation Authority',
+  HINTERLAND_AIRSTRIPS: 'Hinterland Airstrips',
   MOPUA: 'Ministry of Public Works',
-  HAS: 'Harbour & Aviation Services',
+  HAS: 'Hinterland Airstrips',  // legacy alias; HAS is superseded by HINTERLAND_AIRSTRIPS
 };
 
 /** Short agency names for compact displays */
@@ -54,14 +56,16 @@ export const PROJECT_STATUS_STYLES: Record<string, { bg: string; text: string }>
 
 /** Agency code → hex color for charts and badges */
 export const AGENCY_HEX_COLORS: Record<string, string> = {
-  GPL:   '#d4af37',
-  GWI:   '#60a5fa',
-  CJIA:  '#38bdf8',
-  GCAA:  '#94a3b8',
-  MARAD: '#2dd4bf',
-  HECI:  '#fbbf24',
-  HAS:   '#a78bfa',
-  MOPUA: '#34d399',
+  MPUA:                 '#f472b6',
+  GPL:                  '#d4af37',
+  GWI:                  '#60a5fa',
+  CJIA:                 '#38bdf8',
+  GCAA:                 '#94a3b8',
+  MARAD:                '#2dd4bf',
+  HECI:                 '#fbbf24',
+  HINTERLAND_AIRSTRIPS: '#a78bfa',
+  HAS:                  '#a78bfa',
+  MOPUA:                '#34d399',
 };
 
 /** Project health indicator dot classes */

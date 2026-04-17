@@ -1,7 +1,7 @@
-import { NextResponse, NextRequest } from 'next/server';
-import { requireRole } from '@/lib/auth-helpers';
-import { getPackageSummary, updatePackageStage } from '@/lib/procurement-queries';
-import { PROCUREMENT_STAGES, ProcurementStage } from '@/lib/procurement-types';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
+import { getTenderById, updateTenderStage } from '@/lib/tender/queries';
+import { TENDER_STAGES, type TenderStage } from '@/lib/tender/types';
 import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
@@ -11,42 +11,29 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { packageId, newStage, notes } = body as {
-      packageId: string;
-      newStage: ProcurementStage;
-      notes?: string;
-    };
-
-    if (!packageId || !newStage) {
-      return NextResponse.json({ error: 'packageId and newStage are required' }, { status: 400 });
+    const tenderId = body?.tenderId ?? body?.packageId; // back-compat for old client code
+    const newStage = body?.newStage;
+    if (!tenderId || !newStage) {
+      return NextResponse.json({ error: 'tenderId and newStage are required' }, { status: 400 });
     }
-
-    // Validate newStage is a valid procurement stage
-    if (!PROCUREMENT_STAGES.includes(newStage)) {
+    if (!TENDER_STAGES.includes(newStage as TenderStage)) {
       return NextResponse.json({ error: 'Invalid stage' }, { status: 400 });
     }
 
-    // Lightweight fetch to verify ownership and current stage
-    const pkg = await getPackageSummary(packageId);
-    if (!pkg) {
-      return NextResponse.json({ error: 'Tender not found' }, { status: 404 });
-    }
+    const existing = await getTenderById(tenderId);
+    if (!existing) return NextResponse.json({ error: 'Tender not found' }, { status: 404 });
 
-    // Verify the package belongs to user's agency (DG can advance any)
-    if (session.user.role !== 'dg' && pkg.agency.toLowerCase() !== session.user.agency?.toLowerCase()) {
+    if (!canAccessAgency(session.user.role, session.user.agency, existing.agency)) {
       return NextResponse.json({ error: 'Cannot advance tenders from another agency' }, { status: 403 });
     }
-
-    // Prevent no-op (same stage)
-    if (newStage === pkg.current_stage) {
+    if (existing.stage === newStage) {
       return NextResponse.json({ error: 'Tender is already at this stage' }, { status: 400 });
     }
 
-    const updated = await updatePackageStage(packageId, newStage, session.user.id, notes);
-
-    return NextResponse.json({ package: updated });
+    const updated = await updateTenderStage(tenderId, newStage as TenderStage, session.user.id);
+    return NextResponse.json({ tender: updated });
   } catch (err) {
-    logger.error({ err }, 'procurement-advance: error advancing package');
+    logger.error({ err }, 'tender-advance: error advancing stage');
     return NextResponse.json({ error: 'Failed to advance tender' }, { status: 500 });
   }
 }

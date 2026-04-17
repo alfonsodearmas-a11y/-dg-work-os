@@ -79,36 +79,40 @@ export interface TrelloWebhookPayload {
 // Stage mapping
 // ---------------------------------------------------------------------------
 
-export type ProcurementStage =
-  | 'not_advertised'
+// Trello list names map to the unified tender_stage enum (§5 of plan).
+export type TenderStage =
+  | 'design'
   | 'advertised'
   | 'evaluation'
-  | 'nptab_no_objection'
-  | 'contract_awarded';
+  | 'awaiting_award'
+  | 'award';
 
-const STAGE_MAP: Record<string, ProcurementStage> = {
-  'not advertised': 'not_advertised',
+const STAGE_MAP: Record<string, TenderStage> = {
+  'not advertised': 'design',
+  'design': 'design',
   'advertised': 'advertised',
   'evaluation': 'evaluation',
-  'nptab/cabinet no objection request': 'nptab_no_objection',
-  'nptab': 'nptab_no_objection',
-  'contract awarded': 'contract_awarded',
+  'nptab/cabinet no objection request': 'awaiting_award',
+  'nptab': 'awaiting_award',
+  'awaiting award': 'awaiting_award',
+  'contract awarded': 'award',
+  'award': 'award',
 };
 
-/** Map a Trello list name to a procurement stage. Falls back to not_advertised. */
-export function mapListNameToStage(listName: string): ProcurementStage {
+/** Map a Trello list name to a tender stage. Falls back to 'design'. */
+export function mapListNameToStage(listName: string): TenderStage {
   const normalized = listName.trim().toLowerCase();
   const stage = STAGE_MAP[normalized];
   if (!stage) {
-    logger.warn({ listName }, 'Trello list name did not match any known stage — defaulting to not_advertised');
-    return 'not_advertised';
+    logger.warn({ listName }, 'Trello list name did not match any known stage — defaulting to design');
+    return 'design';
   }
   return stage;
 }
 
 /** Build a list_mapping object from Trello lists: { trello_list_id: stage } */
-export function buildListMapping(lists: TrelloList[]): Record<string, ProcurementStage> {
-  const mapping: Record<string, ProcurementStage> = {};
+export function buildListMapping(lists: TrelloList[]): Record<string, TenderStage> {
+  const mapping: Record<string, TenderStage> = {};
   for (const list of lists) {
     if (!list.closed) {
       mapping[list.id] = mapListNameToStage(list.name);
@@ -120,9 +124,9 @@ export function buildListMapping(lists: TrelloList[]): Record<string, Procuremen
 /** Resolve a Trello list ID to a stage using a pre-built mapping */
 export function resolveStage(
   listId: string,
-  listMapping: Record<string, ProcurementStage>,
-): ProcurementStage {
-  return listMapping[listId] ?? 'not_advertised';
+  listMapping: Record<string, TenderStage>,
+): TenderStage {
+  return listMapping[listId] ?? 'design';
 }
 
 // ---------------------------------------------------------------------------

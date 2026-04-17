@@ -3,16 +3,11 @@ import { supabaseAdmin } from '@/lib/db';
 import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 import { trello, buildListMapping, resolveStage } from '@/lib/trello';
-import type { ProcurementStage } from '@/lib/trello';
+import type { TenderStage } from '@/lib/trello';
 
-/** Default board — HECI Capital Projects */
+/** Default board — HECI Capital Projects (Lethem folds into HECI per Q7) */
 const DEFAULT_BOARD_ID = 'u9m0lBnP';
 
-/**
- * POST /api/integrations/trello/sync
- * Full sync: fetches all cards from Trello, upserts items, removes orphans.
- * Body is optional. Defaults to HECI board if no boardId provided.
- */
 export async function POST(request: NextRequest) {
   const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
   if (authResult instanceof NextResponse) return authResult;
@@ -22,7 +17,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     if (body?.boardId) boardId = body.boardId;
   } catch {
-    // No body or invalid JSON — use default
+    // use default
   }
 
   try {
@@ -34,14 +29,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * Core sync logic.
- */
 export async function syncBoard(trelloBoardId: string) {
-  // 1. Look up the board record
   const { data: board, error: boardErr } = await supabaseAdmin
-    .from('procurement_boards')
-    .select('id, list_mapping')
+    .from('trello_board')
+    .select('id, agency, list_mapping')
     .eq('trello_board_id', trelloBoardId)
     .eq('is_active', true)
     .single();
@@ -50,65 +41,51 @@ export async function syncBoard(trelloBoardId: string) {
     throw new Error(`No active board found for trello_board_id: ${trelloBoardId}`);
   }
 
-  // 2. Fetch lists from Trello and rebuild list_mapping if empty
-  let listMapping = (board.list_mapping ?? {}) as Record<string, ProcurementStage>;
+  let listMapping = (board.list_mapping ?? {}) as Record<string, TenderStage>;
   if (Object.keys(listMapping).length === 0) {
     const lists = await trello.getBoardLists(trelloBoardId);
     listMapping = buildListMapping(lists);
-    await supabaseAdmin
-      .from('procurement_boards')
-      .update({ list_mapping: listMapping })
-      .eq('id', board.id);
+    await supabaseAdmin.from('trello_board').update({ list_mapping: listMapping }).eq('id', board.id);
   }
 
-  // 3. Fetch all cards from Trello
   const cards = await trello.getBoardCards(trelloBoardId);
 
-  // 4. Upsert each card
+  const agency = (board.agency as string)?.toUpperCase() === 'LETHEM' ? 'HECI' : (board.agency as string);
+
   const trelloCardIds: string[] = [];
   for (const card of cards) {
     trelloCardIds.push(card.id);
     const stage = resolveStage(card.idList, listMapping);
 
+    // Upsert into unified `tender` with source='trello' and external_id = card id.
     await supabaseAdmin
-      .from('procurement_items')
+      .from('tender')
       .upsert(
         {
-          board_id: board.id,
-          trello_card_id: card.id,
-          title: card.name,
-          description: card.desc || null,
+          source: 'trello',
+          external_id: card.id,
+          description: card.name,
+          agency,
           stage,
-          trello_list_id: card.idList,
-          due_date: card.due ?? null,
-          labels: card.labels ?? [],
-          attachments_count: card.attachments?.length ?? 0,
-          trello_url: card.shortUrl,
-          last_activity_at: card.dateLastActivity,
+          stage_source: 'manual_override',
+          remarks: card.desc || null,
+          // 'trello_url' isn't a column on tender; we rely on external_id to deep-link.
         },
-        { onConflict: 'trello_card_id' },
+        { onConflict: 'source,external_id' },
       );
   }
 
-  // 5. Delete orphaned items (cards removed from Trello while webhook was down)
+  // Flag Trello tenders that disappeared from the board as missing (never delete).
   if (trelloCardIds.length > 0) {
     await supabaseAdmin
-      .from('procurement_items')
-      .delete()
-      .eq('board_id', board.id)
-      .not('trello_card_id', 'in', `(${trelloCardIds.join(',')})`);
-  } else {
-    await supabaseAdmin
-      .from('procurement_items')
-      .delete()
-      .eq('board_id', board.id);
+      .from('tender')
+      .update({ missing_from_last_upload: true })
+      .eq('source', 'trello')
+      .eq('agency', agency)
+      .not('external_id', 'in', `(${trelloCardIds.join(',')})`);
   }
 
-  // 6. Update last_synced_at
-  await supabaseAdmin
-    .from('procurement_boards')
-    .update({ last_synced_at: new Date().toISOString() })
-    .eq('id', board.id);
+  await supabaseAdmin.from('trello_board').update({ last_synced_at: new Date().toISOString() }).eq('id', board.id);
 
   return {
     success: true,

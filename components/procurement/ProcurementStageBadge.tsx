@@ -1,9 +1,9 @@
 'use client';
 
-import { ProcurementStage, STAGE_CONFIG } from '@/lib/procurement-types';
+import { STAGE_CONFIG, type TenderStage } from '@/lib/tender/types';
 
 interface ProcurementStageBadgeProps {
-  stage: ProcurementStage;
+  stage: TenderStage;
   size?: 'sm' | 'md';
 }
 
@@ -15,7 +15,7 @@ export function ProcurementStageBadge({ stage, size = 'md' }: ProcurementStageBa
     <span
       className={`inline-flex items-center rounded-lg font-medium ${sizeClasses}`}
       style={{
-        backgroundColor: `${config.color}33`, // 20% opacity
+        backgroundColor: `${config.color}33`,
         color: config.color,
       }}
     >

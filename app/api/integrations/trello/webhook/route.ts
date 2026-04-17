@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
-import type { TrelloWebhookPayload, ProcurementStage } from '@/lib/trello';
+import type { TrelloWebhookPayload, TenderStage } from '@/lib/trello';
 import { resolveStage } from '@/lib/trello';
 
 /**
@@ -12,11 +12,6 @@ export async function HEAD() {
   return new NextResponse(null, { status: 200 });
 }
 
-/**
- * POST /api/integrations/trello/webhook
- * Receives Trello webhook events and syncs procurement_items accordingly.
- * Must be idempotent — processing the same event twice must not create duplicates.
- */
 export async function POST(request: NextRequest) {
   let payload: TrelloWebhookPayload;
   try {
@@ -26,37 +21,34 @@ export async function POST(request: NextRequest) {
   }
 
   const { action } = payload;
-  if (!action?.data?.board?.id) {
-    // Not a board-level action we care about
-    return NextResponse.json({ ok: true });
-  }
+  if (!action?.data?.board?.id) return NextResponse.json({ ok: true });
 
   const boardTrelloId = action.data.board.id;
 
-  // Look up the procurement_boards record
   const { data: board, error: boardErr } = await supabaseAdmin
-    .from('procurement_boards')
-    .select('id, list_mapping')
+    .from('trello_board')
+    .select('id, agency, list_mapping')
     .eq('trello_board_id', boardTrelloId)
     .eq('is_active', true)
     .single();
 
   if (boardErr || !board) {
-    logger.warn({ boardTrelloId }, 'Trello webhook: no active board found for this trello_board_id');
+    logger.warn({ boardTrelloId }, 'Trello webhook: no active board found');
     return NextResponse.json({ ok: true });
   }
 
-  const listMapping = (board.list_mapping ?? {}) as Record<string, ProcurementStage>;
+  const agency = (board.agency as string)?.toUpperCase() === 'LETHEM' ? 'HECI' : (board.agency as string);
+  const listMapping = (board.list_mapping ?? {}) as Record<string, TenderStage>;
 
   try {
     switch (action.type) {
       case 'createCard':
       case 'moveCardToBoard':
-        await handleCreateCard(board.id, listMapping, action);
+        await upsertCard(agency, listMapping, action);
         break;
 
       case 'updateCard':
-        await handleUpdateCard(board.id, listMapping, action);
+        await handleUpdateCard(agency, listMapping, action);
         break;
 
       case 'deleteCard':
@@ -65,7 +57,6 @@ export async function POST(request: NextRequest) {
         break;
 
       default:
-        // Ignore action types we don't handle
         break;
     }
   } catch (err) {
@@ -76,58 +67,35 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-// ---------------------------------------------------------------------------
-// Handlers
-// ---------------------------------------------------------------------------
-
-async function handleCreateCard(
-  boardId: string,
-  listMapping: Record<string, ProcurementStage>,
+async function upsertCard(
+  agency: string,
+  listMapping: Record<string, TenderStage>,
   action: TrelloWebhookPayload['action'],
 ) {
   const card = action.data.card;
   if (!card) return;
-
   const stage = resolveStage(card.idList, listMapping);
 
   const { error } = await supabaseAdmin
-    .from('procurement_items')
+    .from('tender')
     .upsert(
       {
-        board_id: boardId,
-        trello_card_id: card.id,
-        title: card.name,
-        description: card.desc ?? null,
+        source: 'trello',
+        external_id: card.id,
+        description: card.name,
+        agency,
         stage,
-        trello_list_id: card.idList,
-        due_date: card.due ?? null,
-        trello_url: card.shortUrl ?? null,
-        last_activity_at: new Date().toISOString(),
+        stage_source: 'manual_override',
+        remarks: card.desc ?? null,
       },
-      { onConflict: 'trello_card_id' },
+      { onConflict: 'source,external_id' },
     );
-
   if (error) throw error;
-
-  // Record initial stage in history
-  const { data: item } = await supabaseAdmin
-    .from('procurement_items')
-    .select('id')
-    .eq('trello_card_id', card.id)
-    .single();
-
-  if (item) {
-    await supabaseAdmin.from('trello_item_stage_history').insert({
-      item_id: item.id,
-      from_stage: null,
-      to_stage: stage,
-    });
-  }
 }
 
 async function handleUpdateCard(
-  boardId: string,
-  listMapping: Record<string, ProcurementStage>,
+  agency: string,
+  listMapping: Record<string, TenderStage>,
   action: TrelloWebhookPayload['action'],
 ) {
   const card = action.data.card;
@@ -135,55 +103,50 @@ async function handleUpdateCard(
 
   const stage = resolveStage(card.idList, listMapping);
 
+  // Fetch prior stage for diff log.
+  const { data: existing } = await supabaseAdmin
+    .from('tender')
+    .select('id, stage')
+    .eq('source', 'trello')
+    .eq('external_id', card.id)
+    .maybeSingle();
+
   const { error } = await supabaseAdmin
-    .from('procurement_items')
+    .from('tender')
     .upsert(
       {
-        board_id: boardId,
-        trello_card_id: card.id,
-        title: card.name,
-        description: card.desc ?? null,
+        source: 'trello',
+        external_id: card.id,
+        description: card.name,
+        agency,
         stage,
-        trello_list_id: card.idList,
-        due_date: card.due ?? null,
-        trello_url: card.shortUrl ?? null,
-        last_activity_at: new Date().toISOString(),
+        stage_source: 'manual_override',
+        remarks: card.desc ?? null,
       },
-      { onConflict: 'trello_card_id' },
+      { onConflict: 'source,external_id' },
     );
-
   if (error) throw error;
 
-  // If the card moved between lists, record a stage transition
-  const { listBefore, listAfter } = action.data;
-  if (listBefore && listAfter) {
-    const fromStage = resolveStage(listBefore.id, listMapping);
-    const toStage = resolveStage(listAfter.id, listMapping);
-
-    if (fromStage !== toStage) {
-      const { data: item } = await supabaseAdmin
-        .from('procurement_items')
-        .select('id')
-        .eq('trello_card_id', card.id)
-        .single();
-
-      if (item) {
-        await supabaseAdmin.from('trello_item_stage_history').insert({
-          item_id: item.id,
-          from_stage: fromStage,
-          to_stage: toStage,
-        });
-      }
-    }
+  // Log stage transition on the tender_field_change audit trail.
+  if (existing && existing.stage !== stage) {
+    await supabaseAdmin.from('tender_field_change').insert({
+      tender_id: existing.id,
+      field_name: 'stage',
+      old_value: existing.stage,
+      new_value: stage,
+      upload_id: null,
+      changed_by: null,
+    });
   }
 }
 
 async function handleDeleteCard(action: TrelloWebhookPayload['action']) {
   const card = action.data.card;
   if (!card) return;
-
+  // Never hard-delete; flag as missing.
   await supabaseAdmin
-    .from('procurement_items')
-    .delete()
-    .eq('trello_card_id', card.id);
+    .from('tender')
+    .update({ missing_from_last_upload: true })
+    .eq('source', 'trello')
+    .eq('external_id', card.id);
 }

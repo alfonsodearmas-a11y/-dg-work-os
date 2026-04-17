@@ -49,19 +49,17 @@ export function canAssignTasks(userRole: Role): boolean {
   return ['dg', 'minister', 'ps', 'parl_sec', 'agency_admin'].includes(userRole);
 }
 
-export function canAccessPsipSync(userRole: Role, userAgency: string | null | undefined): boolean {
-  if (MINISTRY_ROLES.includes(userRole)) return true;
-  return userRole === 'agency_admin' && userAgency?.toUpperCase() === 'GWI';
+// PSIP upload is ministry-only (dg/minister/ps). Deprecated GWI-specific
+// helper retained as a thin alias for any callers that haven't moved yet.
+export function canAccessPsipSync(userRole: Role, _userAgency: string | null | undefined): boolean {
+  void _userAgency;
+  return MINISTRY_ROLES.includes(userRole);
 }
 
 export async function requirePsipSyncAccess() {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+  const result = await requireRole(['dg', 'minister', 'ps']);
   if (result instanceof NextResponse) return { error: result };
-  const { session } = result;
-  if (!canAccessPsipSync(session.user.role, session.user.agency)) {
-    return { error: NextResponse.json({ error: 'PSIP sync is scoped to GWI' }, { status: 403 }) };
-  }
-  return { session };
+  return { session: result.session };
 }
 
 const UPLOAD_ROLES: Role[] = ['dg', 'agency_admin', 'officer'];

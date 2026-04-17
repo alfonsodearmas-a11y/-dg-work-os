@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
-import { getAllPackages, getPackagesByAgency, getPipelineStats, createPackage, getTrelloItems } from '@/lib/procurement-queries';
 import { MINISTRY_ROLES } from '@/lib/people-types';
-import { METHOD_CONFIG, type ProcurementMethod } from '@/lib/procurement-types';
-import { AGENCY_CODES } from '@/lib/constants/agencies';
+import { listTenders, createManualTender, getPipelineStats } from '@/lib/tender/queries';
+import {
+  AGENCY_CODES,
+  METHOD_CONFIG,
+  TENDER_STAGES,
+  type TenderAgency,
+  type TenderMethod,
+  type TenderStage,
+} from '@/lib/tender/types';
 import { logger } from '@/lib/logger';
 
 export async function GET() {
@@ -13,94 +19,95 @@ export async function GET() {
 
   try {
     const isMinistry = MINISTRY_ROLES.includes(session.user.role);
+    const agencyFilter = isMinistry ? undefined : session.user.agency ?? undefined;
 
-    const agencyFilter = isMinistry ? undefined : session.user.agency!;
-
-    const [packages, stats, trelloResult] = await Promise.all([
-      agencyFilter
-        ? getPackagesByAgency(agencyFilter)
-        : getAllPackages(),
+    const [tenders, stats] = await Promise.all([
+      listTenders({ agency: agencyFilter }),
       getPipelineStats(agencyFilter),
-      getTrelloItems(agencyFilter),
     ]);
 
-    // Merge Trello items into the packages array
-    const allPackages = [...packages, ...trelloResult.items];
-
-    return NextResponse.json({
-      packages: allPackages,
-      stats,
-      trello_last_synced_at: trelloResult.lastSyncedAt,
-    });
+    return NextResponse.json({ tenders, stats });
   } catch (err: unknown) {
     const code = (err as { code?: string })?.code ?? '';
     const msg = (err as { message?: string })?.message ?? '';
-
-    // Table/column/relationship doesn't exist — migration not applied yet
     const isSchemaIssue =
       code === '42P01' || code === '42703' || code === 'PGRST200' || code === 'PGRST205' ||
       msg.includes('schema cache') || msg.includes('does not exist');
-
     if (isSchemaIssue) {
-      logger.warn({ code, message: msg }, 'Procurement schema issue (migration may not be applied)');
-      return NextResponse.json({ packages: [], stats: null });
+      logger.warn({ code, message: msg }, 'Tender schema issue (migrations may not be applied)');
+      return NextResponse.json({ tenders: [], stats: null });
     }
-
-    logger.error({ err }, 'Error fetching procurement data');
-    return NextResponse.json({ error: 'Failed to load procurement data' }, { status: 500 });
+    logger.error({ err }, 'Error fetching tenders');
+    return NextResponse.json({ error: 'Failed to load tenders' }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
-  const result = await requireRole(['dg', 'agency_admin']);
+  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
   try {
     const body = await request.json();
-    const { title, nptab_number, description, estimated_value, procurement_method, agency, expected_delivery_date, notes } = body as {
-      title: string;
-      nptab_number?: string;
-      description?: string;
-      estimated_value: number;
-      procurement_method: string;
+    const {
+      description,
+      agency,
+      programme_code,
+      sub_programme_code,
+      programme_activity,
+      stage,
+      method,
+      is_rollover,
+      has_exception,
+      remarks,
+    } = body as {
+      description: string;
       agency?: string;
-      expected_delivery_date?: string;
-      notes?: string;
+      programme_code?: string;
+      sub_programme_code?: string;
+      programme_activity?: string;
+      stage?: string;
+      method?: string;
+      is_rollover?: boolean;
+      has_exception?: boolean;
+      remarks?: string;
     };
 
-    if (!title?.trim()) {
-      return NextResponse.json({ error: 'Title is required' }, { status: 400 });
+    if (!description?.trim()) {
+      return NextResponse.json({ error: 'Description is required' }, { status: 400 });
     }
-    if (estimated_value == null || estimated_value < 0) {
-      return NextResponse.json({ error: 'Estimated value is invalid' }, { status: 400 });
+    const resolvedAgency =
+      session.user.role === 'agency_admin' ? session.user.agency : agency;
+    const upper = (resolvedAgency || '').toUpperCase() as TenderAgency;
+    if (!AGENCY_CODES.includes(upper)) {
+      return NextResponse.json({ error: 'A valid agency is required' }, { status: 400 });
     }
-    if (!procurement_method || !(procurement_method in METHOD_CONFIG)) {
+    const resolvedStage = (stage || 'design') as TenderStage;
+    if (!TENDER_STAGES.includes(resolvedStage)) {
+      return NextResponse.json({ error: 'Invalid stage' }, { status: 400 });
+    }
+    const resolvedMethod = method ? (method as TenderMethod) : undefined;
+    if (resolvedMethod && !(resolvedMethod in METHOD_CONFIG)) {
       return NextResponse.json({ error: 'Invalid procurement method' }, { status: 400 });
     }
 
-    // DG must provide a valid agency; agency_admin uses their own
-    // (session.user.agency is already normalized to uppercase in auth.ts)
-    const packageAgency = session.user.role === 'dg' ? agency?.toUpperCase() : session.user.agency;
-    if (!packageAgency || !AGENCY_CODES.includes(packageAgency as typeof AGENCY_CODES[number])) {
-      return NextResponse.json({ error: 'A valid agency is required' }, { status: 400 });
-    }
-
-    const pkg = await createPackage({
-      title: title.trim(),
-      nptab_number: nptab_number?.trim() || undefined,
-      description: description?.trim(),
-      estimated_value,
-      procurement_method: procurement_method as ProcurementMethod,
-      agency: packageAgency,
-      submitted_by: session.user.id,
-      expected_delivery_date: expected_delivery_date || undefined,
-      notes: notes?.trim() || undefined,
+    const tender = await createManualTender({
+      description: description.trim(),
+      agency: upper,
+      programme_code: programme_code?.trim() || undefined,
+      sub_programme_code: sub_programme_code?.trim() || undefined,
+      programme_activity: programme_activity?.trim() || undefined,
+      stage: resolvedStage,
+      method: resolvedMethod,
+      is_rollover: !!is_rollover,
+      has_exception: !!has_exception,
+      remarks: remarks?.trim() || undefined,
+      created_by: session.user.id,
     });
 
-    return NextResponse.json({ package: pkg }, { status: 201 });
+    return NextResponse.json({ tender }, { status: 201 });
   } catch (err: unknown) {
-    logger.error({ err }, 'Error creating procurement package');
+    logger.error({ err }, 'Error creating manual tender');
     return NextResponse.json({ error: 'Failed to create tender' }, { status: 500 });
   }
 }

@@ -1,16 +1,20 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { Package, Upload, X as XIcon } from 'lucide-react';
+import { Package } from 'lucide-react';
 import { SlidePanel } from '@/components/layout/SlidePanel';
 import { Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/components/ui/Toast';
-import { METHOD_CONFIG, ProcurementMethod } from '@/lib/procurement-types';
-import { fmtFileSize } from '@/lib/format';
-import { SELECTABLE_AGENCIES } from '@/lib/constants/agencies';
-
-// ── Types ─────────────────────────────────────────────────────────────────
+import {
+  METHOD_CONFIG,
+  TENDER_STAGES,
+  STAGE_CONFIG,
+  type TenderAgency,
+  type TenderMethod,
+  type TenderStage,
+  AGENCY_CODES,
+} from '@/lib/tender/types';
 
 interface ProcurementNewPackageFormProps {
   isOpen: boolean;
@@ -18,152 +22,72 @@ interface ProcurementNewPackageFormProps {
   onCreated: () => void;
 }
 
-const METHODS = Object.entries(METHOD_CONFIG) as [ProcurementMethod, { label: string }][];
+const METHODS = Object.entries(METHOD_CONFIG) as [TenderMethod, { label: string }][];
 
-// ── Component ─────────────────────────────────────────────────────────────
-
-export function ProcurementNewPackageForm({
-  isOpen,
-  onClose,
-  onCreated,
-}: ProcurementNewPackageFormProps) {
+export function ProcurementNewPackageForm({ isOpen, onClose, onCreated }: ProcurementNewPackageFormProps) {
   const { data: session } = useSession();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const userRole = session?.user?.role;
   const userAgency = session?.user?.agency;
-  const isDG = userRole === 'dg';
+  const isMinistry = userRole === 'dg' || userRole === 'minister' || userRole === 'ps';
 
-  // Form state
-  const [title, setTitle] = useState('');
-  const [nptabNumber, setNptabNumber] = useState('');
   const [description, setDescription] = useState('');
-  const [procurementMethod, setProcurementMethod] = useState<ProcurementMethod | ''>('');
   const [agency, setAgency] = useState('');
-  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState('');
-  const [notes, setNotes] = useState('');
-  const [files, setFiles] = useState<File[]>([]);
+  const [programmeCode, setProgrammeCode] = useState('');
+  const [subProgrammeCode, setSubProgrammeCode] = useState('');
+  const [programmeActivity, setProgrammeActivity] = useState('');
+  const [stage, setStage] = useState<TenderStage>('design');
+  const [method, setMethod] = useState<TenderMethod | ''>('');
+  const [isRollover, setIsRollover] = useState(false);
+  const [hasException, setHasException] = useState(false);
+  const [remarks, setRemarks] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Validation errors
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // ── Helpers ───────────────────────────────────────────────────────────
-
   const resetForm = () => {
-    setTitle('');
-    setNptabNumber('');
     setDescription('');
-    setProcurementMethod('');
     setAgency('');
-    setExpectedDeliveryDate('');
-    setNotes('');
-    setFiles([]);
-    setErrors({});
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    setProgrammeCode('');
+    setSubProgrammeCode('');
+    setProgrammeActivity('');
+    setStage('design');
+    setMethod('');
+    setIsRollover(false);
+    setHasException(false);
+    setRemarks('');
   };
 
-  const handleClose = () => {
-    resetForm();
-    onClose();
-  };
-
-  const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!title.trim()) {
-      newErrors.title = 'Title is required';
-    }
-
-    if (!procurementMethod) {
-      newErrors.procurementMethod = 'Procurement method is required';
-    }
-
-    if (isDG && !agency) {
-      newErrors.agency = 'Agency is required';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // ── File handling ─────────────────────────────────────────────────────
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files;
-    if (!selected) return;
-    setFiles((prev) => [...prev, ...Array.from(selected)]);
-    // Reset the input so the same file can be re-selected
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const removeFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  // ── Submit ────────────────────────────────────────────────────────────
+  const handleClose = () => { resetForm(); onClose(); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!description.trim()) { toast.error('Description is required'); return; }
+    if (isMinistry && !agency) { toast.error('Agency is required'); return; }
 
     setSubmitting(true);
-
     try {
-      // 1. Create the package
       const res = await fetch('/api/procurement', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: title.trim(),
-          nptab_number: nptabNumber.trim() || undefined,
-          description: description.trim() || undefined,
-          estimated_value: 0,
-          procurement_method: procurementMethod,
-          expected_delivery_date: expectedDeliveryDate || undefined,
-          notes: notes.trim() || undefined,
-          ...(isDG && { agency }),
+          description: description.trim(),
+          agency: isMinistry ? agency : undefined,
+          programme_code: programmeCode.trim() || undefined,
+          sub_programme_code: subProgrammeCode.trim() || undefined,
+          programme_activity: programmeActivity.trim() || undefined,
+          stage,
+          method: method || undefined,
+          is_rollover: isRollover,
+          has_exception: hasException,
+          remarks: remarks.trim() || undefined,
         }),
       });
-
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         toast.error(data.error || 'Failed to create tender');
-        setSubmitting(false);
         return;
       }
-
-      const { package: created } = await res.json();
-      const packageId = created?.id;
-
-      // 2. Upload documents in parallel (if any)
-      if (packageId && files.length > 0) {
-        const results = await Promise.allSettled(
-          files.map(async (file) => {
-            const formData = new FormData();
-            formData.append('file', file);
-            const uploadRes = await fetch(
-              `/api/procurement/${packageId}/documents`,
-              { method: 'POST', body: formData }
-            );
-            if (!uploadRes.ok) throw new Error(file.name);
-          })
-        );
-
-        const failedCount = results.filter((r) => r.status === 'rejected').length;
-
-        if (failedCount > 0) {
-          toast.warning(
-            `Tender created but ${failedCount} document${failedCount > 1 ? 's' : ''} failed to upload`
-          );
-        } else {
-          toast.success('Tender submitted');
-        }
-      } else {
-        toast.success('Tender submitted');
-      }
-
+      toast.success('Tender created');
       onCreated();
       handleClose();
     } catch {
@@ -173,214 +97,133 @@ export function ProcurementNewPackageForm({
     }
   };
 
-  // ── Render ────────────────────────────────────────────────────────────
-
   return (
     <SlidePanel
       isOpen={isOpen}
       onClose={handleClose}
-      title="New Procurement Tender"
-      subtitle={isDG ? 'Director General' : userAgency?.toUpperCase()}
+      title="New Tender (Manual)"
+      subtitle="Creates a source='manual' tender outside the PSIP weekly ingest"
       icon={Package}
       accentColor="from-gold-600 to-gold-500"
     >
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Title */}
         <div>
-          <label htmlFor="pkg-title" className="block text-xs text-slate-400 mb-1.5">
-            Title <span className="text-red-400 ml-0.5" aria-label="required">*</span>
-          </label>
-          <input
-            id="pkg-title"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Supply of Distribution Transformers"
-            required
-            aria-invalid={!!errors.title}
-            aria-describedby={errors.title ? 'pkg-title-error' : undefined}
-            className="w-full px-3 py-2.5 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
-          />
-          {errors.title && <p id="pkg-title-error" className="text-xs text-red-400 mt-1">{errors.title}</p>}
-        </div>
-
-        {/* NPTAB No. */}
-        <div>
-          <label htmlFor="pkg-nptab" className="block text-xs text-slate-400 mb-1.5">
-            NPTAB No.
-          </label>
-          <input
-            id="pkg-nptab"
-            type="text"
-            value={nptabNumber}
-            onChange={(e) => setNptabNumber(e.target.value)}
-            placeholder="e.g. NPTAB/2026/001"
-            className="w-full px-3 py-2.5 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white font-semibold tracking-wide placeholder:text-navy-600 placeholder:font-normal placeholder:tracking-normal focus:outline-none focus:ring-1 focus:ring-gold-500/50"
-          />
-        </div>
-
-        {/* Description */}
-        <div>
-          <label htmlFor="pkg-desc" className="block text-xs text-slate-400 mb-1.5">
-            Description
-          </label>
+          <label className="block text-xs text-slate-400 mb-1.5">Description <span className="text-red-400">*</span></label>
           <textarea
-            id="pkg-desc"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Brief description of the procurement tender..."
-            rows={3}
+            rows={2}
+            placeholder="e.g. Supply and delivery of transformers"
             className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50 resize-none"
+            required
           />
         </div>
 
-        {/* Procurement Method */}
-        <div>
-          <label htmlFor="pkg-method" className="block text-xs text-slate-400 mb-1.5">
-            Procurement Method <span className="text-red-400 ml-0.5" aria-label="required">*</span>
-          </label>
-          <select
-            id="pkg-method"
-            value={procurementMethod}
-            onChange={(e) => setProcurementMethod(e.target.value as ProcurementMethod | '')}
-            required
-            aria-invalid={!!errors.procurementMethod}
-            aria-describedby={errors.procurementMethod ? 'pkg-method-error' : undefined}
-            className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
-          >
-            <option value="">Select method</option>
-            {METHODS.map(([value, { label }]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-          {errors.procurementMethod && (
-            <p id="pkg-method-error" className="text-xs text-red-400 mt-1">{errors.procurementMethod}</p>
-          )}
-        </div>
-
-        {/* Agency (DG only — agency_admin auto-assigned) */}
-        {isDG && (
+        {isMinistry && (
           <div>
-            <label htmlFor="pkg-agency" className="block text-xs text-slate-400 mb-1.5">
-              Agency <span className="text-red-400 ml-0.5" aria-label="required">*</span>
-            </label>
+            <label className="block text-xs text-slate-400 mb-1.5">Agency <span className="text-red-400">*</span></label>
             <select
-              id="pkg-agency"
               value={agency}
-              onChange={(e) => setAgency(e.target.value)}
+              onChange={(e) => setAgency(e.target.value as TenderAgency)}
               required
-              aria-invalid={!!errors.agency}
-              aria-describedby={errors.agency ? 'pkg-agency-error' : undefined}
               className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
             >
               <option value="">Select agency</option>
-              {SELECTABLE_AGENCIES.map((code) => (
-                <option key={code} value={code}>
-                  {code}
-                </option>
-              ))}
+              {AGENCY_CODES.map((c) => <option key={c} value={c}>{c === 'HINTERLAND_AIRSTRIPS' ? 'Hinterland Airstrips' : c}</option>)}
             </select>
-            {errors.agency && <p id="pkg-agency-error" className="text-xs text-red-400 mt-1">{errors.agency}</p>}
+          </div>
+        )}
+        {!isMinistry && userAgency && (
+          <div>
+            <label className="block text-xs text-slate-400 mb-1.5">Agency</label>
+            <div className="text-sm text-white">{userAgency}</div>
           </div>
         )}
 
-        {/* Expected Delivery Date */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs text-slate-400 mb-1.5">Programme code</label>
+            <input
+              value={programmeCode}
+              onChange={(e) => setProgrammeCode(e.target.value)}
+              placeholder="e.g. 342"
+              className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1.5">Sub-programme code</label>
+            <input
+              value={subProgrammeCode}
+              onChange={(e) => setSubProgrammeCode(e.target.value)}
+              placeholder="e.g. 2611300"
+              className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
+            />
+          </div>
+        </div>
+
         <div>
-          <label htmlFor="pkg-delivery" className="block text-xs text-slate-400 mb-1.5">
-            Expected Delivery Date
-          </label>
+          <label className="block text-xs text-slate-400 mb-1.5">Programme activity</label>
           <input
-            id="pkg-delivery"
-            type="date"
-            value={expectedDeliveryDate}
-            onChange={(e) => setExpectedDeliveryDate(e.target.value)}
-            className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
+            value={programmeActivity}
+            onChange={(e) => setProgrammeActivity(e.target.value)}
+            placeholder="Parent-row description this tender rolls up to"
+            className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50"
           />
         </div>
 
-        {/* Notes */}
-        <div>
-          <label htmlFor="pkg-notes" className="block text-xs text-slate-400 mb-1.5">
-            Notes
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs text-slate-400 mb-1.5">Stage</label>
+            <select
+              value={stage}
+              onChange={(e) => setStage(e.target.value as TenderStage)}
+              className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
+            >
+              {TENDER_STAGES.map((s) => <option key={s} value={s}>{STAGE_CONFIG[s].label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1.5">Method</label>
+            <select
+              value={method}
+              onChange={(e) => setMethod(e.target.value as TenderMethod | '')}
+              className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
+            >
+              <option value="">(none)</option>
+              {METHODS.map(([v, { label }]) => <option key={v} value={v}>{label}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
+            <input type="checkbox" checked={isRollover} onChange={(e) => setIsRollover(e.target.checked)} className="accent-gold-500" />
+            Rollover from prior year
           </label>
+          <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
+            <input type="checkbox" checked={hasException} onChange={(e) => setHasException(e.target.checked)} className="accent-gold-500" />
+            See remarks
+          </label>
+        </div>
+
+        <div>
+          <label className="block text-xs text-slate-400 mb-1.5">Remarks</label>
           <textarea
-            id="pkg-notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Additional notes or context..."
+            value={remarks}
+            onChange={(e) => setRemarks(e.target.value)}
             rows={3}
             className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white placeholder:text-navy-600 focus:outline-none focus:ring-1 focus:ring-gold-500/50 resize-none"
           />
         </div>
 
-        {/* Supporting Documents */}
-        <div>
-          <label className="block text-xs text-slate-400 mb-1.5">
-            Supporting Documents
-          </label>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.docx,.xlsx,.jpeg,.jpg,.png"
-            multiple
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-dashed border-navy-700 text-sm text-navy-600 hover:border-gold-500/50 hover:text-gold-500 transition-colors"
-          >
-            <Upload className="h-4 w-4" />
-            <span>Add Files</span>
-          </button>
-
-          {/* File list */}
-          {files.length > 0 && (
-            <div className="mt-3 space-y-2">
-              {files.map((file, idx) => (
-                <div
-                  key={`${file.name}-${idx}`}
-                  className="flex items-center gap-3 p-2.5 rounded-lg border border-navy-800 bg-navy-900/30"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white truncate">{file.name}</p>
-                    <p className="text-xs text-navy-600">{fmtFileSize(file.size)}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeFile(idx)}
-                    className="p-1 rounded hover:bg-navy-800 text-navy-600 hover:text-red-400 transition-colors shrink-0"
-                    aria-label={`Remove ${file.name}`}
-                  >
-                    <XIcon className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Submit — sticky on mobile via SlidePanel's bottom padding */}
         <div className="sticky bottom-0 -mx-3 md:-mx-6 px-3 md:px-6 py-3 bg-navy-950/95 backdrop-blur-sm border-t border-navy-800 mt-4">
           <button
             type="submit"
-            disabled={submitting || !title.trim() || !procurementMethod || (isDG && !agency)}
+            disabled={submitting || !description.trim() || (isMinistry && !agency)}
             className="w-full py-3 rounded-lg bg-gold-500 text-navy-950 font-semibold text-sm hover:bg-[#e5c348] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             style={{ minHeight: 48 }}
           >
-            {submitting ? (
-              <>
-                <Spinner size="sm" className="border-navy-950 border-t-transparent" />
-                Submitting...
-              </>
-            ) : (
-              'Submit Tender'
-            )}
+            {submitting ? <><Spinner size="sm" className="border-navy-950 border-t-transparent" />Submitting…</> : 'Create Tender'}
           </button>
         </div>
       </form>
