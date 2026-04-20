@@ -95,14 +95,13 @@ export function ProcurementAnalytics() {
   }, [filtered]);
 
   const flagCounts = useMemo(() => {
-    let rollover = 0, exception = 0, inferred = 0, inheritedAwarded = 0;
+    let exception = 0, inferred = 0, inheritedAwarded = 0;
     for (const t of filtered) {
-      if (t.is_rollover) rollover++;
       if (t.has_exception) exception++;
       if (t.stage_source === 'inferred_from_dates') inferred++;
       if (t.first_appearance_already_awarded) inheritedAwarded++;
     }
-    return { rollover, exception, inferred, inheritedAwarded };
+    return { exception, inferred, inheritedAwarded };
   }, [filtered]);
 
   const stalled = useMemo(() => {
@@ -246,11 +245,7 @@ export function ProcurementAnalytics() {
 
         <div className="bg-navy-900 rounded-xl border border-navy-800 p-4">
           <h3 className="text-sm font-semibold text-white mb-4">Flags</h3>
-          <div className="grid grid-cols-4 gap-3">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-amber-300">{flagCounts.rollover}</div>
-              <div className="text-[11px] text-navy-600 mt-1">Rollover</div>
-            </div>
+          <div className="grid grid-cols-3 gap-3">
             <div className="text-center">
               <div className="text-2xl font-bold text-orange-300">{flagCounts.exception}</div>
               <div className="text-[11px] text-navy-600 mt-1">See Remarks</div>

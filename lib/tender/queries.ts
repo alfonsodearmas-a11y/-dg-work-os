@@ -112,7 +112,9 @@ async function fetchLatestStageChangeMap(tenderIds: string[]): Promise<Record<st
   return map;
 }
 
-export async function listTenders(opts: { agency?: string; includeMissing?: boolean } = {}): Promise<Tender[]> {
+export async function listTenders(
+  opts: { agency?: string; includeMissing?: boolean; includeRollovers?: boolean } = {},
+): Promise<Tender[]> {
   let query = supabaseAdmin
     .from('tender')
     .select(TENDER_COLUMNS)
@@ -123,6 +125,11 @@ export async function listTenders(opts: { agency?: string; includeMissing?: bool
   }
   if (!opts.includeMissing) {
     query = query.eq('missing_from_last_upload', false);
+  }
+  // Rollovers are prior-year awards under execution — contracts, not tenders.
+  // Excluded from the pipeline tracker by default; admin/debug views opt in.
+  if (!opts.includeRollovers) {
+    query = query.eq('is_rollover', false);
   }
 
   const { data, error } = await query;
@@ -405,6 +412,7 @@ export async function getPipelineStats(agency?: string): Promise<PipelineStats> 
 
   if (agency) query = query.eq('agency', agency.toUpperCase());
   query = query.eq('missing_from_last_upload', false);
+  query = query.eq('is_rollover', false);
 
   const { data, error } = await query;
   if (error) throw error;
@@ -448,7 +456,7 @@ export async function getPipelineStats(agency?: string): Promise<PipelineStats> 
 // ── Missing & review ──────────────────────────────────────────────────────────
 
 export async function listMissingTenders(agency?: string): Promise<Tender[]> {
-  return listTenders({ agency, includeMissing: true }).then((all) =>
+  return listTenders({ agency, includeMissing: true, includeRollovers: true }).then((all) =>
     all.filter((t) => t.missing_from_last_upload),
   );
 }
