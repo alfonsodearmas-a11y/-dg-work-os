@@ -30,6 +30,7 @@ html {
   --kind-tender: #d4af37;     /* amber — tender SLA breaches (gold-aligned) */
   --kind-stagnant: #a25ddc;   /* purple — stagnant tenders + agency rollups */
   --kind-action: #00cec9;     /* teal  — meeting actions */
+  --kind-missing: #e8835a;    /* dark orange — incomplete PSIP data */
 
   /* Background */
   --background: #0a1628;

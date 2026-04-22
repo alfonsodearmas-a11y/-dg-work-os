@@ -12,6 +12,7 @@ const KIND_PILL: Record<TodaySignalKind, { label: string; color: string }> = {
   stagnant_tender:         { label: 'STAGNANT', color: 'var(--kind-stagnant)' },
   agency_stagnant_rollup:  { label: 'STAGNANT', color: 'var(--kind-stagnant)' },
   meeting_action:          { label: 'ACTION',   color: 'var(--kind-action)' },
+  incomplete_psip_data:    { label: 'MISSING',  color: 'var(--kind-missing)' },
 };
 
 export function TodaySignalCard({ signal }: { signal: TodaySignal }) {

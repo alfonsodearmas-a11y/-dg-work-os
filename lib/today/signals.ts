@@ -27,6 +27,7 @@ import {
   severityForMeetingAction,
   severityForStagnantTender,
   severityForAgencyStagnantRollup,
+  severityForIncompletePsip,
   daysOverSla,
   daysBetweenDates,
   severityRank,
@@ -387,6 +388,102 @@ export async function fetchStagnantTenderSignals(
   return signals;
 }
 
+// ── 5. Incomplete-PSIP-data signals ──────────────────────────────────────────
+// One rollup per agency that has ≥ min_count tenders whose stage is
+// SLA-eligible (advertised / evaluation / awaiting_award) but the required
+// date column is NULL, so days-in-stage cannot be computed. These tenders
+// are silently skipped by fetchTenderSlaSignals; this signal surfaces the
+// data-quality gap so the agency can fill in the PSIP.
+
+type IncompletePsipRow = {
+  id: string;
+  agency: string;
+  stage: string;
+  created_at: string;
+  date_advertised: string | null;
+  date_closed: string | null;
+  date_eval_sent_mtb_rtb: string | null;
+  date_eval_sent_nptab: string | null;
+};
+
+function isMissingRequiredDate(row: IncompletePsipRow): boolean {
+  switch (row.stage) {
+    case 'advertised':
+      return row.date_advertised === null;
+    case 'evaluation':
+      return row.date_closed === null;
+    case 'awaiting_award':
+      return row.date_eval_sent_nptab === null
+        && row.date_eval_sent_mtb_rtb === null
+        && row.date_closed === null;
+    default:
+      return false;
+  }
+}
+
+export async function fetchIncompletePsipDataSignals(
+  role: Role,
+  agency: string | null,
+  now: Date = new Date(),
+): Promise<TodaySignal[]> {
+  const scope = scopedAgency(role, agency);
+
+  let q = supabaseAdmin
+    .from('tender')
+    .select('id, agency, stage, created_at, date_advertised, date_closed, date_eval_sent_mtb_rtb, date_eval_sent_nptab')
+    .in('stage', ['advertised', 'evaluation', 'awaiting_award'])
+    .eq('is_rollover', false)
+    .eq('has_exception', false)
+    .eq('missing_from_last_upload', false);
+  if (scope) q = q.eq('agency', scope.toUpperCase());
+
+  const { data, error } = await q;
+  if (error) {
+    logger.error({ error }, 'fetchIncompletePsipDataSignals: query failed');
+    throw error;
+  }
+
+  const rows = ((data || []) as IncompletePsipRow[]).filter(isMissingRequiredDate);
+  if (rows.length === 0) return [];
+
+  const byAgency = new Map<string, IncompletePsipRow[]>();
+  for (const r of rows) {
+    const bucket = byAgency.get(r.agency) ?? [];
+    bucket.push(r);
+    byAgency.set(r.agency, bucket);
+  }
+
+  const nowISO = now.toISOString();
+  const nowMs = now.getTime();
+  const signals: TodaySignal[] = [];
+
+  for (const [a, agencyRows] of byAgency) {
+    const count = agencyRows.length;
+    if (count < TODAY_THRESHOLDS.incomplete_psip.min_count) continue;
+    const maxAgeDays = Math.max(
+      ...agencyRows.map((r) =>
+        Math.max(0, Math.floor((nowMs - new Date(r.created_at).getTime()) / (1000 * 60 * 60 * 24))),
+      ),
+    );
+    signals.push({
+      id: `incomplete_psip:${a}`,
+      kind: 'incomplete_psip_data',
+      severity: severityForIncompletePsip(count),
+      title: `${a} has ${count} ${count === 1 ? 'tender' : 'tenders'} missing PSIP dates`,
+      subtitle: 'Dates required for SLA tracking are not filled in',
+      metric: `${count} ${count === 1 ? 'tender' : 'tenders'}`,
+      href: `/procurement?agency=${a}&missing_dates=true`,
+      agency: a,
+      sourceId: a,
+      dueDate: null,
+      ageDays: maxAgeDays,
+      computedAt: nowISO,
+    });
+  }
+
+  return signals;
+}
+
 // ── Orchestrator ─────────────────────────────────────────────────────────────
 
 // Tiebreak when severity and ageDays match.
@@ -395,7 +492,8 @@ const KIND_RANK: Record<TodaySignal['kind'], number> = {
   tender_sla: 1,
   agency_stagnant_rollup: 2,
   stagnant_tender: 3,
-  meeting_action: 4,
+  incomplete_psip_data: 4,
+  meeting_action: 5,
 };
 
 export async function getTodaySignals(
@@ -404,11 +502,12 @@ export async function getTodaySignals(
   agency: string | null,
   now: Date = new Date(),
 ): Promise<TodayPayload> {
-  const [delayedResult, tenderResult, meetingResult, stagnantResult] = await Promise.allSettled([
+  const [delayedResult, tenderResult, meetingResult, stagnantResult, incompleteResult] = await Promise.allSettled([
     fetchDelayedProjectSignals(role, agency, now),
     fetchTenderSlaSignals(role, agency, now),
     fetchMeetingActionSignals(role, agency, now),
     fetchStagnantTenderSignals(role, agency, now),
+    fetchIncompletePsipDataSignals(role, agency, now),
   ]);
 
   const sources: TodayPayload['sources'] = {
@@ -416,6 +515,7 @@ export async function getTodaySignals(
     tenders: healthFrom(tenderResult),
     meeting_actions: healthFrom(meetingResult),
     stagnant_tenders: healthFrom(stagnantResult),
+    incomplete_psip: healthFrom(incompleteResult),
   };
 
   const all: TodaySignal[] = [
@@ -423,6 +523,7 @@ export async function getTodaySignals(
     ...(tenderResult.status === 'fulfilled' ? tenderResult.value : []),
     ...(meetingResult.status === 'fulfilled' ? meetingResult.value : []),
     ...(stagnantResult.status === 'fulfilled' ? stagnantResult.value : []),
+    ...(incompleteResult.status === 'fulfilled' ? incompleteResult.value : []),
   ];
 
   all.sort((a, b) => {

@@ -48,6 +48,15 @@
 // medium (older than this, never newer). Consumer:
 // lib/today/severity.ts::severityForMeetingAction.
 //
+// incomplete_psip — one rollup signal per agency with tenders whose stage is
+// SLA-eligible (advertised / evaluation / awaiting_award) but the required
+// PSIP date column is blank, so days-in-stage cannot be computed and the
+// tender is silently skipped by the SLA fetcher. min_count gates whether the
+// rollup appears at all. high / critical set the internal severity used only
+// for sort order (kind pill is MISSING, severity is not displayed).
+// Consumers: lib/today/signals.ts::fetchIncompletePsipDataSignals and
+// lib/today/severity.ts::severityForIncompletePsip.
+//
 // Note: all thresholds are inclusive-of-the-value (>= rather than >).
 
 import type { TenderStage } from '@/lib/tender/types';
@@ -87,5 +96,11 @@ export const TODAY_THRESHOLDS = {
     high_days_past_due: 1,
     medium_due_within_days: 7,
     medium_no_due_age_days: 30,
+  },
+  incomplete_psip: {
+    min_count: 1,
+    high_count: 5,
+    critical_count: 10,
+    // medium = 1–4 missing-date tenders in one agency
   },
 } as const;

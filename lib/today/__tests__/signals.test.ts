@@ -55,6 +55,7 @@ import {
   fetchTenderSlaSignals,
   fetchMeetingActionSignals,
   fetchStagnantTenderSignals,
+  fetchIncompletePsipDataSignals,
   getStalledProjectIds,
   getTodaySignals,
 } from '@/lib/today/signals';
@@ -484,6 +485,149 @@ describe('fetchStagnantTenderSignals — agency rollup', () => {
   });
 });
 
+// ── fetchIncompletePsipDataSignals ───────────────────────────────────────────
+
+describe('fetchIncompletePsipDataSignals', () => {
+  function tenderRow(overrides: Partial<{
+    id: string;
+    agency: string;
+    stage: 'design' | 'advertised' | 'evaluation' | 'awaiting_award' | 'award';
+    created_at: string;
+    date_advertised: string | null;
+    date_closed: string | null;
+    date_eval_sent_mtb_rtb: string | null;
+    date_eval_sent_nptab: string | null;
+  }>) {
+    return {
+      id: overrides.id ?? crypto.randomUUID(),
+      agency: overrides.agency ?? 'GPL',
+      stage: overrides.stage ?? 'advertised',
+      created_at: overrides.created_at ?? '2026-03-01T00:00:00Z',
+      date_advertised: overrides.date_advertised ?? null,
+      date_closed: overrides.date_closed ?? null,
+      date_eval_sent_mtb_rtb: overrides.date_eval_sent_mtb_rtb ?? null,
+      date_eval_sent_nptab: overrides.date_eval_sent_nptab ?? null,
+    };
+  }
+
+  it('returns no signals when no agency has missing-date tenders', async () => {
+    fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
+    expect(await fetchIncompletePsipDataSignals('dg', null, NOW)).toEqual([]);
+  });
+
+  it('agency with 3 missing-date tenders → 1 signal, medium severity', async () => {
+    fromMock.mockImplementationOnce(
+      () =>
+        makeChain({
+          data: [
+            tenderRow({ agency: 'HECI', stage: 'advertised' }),
+            tenderRow({ agency: 'HECI', stage: 'evaluation' }),
+            tenderRow({ agency: 'HECI', stage: 'awaiting_award' }),
+          ],
+          error: null,
+        }).chain,
+    );
+    const out = await fetchIncompletePsipDataSignals('dg', null, NOW);
+    expect(out).toHaveLength(1);
+    expect(out[0].kind).toBe('incomplete_psip_data');
+    expect(out[0].agency).toBe('HECI');
+    expect(out[0].severity).toBe('medium');
+    expect(out[0].title).toContain('HECI has 3 tenders');
+    expect(out[0].href).toBe('/procurement?agency=HECI&missing_dates=true');
+  });
+
+  it('agency with 8 missing-date tenders → 1 signal, high severity', async () => {
+    fromMock.mockImplementationOnce(
+      () =>
+        makeChain({
+          data: Array.from({ length: 8 }, (_, i) =>
+            tenderRow({ id: `h${i}`, agency: 'MARAD', stage: 'advertised' }),
+          ),
+          error: null,
+        }).chain,
+    );
+    const out = await fetchIncompletePsipDataSignals('dg', null, NOW);
+    expect(out).toHaveLength(1);
+    expect(out[0].severity).toBe('high');
+  });
+
+  it('agency with 12 missing-date tenders → 1 signal, critical severity', async () => {
+    fromMock.mockImplementationOnce(
+      () =>
+        makeChain({
+          data: Array.from({ length: 12 }, (_, i) =>
+            tenderRow({ id: `c${i}`, agency: 'GWI', stage: 'evaluation' }),
+          ),
+          error: null,
+        }).chain,
+    );
+    const out = await fetchIncompletePsipDataSignals('dg', null, NOW);
+    expect(out).toHaveLength(1);
+    expect(out[0].severity).toBe('critical');
+  });
+
+  it('excludes tenders whose required date IS populated', async () => {
+    fromMock.mockImplementationOnce(
+      () =>
+        makeChain({
+          data: [
+            // evaluation with date_closed → not missing
+            tenderRow({ agency: 'GPL', stage: 'evaluation', date_closed: '2026-03-01' }),
+            // advertised with date_advertised → not missing
+            tenderRow({ agency: 'GPL', stage: 'advertised', date_advertised: '2026-02-01' }),
+            // awaiting_award with any of the 3 date fields → not missing
+            tenderRow({ agency: 'GPL', stage: 'awaiting_award', date_eval_sent_nptab: '2026-03-01' }),
+            tenderRow({ agency: 'GPL', stage: 'awaiting_award', date_eval_sent_mtb_rtb: '2026-03-01' }),
+            tenderRow({ agency: 'GPL', stage: 'awaiting_award', date_closed: '2026-03-01' }),
+          ],
+          error: null,
+        }).chain,
+    );
+    expect(await fetchIncompletePsipDataSignals('dg', null, NOW)).toEqual([]);
+  });
+
+  it('awaiting_award with ALL three eval/closed dates null → flagged', async () => {
+    fromMock.mockImplementationOnce(
+      () =>
+        makeChain({
+          data: [tenderRow({ agency: 'CJIA', stage: 'awaiting_award' })],
+          error: null,
+        }).chain,
+    );
+    const out = await fetchIncompletePsipDataSignals('dg', null, NOW);
+    expect(out).toHaveLength(1);
+    expect(out[0].agency).toBe('CJIA');
+  });
+
+  it('restricts the DB query to SLA-eligible stages, non-rollover, non-exception, non-missing', async () => {
+    const chain = makeChain({ data: [], error: null });
+    fromMock.mockImplementationOnce(() => chain.chain);
+    await fetchIncompletePsipDataSignals('dg', null, NOW);
+    const eqCalls = chain.calls.filter((c) => c.method === 'eq');
+    const inCalls = chain.calls.filter((c) => c.method === 'in');
+    expect(eqCalls).toContainEqual({ method: 'eq', args: ['is_rollover', false] });
+    expect(eqCalls).toContainEqual({ method: 'eq', args: ['has_exception', false] });
+    expect(eqCalls).toContainEqual({ method: 'eq', args: ['missing_from_last_upload', false] });
+    expect(inCalls).toContainEqual({ method: 'in', args: ['stage', ['advertised', 'evaluation', 'awaiting_award']] });
+  });
+
+  it('agency scoping: non-ministry role adds agency eq filter with uppercase', async () => {
+    const chain = makeChain({ data: [], error: null });
+    fromMock.mockImplementationOnce(() => chain.chain);
+    await fetchIncompletePsipDataSignals('agency_admin', 'gpl', NOW);
+    const eqCalls = chain.calls.filter((c) => c.method === 'eq');
+    expect(eqCalls).toContainEqual({ method: 'eq', args: ['agency', 'GPL'] });
+  });
+
+  it('ministry role does not add agency filter', async () => {
+    const chain = makeChain({ data: [], error: null });
+    fromMock.mockImplementationOnce(() => chain.chain);
+    await fetchIncompletePsipDataSignals('dg', null, NOW);
+    const eqCalls = chain.calls.filter((c) => c.method === 'eq');
+    expect(eqCalls.some((c) => Array.isArray(c.args) && c.args[0] === 'agency')).toBe(false);
+  });
+});
+
 // ── fetchMeetingActionSignals ────────────────────────────────────────────────
 
 describe('fetchMeetingActionSignals', () => {
@@ -583,7 +727,7 @@ describe('fetchMeetingActionSignals', () => {
 // ── getTodaySignals orchestrator ─────────────────────────────────────────────
 
 describe('getTodaySignals', () => {
-  it('aggregates all four sources, sorts by severity then ageDays desc, caps at 50', async () => {
+  it('aggregates all five sources, sorts by severity then ageDays desc, caps at 50', async () => {
     getProjectsMock.mockResolvedValueOnce({
       projects: [
         baseDelayed({ id: 'dp-crit', days_overdue: 200 }),
@@ -618,6 +762,9 @@ describe('getTodaySignals', () => {
     // stagnant_tender query returns empty (no 2nd upload yet in this fixture)
     fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
 
+    // incomplete_psip query returns empty
+    fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
+
     const out = await getTodaySignals('user-1', 'dg', null, NOW);
 
     expect(out.counts.total).toBe(4);
@@ -627,6 +774,7 @@ describe('getTodaySignals', () => {
     expect(out.sources.tenders.ok).toBe(true);
     expect(out.sources.meeting_actions.ok).toBe(true);
     expect(out.sources.stagnant_tenders.ok).toBe(true);
+    expect(out.sources.incomplete_psip.ok).toBe(true);
 
     // Within critical bucket, ageDays desc then kind-rank.
     // ageDays: dp-crit=200, ma-crit=51, t-crit=45. Expect that order.
@@ -651,6 +799,9 @@ describe('getTodaySignals', () => {
     // Stagnant: succeed (empty)
     fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
 
+    // Incomplete PSIP: succeed (empty)
+    fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
+
     const out = await getTodaySignals('user-1', 'dg', null, NOW);
 
     expect(out.sources.delayed_projects.ok).toBe(true);
@@ -658,6 +809,7 @@ describe('getTodaySignals', () => {
     expect(out.sources.tenders.error).toContain('tender fetch failed');
     expect(out.sources.meeting_actions.ok).toBe(true);
     expect(out.sources.stagnant_tenders.ok).toBe(true);
+    expect(out.sources.incomplete_psip.ok).toBe(true);
     expect(out.signals.map((s) => s.sourceId)).toEqual(['dp1']);
   });
 
@@ -676,12 +828,15 @@ describe('getTodaySignals', () => {
     // stagnant signals from their own agency (unlike meeting actions).
     fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
 
+    // Incomplete PSIP query (agency-scoped): empty.
+    fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
+
     const out = await getTodaySignals('user-1', 'agency_admin', 'GPL', NOW);
 
     expect(getProjectsMock).toHaveBeenCalledWith(expect.any(Object), 'GPL');
     expect(listTendersMock).toHaveBeenCalledWith({ agency: 'GPL' });
     expect(out.signals.filter((s) => s.kind === 'meeting_action')).toEqual([]);
-    // 2 fromMock calls: stalled + stagnant. Meetings path never ran (non-ministry).
-    expect(fromMock).toHaveBeenCalledTimes(2);
+    // 3 fromMock calls: stalled + stagnant + incomplete_psip. Meetings path never ran (non-ministry).
+    expect(fromMock).toHaveBeenCalledTimes(3);
   });
 });

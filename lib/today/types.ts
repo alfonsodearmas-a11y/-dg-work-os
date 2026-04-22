@@ -9,7 +9,8 @@ export type TodaySignalKind =
   | 'tender_sla'
   | 'meeting_action'
   | 'stagnant_tender'
-  | 'agency_stagnant_rollup';
+  | 'agency_stagnant_rollup'
+  | 'incomplete_psip_data';
 
 export type TodaySeverity = 'critical' | 'high' | 'medium';
 
@@ -46,6 +47,7 @@ export interface TodayPayload {
     tenders: TodaySourceHealth;
     meeting_actions: TodaySourceHealth;
     stagnant_tenders: TodaySourceHealth;
+    incomplete_psip: TodaySourceHealth;
   };
   generatedAt: string;
 }

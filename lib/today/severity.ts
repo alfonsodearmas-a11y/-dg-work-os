@@ -81,6 +81,14 @@ export function severityForAgencyStagnantRollup(count: number): TodaySeverity {
   return 'medium';
 }
 
+// ── Incomplete PSIP data ─────────────────────────────────────────────────────
+
+export function severityForIncompletePsip(count: number): TodaySeverity {
+  if (count >= T.incomplete_psip.critical_count) return 'critical';
+  if (count >= T.incomplete_psip.high_count) return 'high';
+  return 'medium';
+}
+
 // ── Ordering ─────────────────────────────────────────────────────────────────
 
 const SEVERITY_ORDER: Record<TodaySeverity, number> = { critical: 0, high: 1, medium: 2 };
