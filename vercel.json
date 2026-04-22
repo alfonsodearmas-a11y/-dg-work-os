@@ -35,6 +35,10 @@
     {
       "path": "/api/cron/recurring-tasks",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/psip-nag-weekly",
+      "schedule": "0 10 * * 1"
     }
   ]
 }
