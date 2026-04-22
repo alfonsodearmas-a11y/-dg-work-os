@@ -1,62 +1,44 @@
 'use client';
 
 import Link from 'next/link';
-import { AlertTriangle, FileText, CheckSquare, ChevronRight, Clock, Building2 } from 'lucide-react';
-import { Badge } from '@/components/ui/Badge';
-import type { TodaySignal, TodaySeverity, TodaySignalKind } from '@/lib/today/types';
+import { ChevronRight } from 'lucide-react';
+import type { TodaySignal, TodaySignalKind } from '@/lib/today/types';
 
-const SEVERITY_VARIANT: Record<TodaySeverity, 'danger' | 'warning' | 'info'> = {
-  critical: 'danger',
-  high: 'warning',
-  medium: 'info',
-};
-
-const SEVERITY_LABEL: Record<TodaySeverity, string> = {
-  critical: 'Critical',
-  high: 'High',
-  medium: 'Medium',
-};
-
-const KIND_LABEL: Record<TodaySignalKind, string> = {
-  delayed_project: 'Project',
-  tender_sla: 'Procurement',
-  meeting_action: 'Action',
-  stagnant_tender: 'Stagnant',
-  agency_stagnant_rollup: 'Agency',
-};
-
-const KIND_ICON: Record<TodaySignalKind, typeof AlertTriangle> = {
-  delayed_project: AlertTriangle,
-  tender_sla: FileText,
-  meeting_action: CheckSquare,
-  stagnant_tender: Clock,
-  agency_stagnant_rollup: Building2,
+// Kind grouping → pill label + CSS variable. Stagnant and rollup share one
+// color because they both represent "unchanged PSIP data" to the reader.
+const KIND_PILL: Record<TodaySignalKind, { label: string; color: string }> = {
+  delayed_project:         { label: 'PROJECT',  color: 'var(--kind-project)' },
+  tender_sla:              { label: 'TENDER',   color: 'var(--kind-tender)' },
+  stagnant_tender:         { label: 'STAGNANT', color: 'var(--kind-stagnant)' },
+  agency_stagnant_rollup:  { label: 'STAGNANT', color: 'var(--kind-stagnant)' },
+  meeting_action:          { label: 'ACTION',   color: 'var(--kind-action)' },
 };
 
 export function TodaySignalCard({ signal }: { signal: TodaySignal }) {
-  const Icon = KIND_ICON[signal.kind];
+  const pill = KIND_PILL[signal.kind];
+
   return (
     <Link
       href={signal.href}
       className="card-premium group flex items-start gap-4 p-4 transition-colors hover:border-gold-500/40"
     >
-      <div className="mt-0.5 text-navy-600 group-hover:text-gold-400">
-        <Icon className="h-5 w-5" />
-      </div>
-
       <div className="min-w-0 flex-1">
-        <div className="mb-1 flex flex-wrap items-center gap-2">
-          <Badge variant={SEVERITY_VARIANT[signal.severity]}>{SEVERITY_LABEL[signal.severity]}</Badge>
-          <span className="text-xs uppercase tracking-wide text-navy-600">{KIND_LABEL[signal.kind]}</span>
+        <div className="mb-1.5 flex flex-wrap items-center gap-2">
+          <span
+            className="rounded-md px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide"
+            style={{ color: pill.color, backgroundColor: `${pill.color}22`, border: `1px solid ${pill.color}55` }}
+          >
+            {pill.label}
+          </span>
           {signal.agency && (
-            <span className="text-xs font-medium text-slate-400">{signal.agency}</span>
+            <span className="font-mono text-xs text-navy-600">{signal.agency}</span>
           )}
         </div>
-        <h3 className="truncate text-sm font-medium text-white">{signal.title}</h3>
+        <h3 className="text-sm font-medium text-white today-title-clamp">{signal.title}</h3>
         {signal.subtitle && (
           <p className="truncate text-xs text-navy-600">{signal.subtitle}</p>
         )}
-        <p className="mt-1 font-mono text-xs text-slate-400">{signal.metric}</p>
+        <p className="mt-1 truncate font-mono text-xs text-slate-400">{signal.metric}</p>
       </div>
 
       <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-navy-600 group-hover:text-gold-400" />

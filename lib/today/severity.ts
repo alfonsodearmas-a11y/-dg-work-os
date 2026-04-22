@@ -1,65 +1,52 @@
 // ── Pure severity classifiers ────────────────────────────────────────────────
-//
-// No DB access. Given the raw facts about a row (days overdue, days over SLA,
-// due-date relative to today), return a TodaySeverity. The three fetchers in
-// signals.ts call these to build TodaySignal.severity.
-//
-// Thresholds (see plan §"Severity & ordering rules"):
-//   delayed_project — HIGH risk already required by caller; this splits by age.
-//   tender_sla      — days_over_sla = days_at_current_stage − stage SLA.
-//   meeting_action  — due_date relative to today; no_due_date uses created_at.
+// No DB access. All tunable numbers come from lib/today/thresholds.ts.
 
 import type { TodaySeverity } from './types';
-import {
-  TENDER_STAGE_SLA_DAYS,
-  STAGNANT_TENDER_CRITICAL,
-  STAGNANT_TENDER_HIGH,
-  AGENCY_STAGNANT_CRITICAL,
-  AGENCY_STAGNANT_HIGH,
-} from './types';
 import type { TenderStage } from '@/lib/tender/types';
+import { TODAY_THRESHOLDS } from './thresholds';
+
+const T = TODAY_THRESHOLDS;
 
 // ── Delayed projects ─────────────────────────────────────────────────────────
 // Caller passes only HIGH-risk (or stalled-union) projects. days_overdue may
 // be null for stalled-only rows that aren't past their end_date yet.
 
 export function severityForDelayedProject(daysOverdue: number | null): TodaySeverity {
-  if (daysOverdue !== null && daysOverdue >= 90) return 'critical';
-  if (daysOverdue !== null && daysOverdue >= 30) return 'high';
+  if (daysOverdue !== null && daysOverdue >= T.delayed_project.critical_days_overdue) return 'critical';
+  if (daysOverdue !== null && daysOverdue >= T.delayed_project.high_days_overdue) return 'high';
   return 'medium';
 }
 
 // ── Tender SLA ───────────────────────────────────────────────────────────────
 
 export function daysOverSla(stage: TenderStage, daysAtCurrentStage: number): number | null {
-  const sla = TENDER_STAGE_SLA_DAYS[stage];
+  const sla = T.tender_sla.stage_sla_days[stage];
   if (sla === null) return null;
   return daysAtCurrentStage - sla;
 }
 
 export function severityForTenderSla(overSla: number): TodaySeverity {
-  if (overSla >= 30) return 'critical';
-  if (overSla >= 14) return 'high';
+  if (overSla >= T.tender_sla.critical_days_over_sla) return 'critical';
+  if (overSla >= T.tender_sla.high_days_over_sla) return 'high';
   return 'medium';
 }
 
 // ── Meeting actions ──────────────────────────────────────────────────────────
 // daysPastDue: null means no due_date; positive is past, negative is upcoming.
-// Bands: critical ≥14d past, high 1–13d past, medium due within next 7d or
-// no-due-date items older than 30d.
 
 export function severityForMeetingAction(input: {
   daysPastDue: number | null;
   daysSinceCreated: number;
 }): TodaySeverity | null {
   const { daysPastDue, daysSinceCreated } = input;
+  const M = T.meeting_action;
 
   if (daysPastDue === null) {
-    return daysSinceCreated >= 30 ? 'medium' : null;
+    return daysSinceCreated >= M.medium_no_due_age_days ? 'medium' : null;
   }
-  if (daysPastDue >= 14) return 'critical';
-  if (daysPastDue >= 1) return 'high';
-  if (daysPastDue >= -7) return 'medium';
+  if (daysPastDue >= M.critical_days_past_due) return 'critical';
+  if (daysPastDue >= M.high_days_past_due) return 'high';
+  if (daysPastDue >= -M.medium_due_within_days) return 'medium';
   return null;
 }
 
@@ -83,14 +70,14 @@ export function daysSinceISO(iso: string | null, now: Date = new Date()): number
 // ── Stagnant tenders ─────────────────────────────────────────────────────────
 
 export function severityForStagnantTender(stagnantWeeks: number): TodaySeverity {
-  if (stagnantWeeks >= STAGNANT_TENDER_CRITICAL) return 'critical';
-  if (stagnantWeeks >= STAGNANT_TENDER_HIGH) return 'high';
+  if (stagnantWeeks >= T.stagnant_tender.critical_weeks) return 'critical';
+  if (stagnantWeeks >= T.stagnant_tender.high_weeks) return 'high';
   return 'medium';
 }
 
 export function severityForAgencyStagnantRollup(count: number): TodaySeverity {
-  if (count >= AGENCY_STAGNANT_CRITICAL) return 'critical';
-  if (count >= AGENCY_STAGNANT_HIGH) return 'high';
+  if (count >= T.agency_stagnant_rollup.critical_count) return 'critical';
+  if (count >= T.agency_stagnant_rollup.high_count) return 'high';
   return 'medium';
 }
 

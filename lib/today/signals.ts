@@ -32,10 +32,7 @@ import {
   severityRank,
 } from './severity';
 import type { TodayPayload, TodaySignal } from './types';
-import {
-  STAGNANT_WEEKS_THRESHOLD,
-  AGENCY_STAGNANT_ROLLUP_THRESHOLD,
-} from './types';
+import { TODAY_THRESHOLDS } from './thresholds';
 
 // A project is "stalled" when its completion_percent changed by less than
 // 1 percentage point between the two most recent delayed_project_snapshots
@@ -316,7 +313,7 @@ export async function fetchStagnantTenderSignals(
   let q = supabaseAdmin
     .from('tender')
     .select('id, description, agency, stage, stagnant_weeks, updated_at')
-    .gte('stagnant_weeks', STAGNANT_WEEKS_THRESHOLD)
+    .gte('stagnant_weeks', TODAY_THRESHOLDS.stagnant_tender.min_weeks)
     .eq('is_rollover', false)
     .eq('has_exception', false)
     .eq('missing_from_last_upload', false);
@@ -336,7 +333,7 @@ export async function fetchStagnantTenderSignals(
 
   const rolledUpAgencies = new Set<string>();
   for (const [a, n] of countByAgency) {
-    if (n >= AGENCY_STAGNANT_ROLLUP_THRESHOLD) rolledUpAgencies.add(a);
+    if (n >= TODAY_THRESHOLDS.agency_stagnant_rollup.min_count) rolledUpAgencies.add(a);
   }
 
   const nowISO = now.toISOString();

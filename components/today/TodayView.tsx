@@ -30,26 +30,16 @@ export function TodayView({ payload, userName }: { payload: TodayPayload; userNa
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-navy-600">{formatToday(generatedAt)}</p>
-          <h1 className="mt-1 text-2xl font-semibold text-white">
-            {firstName ? `Good morning, ${firstName}` : 'Today'}
-          </h1>
-          <p className="mt-1 text-sm text-navy-600">
-            {counts.total === 0
-              ? 'Nothing needs your attention right now.'
-              : `${counts.total} ${counts.total === 1 ? 'item needs' : 'items need'} your attention.`}
-          </p>
-        </div>
-
-        {counts.total > 0 && (
-          <div className="flex gap-4 font-mono text-xs">
-            <CountPill label="Critical" value={counts.critical} tone="critical" />
-            <CountPill label="High" value={counts.high} tone="high" />
-            <CountPill label="Medium" value={counts.medium} tone="medium" />
-          </div>
-        )}
+      <header>
+        <p className="text-xs uppercase tracking-wider text-navy-600">{formatToday(generatedAt)}</p>
+        <h1 className="mt-1 text-2xl font-semibold text-white">
+          {firstName ? `Good morning, ${firstName}` : 'Today'}
+        </h1>
+        <p className="mt-1 text-sm text-navy-600">
+          {counts.total === 0
+            ? 'Nothing needs your attention right now.'
+            : `${counts.total} ${counts.total === 1 ? 'item needs' : 'items need'} your attention.`}
+        </p>
       </header>
 
       {unhealthySources.length > 0 && (
@@ -77,21 +67,6 @@ export function TodayView({ payload, userName }: { payload: TodayPayload; userNa
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function CountPill({ label, value, tone }: { label: string; value: number; tone: 'critical' | 'high' | 'medium' }) {
-  const toneClass =
-    tone === 'critical'
-      ? 'text-red-400'
-      : tone === 'high'
-        ? 'text-gold-400'
-        : 'text-blue-400';
-  return (
-    <div className="flex flex-col items-end">
-      <span className={`text-lg font-semibold ${toneClass}`}>{value}</span>
-      <span className="text-[10px] uppercase tracking-wider text-navy-600">{label}</span>
     </div>
   );
 }

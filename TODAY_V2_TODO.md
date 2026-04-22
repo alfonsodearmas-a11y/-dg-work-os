@@ -79,3 +79,12 @@ order `nptab ?? mtb_rtb ?? closed` in `computeDaysInStage` still honours
 the MTB/RTB column, but if it stays empty across subsequent PSIP uploads,
 consider dropping it from the schema (and the parser) to reduce column
 churn. Not urgent; wait 4–6 more upload cycles before deciding.
+
+## 6. Admin UI for Today thresholds
+
+When earned (3+ manual tunings, or multi-user threshold needs). Back it
+with `TODAY_THRESHOLDS` in `lib/today/thresholds.ts` as the source of
+truth; a settings UI writes to a DB override table (e.g.
+`today_threshold_override`) that is read inside the threshold accessors
+before falling back to `TODAY_THRESHOLDS` defaults. Keep the file as the
+canonical documentation of what each knob does and the default.

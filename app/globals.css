@@ -25,6 +25,12 @@ html {
   --status-warning: #d4af37;
   --status-info: #4a5568;
 
+  /* Today-card kind pill colors. One per TodaySignalKind group. */
+  --kind-project: #4a82f5;    /* blue  — delayed projects */
+  --kind-tender: #d4af37;     /* amber — tender SLA breaches (gold-aligned) */
+  --kind-stagnant: #a25ddc;   /* purple — stagnant tenders + agency rollups */
+  --kind-action: #00cec9;     /* teal  — meeting actions */
+
   /* Background */
   --background: #0a1628;
   --foreground: #f8fafc;
@@ -2211,4 +2217,13 @@ button, a, [role="button"], .clickable, input, select, textarea {
     background: white !important;
     color: black !important;
   }
+}
+
+/* Today card title: wrap to 2 lines, ellipsis at line 2 overflow. */
+.today-title-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
