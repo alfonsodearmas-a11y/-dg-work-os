@@ -88,3 +88,36 @@ truth; a settings UI writes to a DB override table (e.g.
 `today_threshold_override`) that is read inside the threshold accessors
 before falling back to `TODAY_THRESHOLDS` defaults. Keep the file as the
 canonical documentation of what each knob does and the default.
+
+---
+
+## Known dev environment quirks
+
+### Extending the TodaySignalKind enum — service worker + Turbopack caching
+
+When adding a new kind to `TodaySignalKind` and its matching entry in
+`TodaySignalCard.tsx::KIND_PILL`, the browser will render a
+`TypeError: Cannot read properties of undefined (reading 'color')`
+inside the Today cards even after the source file is updated.
+
+**Cause.** Two cache layers hold the stale client bundle:
+1. Turbopack's persistent cache (`.next`, `node_modules/.cache`, `.turbo`).
+2. The Serwist service worker's precache (`serwist-precache-v2-...`)
+   plus the app's `dg-static-assets` and `dg-pages` runtime caches.
+
+**Fix.**
+```
+lsof -ti:3000 | xargs kill
+rm -rf .next node_modules/.cache .turbo
+# In the browser dev tools (or via Playwright evaluate):
+#   for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister();
+#   for (const n of await caches.keys()) await caches.delete(n);
+npm run dev
+```
+
+Check that the served bundle has the new enum value before assuming the
+code is wrong — grep the `_cb3bb698._.js`-style chunk for the new kind
+literal. If it's missing from the bundle, you're looking at a cache,
+not a code bug.
+
+Hit this in commit cd169ac (Phase A rollout of `incomplete_psip_data`).
