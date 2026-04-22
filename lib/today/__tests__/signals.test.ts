@@ -309,6 +309,9 @@ describe('fetchTenderSlaSignals', () => {
     expect(signals.map((s) => s.sourceId)).toEqual(['t-over']);
     expect(signals[0].metric).toContain('Evaluation');
     expect(signals[0].metric).toContain('over SLA');
+    // href must match the /procurement?tender=<id> deep-link pattern the
+    // Kanban's URL-sync recognizes. A path-style /procurement/<id> 404s.
+    expect(signals[0].href).toBe(`/procurement?tender=${signals[0].sourceId}`);
   });
 
   it('applies severity bands per stage (design has no SLA, skipped)', async () => {

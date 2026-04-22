@@ -188,7 +188,7 @@ export async function fetchTenderSlaSignals(
       title: t.description,
       subtitle: t.agency_name ?? t.agency,
       metric: formatTenderMetric(t, over),
-      href: `/procurement/${t.id}`,
+      href: `/procurement?tender=${t.id}`,
       agency: t.agency,
       sourceId: t.id,
       dueDate: null,
