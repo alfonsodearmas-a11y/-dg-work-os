@@ -162,6 +162,11 @@ function buildDelayedMetric(p: DelayedProjectWithComputed, isStalled: boolean): 
   return parts.join(' · ');
 }
 
+// Procurement detail drawer deep-link: ProcurementKanban's URL-sync reads
+// `?tender=<id>` on mount (mirror of Oversight's `?project=`). A path-style
+// /procurement/<id> has no route and 404s.
+const tenderHref = (id: string) => `/procurement?tender=${id}`;
+
 // ── 2. Tender SLA signals ────────────────────────────────────────────────────
 
 export async function fetchTenderSlaSignals(
@@ -188,7 +193,7 @@ export async function fetchTenderSlaSignals(
       title: t.description,
       subtitle: t.agency_name ?? t.agency,
       metric: formatTenderMetric(t, over),
-      href: `/procurement?tender=${t.id}`,
+      href: tenderHref(t.id),
       agency: t.agency,
       sourceId: t.id,
       dueDate: null,
@@ -349,7 +354,7 @@ export async function fetchStagnantTenderSignals(
       title: r.description,
       subtitle: `${r.agency} · stage: ${r.stage}`,
       metric: `No PSIP change in ${r.stagnant_weeks} ${r.stagnant_weeks === 1 ? 'week' : 'weeks'}`,
-      href: `/procurement?tender=${r.id}`,
+      href: tenderHref(r.id),
       agency: r.agency,
       sourceId: r.id,
       dueDate: null,
