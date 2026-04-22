@@ -170,7 +170,10 @@ export async function fetchTenderSlaSignals(
 
   const signals: TodaySignal[] = [];
   for (const t of tenders) {
-    if (t.stage === 'award') continue;
+    // Skip stages with no SLA, flagged tenders, and rows with no computable
+    // days-in-stage (required PSIP date missing — not a breach, just unknown).
+    if (t.stage === 'award' || t.is_rollover || t.has_exception) continue;
+    if (t.days_at_current_stage === null) continue;
     const over = daysOverSla(t.stage, t.days_at_current_stage);
     if (over === null || over <= 0) continue;
 
@@ -195,7 +198,8 @@ export async function fetchTenderSlaSignals(
 }
 
 function formatTenderMetric(t: Tender, daysOver: number): string {
-  return `${t.days_at_current_stage}d in ${STAGE_CONFIG[t.stage].label} · ${daysOver}d over SLA`;
+  // days_at_current_stage is guaranteed non-null here — callers filter null before invoking.
+  return `${t.days_at_current_stage!}d in ${STAGE_CONFIG[t.stage].label} · ${daysOver}d over SLA`;
 }
 
 // ── 3. Meeting action signals ────────────────────────────────────────────────

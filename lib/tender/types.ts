@@ -109,7 +109,7 @@ export interface Tender {
   updated_at: string;
   // Derived
   agency_name: string;
-  days_at_current_stage: number;
+  days_at_current_stage: number | null;
   // Optional source-specific enrichment
   trello_url?: string | null;
 }

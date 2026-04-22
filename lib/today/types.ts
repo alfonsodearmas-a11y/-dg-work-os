@@ -48,11 +48,15 @@ export interface TodayPayload {
 }
 
 // ── Tender SLA table (days in stage before breach) ───────────────────────────
-// Source: Today v1 spec. `award` has no SLA because it's the terminal stage —
-// time-in-stage there is expected (and the kanban/archive surface it differently).
+// Only stages with a PSIP-provided entry date are SLA-eligible:
+//   advertised    → entered on date_advertised
+//   evaluation    → entered on date_closed
+//   awaiting_award → entered on date_eval_sent_nptab (preferred) or mtb_rtb
+// Design has no entry date in the PSIP (pre-advertisement) so no meaningful
+// "days in stage" can be computed. Award is terminal.
 
 export const TENDER_STAGE_SLA_DAYS: Record<TenderStage, number | null> = {
-  design: 45,
+  design: null,
   advertised: 30,
   evaluation: 30,
   awaiting_award: 21,

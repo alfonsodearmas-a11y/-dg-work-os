@@ -310,9 +310,10 @@ describe('fetchTenderSlaSignals', () => {
     expect(signals[0].metric).toContain('over SLA');
   });
 
-  it('applies severity bands per stage', async () => {
+  it('applies severity bands per stage (design has no SLA, skipped)', async () => {
     listTendersMock.mockResolvedValueOnce([
-      baseTender({ id: 't-design-crit', stage: 'design', days_at_current_stage: 75 }),       // over=30 → critical
+      baseTender({ id: 't-design', stage: 'design', days_at_current_stage: 75 }),            // no SLA → skipped
+      baseTender({ id: 't-ad-crit', stage: 'advertised', days_at_current_stage: 60 }),       // over=30 → critical
       baseTender({ id: 't-ad-high', stage: 'advertised', days_at_current_stage: 44 }),       // over=14 → high
       baseTender({ id: 't-eval-med', stage: 'evaluation', days_at_current_stage: 31 }),      // over=1  → medium
       baseTender({ id: 't-aa-high', stage: 'awaiting_award', days_at_current_stage: 35 }),   // over=14 → high
@@ -321,11 +322,32 @@ describe('fetchTenderSlaSignals', () => {
     const signals = await fetchTenderSlaSignals('dg', null, NOW);
     const sev = Object.fromEntries(signals.map((s) => [s.sourceId, s.severity]));
     expect(sev).toEqual({
-      't-design-crit': 'critical',
+      't-ad-crit': 'critical',
       't-ad-high': 'high',
       't-eval-med': 'medium',
       't-aa-high': 'high',
     });
+  });
+
+  it('skips tenders where days_at_current_stage is null (PSIP date missing)', async () => {
+    listTendersMock.mockResolvedValueOnce([
+      baseTender({ id: 't-null', stage: 'advertised', days_at_current_stage: null }),
+      baseTender({ id: 't-ok', stage: 'advertised', days_at_current_stage: 45 }),
+    ]);
+
+    const signals = await fetchTenderSlaSignals('dg', null, NOW);
+    expect(signals.map((s) => s.sourceId)).toEqual(['t-ok']);
+  });
+
+  it('skips rollover and has_exception tenders even with an over-SLA number', async () => {
+    listTendersMock.mockResolvedValueOnce([
+      baseTender({ id: 't-roll', stage: 'evaluation', days_at_current_stage: 60, is_rollover: true }),
+      baseTender({ id: 't-exc', stage: 'evaluation', days_at_current_stage: 60, has_exception: true }),
+      baseTender({ id: 't-ok', stage: 'evaluation', days_at_current_stage: 60 }),
+    ]);
+
+    const signals = await fetchTenderSlaSignals('dg', null, NOW);
+    expect(signals.map((s) => s.sourceId)).toEqual(['t-ok']);
   });
 
   it('passes agency filter for non-ministry roles, undefined for ministry', async () => {
@@ -449,7 +471,7 @@ describe('getTodaySignals', () => {
     fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain); // stalled
 
     listTendersMock.mockResolvedValueOnce([
-      baseTender({ id: 't-crit', stage: 'design', days_at_current_stage: 90 }), // over=45 → critical
+      baseTender({ id: 't-crit', stage: 'advertised', days_at_current_stage: 75 }), // over=45 → critical
     ]);
 
     fromMock.mockImplementationOnce(
@@ -516,7 +538,7 @@ describe('getTodaySignals', () => {
     fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
 
     listTendersMock.mockResolvedValueOnce([
-      baseTender({ id: 'tg1', agency: 'GPL', stage: 'design', days_at_current_stage: 80 }),
+      baseTender({ id: 'tg1', agency: 'GPL', stage: 'advertised', days_at_current_stage: 65 }),
     ]);
 
     const out = await getTodaySignals('user-1', 'agency_admin', 'GPL', NOW);

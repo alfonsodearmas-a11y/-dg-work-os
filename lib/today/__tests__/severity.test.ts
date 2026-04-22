@@ -39,19 +39,19 @@ describe('severityForDelayedProject', () => {
 });
 
 describe('daysOverSla', () => {
-  it('returns null for award stage (no SLA)', () => {
+  it('returns null for stages with no SLA (design, award)', () => {
+    expect(daysOverSla('design', 500)).toBeNull();
     expect(daysOverSla('award', 500)).toBeNull();
   });
 
   it('subtracts the stage SLA from days_at_current_stage', () => {
-    expect(daysOverSla('design', 50)).toBe(50 - 45);
     expect(daysOverSla('advertised', 30)).toBe(0);
     expect(daysOverSla('evaluation', 29)).toBe(-1);
     expect(daysOverSla('awaiting_award', 22)).toBe(1);
   });
 
   it('matches the canonical SLA table exactly', () => {
-    expect(TENDER_STAGE_SLA_DAYS.design).toBe(45);
+    expect(TENDER_STAGE_SLA_DAYS.design).toBeNull();
     expect(TENDER_STAGE_SLA_DAYS.advertised).toBe(30);
     expect(TENDER_STAGE_SLA_DAYS.evaluation).toBe(30);
     expect(TENDER_STAGE_SLA_DAYS.awaiting_award).toBe(21);

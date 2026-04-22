@@ -80,7 +80,7 @@ export function ProcurementAnalytics() {
       if (!m[t.agency]) m[t.agency] = { active: 0, award: 0, stalled: 0 };
       if (t.stage === 'award') m[t.agency].award++;
       else m[t.agency].active++;
-      if (t.stage !== 'award' && t.days_at_current_stage >= 30) m[t.agency].stalled++;
+      if (t.stage !== 'award' && (t.days_at_current_stage ?? 0) >= 30) m[t.agency].stalled++;
     }
     return Object.entries(m).sort((a, b) => b[1].active - a[1].active);
   }, [filtered]);
@@ -106,8 +106,8 @@ export function ProcurementAnalytics() {
 
   const stalled = useMemo(() => {
     return filtered
-      .filter((t) => t.stage !== 'award' && t.days_at_current_stage >= 30)
-      .sort((a, b) => b.days_at_current_stage - a.days_at_current_stage)
+      .filter((t) => t.stage !== 'award' && (t.days_at_current_stage ?? 0) >= 30)
+      .sort((a, b) => (b.days_at_current_stage ?? 0) - (a.days_at_current_stage ?? 0))
       .slice(0, 10);
   }, [filtered]);
 

@@ -27,7 +27,13 @@ function sortList(tenders: Tender[], field: SortField, dir: SortDir): Tender[] {
       case 'description': cmp = a.description.localeCompare(b.description); break;
       case 'agency': cmp = a.agency.localeCompare(b.agency); break;
       case 'stage': cmp = STAGE_ORDER[a.stage] - STAGE_ORDER[b.stage]; break;
-      case 'days_at_current_stage': cmp = a.days_at_current_stage - b.days_at_current_stage; break;
+      case 'days_at_current_stage': {
+        // Null (no SLA-relevant date) sorts last in desc, first in asc — treat as -Infinity.
+        const av = a.days_at_current_stage ?? -Infinity;
+        const bv = b.days_at_current_stage ?? -Infinity;
+        cmp = av - bv;
+        break;
+      }
       case 'updated_at': cmp = a.updated_at.localeCompare(b.updated_at); break;
     }
     return dir === 'asc' ? cmp : -cmp;

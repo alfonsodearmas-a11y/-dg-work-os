@@ -42,8 +42,10 @@ function canDrag(role: Role | undefined): boolean {
 
 function sortTenders(tenders: Tender[]): Tender[] {
   return [...tenders].sort((a, b) => {
-    const aUrgency = a.days_at_current_stage >= 30 ? 2 : a.days_at_current_stage >= 14 ? 1 : 0;
-    const bUrgency = b.days_at_current_stage >= 30 ? 2 : b.days_at_current_stage >= 14 ? 1 : 0;
+    const ad = a.days_at_current_stage ?? 0;
+    const bd = b.days_at_current_stage ?? 0;
+    const aUrgency = ad >= 30 ? 2 : ad >= 14 ? 1 : 0;
+    const bUrgency = bd >= 30 ? 2 : bd >= 14 ? 1 : 0;
     if (bUrgency !== aUrgency) return bUrgency - aUrgency;
     return b.updated_at.localeCompare(a.updated_at);
   });
@@ -160,7 +162,8 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
       if (targetStage === t.stage) return;
 
       // Optimistic
-      setTenders((prev) => prev.map((x) => (x.id === tenderId ? { ...x, stage: targetStage, days_at_current_stage: 0 } : x)));
+      // Optimistic: the stage just changed so no PSIP date reflects the new stage yet; surface "—".
+      setTenders((prev) => prev.map((x) => (x.id === tenderId ? { ...x, stage: targetStage, days_at_current_stage: null } : x)));
 
       try {
         const res = await fetch('/api/procurement/advance', {

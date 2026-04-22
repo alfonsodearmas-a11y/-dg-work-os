@@ -49,13 +49,51 @@ function computeDaysSince(referenceISO: string | null | undefined): number {
   return Math.max(0, Math.floor((Date.now() - t) / (1000 * 60 * 60 * 24)));
 }
 
+// Days in current stage, derived strictly from PSIP dates. Returns null when
+// the required date is missing, the tender is a rollover / has_exception, or
+// the stage has no SLA (design, award). No updated_at fallback — updated_at
+// churns on every weekly upload and is not a signal of stage progression.
+export function computeDaysInStage(
+  stage: TenderStage,
+  row: {
+    date_advertised?: string | null;
+    date_closed?: string | null;
+    date_eval_sent_mtb_rtb?: string | null;
+    date_eval_sent_nptab?: string | null;
+    is_rollover?: boolean | null;
+    has_exception?: boolean | null;
+  },
+  now: Date = new Date(),
+): number | null {
+  if (row.is_rollover || row.has_exception) return null;
+
+  let ref: string | null | undefined;
+  switch (stage) {
+    case 'advertised':
+      ref = row.date_advertised;
+      break;
+    case 'evaluation':
+      ref = row.date_closed;
+      break;
+    case 'awaiting_award':
+      ref = row.date_eval_sent_nptab ?? row.date_eval_sent_mtb_rtb ?? row.date_closed;
+      break;
+    default:
+      return null;
+  }
+
+  if (!ref) return null;
+  const t = new Date(ref).getTime();
+  if (Number.isNaN(t)) return null;
+  return Math.max(0, Math.floor((now.getTime() - t) / (1000 * 60 * 60 * 24)));
+}
+
 function agencyName(code: string): string {
   return (AGENCY_LABEL as Record<string, string>)[code.toUpperCase()] || code;
 }
 
-function enrichTender(row: Record<string, unknown>, latestChangeAt: string | null): Tender {
-  // Days at current stage = days since most recent stage change in field_change, else updated_at.
-  const reference = latestChangeAt ?? (row.updated_at as string) ?? (row.created_at as string);
+function enrichTender(row: Record<string, unknown>): Tender {
+  const stage = row.stage as TenderStage;
   return {
     id: row.id as string,
     source: row.source as TenderSource,
@@ -89,28 +127,18 @@ function enrichTender(row: Record<string, unknown>, latestChangeAt: string | nul
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
     agency_name: agencyName(row.agency as string),
-    days_at_current_stage: computeDaysSince(reference),
+    days_at_current_stage: computeDaysInStage(stage, {
+      date_advertised: row.date_advertised as string | null,
+      date_closed: row.date_closed as string | null,
+      date_eval_sent_mtb_rtb: row.date_eval_sent_mtb_rtb as string | null,
+      date_eval_sent_nptab: row.date_eval_sent_nptab as string | null,
+      is_rollover: Boolean(row.is_rollover),
+      has_exception: Boolean(row.has_exception),
+    }),
   };
 }
 
 // ── Queries ───────────────────────────────────────────────────────────────────
-
-async function fetchLatestStageChangeMap(tenderIds: string[]): Promise<Record<string, string>> {
-  if (tenderIds.length === 0) return {};
-  const { data, error } = await supabaseAdmin
-    .from('tender_field_change')
-    .select('tender_id, changed_at')
-    .in('tender_id', tenderIds)
-    .eq('field_name', 'stage')
-    .order('changed_at', { ascending: false });
-  if (error) return {};
-  const map: Record<string, string> = {};
-  for (const row of data || []) {
-    const id = row.tender_id as string;
-    if (!(id in map)) map[id] = row.changed_at as string; // first = most recent
-  }
-  return map;
-}
 
 export async function listTenders(
   opts: { agency?: string; includeMissing?: boolean; includeRollovers?: boolean } = {},
@@ -136,9 +164,7 @@ export async function listTenders(
   if (error) throw error;
 
   const rows = (data || []) as unknown as Record<string, unknown>[];
-  const ids = rows.map((r) => r.id as string);
-  const latestStageMap = await fetchLatestStageChangeMap(ids);
-  return rows.map((r) => enrichTender(r, latestStageMap[r.id as string] ?? null));
+  return rows.map((r) => enrichTender(r));
 }
 
 export async function getTenderById(id: string): Promise<
@@ -167,9 +193,7 @@ export async function getTenderById(id: string): Promise<
 
   const row = tenderResult.data as unknown as Record<string, unknown>;
   const changes = (changesResult.data || []) as unknown as Record<string, unknown>[];
-  const stageChanges = changes.filter((c) => c.field_name === 'stage');
-  const latestStage = stageChanges[0]?.changed_at as string | undefined;
-  const tender = enrichTender(row, latestStage ?? null);
+  const tender = enrichTender(row);
 
   const field_changes: TenderFieldChange[] = changes.map((c) => ({
     id: c.id as string,
@@ -248,7 +272,7 @@ export async function createManualTender(input: {
 
   if (error) throw error;
 
-  const tender = enrichTender(data as unknown as Record<string, unknown>, null);
+  const tender = enrichTender(data as unknown as Record<string, unknown>);
   // Log the creation as a synthetic field change so the change log has a zero-point anchor.
   await supabaseAdmin.from('tender_field_change').insert({
     tender_id: tender.id,
@@ -288,7 +312,7 @@ export async function updateTenderStage(
   if (fromStage === newStage) {
     const again = await supabaseAdmin.from('tender').select(TENDER_COLUMNS).eq('id', tenderId).single();
     if (again.error || !again.data) throw again.error || new Error('Tender not found');
-    return enrichTender(again.data as unknown as Record<string, unknown>, null);
+    return enrichTender(again.data as unknown as Record<string, unknown>);
   }
 
   // Award-tracking on manual advance: stamp awarded_at on first transition
@@ -330,7 +354,7 @@ export async function updateTenderStage(
     });
   }
   const row = updateResult.data as unknown as Record<string, unknown>;
-  return enrichTender(row, nowIso);
+  return enrichTender(row);
 
   // Note: `note` is currently unused; reserved for the optional change annotation
   //       in a future iteration. Silencing lint via an explicit use below.
@@ -504,7 +528,7 @@ export async function getAwardedSinceLastUpload(opts: { agency?: string } = {}):
   const { data, error } = await query;
   if (error) throw error;
   const rows = (data || []) as unknown as Record<string, unknown>[];
-  const tenders = rows.map((r) => enrichTender(r, null));
+  const tenders = rows.map((r) => enrichTender(r));
   return {
     previous_upload_at: ref.uploaded_at,
     previous_upload_id: ref.id,
@@ -524,5 +548,5 @@ export async function listAwardedTenders(opts: { agency?: string } = {}): Promis
   const { data, error } = await query;
   if (error) throw error;
   const rows = (data || []) as unknown as Record<string, unknown>[];
-  return rows.map((r) => enrichTender(r, null));
+  return rows.map((r) => enrichTender(r));
 }
