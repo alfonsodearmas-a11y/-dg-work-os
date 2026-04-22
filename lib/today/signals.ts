@@ -25,11 +25,17 @@ import {
   severityForDelayedProject,
   severityForTenderSla,
   severityForMeetingAction,
+  severityForStagnantTender,
+  severityForAgencyStagnantRollup,
   daysOverSla,
   daysBetweenDates,
   severityRank,
 } from './severity';
 import type { TodayPayload, TodaySignal } from './types';
+import {
+  STAGNANT_WEEKS_THRESHOLD,
+  AGENCY_STAGNANT_ROLLUP_THRESHOLD,
+} from './types';
 
 // A project is "stalled" when its completion_percent changed by less than
 // 1 percentage point between the two most recent delayed_project_snapshots
@@ -285,13 +291,109 @@ function formatMeetingMetric(input: {
   return `no due date · open ${daysSinceCreated}d${ownerPart}`;
 }
 
+// ── 4. Stagnant-tender signals ───────────────────────────────────────────────
+// Fires individual stagnant_tender signals for tenders with stagnant_weeks ≥ 3,
+// and collapses them into agency_stagnant_rollup signals when a single agency
+// has ≥ 3 stagnant tenders. Rollups suppress their constituent individual
+// signals (one signal per agency instead of 3–N separate cards).
+
+interface StagnantTenderRow {
+  id: string;
+  description: string;
+  agency: string;
+  stage: string;
+  stagnant_weeks: number;
+  updated_at: string;
+}
+
+export async function fetchStagnantTenderSignals(
+  role: Role,
+  agency: string | null,
+  now: Date = new Date(),
+): Promise<TodaySignal[]> {
+  const scope = scopedAgency(role, agency);
+
+  let q = supabaseAdmin
+    .from('tender')
+    .select('id, description, agency, stage, stagnant_weeks, updated_at')
+    .gte('stagnant_weeks', STAGNANT_WEEKS_THRESHOLD)
+    .eq('is_rollover', false)
+    .eq('has_exception', false)
+    .eq('missing_from_last_upload', false);
+  if (scope) q = q.eq('agency', scope.toUpperCase());
+
+  const { data, error } = await q;
+  if (error) {
+    logger.error({ error }, 'fetchStagnantTenderSignals: query failed');
+    throw error;
+  }
+
+  const rows = (data || []) as StagnantTenderRow[];
+
+  // Per-agency count to decide whether to emit individuals or the rollup.
+  const countByAgency = new Map<string, number>();
+  for (const r of rows) countByAgency.set(r.agency, (countByAgency.get(r.agency) || 0) + 1);
+
+  const rolledUpAgencies = new Set<string>();
+  for (const [a, n] of countByAgency) {
+    if (n >= AGENCY_STAGNANT_ROLLUP_THRESHOLD) rolledUpAgencies.add(a);
+  }
+
+  const nowISO = now.toISOString();
+  const signals: TodaySignal[] = [];
+
+  // Individual stagnant_tender signals — only for agencies NOT rolled up.
+  for (const r of rows) {
+    if (rolledUpAgencies.has(r.agency)) continue;
+    signals.push({
+      id: `stagnant_tender:${r.id}`,
+      kind: 'stagnant_tender',
+      severity: severityForStagnantTender(r.stagnant_weeks),
+      title: r.description,
+      subtitle: `${r.agency} · stage: ${r.stage}`,
+      metric: `No PSIP change in ${r.stagnant_weeks} ${r.stagnant_weeks === 1 ? 'week' : 'weeks'}`,
+      href: `/procurement?tender=${r.id}`,
+      agency: r.agency,
+      sourceId: r.id,
+      dueDate: null,
+      ageDays: r.stagnant_weeks * 7,
+      computedAt: nowISO,
+    });
+  }
+
+  // Agency rollup signals.
+  for (const a of rolledUpAgencies) {
+    const agencyRows = rows.filter((r) => r.agency === a);
+    const count = agencyRows.length;
+    const maxWeeks = Math.max(...agencyRows.map((r) => r.stagnant_weeks));
+    signals.push({
+      id: `agency_stagnant_rollup:${a}`,
+      kind: 'agency_stagnant_rollup',
+      severity: severityForAgencyStagnantRollup(count),
+      title: `${a} has ${count} stagnant tenders`,
+      subtitle: 'Unchanged for 3+ weeks on the PSIP',
+      metric: `Longest stagnation: ${maxWeeks} ${maxWeeks === 1 ? 'week' : 'weeks'}`,
+      href: `/procurement?agency=${a}&stagnant=true`,
+      agency: a,
+      sourceId: a,
+      dueDate: null,
+      ageDays: maxWeeks * 7,
+      computedAt: nowISO,
+    });
+  }
+
+  return signals;
+}
+
 // ── Orchestrator ─────────────────────────────────────────────────────────────
 
-// Tiebreak when severity and ageDays match: delayed > tender > meeting.
+// Tiebreak when severity and ageDays match.
 const KIND_RANK: Record<TodaySignal['kind'], number> = {
   delayed_project: 0,
   tender_sla: 1,
-  meeting_action: 2,
+  agency_stagnant_rollup: 2,
+  stagnant_tender: 3,
+  meeting_action: 4,
 };
 
 export async function getTodaySignals(
@@ -300,22 +402,25 @@ export async function getTodaySignals(
   agency: string | null,
   now: Date = new Date(),
 ): Promise<TodayPayload> {
-  const [delayedResult, tenderResult, meetingResult] = await Promise.allSettled([
+  const [delayedResult, tenderResult, meetingResult, stagnantResult] = await Promise.allSettled([
     fetchDelayedProjectSignals(role, agency, now),
     fetchTenderSlaSignals(role, agency, now),
     fetchMeetingActionSignals(role, agency, now),
+    fetchStagnantTenderSignals(role, agency, now),
   ]);
 
   const sources: TodayPayload['sources'] = {
     delayed_projects: healthFrom(delayedResult),
     tenders: healthFrom(tenderResult),
     meeting_actions: healthFrom(meetingResult),
+    stagnant_tenders: healthFrom(stagnantResult),
   };
 
   const all: TodaySignal[] = [
     ...(delayedResult.status === 'fulfilled' ? delayedResult.value : []),
     ...(tenderResult.status === 'fulfilled' ? tenderResult.value : []),
     ...(meetingResult.status === 'fulfilled' ? meetingResult.value : []),
+    ...(stagnantResult.status === 'fulfilled' ? stagnantResult.value : []),
   ];
 
   all.sort((a, b) => {

@@ -54,6 +54,7 @@ import {
   fetchDelayedProjectSignals,
   fetchTenderSlaSignals,
   fetchMeetingActionSignals,
+  fetchStagnantTenderSignals,
   getStalledProjectIds,
   getTodaySignals,
 } from '@/lib/today/signals';
@@ -361,6 +362,126 @@ describe('fetchTenderSlaSignals', () => {
   });
 });
 
+// ── fetchStagnantTenderSignals ───────────────────────────────────────────────
+
+describe('fetchStagnantTenderSignals — severity bands', () => {
+  function stagnantRow(id: string, agency: string, weeks: number, stage = 'advertised') {
+    return {
+      id,
+      description: `tender ${id}`,
+      agency,
+      stage,
+      stagnant_weeks: weeks,
+      updated_at: NOW.toISOString(),
+    };
+  }
+
+  it('does not surface stagnant_weeks below the threshold (2 → none)', async () => {
+    // Rows under 3 are filtered at the DB; the fetcher won't see them. Simulate
+    // by returning an empty set — asserts the query path works.
+    fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
+    const out = await fetchStagnantTenderSignals('dg', null, NOW);
+    expect(out).toEqual([]);
+  });
+
+  it('returns a medium signal at weeks = 3 (threshold)', async () => {
+    fromMock.mockImplementationOnce(
+      () => makeChain({ data: [stagnantRow('t-a', 'GPL', 3)], error: null }).chain,
+    );
+    const out = await fetchStagnantTenderSignals('dg', null, NOW);
+    expect(out).toHaveLength(1);
+    expect(out[0].severity).toBe('medium');
+    expect(out[0].kind).toBe('stagnant_tender');
+  });
+
+  it('returns a medium at weeks = 4, high at 5, high at 7, critical at 8', async () => {
+    fromMock.mockImplementationOnce(
+      () =>
+        makeChain({
+          data: [
+            stagnantRow('t4', 'GPL', 4),
+            stagnantRow('t5', 'GWI', 5),
+            stagnantRow('t7', 'CJIA', 7),
+            stagnantRow('t8', 'GCAA', 8),
+          ],
+          error: null,
+        }).chain,
+    );
+    const out = await fetchStagnantTenderSignals('dg', null, NOW);
+    const sev = Object.fromEntries(out.map((s) => [s.sourceId, s.severity]));
+    expect(sev).toEqual({ t4: 'medium', t5: 'high', t7: 'high', t8: 'critical' });
+  });
+});
+
+describe('fetchStagnantTenderSignals — agency rollup', () => {
+  function rows(n: number, agency: string, weeks = 4): Array<{
+    id: string; description: string; agency: string; stage: string; stagnant_weeks: number; updated_at: string;
+  }> {
+    return Array.from({ length: n }, (_, i) => ({
+      id: `${agency}-${i}`,
+      description: `tender ${agency} ${i}`,
+      agency,
+      stage: 'advertised',
+      stagnant_weeks: weeks,
+      updated_at: NOW.toISOString(),
+    }));
+  }
+
+  it('emits individuals when agency count < 3 (count=2)', async () => {
+    fromMock.mockImplementationOnce(() => makeChain({ data: rows(2, 'GPL'), error: null }).chain);
+    const out = await fetchStagnantTenderSignals('dg', null, NOW);
+    expect(out.map((s) => s.kind)).toEqual(['stagnant_tender', 'stagnant_tender']);
+  });
+
+  it('emits one rollup (replaces individuals) when count = 3 (threshold)', async () => {
+    fromMock.mockImplementationOnce(() => makeChain({ data: rows(3, 'GPL'), error: null }).chain);
+    const out = await fetchStagnantTenderSignals('dg', null, NOW);
+    expect(out).toHaveLength(1);
+    expect(out[0].kind).toBe('agency_stagnant_rollup');
+    expect(out[0].agency).toBe('GPL');
+    expect(out[0].severity).toBe('medium');
+    expect(out[0].title).toContain('3 stagnant tenders');
+  });
+
+  it('rollup severity: medium at 4, high at 5, high at 9, critical at 10', async () => {
+    for (const [count, expected] of [[4, 'medium'], [5, 'high'], [9, 'high'], [10, 'critical']] as const) {
+      fromMock.mockImplementationOnce(() => makeChain({ data: rows(count, 'GPL'), error: null }).chain);
+      const out = await fetchStagnantTenderSignals('dg', null, NOW);
+      expect(out).toHaveLength(1);
+      expect(out[0].severity).toBe(expected);
+    }
+  });
+
+  it('rollup in one agency does not suppress individuals in another', async () => {
+    fromMock.mockImplementationOnce(
+      () => makeChain({ data: [...rows(3, 'GPL'), ...rows(2, 'GWI')], error: null }).chain,
+    );
+    const out = await fetchStagnantTenderSignals('dg', null, NOW);
+    const gplSignals = out.filter((s) => s.agency === 'GPL');
+    const gwiSignals = out.filter((s) => s.agency === 'GWI');
+    expect(gplSignals).toHaveLength(1);
+    expect(gplSignals[0].kind).toBe('agency_stagnant_rollup');
+    expect(gwiSignals).toHaveLength(2);
+    expect(gwiSignals.every((s) => s.kind === 'stagnant_tender')).toBe(true);
+  });
+
+  it('agency user scoping: passes upper-cased agency filter to the query', async () => {
+    const chain = makeChain({ data: [], error: null });
+    fromMock.mockImplementationOnce(() => chain.chain);
+    await fetchStagnantTenderSignals('agency_admin', 'gpl', NOW);
+    const eqCalls = chain.calls.filter((c) => c.method === 'eq');
+    expect(eqCalls).toContainEqual({ method: 'eq', args: ['agency', 'GPL'] });
+  });
+
+  it('no agency filter for ministry roles', async () => {
+    const chain = makeChain({ data: [], error: null });
+    fromMock.mockImplementationOnce(() => chain.chain);
+    await fetchStagnantTenderSignals('dg', null, NOW);
+    const eqCalls = chain.calls.filter((c) => c.method === 'eq');
+    expect(eqCalls).not.toContainEqual(expect.objectContaining({ args: expect.arrayContaining(['agency']) }));
+  });
+});
+
 // ── fetchMeetingActionSignals ────────────────────────────────────────────────
 
 describe('fetchMeetingActionSignals', () => {
@@ -460,7 +581,7 @@ describe('fetchMeetingActionSignals', () => {
 // ── getTodaySignals orchestrator ─────────────────────────────────────────────
 
 describe('getTodaySignals', () => {
-  it('aggregates all three sources, sorts by severity then ageDays desc, caps at 50', async () => {
+  it('aggregates all four sources, sorts by severity then ageDays desc, caps at 50', async () => {
     getProjectsMock.mockResolvedValueOnce({
       projects: [
         baseDelayed({ id: 'dp-crit', days_overdue: 200 }),
@@ -492,6 +613,9 @@ describe('getTodaySignals', () => {
         }).chain,
     );
 
+    // stagnant_tender query returns empty (no 2nd upload yet in this fixture)
+    fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
+
     const out = await getTodaySignals('user-1', 'dg', null, NOW);
 
     expect(out.counts.total).toBe(4);
@@ -500,6 +624,7 @@ describe('getTodaySignals', () => {
     expect(out.sources.delayed_projects.ok).toBe(true);
     expect(out.sources.tenders.ok).toBe(true);
     expect(out.sources.meeting_actions.ok).toBe(true);
+    expect(out.sources.stagnant_tenders.ok).toBe(true);
 
     // Within critical bucket, ageDays desc then kind-rank.
     // ageDays: dp-crit=200, ma-crit=51, t-crit=45. Expect that order.
@@ -521,32 +646,40 @@ describe('getTodaySignals', () => {
     // Meetings: succeed (empty)
     fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
 
+    // Stagnant: succeed (empty)
+    fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
+
     const out = await getTodaySignals('user-1', 'dg', null, NOW);
 
     expect(out.sources.delayed_projects.ok).toBe(true);
     expect(out.sources.tenders.ok).toBe(false);
     expect(out.sources.tenders.error).toContain('tender fetch failed');
     expect(out.sources.meeting_actions.ok).toBe(true);
+    expect(out.sources.stagnant_tenders.ok).toBe(true);
     expect(out.signals.map((s) => s.sourceId)).toEqual(['dp1']);
   });
 
-  it('agency user sees only their own agency across delayed + tenders, and no meeting actions', async () => {
+  it('agency user sees only their own agency across delayed + tenders + stagnant, and no meeting actions', async () => {
     getProjectsMock.mockResolvedValueOnce({
       projects: [baseDelayed({ id: 'gpl1', sub_agency: 'GPL', days_overdue: 100 })],
       total: 1,
     });
-    fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
+    fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain); // stalled
 
     listTendersMock.mockResolvedValueOnce([
       baseTender({ id: 'tg1', agency: 'GPL', stage: 'advertised', days_at_current_stage: 65 }),
     ]);
+
+    // Stagnant query (for the agency_admin): empty. Agency users can still see
+    // stagnant signals from their own agency (unlike meeting actions).
+    fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
 
     const out = await getTodaySignals('user-1', 'agency_admin', 'GPL', NOW);
 
     expect(getProjectsMock).toHaveBeenCalledWith(expect.any(Object), 'GPL');
     expect(listTendersMock).toHaveBeenCalledWith({ agency: 'GPL' });
     expect(out.signals.filter((s) => s.kind === 'meeting_action')).toEqual([]);
-    // from mock was only called once (for the stalled query); meetings path never ran.
-    expect(fromMock).toHaveBeenCalledTimes(1);
+    // 2 fromMock calls: stalled + stagnant. Meetings path never ran (non-ministry).
+    expect(fromMock).toHaveBeenCalledTimes(2);
   });
 });

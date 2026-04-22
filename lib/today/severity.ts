@@ -10,7 +10,13 @@
 //   meeting_action  — due_date relative to today; no_due_date uses created_at.
 
 import type { TodaySeverity } from './types';
-import { TENDER_STAGE_SLA_DAYS } from './types';
+import {
+  TENDER_STAGE_SLA_DAYS,
+  STAGNANT_TENDER_CRITICAL,
+  STAGNANT_TENDER_HIGH,
+  AGENCY_STAGNANT_CRITICAL,
+  AGENCY_STAGNANT_HIGH,
+} from './types';
 import type { TenderStage } from '@/lib/tender/types';
 
 // ── Delayed projects ─────────────────────────────────────────────────────────
@@ -72,6 +78,20 @@ export function daysBetweenDates(earlierISO: string, laterISO: string): number {
 export function daysSinceISO(iso: string | null, now: Date = new Date()): number | null {
   if (!iso) return null;
   return daysBetweenDates(iso, now.toISOString());
+}
+
+// ── Stagnant tenders ─────────────────────────────────────────────────────────
+
+export function severityForStagnantTender(stagnantWeeks: number): TodaySeverity {
+  if (stagnantWeeks >= STAGNANT_TENDER_CRITICAL) return 'critical';
+  if (stagnantWeeks >= STAGNANT_TENDER_HIGH) return 'high';
+  return 'medium';
+}
+
+export function severityForAgencyStagnantRollup(count: number): TodaySeverity {
+  if (count >= AGENCY_STAGNANT_CRITICAL) return 'critical';
+  if (count >= AGENCY_STAGNANT_HIGH) return 'high';
+  return 'medium';
 }
 
 // ── Ordering ─────────────────────────────────────────────────────────────────

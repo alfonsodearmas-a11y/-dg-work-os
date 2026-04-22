@@ -7,7 +7,12 @@
 
 import type { TenderStage } from '@/lib/tender/types';
 
-export type TodaySignalKind = 'delayed_project' | 'tender_sla' | 'meeting_action';
+export type TodaySignalKind =
+  | 'delayed_project'
+  | 'tender_sla'
+  | 'meeting_action'
+  | 'stagnant_tender'
+  | 'agency_stagnant_rollup';
 
 export type TodaySeverity = 'critical' | 'high' | 'medium';
 
@@ -43,9 +48,27 @@ export interface TodayPayload {
     delayed_projects: TodaySourceHealth;
     tenders: TodaySourceHealth;
     meeting_actions: TodaySourceHealth;
+    stagnant_tenders: TodaySourceHealth;
   };
   generatedAt: string;
 }
+
+// ── Stagnant-tender thresholds ───────────────────────────────────────────────
+// stagnant_weeks >= 3 triggers a signal (21+ days of no reported PSIP change).
+// Stagnation is agency-independent: any stage, rollovers excluded.
+
+export const STAGNANT_WEEKS_THRESHOLD = 3;
+
+// Individual stagnant tenders get severity bands:
+export const STAGNANT_TENDER_CRITICAL = 8;
+export const STAGNANT_TENDER_HIGH = 5;
+
+// Agency rollups fire when an agency has ≥ ROLLUP_THRESHOLD stagnant tenders.
+// When the rollup fires for an agency, the individual stagnant signals from
+// that agency are suppressed — the rollup replaces them.
+export const AGENCY_STAGNANT_ROLLUP_THRESHOLD = 3;
+export const AGENCY_STAGNANT_CRITICAL = 10;
+export const AGENCY_STAGNANT_HIGH = 5;
 
 // ── Tender SLA table (days in stage before breach) ───────────────────────────
 // Only stages with a PSIP-provided entry date are SLA-eligible:

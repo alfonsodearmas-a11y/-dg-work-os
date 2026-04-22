@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { AlertTriangle, FileText, CheckSquare, ChevronRight } from 'lucide-react';
+import { AlertTriangle, FileText, CheckSquare, ChevronRight, Clock, Building2 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import type { TodaySignal, TodaySeverity, TodaySignalKind } from '@/lib/today/types';
 
@@ -21,12 +21,16 @@ const KIND_LABEL: Record<TodaySignalKind, string> = {
   delayed_project: 'Project',
   tender_sla: 'Procurement',
   meeting_action: 'Action',
+  stagnant_tender: 'Stagnant',
+  agency_stagnant_rollup: 'Agency',
 };
 
 const KIND_ICON: Record<TodaySignalKind, typeof AlertTriangle> = {
   delayed_project: AlertTriangle,
   tender_sla: FileText,
   meeting_action: CheckSquare,
+  stagnant_tender: Clock,
+  agency_stagnant_rollup: Building2,
 };
 
 export function TodaySignalCard({ signal }: { signal: TodaySignal }) {

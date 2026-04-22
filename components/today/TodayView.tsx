@@ -9,6 +9,7 @@ const SOURCE_LABEL: Record<keyof TodayPayload['sources'], string> = {
   delayed_projects: 'delayed projects',
   tenders: 'procurement',
   meeting_actions: 'meeting actions',
+  stagnant_tenders: 'stagnant tenders',
 };
 
 function formatToday(iso: string): string {

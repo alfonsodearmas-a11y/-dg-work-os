@@ -9,6 +9,12 @@ import { supabaseAdmin } from '@/lib/db';
 import { parsePsipWorkbook } from './parser';
 import { matchTenders, type ExistingTenderSnapshot, DIFFABLE_FIELDS } from './matcher';
 import type { MatchResult, ParseResult, ParsedTender, ReviewReason } from './types';
+import {
+  buildTenderSnapshot,
+  diffTenderSnapshots,
+  type TenderRowForSnapshot,
+  type TenderSnapshot,
+} from '@/lib/tender/freshness';
 
 export interface PreviewOutcome {
   upload_id: string;
@@ -203,6 +209,9 @@ export async function applyPsipUpload(uploadId: string, buffer: Buffer, userId: 
     );
   }
 
+  // Freshness snapshot + stagnant_weeks bookkeeping.
+  const freshness = await recordFreshnessSnapshots(uploadId, missingIds);
+
   // Mark upload as applied.
   await supabaseAdmin
     .from('upload')
@@ -215,6 +224,8 @@ export async function applyPsipUpload(uploadId: string, buffer: Buffer, userId: 
         new: newCount,
         updated: updatedCount,
         updated_field_changes: fieldChangeCount,
+        freshness_snapshots_written: freshness.snapshotsWritten,
+        freshness_stagnant_bumped: freshness.stagnantBumped,
       },
     })
     .eq('id', uploadId);
@@ -371,4 +382,107 @@ async function applyUpdate(
   }
 
   return extraChangeCount;
+}
+
+// ── Freshness bookkeeping ────────────────────────────────────────────────────
+//
+// For every tender present in this upload (last_seen_upload_id = uploadId),
+// write a snapshot of diffable fields and update stagnant_weeks:
+//   - No prior snapshot (first-ever upload for this tender): stagnant_weeks = 0
+//   - Prior snapshot exists and differs: stagnant_weeks = 0 (reset)
+//   - Prior snapshot exists and matches: stagnant_weeks += 1
+//
+// Missing tenders (in DB but not in this upload) get stagnant_weeks reset to 0
+// — they've either been removed or renamed, neither of which is "stagnation".
+
+const FRESHNESS_SNAPSHOT_COLUMNS = `
+  id, stage, date_advertised, date_closed, date_eval_sent_mtb_rtb,
+  date_eval_sent_nptab, date_of_award, contractor,
+  implementation_status_pct, implementation_start_date,
+  implementation_end_date, remarks, stagnant_weeks
+`.replace(/\s+/g, ' ').trim();
+
+async function recordFreshnessSnapshots(
+  uploadId: string,
+  missingIds: string[],
+): Promise<{ snapshotsWritten: number; stagnantBumped: number }> {
+  // Tenders present in this upload.
+  const { data: presentRows, error: presentErr } = await supabaseAdmin
+    .from('tender')
+    .select(FRESHNESS_SNAPSHOT_COLUMNS)
+    .eq('last_seen_upload_id', uploadId);
+  if (presentErr) throw presentErr;
+
+  const present = (presentRows || []) as unknown as Array<TenderRowForSnapshot & { id: string; stagnant_weeks: number }>;
+  if (present.length === 0) {
+    if (missingIds.length > 0) {
+      await supabaseAdmin.from('tender').update({ stagnant_weeks: 0 }).in('id', missingIds);
+    }
+    return { snapshotsWritten: 0, stagnantBumped: 0 };
+  }
+
+  const presentIds = present.map((r) => r.id);
+
+  // Load the most recent prior snapshot per tender (from any earlier upload).
+  const { data: priorRows, error: priorErr } = await supabaseAdmin
+    .from('tender_upload_snapshot')
+    .select('tender_id, snapshot_fields, created_at')
+    .in('tender_id', presentIds)
+    .neq('upload_id', uploadId)
+    .order('created_at', { ascending: false });
+  if (priorErr) throw priorErr;
+
+  const priorByTender = new Map<string, TenderSnapshot>();
+  for (const r of priorRows || []) {
+    const tid = r.tender_id as string;
+    if (!priorByTender.has(tid)) priorByTender.set(tid, r.snapshot_fields as TenderSnapshot);
+  }
+
+  // Write this upload's snapshots.
+  const snapshotInserts = present.map((row) => ({
+    upload_id: uploadId,
+    tender_id: row.id,
+    snapshot_fields: buildTenderSnapshot(row),
+  }));
+  const { error: snapErr } = await supabaseAdmin
+    .from('tender_upload_snapshot')
+    .upsert(snapshotInserts, { onConflict: 'upload_id,tender_id' });
+  if (snapErr) throw snapErr;
+
+  // Recompute stagnant_weeks per tender.
+  let stagnantBumped = 0;
+  const perValueUpdates = new Map<number, string[]>();
+  for (const row of present) {
+    const curr = buildTenderSnapshot(row);
+    const prev = priorByTender.get(row.id);
+    let next: number;
+    if (!prev) {
+      next = 0; // first observation — no basis for stagnation yet
+    } else if (diffTenderSnapshots(curr, prev).changed) {
+      next = 0;
+    } else {
+      next = (row.stagnant_weeks ?? 0) + 1;
+      stagnantBumped++;
+    }
+    if (next !== row.stagnant_weeks) {
+      const bucket = perValueUpdates.get(next) ?? [];
+      bucket.push(row.id);
+      perValueUpdates.set(next, bucket);
+    }
+  }
+
+  // Batch updates by target value to minimize round trips.
+  for (const [value, ids] of perValueUpdates) {
+    const { error: uErr } = await supabaseAdmin
+      .from('tender')
+      .update({ stagnant_weeks: value })
+      .in('id', ids);
+    if (uErr) throw uErr;
+  }
+
+  if (missingIds.length > 0) {
+    await supabaseAdmin.from('tender').update({ stagnant_weeks: 0 }).in('id', missingIds);
+  }
+
+  return { snapshotsWritten: snapshotInserts.length, stagnantBumped };
 }

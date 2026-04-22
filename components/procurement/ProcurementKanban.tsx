@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { AlertTriangle, Package, ChevronDown, LayoutGrid, List } from 'lucide-react';
 import Link from 'next/link';
@@ -55,6 +56,9 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
   const { data: session } = useSession();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const [tenders, setTenders] = useState<Tender[]>([]);
   const [stats, setStats] = useState<PipelineStats | null>(null);
@@ -62,7 +66,18 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [agencyFilter, setAgencyFilter] = useState('');
-  const [selectedTenderId, setSelectedTenderId] = useState<string | null>(null);
+  // URL is the source of truth — the detail drawer opens iff ?tender=<id> is present.
+  const selectedTenderId = searchParams.get('tender');
+  const setTenderParam = useCallback(
+    (tenderId: string | null) => {
+      const next = new URLSearchParams(Array.from(searchParams.entries()));
+      if (tenderId) next.set('tender', tenderId);
+      else next.delete('tender');
+      const qs = next.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [searchParams, router, pathname],
+  );
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<TenderStage | null>('design');
   const [viewMode, setViewMode] = useState<'board' | 'list'>(() => {
@@ -310,7 +325,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
 
       <div key={viewMode} style={{ animation: 'fadeIn 0.3s ease both' }}>
       {viewMode === 'list' ? (
-        <ProcurementListView tenders={filtered} onSelect={setSelectedTenderId} />
+        <ProcurementListView tenders={filtered} onSelect={setTenderParam} />
       ) : isMobile ? (
         <div className="space-y-2">
           {KANBAN_STAGES.map((stage) => {
@@ -340,7 +355,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
                     ) : (
                       <>
                         {visible.map((t) => (
-                          <ProcurementCard key={t.id} tender={t} onClick={() => setSelectedTenderId(t.id)} canDrag={false} isMobile />
+                          <ProcurementCard key={t.id} tender={t} onClick={() => setTenderParam(t.id)} canDrag={false} isMobile />
                         ))}
                         {hasMore && (
                           <button onClick={() => handleLoadMore(stage)} className="w-full py-2.5 text-xs font-medium text-navy-600 hover:text-gold-500 transition-colors rounded-lg hover:bg-navy-900/50">
@@ -370,7 +385,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
                 userRole={userRole}
                 userAgency={userAgency}
                 onDrop={handleDrop}
-                onCardClick={setSelectedTenderId}
+                onCardClick={setTenderParam}
                 onDragStart={handleDragStart}
               />
             </div>
@@ -382,8 +397,8 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
       <ProcurementDetailPanel
         tenderId={selectedTenderId}
         isOpen={!!selectedTenderId}
-        onClose={() => setSelectedTenderId(null)}
-        onDeleted={() => { setSelectedTenderId(null); fetchData(); }}
+        onClose={() => setTenderParam(null)}
+        onDeleted={() => { setTenderParam(null); fetchData(); }}
       />
     </div>
   );
