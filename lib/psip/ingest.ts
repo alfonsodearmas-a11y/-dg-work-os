@@ -15,6 +15,10 @@ import {
   type TenderRowForSnapshot,
   type TenderSnapshot,
 } from '@/lib/tender/freshness';
+import { fetchMissingTenders, groupByAgency, type MissingTenderRow } from '@/lib/psip/nag/missing';
+import { loadSettings, loadFocalPoints, runEventForAgency, markResolvedForAgency } from '@/lib/psip/nag/send';
+import { TODAY_THRESHOLDS } from '@/lib/today/thresholds';
+import { logger } from '@/lib/logger';
 
 export interface PreviewOutcome {
   upload_id: string;
@@ -212,6 +216,16 @@ export async function applyPsipUpload(uploadId: string, buffer: Buffer, userId: 
   // Freshness snapshot + stagnant_weeks bookkeeping.
   const freshness = await recordFreshnessSnapshots(uploadId, missingIds);
 
+  // Event-trigger nag emails for agencies that crossed the critical threshold
+  // AND have at least one tender that newly entered the missing-dates state.
+  // Failures here are logged but do not fail the upload.
+  let eventNagResult: { considered: number; sent: number; preview_ids: string[] } = { considered: 0, sent: 0, preview_ids: [] };
+  try {
+    eventNagResult = await runEventNags(existing);
+  } catch (err) {
+    logger.error({ err }, 'applyPsipUpload: event nag pass failed');
+  }
+
   // Mark upload as applied.
   await supabaseAdmin
     .from('upload')
@@ -226,6 +240,8 @@ export async function applyPsipUpload(uploadId: string, buffer: Buffer, userId: 
         updated_field_changes: fieldChangeCount,
         freshness_snapshots_written: freshness.snapshotsWritten,
         freshness_stagnant_bumped: freshness.stagnantBumped,
+        event_nags_considered: eventNagResult.considered,
+        event_nags_sent: eventNagResult.sent,
       },
     })
     .eq('id', uploadId);
@@ -485,4 +501,78 @@ async function recordFreshnessSnapshots(
   }
 
   return { snapshotsWritten: snapshotInserts.length, stagnantBumped };
+}
+
+// ── Event-trigger nag orchestration ──────────────────────────────────────────
+// Called once after applyPsipUpload commits. For every agency whose post-
+// upload missing-date tender count crosses the critical threshold AND whose
+// newly-missing tenders set is non-empty, compose an "NEW critical missing-
+// date gap" email via runEventForAgency. consecutive_weekly_count is NOT
+// bumped here — event triggers are orthogonal to the weekly cadence.
+
+// Pre-upload missing detection mirrors missingFieldFor in lib/psip/nag/missing
+// but runs against the ExistingTenderSnapshot shape available in-memory.
+function preUploadMissingFor(row: ExistingTenderSnapshot): boolean {
+  if (row.is_rollover || row.has_exception) return false;
+  switch (row.stage) {
+    case 'advertised':
+      return row.date_advertised === null;
+    case 'evaluation':
+      return row.date_closed === null;
+    case 'awaiting_award':
+      return row.date_eval_sent_nptab === null
+        && row.date_eval_sent_mtb_rtb === null
+        && row.date_closed === null;
+    default:
+      return false;
+  }
+}
+
+async function runEventNags(preUploadExisting: ExistingTenderSnapshot[]): Promise<{
+  considered: number;
+  sent: number;
+  preview_ids: string[];
+}> {
+  const preMissingIds = new Set(
+    preUploadExisting.filter(preUploadMissingFor).map((t) => t.id),
+  );
+
+  const [settings, focals, postMissing] = await Promise.all([
+    loadSettings(),
+    loadFocalPoints(),
+    fetchMissingTenders(),
+  ]);
+  const postByAgency = groupByAgency(postMissing);
+
+  // Resolution pass: tenders previously nagged that are no longer missing.
+  const stillMissingByAgency = new Map<string, Set<string>>();
+  for (const [a, list] of postByAgency) stillMissingByAgency.set(a, new Set(list.map((t) => t.id)));
+  for (const agency of focals.keys()) {
+    await markResolvedForAgency(agency, stillMissingByAgency.get(agency) ?? new Set<string>());
+  }
+
+  const criticalThreshold = TODAY_THRESHOLDS.incomplete_psip.critical_count;
+  let considered = 0;
+  let sent = 0;
+  const previewIds: string[] = [];
+  const now = new Date();
+
+  for (const [agency, tenders] of postByAgency) {
+    const newGaps: MissingTenderRow[] = tenders.filter((t) => !preMissingIds.has(t.id));
+    if (tenders.length < criticalThreshold || newGaps.length === 0) continue;
+    considered++;
+    const outcome = await runEventForAgency({
+      agency,
+      newGaps,
+      totalMissingAfterUpload: tenders.length,
+      criticalThreshold,
+      focal: focals.get(agency),
+      settings,
+      now,
+    });
+    if (outcome.preview_id) previewIds.push(outcome.preview_id);
+    if (outcome.attempted_send && outcome.sent_success) sent++;
+  }
+
+  return { considered, sent, preview_ids: previewIds };
 }
