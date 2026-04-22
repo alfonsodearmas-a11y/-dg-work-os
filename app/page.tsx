@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { getMissionControlData, generateStaticBriefing } from '@/lib/data/mission-control';
-import { MissionControlView } from '@/components/mission-control/MissionControlView';
+import { getTodaySignals } from '@/lib/today/signals';
+import { TodayView } from '@/components/today/TodayView';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,14 +10,7 @@ export default async function Home() {
   if (!session?.user?.id) redirect('/login');
 
   const { role, agency } = session.user;
-  const data = await getMissionControlData(session.user.id, role, agency);
-  const briefing = generateStaticBriefing(data);
+  const payload = await getTodaySignals(session.user.id, role, agency);
 
-  return (
-    <MissionControlView
-      data={data}
-      briefing={briefing}
-      userName={session.user.name}
-    />
-  );
+  return <TodayView payload={payload} userName={session.user.name} />;
 }

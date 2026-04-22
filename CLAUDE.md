@@ -110,6 +110,7 @@ Users table is in Supabase (see `supabase/migrations/021_multi_user.sql`). Tasks
 ```
 app/api/
 ├── briefing/route.ts          # GET — Daily briefing (tasks + calendar)
+├── today/route.ts             # GET — Today v1 prioritized attention queue (delayed + tender SLA + meeting actions)
 ├── tasks/
 │   ├── route.ts               # GET/POST — Task CRUD (Supabase)
 │   └── [id]/route.ts          # PATCH/DELETE — Single task

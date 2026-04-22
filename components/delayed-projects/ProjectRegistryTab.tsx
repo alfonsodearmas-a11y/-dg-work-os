@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import { Download } from 'lucide-react';
 import type { DelayedProjectWithComputed, RiskTier } from '@/lib/delayed-projects/types';
@@ -18,6 +18,8 @@ interface ProjectRegistryTabProps {
 
 export function ProjectRegistryTab({ isMobile, onRefresh, onLogIntervention }: ProjectRegistryTabProps) {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const { effectiveUser } = useEffectiveUser();
 
   const isAgencyUser = effectiveUser.role === 'agency_admin' || effectiveUser.role === 'officer';
@@ -40,7 +42,19 @@ export function ProjectRegistryTab({ isMobile, onRefresh, onLogIntervention }: P
   const [projects, setProjects] = useState<DelayedProjectWithComputed[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  // URL is the source of truth — the drawer opens iff ?project=<id> is present.
+  const selectedProjectId = searchParams.get('project');
+
+  const setProjectParam = useCallback(
+    (projectId: string | null) => {
+      const next = new URLSearchParams(Array.from(searchParams.entries()));
+      if (projectId) next.set('project', projectId);
+      else next.delete('project');
+      const qs = next.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [searchParams, router, pathname],
+  );
 
   const limit = 25;
   const totalPages = Math.ceil(total / limit);
@@ -137,7 +151,7 @@ export function ProjectRegistryTab({ isMobile, onRefresh, onLogIntervention }: P
         loading={loading}
         sort={sort}
         onSort={handleSort}
-        onSelectProject={(p) => setSelectedProjectId(p.id)}
+        onSelectProject={(p) => setProjectParam(p.id)}
         onLogIntervention={onLogIntervention ? (p) => onLogIntervention(p.id, getShortName(p.project_name)) : undefined}
         page={page}
         totalPages={totalPages}
@@ -149,7 +163,7 @@ export function ProjectRegistryTab({ isMobile, onRefresh, onLogIntervention }: P
       {/* Detail Panel */}
       <ProjectDetailPanel
         projectId={selectedProjectId}
-        onClose={() => setSelectedProjectId(null)}
+        onClose={() => setProjectParam(null)}
       />
     </div>
   );
