@@ -21,7 +21,7 @@ export async function POST(
     const {
       inspection_date, inspector_name, surface_condition, runway_condition_notes,
       vegetation_status, drainage_condition, buildings_condition,
-      findings, recommendations, signal_available,
+      findings, recommendations, remarks, signal_available,
     } = body;
 
     if (!inspection_date) {
@@ -47,6 +47,7 @@ export async function POST(
         buildings_condition: buildings_condition?.trim() || null,
         findings: findings?.trim() || null,
         recommendations: recommendations?.trim() || null,
+        remarks: remarks?.trim() || null,
         signal_available: signal_available ?? null,
         created_by: session.user.id,
       }).select().single(),

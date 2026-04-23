@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   PlaneLanding, ArrowLeft, RefreshCw, Edit3, MapPin,
   Wrench, Camera, ClipboardCheck, History, Info,
   Check, X, Loader2, AlertTriangle, ChevronDown, ChevronRight,
-  Trash2, Upload, Signal, SignalZero, ExternalLink,
+  Trash2, Upload, Signal, SignalZero, ExternalLink, ImageIcon,
 } from 'lucide-react';
 import { Tabs, type Tab } from '@/components/ui/Tabs';
 import {
@@ -159,6 +159,9 @@ export default function AirstripDetailPage() {
   const [photoUploadOpen, setPhotoUploadOpen] = useState(false);
   const [lightboxPhoto, setLightboxPhoto] = useState<AirstripPhoto | null>(null);
   const [expandedInspection, setExpandedInspection] = useState<string | null>(null);
+  const [editingMaintenance, setEditingMaintenance] = useState<AirstripMaintenanceLog | null>(null);
+  const [managingPhotosFor, setManagingPhotosFor] = useState<AirstripMaintenanceLog | null>(null);
+  const [editingInspection, setEditingInspection] = useState<AirstripInspection | null>(null);
 
   // Fetch
   const fetchData = useCallback(async () => {
@@ -270,6 +273,9 @@ export default function AirstripDetailPage() {
                 });
                 fetchData();
               }}
+              onEdit={setEditingMaintenance}
+              onManagePhotos={setManagingPhotosFor}
+              onViewPhoto={setLightboxPhoto}
             />
           )}
           {activeTab === 'photos' && (
@@ -295,6 +301,7 @@ export default function AirstripDetailPage() {
               expandedId={expandedInspection}
               onToggleExpand={setExpandedInspection}
               onAddInspection={() => setInspectionModalOpen(true)}
+              onEdit={setEditingInspection}
             />
           )}
           {activeTab === 'history' && <StatusHistoryTab statusLog={statusLog} />}
@@ -333,6 +340,29 @@ export default function AirstripDetailPage() {
         airstripId={id}
         onSaved={fetchData}
       />
+      <EditMaintenanceModal
+        key={`edit-maint-${editingMaintenance?.id ?? 'none'}`}
+        log={editingMaintenance}
+        onClose={() => setEditingMaintenance(null)}
+        airstripId={id}
+        onSaved={fetchData}
+      />
+      <MaintenancePhotosModal
+        key={`maint-photos-${managingPhotosFor?.id ?? 'none'}`}
+        log={managingPhotosFor}
+        photos={managingPhotosFor ? photos.filter(p => p.maintenance_log_id === managingPhotosFor.id) : []}
+        onClose={() => setManagingPhotosFor(null)}
+        airstripId={id}
+        onSaved={fetchData}
+        onViewPhoto={setLightboxPhoto}
+      />
+      <EditInspectionModal
+        key={`edit-insp-${editingInspection?.id ?? 'none'}`}
+        inspection={editingInspection}
+        onClose={() => setEditingInspection(null)}
+        airstripId={id}
+        onSaved={fetchData}
+      />
       {lightboxPhoto && (
         <Lightbox photo={lightboxPhoto} onClose={() => setLightboxPhoto(null)} />
       )}
@@ -346,6 +376,7 @@ export default function AirstripDetailPage() {
 
 function OverviewTab({ airstrip: a, quickStats }: { airstrip: Airstrip; quickStats: QuickStats }) {
   const overdue = isOverdue(a.last_inspection_date);
+  const { labelFor: surfaceLabel } = useAirstripOptions('surface_type');
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -355,7 +386,7 @@ function OverviewTab({ airstrip: a, quickStats }: { airstrip: Airstrip; quickSta
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <DetailRow label="Runway Length" value={a.runway_length_m ? `${a.runway_length_m}m` : null} />
           <DetailRow label="Runway Width" value={a.runway_width_m ? `${a.runway_width_m}m` : null} />
-          <DetailRow label="Surface Type" value={a.surface_type} />
+          <DetailRow label="Surface Type" value={a.surface_type ? surfaceLabel(a.surface_type) : null} />
           <div className="flex flex-col gap-1">
             <span className="text-xs text-navy-600 uppercase tracking-wide">Surface Condition</span>
             <ConfigBadge value={a.surface_condition} config={CONDITION_CONFIG} />
@@ -440,13 +471,26 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
 // TAB: MAINTENANCE
 // ════════════════════════════════════════════════════════════════════════════
 
-function MaintenanceTab({ maintenance, photos, onLogMaintenance, onVerify }: {
+function MaintenanceTab({ maintenance, photos, onLogMaintenance, onVerify, onEdit, onManagePhotos, onViewPhoto }: {
   maintenance: AirstripMaintenanceLog[];
   photos: AirstripPhoto[];
   onLogMaintenance: () => void;
   onVerify: (id: string) => Promise<void>;
+  onEdit: (log: AirstripMaintenanceLog) => void;
+  onManagePhotos: (log: AirstripMaintenanceLog) => void;
+  onViewPhoto: (photo: AirstripPhoto) => void;
 }) {
   const { labelFor: activityLabel } = useAirstripOptions('activity_type');
+  const photosByLogId = React.useMemo(() => {
+    const map = new Map<string, AirstripPhoto[]>();
+    for (const p of photos) {
+      if (!p.maintenance_log_id) continue;
+      const arr = map.get(p.maintenance_log_id) ?? [];
+      arr.push(p);
+      map.set(p.maintenance_log_id, arr);
+    }
+    return map;
+  }, [photos]);
   const quarters = [...new Set(maintenance.map(m => m.quarter).filter((q): q is string => !!q))].sort().reverse();
   const [selectedQuarter, setSelectedQuarter] = useState(() => {
     const now = new Date();
@@ -504,19 +548,20 @@ function MaintenanceTab({ maintenance, photos, onLogMaintenance, onVerify }: {
                 <th className="px-3 py-3 text-left text-xs">Contractor</th>
                 <th className="px-3 py-3 text-left text-xs">Verification</th>
                 <th className="px-3 py-3 text-center text-xs">Verified</th>
-                <th className="px-3 py-3 text-center text-xs">Photos</th>
-                <th className="px-3 py-3 text-center text-xs">Actions</th>
+                <th className="px-3 py-3 text-left text-xs">Photos</th>
+                <th className="px-3 py-3 text-right text-xs">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map(m => {
-                const linkedPhotos = photos.filter(p => p.maintenance_log_id === m.id);
+                const linkedPhotos = photosByLogId.get(m.id) ?? [];
                 return (
-                  <tr key={m.id} className="border-t border-navy-800/40">
+                  <tr key={m.id} className="border-t border-navy-800/40 align-top">
                     <td className="px-3 py-2.5 text-xs text-slate-400">{formatDate(m.performed_date)}</td>
                     <td className="px-3 py-2.5 text-sm text-white">
                       {activityLabel(m.activity_type)}
                       {m.activity_description && <p className="text-xs text-navy-600 mt-0.5">{m.activity_description}</p>}
+                      {m.notes && <p className="text-xs text-navy-600 mt-0.5 italic">{m.notes}</p>}
                     </td>
                     <td className="px-3 py-2.5 text-xs text-slate-400">{m.contractor_name || '—'}</td>
                     <td className="px-3 py-2.5">
@@ -528,16 +573,40 @@ function MaintenanceTab({ maintenance, photos, onLogMaintenance, onVerify }: {
                         : <X className="h-4 w-4 text-red-400 mx-auto" />
                       }
                     </td>
-                    <td className="px-3 py-2.5 text-center text-xs text-navy-600">{linkedPhotos.length}</td>
-                    <td className="px-3 py-2.5 text-center">
-                      {!m.verified && (
-                        <button
-                          onClick={() => onVerify(m.id)}
-                          className="text-xs text-gold-500 hover:text-gold-400 transition-colors"
-                        >
-                          Verify
-                        </button>
+                    <td className="px-3 py-2.5">
+                      {linkedPhotos.length > 0 ? (
+                        <div className="flex items-center gap-1.5">
+                          {linkedPhotos.slice(0, 3).map(p => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => onViewPhoto(p)}
+                              className="h-10 w-10 rounded-md bg-navy-900 overflow-hidden border border-navy-800 hover:border-gold-500/60 transition-colors shrink-0"
+                              title={p.caption || p.file_name || 'View photo'}
+                            >
+                              <img src={getStorageUrl(p.storage_path, true)} alt="" className="h-full w-full object-cover" loading="lazy" />
+                            </button>
+                          ))}
+                          {linkedPhotos.length > 3 && (
+                            <span className="text-[10px] text-navy-600">+{linkedPhotos.length - 3}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-navy-600">—</span>
                       )}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center justify-end gap-3 whitespace-nowrap">
+                        {!m.verified && (
+                          <button onClick={() => onVerify(m.id)} className="text-xs text-gold-500 hover:text-gold-400 transition-colors">Verify</button>
+                        )}
+                        <button onClick={() => onManagePhotos(m)} className="text-xs text-navy-600 hover:text-white transition-colors inline-flex items-center gap-1" title="Manage photos">
+                          <ImageIcon className="h-3.5 w-3.5" /> Photos
+                        </button>
+                        <button onClick={() => onEdit(m)} className="text-xs text-navy-600 hover:text-white transition-colors inline-flex items-center gap-1" title="Edit log">
+                          <Edit3 className="h-3.5 w-3.5" /> Edit
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -658,11 +727,12 @@ function Lightbox({ photo, onClose }: { photo: AirstripPhoto; onClose: () => voi
 // TAB: INSPECTIONS
 // ════════════════════════════════════════════════════════════════════════════
 
-function InspectionsTab({ inspections, expandedId, onToggleExpand, onAddInspection }: {
+function InspectionsTab({ inspections, expandedId, onToggleExpand, onAddInspection, onEdit }: {
   inspections: AirstripInspection[];
   expandedId: string | null;
   onToggleExpand: (id: string | null) => void;
   onAddInspection: () => void;
+  onEdit: (insp: AirstripInspection) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -680,20 +750,31 @@ function InspectionsTab({ inspections, expandedId, onToggleExpand, onAddInspecti
             const expanded = expandedId === insp.id;
             return (
               <div key={insp.id} className="card-premium overflow-hidden">
-                <button
-                  onClick={() => onToggleExpand(expanded ? null : insp.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left"
-                >
-                  {expanded ? <ChevronDown className="h-4 w-4 text-gold-500 shrink-0" /> : <ChevronRight className="h-4 w-4 text-navy-600 shrink-0" />}
-                  <span className="text-sm text-white font-medium min-w-[90px]">{formatDate(insp.inspection_date)}</span>
-                  <span className="text-xs text-slate-400 truncate flex-1">{insp.inspector_name || 'Unknown inspector'}</span>
-                  <ConfigBadge value={insp.surface_condition} config={CONDITION_CONFIG} />
-                  <span className="text-xs text-slate-400 hidden sm:inline">
-                    {VEGETATION_CONFIG[insp.vegetation_status as keyof typeof VEGETATION_CONFIG]?.label || insp.vegetation_status || '—'}
-                  </span>
-                  {insp.signal_available === true && <Signal className="h-4 w-4 text-emerald-400 shrink-0" />}
-                  {insp.signal_available === false && <SignalZero className="h-4 w-4 text-red-400 shrink-0" />}
-                </button>
+                <div className="w-full flex items-center gap-3 px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => onToggleExpand(expanded ? null : insp.id)}
+                    className="flex items-center gap-3 text-left flex-1 min-w-0"
+                  >
+                    {expanded ? <ChevronDown className="h-4 w-4 text-gold-500 shrink-0" /> : <ChevronRight className="h-4 w-4 text-navy-600 shrink-0" />}
+                    <span className="text-sm text-white font-medium min-w-[90px] shrink-0">{formatDate(insp.inspection_date)}</span>
+                    <span className="text-xs text-slate-400 truncate flex-1">{insp.inspector_name || 'Unknown inspector'}</span>
+                    <ConfigBadge value={insp.surface_condition} config={CONDITION_CONFIG} />
+                    <span className="text-xs text-slate-400 hidden sm:inline">
+                      {VEGETATION_CONFIG[insp.vegetation_status as keyof typeof VEGETATION_CONFIG]?.label || insp.vegetation_status || '—'}
+                    </span>
+                    {insp.signal_available === true && <Signal className="h-4 w-4 text-emerald-400 shrink-0" />}
+                    {insp.signal_available === false && <SignalZero className="h-4 w-4 text-red-400 shrink-0" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onEdit(insp)}
+                    className="text-xs text-navy-600 hover:text-white transition-colors inline-flex items-center gap-1 shrink-0"
+                    title="Edit inspection"
+                  >
+                    <Edit3 className="h-3.5 w-3.5" /> Edit
+                  </button>
+                </div>
                 {expanded && (
                   <div className="px-4 pb-4 pt-1 border-t border-navy-800/40 space-y-3">
                     {insp.runway_condition_notes && <DetailBlock label="Runway Condition" text={insp.runway_condition_notes} />}
@@ -701,6 +782,7 @@ function InspectionsTab({ inspections, expandedId, onToggleExpand, onAddInspecti
                     {insp.buildings_condition && <DetailBlock label="Buildings Condition" text={insp.buildings_condition} />}
                     {insp.findings && <DetailBlock label="Findings" text={insp.findings} />}
                     {insp.recommendations && <DetailBlock label="Recommendations" text={insp.recommendations} />}
+                    {insp.remarks && <DetailBlock label="Remarks" text={insp.remarks} />}
                     {insp.vegetation_status && (
                       <div>
                         <span className="text-xs text-navy-600 uppercase tracking-wide block mb-1">Vegetation Status</span>
@@ -952,7 +1034,7 @@ function AddInspectionModal({ open, onClose, airstripId, onSaved }: {
     inspection_date: '', inspector_name: '', surface_condition: '',
     runway_condition_notes: '', vegetation_status: '',
     drainage_condition: '', buildings_condition: '',
-    findings: '', recommendations: '', signal_available: null as boolean | null,
+    findings: '', recommendations: '', remarks: '', signal_available: null as boolean | null,
   });
   const [saving, setSaving] = useState(false);
 
@@ -961,7 +1043,7 @@ function AddInspectionModal({ open, onClose, airstripId, onSaved }: {
       inspection_date: '', inspector_name: '', surface_condition: '',
       runway_condition_notes: '', vegetation_status: '',
       drainage_condition: '', buildings_condition: '',
-      findings: '', recommendations: '', signal_available: null,
+      findings: '', recommendations: '', remarks: '', signal_available: null,
     });
   }, [open]);
 
@@ -1023,6 +1105,9 @@ function AddInspectionModal({ open, onClose, airstripId, onSaved }: {
         </Field>
         <Field label="Recommendations">
           <textarea value={form.recommendations} onChange={e => update('recommendations', e.target.value)} className={inputClass} rows={2} />
+        </Field>
+        <Field label="Remarks">
+          <textarea value={form.remarks} onChange={e => update('remarks', e.target.value)} className={inputClass} rows={2} placeholder="Optional remarks" />
         </Field>
         <Field label="Signal Available">
           <div className="flex items-center gap-3">
@@ -1125,6 +1210,371 @@ function PhotoUploadModal({ open, onClose, airstripId, onSaved }: {
           <button type="button" onClick={onClose} className="btn-navy px-4 py-2 text-sm">Cancel</button>
           <button type="submit" disabled={uploading || !files.length} className="btn-gold px-4 py-2 text-sm flex items-center gap-1.5 disabled:opacity-40">
             {uploading && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Upload
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function EditMaintenanceModal({ log, onClose, airstripId, onSaved }: {
+  log: AirstripMaintenanceLog | null;
+  onClose: () => void;
+  airstripId: string;
+  onSaved: () => void;
+}) {
+  const { options: activityOpts } = useAirstripOptions('activity_type');
+  const { options: verifyOpts } = useAirstripOptions('verification_method');
+
+  const [activityType, setActivityType] = useState('');
+  const [description, setDescription] = useState('');
+  const [performedDate, setPerformedDate] = useState('');
+  const [contractor, setContractor] = useState('');
+  const [verificationMethod, setVerificationMethod] = useState('');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (log) {
+      setActivityType(log.activity_type);
+      setDescription(log.activity_description ?? '');
+      setPerformedDate(log.performed_date);
+      setContractor(log.contractor_name ?? '');
+      setVerificationMethod(log.verification_method);
+      setNotes(log.notes ?? '');
+    }
+  }, [log]);
+
+  const open = !!log;
+  const quarter = performedDate ? getQuarter(performedDate) : '';
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!log || !activityType || !performedDate || !verificationMethod) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/airstrips/${airstripId}/maintenance/${log.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          activity_type: activityType,
+          activity_description: activityType === 'other' ? description : null,
+          performed_date: performedDate,
+          contractor_name: contractor,
+          verification_method: verificationMethod,
+          notes,
+        }),
+      });
+      if (!res.ok) { const d = await res.json(); alert(d.error || 'Failed'); setSaving(false); return; }
+      onSaved();
+      onClose();
+    } catch { alert('Failed to update maintenance log'); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Edit Maintenance Log">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Field label="Activity Type">
+          <select value={activityType} onChange={e => setActivityType(e.target.value)} className={selectClass} required>
+            <option value="">Select…</option>
+            {activityOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </Field>
+        {activityType === 'other' && (
+          <Field label="Description">
+            <textarea value={description} onChange={e => setDescription(e.target.value)} className={inputClass} rows={2} />
+          </Field>
+        )}
+        <Field label="Date Performed">
+          <input type="date" value={performedDate} onChange={e => setPerformedDate(e.target.value)} className={inputClass} required />
+        </Field>
+        {quarter && (
+          <div className="text-xs text-navy-600">Quarter: <span className="text-slate-400">{quarter}</span></div>
+        )}
+        <Field label="Contractor Name">
+          <input type="text" value={contractor} onChange={e => setContractor(e.target.value)} className={inputClass} />
+        </Field>
+        <Field label="Verification Method">
+          <select value={verificationMethod} onChange={e => setVerificationMethod(e.target.value)} className={selectClass} required>
+            <option value="">Select…</option>
+            {verifyOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </Field>
+        <Field label="Notes">
+          <textarea value={notes} onChange={e => setNotes(e.target.value)} className={inputClass} rows={2} />
+        </Field>
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" onClick={onClose} className="btn-navy px-4 py-2 text-sm">Cancel</button>
+          <button type="submit" disabled={saving || !activityType || !performedDate || !verificationMethod} className="btn-gold px-4 py-2 text-sm flex items-center gap-1.5 disabled:opacity-40">
+            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Save Changes
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function MaintenancePhotosModal({ log, photos, onClose, airstripId, onSaved, onViewPhoto }: {
+  log: AirstripMaintenanceLog | null;
+  photos: AirstripPhoto[];
+  onClose: () => void;
+  airstripId: string;
+  onSaved: () => void;
+  onViewPhoto: (p: AirstripPhoto) => void;
+}) {
+  const [files, setFiles] = useState<File[]>([]);
+  const [caption, setCaption] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (log) { setFiles([]); setCaption(''); }
+  }, [log]);
+
+  const open = !!log;
+
+  function addFiles(incoming: File[]) {
+    if (!incoming.length) return;
+    setFiles(prev => {
+      const seen = new Set(prev.map(f => `${f.name}_${f.size}_${f.lastModified}`));
+      const merged = [...prev];
+      for (const f of incoming) {
+        const key = `${f.name}_${f.size}_${f.lastModified}`;
+        if (!seen.has(key)) { seen.add(key); merged.push(f); }
+      }
+      return merged;
+    });
+  }
+
+  async function handleUpload() {
+    if (!log || !files.length) return;
+    for (const f of files) {
+      if (f.size > 10 * 1024 * 1024) { alert(`File too large: ${f.name}. Max 10MB.`); return; }
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(f.type)) { alert(`Invalid type: ${f.name}`); return; }
+    }
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      files.forEach(f => formData.append('files', f));
+      formData.append('photo_type', 'maintenance');
+      formData.append('maintenance_log_id', log.id);
+      if (caption) formData.append('caption', caption);
+      const res = await fetch(`/api/airstrips/${airstripId}/photos`, { method: 'POST', body: formData });
+      if (!res.ok) { const d = await res.json(); alert(d.error || 'Upload failed'); return; }
+      setFiles([]);
+      setCaption('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (cameraInputRef.current) cameraInputRef.current.value = '';
+      onSaved();
+    } catch { alert('Upload failed'); }
+    finally { setUploading(false); }
+  }
+
+  async function handleDelete(photoId: string) {
+    if (!confirm('Delete this photo?')) return;
+    const res = await fetch(`/api/airstrips/${airstripId}/photos`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ photo_id: photoId }),
+    });
+    if (!res.ok) { const d = await res.json(); alert(d.error || 'Delete failed'); return; }
+    onSaved();
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Maintenance Photos">
+      <div className="space-y-4">
+        {photos.length === 0 ? (
+          <p className="text-center text-navy-600 text-sm py-3">No photos yet for this log.</p>
+        ) : (
+          <div className="grid grid-cols-3 gap-2">
+            {photos.map(p => (
+              <div key={p.id} className="relative group rounded-lg overflow-hidden bg-navy-900 border border-navy-800">
+                <button type="button" onClick={() => onViewPhoto(p)} className="block w-full aspect-square">
+                  <img src={getStorageUrl(p.storage_path, true)} alt={p.caption || ''} className="h-full w-full object-cover" loading="lazy" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(p.id)}
+                  className="absolute top-1 right-1 p-1 rounded-md bg-black/60 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label="Delete photo"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="space-y-3 pt-2 border-t border-navy-800">
+          <span className="text-xs font-medium text-navy-600 uppercase tracking-wide block">Add Photos</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              onChange={e => addFiles(Array.from(e.target.files || []))}
+              className="hidden"
+              id="maint-photo-files"
+            />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              capture="environment"
+              onChange={e => addFiles(Array.from(e.target.files || []))}
+              className="hidden"
+              id="maint-photo-camera"
+            />
+            <label htmlFor="maint-photo-files" className="btn-navy px-3 py-2 text-xs flex items-center gap-1.5 cursor-pointer">
+              <Upload className="h-3.5 w-3.5" /> Choose Files
+            </label>
+            <label htmlFor="maint-photo-camera" className="btn-navy px-3 py-2 text-xs flex items-center gap-1.5 cursor-pointer">
+              <Camera className="h-3.5 w-3.5" /> Take Photo
+            </label>
+            {files.length > 0 && <span className="text-xs text-gold-500">{files.length} ready</span>}
+          </div>
+          {files.length > 0 && (
+            <>
+              <Field label="Caption (optional)">
+                <input type="text" value={caption} onChange={e => setCaption(e.target.value)} className={inputClass} placeholder="Applies to all photos being uploaded" />
+              </Field>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={handleUpload} disabled={uploading} className="btn-gold px-3 py-2 text-xs flex items-center gap-1.5 disabled:opacity-40">
+                  {uploading && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Upload {files.length}
+                </button>
+                <button type="button" onClick={() => setFiles([])} className="text-xs text-navy-600 hover:text-white">Clear</button>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex justify-end pt-2">
+          <button type="button" onClick={onClose} className="btn-navy px-4 py-2 text-sm">Close</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function EditInspectionModal({ inspection, onClose, airstripId, onSaved }: {
+  inspection: AirstripInspection | null;
+  onClose: () => void;
+  airstripId: string;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState({
+    inspection_date: '', inspector_name: '', surface_condition: '',
+    runway_condition_notes: '', vegetation_status: '',
+    drainage_condition: '', buildings_condition: '',
+    findings: '', recommendations: '', remarks: '', signal_available: null as boolean | null,
+  });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (inspection) {
+      setForm({
+        inspection_date: inspection.inspection_date,
+        inspector_name: inspection.inspector_name ?? '',
+        surface_condition: inspection.surface_condition ?? '',
+        runway_condition_notes: inspection.runway_condition_notes ?? '',
+        vegetation_status: inspection.vegetation_status ?? '',
+        drainage_condition: inspection.drainage_condition ?? '',
+        buildings_condition: inspection.buildings_condition ?? '',
+        findings: inspection.findings ?? '',
+        recommendations: inspection.recommendations ?? '',
+        remarks: inspection.remarks ?? '',
+        signal_available: inspection.signal_available,
+      });
+    }
+  }, [inspection]);
+
+  const open = !!inspection;
+
+  function update(field: string, value: string | boolean | null) {
+    setForm(prev => ({ ...prev, [field]: value }));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!inspection || !form.inspection_date) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/airstrips/${airstripId}/inspections/${inspection.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) { const d = await res.json(); alert(d.error || 'Failed'); setSaving(false); return; }
+      onSaved();
+      onClose();
+    } catch { alert('Failed to update inspection'); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Edit Inspection">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Inspection Date">
+            <input type="date" value={form.inspection_date} onChange={e => update('inspection_date', e.target.value)} className={inputClass} required />
+          </Field>
+          <Field label="Inspector Name">
+            <input type="text" value={form.inspector_name} onChange={e => update('inspector_name', e.target.value)} className={inputClass} />
+          </Field>
+          <Field label="Surface Condition">
+            <select value={form.surface_condition} onChange={e => update('surface_condition', e.target.value)} className={selectClass}>
+              <option value="">Select…</option>
+              {SURFACE_CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </Field>
+          <Field label="Vegetation Status">
+            <select value={form.vegetation_status} onChange={e => update('vegetation_status', e.target.value)} className={selectClass}>
+              <option value="">Select…</option>
+              {VEGETATION_STATUSES.map(v => <option key={v} value={v}>{VEGETATION_CONFIG[v].label}</option>)}
+            </select>
+          </Field>
+        </div>
+        <Field label="Runway Condition Notes">
+          <textarea value={form.runway_condition_notes} onChange={e => update('runway_condition_notes', e.target.value)} className={inputClass} rows={2} />
+        </Field>
+        <Field label="Drainage Condition">
+          <textarea value={form.drainage_condition} onChange={e => update('drainage_condition', e.target.value)} className={inputClass} rows={2} />
+        </Field>
+        <Field label="Buildings Condition">
+          <textarea value={form.buildings_condition} onChange={e => update('buildings_condition', e.target.value)} className={inputClass} rows={2} />
+        </Field>
+        <Field label="Findings">
+          <textarea value={form.findings} onChange={e => update('findings', e.target.value)} className={inputClass} rows={2} />
+        </Field>
+        <Field label="Recommendations">
+          <textarea value={form.recommendations} onChange={e => update('recommendations', e.target.value)} className={inputClass} rows={2} />
+        </Field>
+        <Field label="Remarks">
+          <textarea value={form.remarks} onChange={e => update('remarks', e.target.value)} className={inputClass} rows={2} />
+        </Field>
+        <Field label="Signal Available">
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => update('signal_available', true)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${form.signal_available === true ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-navy-800 text-navy-600'}`}>
+              <Signal className="inline h-3.5 w-3.5 mr-1" /> Yes
+            </button>
+            <button type="button" onClick={() => update('signal_available', false)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${form.signal_available === false ? 'bg-red-500/20 text-red-400 border border-red-500/40' : 'bg-navy-800 text-navy-600'}`}>
+              <SignalZero className="inline h-3.5 w-3.5 mr-1" /> No
+            </button>
+            {form.signal_available !== null && (
+              <button type="button" onClick={() => update('signal_available', null)} className="text-xs text-navy-600 hover:text-white">Clear</button>
+            )}
+          </div>
+        </Field>
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" onClick={onClose} className="btn-navy px-4 py-2 text-sm">Cancel</button>
+          <button type="submit" disabled={saving || !form.inspection_date} className="btn-gold px-4 py-2 text-sm flex items-center gap-1.5 disabled:opacity-40">
+            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Save Changes
           </button>
         </div>
       </form>

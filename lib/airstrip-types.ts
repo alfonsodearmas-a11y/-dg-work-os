@@ -14,7 +14,7 @@ export const VERIFICATION_METHODS = [
   'physical_inspection', 'photo_verification', 'whatsapp_photo',
   'contractor_report', 'aerial_survey', 'unverified', 'other',
 ] as const;
-export const PHOTO_TYPES = ['verification', 'inspection', 'aerial', 'damage', 'general'] as const;
+export const PHOTO_TYPES = ['verification', 'inspection', 'aerial', 'damage', 'general', 'maintenance'] as const;
 export const VEGETATION_STATUSES = ['cleared', 'overgrown', 'partially_cleared'] as const;
 
 // -- Union types from constants -----------------------------------------------
@@ -149,6 +149,7 @@ export interface AirstripInspection {
   buildings_condition: string | null;
   findings: string | null;
   recommendations: string | null;
+  remarks: string | null;
   signal_available: boolean | null;
   created_at: string;
   created_by: string | null;

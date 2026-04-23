@@ -7,6 +7,7 @@ import {
   STATUS_CONFIG,
 } from '@/lib/airstrip-types';
 import type { Airstrip, AirstripStatus, SurfaceCondition, FlightFrequency } from '@/lib/airstrip-types';
+import { useAirstripOptions } from '@/hooks/useAirstripOptions';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,8 +17,6 @@ interface Props {
   onSaved: () => void;
   /** Pass an airstrip to enter edit mode. Omit for add mode. */
   airstrip?: Airstrip | null;
-  /** Pre-loaded surface types to avoid redundant fetch. */
-  surfaceTypes?: string[];
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -38,9 +37,10 @@ const selectClass = inputClass;
 
 // ── Modal ────────────────────────────────────────────────────────────────────
 
-export default function AddEditAirstripModal({ open, onClose, onSaved, airstrip, surfaceTypes: surfaceTypesProp }: Props) {
+export default function AddEditAirstripModal({ open, onClose, onSaved, airstrip }: Props) {
   const isEdit = !!airstrip;
   const dialogRef = useRef<HTMLDivElement>(null);
+  const { options: surfaceOpts } = useAirstripOptions('surface_type');
 
   // ── Form state ──
   const [name, setName] = useState('');
@@ -60,9 +60,6 @@ export default function AddEditAirstripModal({ open, onClose, onSaved, airstrip,
 
   // Status change reason (edit mode only, shown when status differs from original)
   const [statusChangeReason, setStatusChangeReason] = useState('');
-
-  // Surface type datalist
-  const [surfaceTypes, setSurfaceTypes] = useState<string[]>([]);
 
   // UI state
   const [saving, setSaving] = useState(false);
@@ -103,26 +100,6 @@ export default function AddEditAirstripModal({ open, onClose, onSaved, airstrip,
     setServerError(null);
     setSaving(false);
   }, [open, airstrip]);
-
-  // ── Fetch distinct surface types for datalist (skip if provided via prop) ──
-  useEffect(() => {
-    if (!open || surfaceTypesProp) {
-      if (surfaceTypesProp) setSurfaceTypes(surfaceTypesProp);
-      return;
-    }
-    (async () => {
-      try {
-        const res = await fetch('/api/airstrips?sort=name&dir=asc');
-        if (!res.ok) return;
-        const json = await res.json();
-        const types = new Set<string>();
-        for (const a of json.airstrips ?? []) {
-          if (a.surface_type) types.add(a.surface_type);
-        }
-        setSurfaceTypes([...types].sort());
-      } catch { /* non-critical */ }
-    })();
-  }, [open, surfaceTypesProp]);
 
   // ── Escape key ──
   useEffect(() => {
@@ -356,18 +333,16 @@ export default function AddEditAirstripModal({ open, onClose, onSaved, airstrip,
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Surface Type">
-              <input
-                className={inputClass}
+              <select
+                className={selectClass}
                 value={surfaceType}
                 onChange={e => setSurfaceType(e.target.value)}
-                placeholder="e.g. Laterite"
-                list="surface-type-options"
-              />
-              <datalist id="surface-type-options">
-                {surfaceTypes.map(t => (
-                  <option key={t} value={t} />
+              >
+                <option value="">Not specified</option>
+                {surfaceOpts.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
-              </datalist>
+              </select>
             </Field>
             <Field label="Surface Condition">
               <select className={selectClass} value={surfaceCondition} onChange={e => setSurfaceCondition(e.target.value)}>

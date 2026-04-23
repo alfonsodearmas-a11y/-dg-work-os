@@ -103,7 +103,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
     if (authResult instanceof NextResponse) return authResult;
     const { session } = authResult;
 

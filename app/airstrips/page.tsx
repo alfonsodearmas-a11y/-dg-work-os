@@ -915,10 +915,6 @@ export default function AirstripsPage() {
   const airstrips = data?.airstrips || [];
   const summary = data?.summary;
   const availableRegions = data?.filters?.regions || [];
-  const distinctSurfaceTypes = React.useMemo(
-    () => [...new Set(airstrips.map(a => a.surface_type).filter(Boolean) as string[])].sort(),
-    [airstrips],
-  );
   const selectedAirstrip = airstrips.find(a => a.id === selectedAirstripId) ?? null;
   const allSelected = React.useMemo(
     () => airstrips.length > 0 && airstrips.every(a => selectedIds.has(a.id)),
@@ -1270,7 +1266,6 @@ export default function AirstripsPage() {
         open={addModalOpen}
         onClose={() => setAddModalOpen(false)}
         onSaved={fetchAirstrips}
-        surfaceTypes={distinctSurfaceTypes}
       />
 
       {/* Bulk Upload Modal */}
