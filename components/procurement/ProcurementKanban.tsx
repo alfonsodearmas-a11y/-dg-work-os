@@ -273,6 +273,8 @@ export function ProcurementKanban({
     ? SELECTABLE_AGENCIES
     : SELECTABLE_AGENCIES.filter((a) => a.toLowerCase() === (userAgency || '').toLowerCase());
 
+  const showAwardBanner = !!awardedSince && awardedSince.count > 0;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -291,59 +293,54 @@ export function ProcurementKanban({
           ))}
         </div>
 
-        <div className="relative flex items-center rounded-lg border border-navy-800 bg-navy-950/50 p-0.5">
-          <div
-            className="absolute top-0.5 bottom-0.5 rounded-md bg-navy-800 transition-all duration-300 ease-out"
-            style={{ width: 'calc(50% - 2px)', left: viewMode === 'board' ? '2px' : 'calc(50%)' }}
-          />
-          <button onClick={() => setViewMode('board')} className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors duration-200 ${viewMode === 'board' ? 'text-gold-500' : 'text-navy-600 hover:text-slate-400'}`}>
-            <LayoutGrid className="h-3.5 w-3.5" /><span className="hidden sm:inline">Board</span>
-          </button>
-          <button onClick={() => setViewMode('list')} className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors duration-200 ${viewMode === 'list' ? 'text-gold-500' : 'text-navy-600 hover:text-slate-400'}`}>
-            <List className="h-3.5 w-3.5" /><span className="hidden sm:inline">List</span>
-          </button>
+        <div className="flex items-center gap-3">
+          {stats && (
+            <div className="hidden md:flex items-center gap-3 text-xs font-medium text-navy-600">
+              <span><span className="text-white font-semibold">{stats.total_active}</span> active</span>
+              <span className="text-navy-800">·</span>
+              <span><span className="text-white font-semibold">{stats.total_count}</span> total</span>
+              <span className="text-navy-800">·</span>
+              <span>
+                <span className={`font-semibold ${stats.stalled_count > 0 ? 'text-red-400' : 'text-white'}`}>{stats.stalled_count}</span> stalled
+              </span>
+            </div>
+          )}
+
+          <div className="relative flex items-center rounded-lg border border-navy-800 bg-navy-950/50 p-0.5">
+            <div
+              className="absolute top-0.5 bottom-0.5 rounded-md bg-navy-800 transition-all duration-300 ease-out"
+              style={{ width: 'calc(50% - 2px)', left: viewMode === 'board' ? '2px' : 'calc(50%)' }}
+            />
+            <button onClick={() => setViewMode('board')} className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors duration-200 ${viewMode === 'board' ? 'text-gold-500' : 'text-navy-600 hover:text-slate-400'}`}>
+              <LayoutGrid className="h-3.5 w-3.5" /><span className="hidden sm:inline">Board</span>
+            </button>
+            <button onClick={() => setViewMode('list')} className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors duration-200 ${viewMode === 'list' ? 'text-gold-500' : 'text-navy-600 hover:text-slate-400'}`}>
+              <List className="h-3.5 w-3.5" /><span className="hidden sm:inline">List</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {awardedSince && (awardedSince.count > 0 || stats) && (
+      {showAwardBanner && awardedSince && (
         <Link
-          href={awardedSince.count > 0 ? `/procurement/archive?since=${encodeURIComponent(awardedSince.previous_upload_at || '')}` : '/procurement/archive'}
-          className="block group"
+          href={`/procurement/archive?since=${encodeURIComponent(awardedSince.previous_upload_at || '')}`}
+          className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs hover:border-emerald-500/50 hover:bg-emerald-500/10 transition-colors group"
         >
-          <div className="rounded-xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 p-4 hover:border-emerald-500/50 transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
-                <Award className="h-5 w-5 text-emerald-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                {awardedSince.count > 0 ? (
-                  <>
-                    <p className="text-sm font-semibold text-white">
-                      <span className="text-emerald-400">{awardedSince.count}</span>{' '}
-                      {awardedSince.count === 1 ? 'tender' : 'tenders'} awarded since{' '}
-                      {awardedSince.previous_upload_at ? fmtDate(awardedSince.previous_upload_at) : 'the last upload'}
-                    </p>
-                    <p className="text-xs text-navy-600 mt-0.5 group-hover:text-emerald-300/70 transition-colors">View the Awarded Archive →</p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm font-semibold text-white">
-                      {stats?.by_stage.award.count ?? 0} awarded tenders on file
-                    </p>
-                    <p className="text-xs text-navy-600 mt-0.5 group-hover:text-emerald-300/70 transition-colors">Nothing new this cycle · Browse the Awarded Archive →</p>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
+          <Award className="h-4 w-4 text-emerald-400 shrink-0" />
+          <span className="text-white font-medium">
+            <span className="text-emerald-400">{awardedSince.count}</span>{' '}
+            {awardedSince.count === 1 ? 'tender' : 'tenders'} awarded since{' '}
+            {awardedSince.previous_upload_at ? fmtDate(awardedSince.previous_upload_at) : 'the last upload'}
+          </span>
+          <span className="ml-auto text-navy-600 group-hover:text-emerald-300/80 transition-colors">View archive →</span>
         </Link>
       )}
 
       {stats && (
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-navy-900 rounded-xl border border-navy-800 p-3"><div className="text-navy-600 text-xs mb-1">Active</div><div className="text-white text-lg font-bold">{stats.total_active}</div></div>
-          <div className="bg-navy-900 rounded-xl border border-navy-800 p-3"><div className="text-navy-600 text-xs mb-1">Total</div><div className="text-white text-lg font-bold">{stats.total_count}</div></div>
-          <div className="bg-navy-900 rounded-xl border border-navy-800 p-3"><div className="text-navy-600 text-xs mb-1">Stalled (30d+)</div><div className={`text-lg font-bold ${stats.stalled_count > 0 ? 'text-red-400' : 'text-white'}`}>{stats.stalled_count}</div></div>
+        <div className="grid grid-cols-3 gap-2 md:hidden">
+          <div className="bg-navy-900 rounded-lg border border-navy-800 px-3 py-2"><div className="text-navy-600 text-[11px]">Active</div><div className="text-white text-sm font-bold">{stats.total_active}</div></div>
+          <div className="bg-navy-900 rounded-lg border border-navy-800 px-3 py-2"><div className="text-navy-600 text-[11px]">Total</div><div className="text-white text-sm font-bold">{stats.total_count}</div></div>
+          <div className="bg-navy-900 rounded-lg border border-navy-800 px-3 py-2"><div className="text-navy-600 text-[11px]">Stalled</div><div className={`text-sm font-bold ${stats.stalled_count > 0 ? 'text-red-400' : 'text-white'}`}>{stats.stalled_count}</div></div>
         </div>
       )}
 

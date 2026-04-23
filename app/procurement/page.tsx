@@ -8,6 +8,7 @@ import {
   Inbox, TrendingUp, EyeOff, Award,
 } from 'lucide-react';
 import { Tabs, type Tab } from '@/components/ui/Tabs';
+import { MenuButton, type MenuItem } from '@/components/ui/MenuButton';
 import { ProcurementKanban } from '@/components/procurement/ProcurementKanban';
 import { ProcurementAnalytics } from '@/components/procurement/ProcurementAnalytics';
 import { ProcurementNewPackageForm } from '@/components/procurement/ProcurementNewPackageForm';
@@ -17,6 +18,13 @@ import type { Tender } from '@/lib/tender/types';
 const tabs: Tab[] = [
   { id: 'pipeline', label: 'Pipeline', icon: LayoutDashboard },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+];
+
+const OVERFLOW_ITEMS: MenuItem[] = [
+  { label: 'Archive', href: '/procurement/archive', icon: Award },
+  { label: 'What Moved', href: '/procurement/changes', icon: TrendingUp },
+  { label: 'Review', href: '/procurement/review', icon: Inbox },
+  { label: 'Missing', href: '/procurement/missing', icon: EyeOff },
 ];
 
 export default function ProcurementPage() {
@@ -32,8 +40,8 @@ export default function ProcurementPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex items-center flex-wrap gap-3 md:gap-4">
-        <Link href="/" className="p-2 rounded-lg text-navy-600 hover:text-white hover:bg-navy-900 transition-colors touch-active" aria-label="Back">
+      <div className="flex items-center gap-3 md:gap-4">
+        <Link href="/" className="shrink-0 p-2 rounded-lg text-navy-600 hover:text-white hover:bg-navy-900 transition-colors touch-active" aria-label="Back">
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -42,29 +50,16 @@ export default function ProcurementPage() {
           </div>
           <div className="min-w-0">
             <h1 className="text-lg md:text-xl font-bold text-white">Procurement Pipeline</h1>
-            <p className="text-xs md:text-sm text-navy-600">Tender tracking · weekly PSIP ingestion</p>
+            <p className="text-xs md:text-sm text-navy-600 truncate">Tender tracking · weekly PSIP ingestion</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <Link href="/procurement/archive" className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-navy-800 text-navy-600 hover:text-gold-500 hover:border-gold-500/30 transition-colors">
-            <Award className="h-4 w-4" />
-            <span>Archive</span>
-          </Link>
-          <Link href="/procurement/changes" className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-navy-800 text-navy-600 hover:text-gold-500 hover:border-gold-500/30 transition-colors">
-            <TrendingUp className="h-4 w-4" />
-            <span>What Moved</span>
-          </Link>
-          <Link href="/procurement/review" className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-navy-800 text-navy-600 hover:text-gold-500 hover:border-gold-500/30 transition-colors">
-            <Inbox className="h-4 w-4" />
-            <span>Review</span>
-          </Link>
-          <Link href="/procurement/missing" className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-navy-800 text-navy-600 hover:text-gold-500 hover:border-gold-500/30 transition-colors">
-            <EyeOff className="h-4 w-4" />
-            <span>Missing</span>
-          </Link>
           {canUpload && (
-            <Link href="/procurement/uploads" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-navy-800 text-navy-600 hover:text-gold-500 hover:border-gold-500/30 transition-colors">
+            <Link
+              href="/procurement/uploads"
+              className="flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-medium border border-navy-800 text-navy-600 hover:text-gold-500 hover:border-gold-500/30 transition-colors"
+            >
               <Upload className="h-4 w-4" />
               <span className="hidden sm:inline">Upload PSIP</span>
             </Link>
@@ -72,12 +67,13 @@ export default function ProcurementPage() {
           {canCreate && (
             <button
               onClick={() => setShowNewForm(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-gold-500 text-navy-950 hover:bg-[#e5c348] transition-colors"
+              className="flex items-center gap-1.5 h-9 px-4 rounded-lg text-sm font-semibold bg-gold-500 text-navy-950 hover:bg-[#e5c348] transition-colors"
             >
               <Plus className="h-4 w-4" />
-              New Tender
+              <span className="hidden sm:inline">New Tender</span>
             </button>
           )}
+          <MenuButton items={OVERFLOW_ITEMS} ariaLabel="More procurement views" />
         </div>
       </div>
 
