@@ -105,6 +105,7 @@ export interface Tender {
   last_seen_upload_id: string | null;
   awarded_at: string | null;
   first_appearance_already_awarded: boolean;
+  created_by: string | null;
   created_at: string;
   updated_at: string;
   // Derived

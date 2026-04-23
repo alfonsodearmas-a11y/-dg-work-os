@@ -12,6 +12,7 @@ import { ProcurementKanban } from '@/components/procurement/ProcurementKanban';
 import { ProcurementAnalytics } from '@/components/procurement/ProcurementAnalytics';
 import { ProcurementNewPackageForm } from '@/components/procurement/ProcurementNewPackageForm';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import type { Tender } from '@/lib/tender/types';
 
 const tabs: Tab[] = [
   { id: 'pipeline', label: 'Pipeline', icon: LayoutDashboard },
@@ -23,9 +24,10 @@ export default function ProcurementPage() {
   const [activeTab, setActiveTab] = useState('pipeline');
   const [showNewForm, setShowNewForm] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [optimisticTender, setOptimisticTender] = useState<Tender | null>(null);
 
   const userRole = session?.user?.role;
-  const canCreate = userRole === 'dg' || userRole === 'minister' || userRole === 'ps' || userRole === 'agency_admin';
+  const canCreate = userRole === 'dg' || userRole === 'minister' || userRole === 'ps' || userRole === 'agency_admin' || userRole === 'officer';
   const canUpload = userRole === 'dg' || userRole === 'minister' || userRole === 'ps';
 
   return (
@@ -81,7 +83,9 @@ export default function ProcurementPage() {
 
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} compactOnMobile>
         <ErrorBoundary key={activeTab} fallbackTitle="Failed to load procurement board">
-          {activeTab === 'pipeline' && <ProcurementKanban refreshTrigger={refreshTrigger} />}
+          {activeTab === 'pipeline' && (
+            <ProcurementKanban refreshTrigger={refreshTrigger} optimisticTender={optimisticTender} />
+          )}
           {activeTab === 'analytics' && <ProcurementAnalytics />}
         </ErrorBoundary>
       </Tabs>
@@ -89,7 +93,10 @@ export default function ProcurementPage() {
       <ProcurementNewPackageForm
         isOpen={showNewForm}
         onClose={() => setShowNewForm(false)}
-        onCreated={() => setRefreshTrigger((t) => t + 1)}
+        onCreated={(tender) => {
+          setOptimisticTender(tender);
+          setRefreshTrigger((t) => t + 1);
+        }}
       />
     </div>
   );

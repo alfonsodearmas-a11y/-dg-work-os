@@ -37,8 +37,21 @@ interface AwardedSincePayload {
   tenders: Tender[];
 }
 
-function canDrag(role: Role | undefined): boolean {
-  return role === 'agency_admin' || role === 'dg';
+function canDragTender(
+  role: Role | undefined,
+  userId: string | undefined,
+  userAgency: string | null | undefined,
+  tender: Tender,
+): boolean {
+  if (role === 'dg') return true;
+  if (role === 'agency_admin') {
+    return tender.agency.toLowerCase() === (userAgency || '').toLowerCase();
+  }
+  // Officers can only drag manual tenders they created.
+  if (role === 'officer') {
+    return tender.source === 'manual' && tender.created_by === userId;
+  }
+  return false;
 }
 
 function sortTenders(tenders: Tender[]): Tender[] {
@@ -52,7 +65,13 @@ function sortTenders(tenders: Tender[]): Tender[] {
   });
 }
 
-export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: number }) {
+export function ProcurementKanban({
+  refreshTrigger = 0,
+  optimisticTender = null,
+}: {
+  refreshTrigger?: number;
+  optimisticTender?: Tender | null;
+}) {
   const { data: session } = useSession();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -113,6 +132,11 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
   useEffect(() => { if (refreshTrigger > 0) fetchData(); }, [refreshTrigger, fetchData]);
 
   useEffect(() => {
+    if (!optimisticTender) return;
+    setTenders((prev) => (prev.some((t) => t.id === optimisticTender.id) ? prev : [optimisticTender, ...prev]));
+  }, [optimisticTender]);
+
+  useEffect(() => {
     const channel = supabase
       .channel('tender_kanban')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tender' }, () => fetchData())
@@ -169,9 +193,9 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
 
       const userRole = session?.user?.role;
       const userAgency = session?.user?.agency;
-      if (!canDrag(userRole)) { toast.error('Only agency admins can advance tenders'); return; }
-      if (userRole !== 'dg' && t.agency.toLowerCase() !== userAgency?.toLowerCase()) {
-        toast.error('Cannot advance tenders from another agency');
+      const userId = session?.user?.id;
+      if (!canDragTender(userRole, userId, userAgency, t)) {
+        toast.error("You can't advance this tender");
         return;
       }
       if (targetStage === t.stage) return;
@@ -243,7 +267,7 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
 
   const userRole = session?.user?.role;
   const userAgency = session?.user?.agency;
-  const isDraggable = canDrag(userRole);
+  const userId = session?.user?.id;
   const isMinistry = MINISTRY_ROLES.includes(userRole || '');
   const visibleAgencies = isMinistry
     ? SELECTABLE_AGENCIES
@@ -381,9 +405,9 @@ export function ProcurementKanban({ refreshTrigger = 0 }: { refreshTrigger?: num
                 hasMore={visibleByStage[stage].length < byStage[stage].length}
                 onLoadMore={() => handleLoadMore(stage)}
                 draggingId={draggingId}
-                isDraggable={isDraggable}
                 userRole={userRole}
                 userAgency={userAgency}
+                userId={userId}
                 onDrop={handleDrop}
                 onCardClick={setTenderParam}
                 onDragStart={handleDragStart}
@@ -411,15 +435,15 @@ interface ProcurementColumnProps {
   hasMore: boolean;
   onLoadMore: () => void;
   draggingId: string | null;
-  isDraggable: boolean;
   userRole: Role | undefined;
   userAgency: string | null | undefined;
+  userId: string | undefined;
   onDrop: (e: React.DragEvent<HTMLDivElement>, stage: TenderStage) => void;
   onCardClick: (id: string) => void;
   onDragStart: (id: string) => void;
 }
 
-function ProcurementColumn({ stage, tenders, totalCount, hasMore, onLoadMore, draggingId, isDraggable, userRole, userAgency, onDrop, onCardClick, onDragStart }: ProcurementColumnProps) {
+function ProcurementColumn({ stage, tenders, totalCount, hasMore, onLoadMore, draggingId, userRole, userAgency, userId, onDrop, onCardClick, onDragStart }: ProcurementColumnProps) {
   const [isOver, setIsOver] = useState(false);
   const config = STAGE_CONFIG[stage];
 
@@ -441,7 +465,7 @@ function ProcurementColumn({ stage, tenders, totalCount, hasMore, onLoadMore, dr
         }`}
       >
         {tenders.map((t) => {
-          const cardDraggable = isDraggable && (userRole === 'dg' || t.agency.toLowerCase() === userAgency?.toLowerCase());
+          const cardDraggable = canDragTender(userRole, userId, userAgency, t);
           return (
             <ProcurementCard
               key={t.id}

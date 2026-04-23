@@ -1,6 +1,6 @@
 'use client';
 
-import { ExternalLink, Repeat, AlertTriangle, HelpCircle, Award } from 'lucide-react';
+import { ExternalLink, Repeat, AlertTriangle, HelpCircle, Award, UserPlus } from 'lucide-react';
 import { METHOD_CONFIG, type Tender } from '@/lib/tender/types';
 import { AgencyBadge } from './AgencyBadge';
 import { DaysAtStageIndicator } from './DaysAtStageIndicator';
@@ -59,8 +59,14 @@ export function ProcurementCard({ tender, onClick, isDragging, canDrag = true, o
       )}
 
       {/* Flag badges */}
-      {(tender.is_rollover || tender.has_exception || tender.stage_source === 'inferred_from_dates' || tender.first_appearance_already_awarded) && (
+      {(tender.source === 'manual' || tender.is_rollover || tender.has_exception || tender.stage_source === 'inferred_from_dates' || tender.first_appearance_already_awarded) && (
         <div className="flex flex-wrap gap-1 mb-1.5">
+          {tender.source === 'manual' && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-gold-500/10 text-gold-500 border border-gold-500/40" title="Manually created tender (not from PSIP)">
+              <UserPlus className="h-2.5 w-2.5" />
+              Manual
+            </span>
+          )}
           {tender.is_rollover && (
             <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30" title="Rollover from prior fiscal year">
               <Repeat className="h-2.5 w-2.5" />

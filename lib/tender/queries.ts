@@ -30,7 +30,7 @@ const TENDER_COLUMNS = [
   'missing_from_last_upload',
   'first_seen_upload_id', 'last_seen_upload_id',
   'awarded_at', 'first_appearance_already_awarded',
-  'created_at', 'updated_at',
+  'created_by', 'created_at', 'updated_at',
 ].join(', ');
 
 const STALLED_THRESHOLD_DAYS = 30;
@@ -124,6 +124,7 @@ function enrichTender(row: Record<string, unknown>): Tender {
     last_seen_upload_id: (row.last_seen_upload_id as string) ?? null,
     awarded_at: (row.awarded_at as string) ?? null,
     first_appearance_already_awarded: Boolean(row.first_appearance_already_awarded),
+    created_by: (row.created_by as string) ?? null,
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
     agency_name: agencyName(row.agency as string),
@@ -233,11 +234,21 @@ export async function getTenderById(id: string): Promise<
 export async function createManualTender(input: {
   description: string;
   agency: TenderAgency;
+  stage: TenderStage;
+  method: TenderMethod;
+  date_of_award: string;
+  line_item_code?: string;
   programme_code?: string;
   sub_programme_code?: string;
   programme_activity?: string;
-  stage: TenderStage;
-  method?: TenderMethod;
+  date_advertised?: string;
+  date_closed?: string;
+  date_eval_sent_mtb_rtb?: string;
+  date_eval_sent_nptab?: string;
+  contractor?: string;
+  implementation_start_date?: string;
+  implementation_end_date?: string;
+  implementation_status_pct?: number;
   is_rollover?: boolean;
   has_exception?: boolean;
   remarks?: string;
@@ -255,17 +266,28 @@ export async function createManualTender(input: {
       source: 'manual',
       description: input.description.trim(),
       agency: input.agency,
+      line_item_code: input.line_item_code ?? null,
       programme_code: input.programme_code ?? null,
       sub_programme_code: input.sub_programme_code ?? null,
       programme_activity: input.programme_activity ?? null,
       stage: input.stage,
       stage_source: 'manual_override',
-      method: input.method ?? null,
+      method: input.method,
       is_rollover: input.is_rollover ?? false,
       has_exception: input.has_exception ?? false,
+      date_advertised: input.date_advertised ?? null,
+      date_closed: input.date_closed ?? null,
+      date_eval_sent_mtb_rtb: input.date_eval_sent_mtb_rtb ?? null,
+      date_eval_sent_nptab: input.date_eval_sent_nptab ?? null,
+      date_of_award: input.date_of_award,
+      contractor: input.contractor ?? null,
+      implementation_start_date: input.implementation_start_date ?? null,
+      implementation_end_date: input.implementation_end_date ?? null,
+      implementation_status_pct: input.implementation_status_pct ?? null,
       remarks: input.remarks ?? null,
       awarded_at: alreadyAwarded ? nowIso : null,
       first_appearance_already_awarded: alreadyAwarded,
+      created_by: input.created_by,
     })
     .select(TENDER_COLUMNS)
     .single();
@@ -273,17 +295,18 @@ export async function createManualTender(input: {
   if (error) throw error;
 
   const tender = enrichTender(data as unknown as Record<string, unknown>);
-  // Log the creation as a synthetic field change so the change log has a zero-point anchor.
-  await supabaseAdmin.from('tender_field_change').insert({
-    tender_id: tender.id,
-    field_name: '__created',
-    old_value: null,
-    new_value: { source: 'manual', stage: tender.stage, agency: tender.agency },
-    upload_id: null,
-    changed_by: input.created_by,
-  });
+  const changes: Array<Record<string, unknown>> = [
+    {
+      tender_id: tender.id,
+      field_name: '__created',
+      old_value: null,
+      new_value: { source: 'manual', stage: tender.stage, agency: tender.agency },
+      upload_id: null,
+      changed_by: input.created_by,
+    },
+  ];
   if (alreadyAwarded) {
-    await supabaseAdmin.from('tender_field_change').insert({
+    changes.push({
       tender_id: tender.id,
       field_name: 'awarded_at',
       old_value: null,
@@ -292,6 +315,7 @@ export async function createManualTender(input: {
       changed_by: input.created_by,
     });
   }
+  await supabaseAdmin.from('tender_field_change').insert(changes);
   return tender;
 }
 

@@ -225,7 +225,7 @@ function textOrNull(raw: unknown): string | null {
 
 const PROGRAMME_CODE_RE = /^3\d{2}$/;
 const SUB_PROGRAMME_CODE_RE = /^\d{7}$/;
-const LINE_ITEM_CODE_RE = /^([HCU]-?\d+|PO-\d+)/i;
+export const LINE_ITEM_CODE_RE = /^([HCU]-?\d+|PO-\d+)/i;
 // Bare-word dividers ("New", "Rollover") without a trailing colon appear in
 // the sheet too — e.g. R105 "New" in the 2026 workbook. Absorb both forms.
 const DIVIDER_RE = /^(Rollover:?|New:?|Summary:|Sub-Total|Total)$/i;
