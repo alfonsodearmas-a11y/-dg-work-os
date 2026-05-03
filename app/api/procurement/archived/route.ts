@@ -4,6 +4,7 @@ import { MINISTRY_ROLES } from '@/lib/people-types';
 import { listArchivedTenders, unarchiveTender } from '@/lib/tender/queries';
 import { supabaseAdmin } from '@/lib/db';
 import { recordDecision } from '@/lib/procurement/decisions';
+import { recordStatusTransition } from '@/lib/procurement/status';
 import { logger } from '@/lib/logger';
 
 export async function GET() {
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     await unarchiveTender(tenderId);
 
-    await recordDecision({
+    const decisionId = await recordDecision({
       decision_type: 'unarchive',
       target_kind: 'tender',
       target_id: tenderId,
@@ -64,6 +65,16 @@ export async function POST(request: NextRequest) {
       actor_role: session.user.role,
       reason_code: null,
       reason_text: reasonText,
+    });
+
+    await recordStatusTransition({
+      tender_id: tenderId,
+      status_before: 'archived',
+      status_after: 'active',
+      decision_id: decisionId,
+      decided_by: session.user.id,
+      decided_role: session.user.role,
+      reason_code: 'unarchive',
     });
 
     return NextResponse.json({ success: true, action: 'unarchive' });

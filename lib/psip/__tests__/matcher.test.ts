@@ -58,6 +58,7 @@ function baseSnapshot(overrides: Partial<ExistingTenderSnapshot> = {}): Existing
     remarks: null,
     awarded_at: null,
     first_appearance_already_awarded: false,
+    status: 'active',
     ...overrides,
   };
 }

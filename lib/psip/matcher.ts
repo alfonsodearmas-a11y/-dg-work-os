@@ -75,6 +75,7 @@ export interface ExistingTenderSnapshot {
   remarks: string | null;
   awarded_at: string | null;
   first_appearance_already_awarded: boolean;
+  status: 'active' | 'missing_pending_decision';
 }
 
 // ── Similarity ────────────────────────────────────────────────────────────────

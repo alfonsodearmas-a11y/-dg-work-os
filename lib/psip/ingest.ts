@@ -19,6 +19,7 @@ import { fetchMissingTenders, groupByAgency, type MissingTenderRow } from '@/lib
 import { loadSettings, loadFocalPoints, runEventForAgency, markResolvedForAgency } from '@/lib/psip/nag/send';
 import { TODAY_THRESHOLDS } from '@/lib/today/thresholds';
 import { recordPresenceEventsBatch } from '@/lib/procurement/presence';
+import { recordStatusTransitionsBatch } from '@/lib/procurement/status';
 import {
   computeRowFingerprint,
   findExistingReviewByFingerprint,
@@ -236,6 +237,9 @@ export async function applyPsipUpload(uploadId: string, buffer: Buffer, userId: 
   let newCount = 0;
   let updatedCount = 0;
   let fieldChangeCount = 0;
+  // Tenders that re-appeared in this upload after being in
+  // missing_pending_decision — transition them back to active.
+  const reappearedTenders: Array<{ id: string; agency: string }> = [];
 
   for (const r of plan.results) {
     if (r.kind === 'new') {
@@ -270,40 +274,109 @@ export async function applyPsipUpload(uploadId: string, buffer: Buffer, userId: 
       );
       updatedCount++;
       fieldChangeCount += r.field_diffs.length + extraChanges;
+      if (previous?.status === 'missing_pending_decision') {
+        reappearedTenders.push({ id: r.existing_tender_id, agency: previous.agency });
+      }
     }
     // REVIEW rows are left as pending tender_match_review entries for human resolution.
   }
 
-  // Flag missing. Disappearance events go to tender_presence_event so
-  // the field-change log stays focused on real field diffs. Sticky-tracked
-  // tenders (keep_tracking_despite_missing=true, set via Resurrect) are
-  // excluded from both the flag flip and the presence event — the user has
-  // already asserted the tender should keep being tracked through absences.
+  // Phase 2: reappearance closes a missing_pending_decision automatically.
+  // The tender is back in PSIP; the system was waiting for either human
+  // judgment or this re-emergence. Transition status='active', emit a
+  // 'reappeared' presence event, and clear the legacy missing flag (which
+  // applyUpdate already did inline; recorded here for completeness).
+  if (reappearedTenders.length > 0) {
+    const { data: sysUser } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('email', 'system@mpua.gov.gy')
+      .single();
+    if (sysUser) {
+      await recordStatusTransitionsBatch(
+        reappearedTenders.map((t) => ({
+          tender_id: t.id,
+          status_before: 'missing_pending_decision',
+          status_after: 'active',
+          decided_by: sysUser.id as string,
+          decided_role: 'system',
+          reason_code: 'reappeared_in_upload',
+        })),
+      );
+    }
+    await recordPresenceEventsBatch(
+      reappearedTenders.map((t) => ({
+        tender_id: t.id,
+        event_type: 'reappeared' as const,
+        agency: t.agency,
+        upload_id: uploadId,
+      })),
+    );
+  }
+
+  // Flag missing. Phase 2: also write a tender_status_decision so
+  // tender.status transitions to 'missing_pending_decision' via trigger.
+  // Disappearance events go to tender_presence_event. The legacy
+  // missing_from_last_upload flag is kept in sync for backward compat
+  // with surfaces that haven't migrated to status yet.
+  // Sticky-tracked tenders (keep_tracking_despite_missing=true, set via
+  // Resurrect) are excluded from all three writes — the user has already
+  // asserted the tender should keep being tracked through absences.
   const missingIds = plan.missing.map((m) => m.id);
   if (missingIds.length > 0) {
-    const { data: stickyRows } = await supabaseAdmin
+    const { data: tenderRows } = await supabaseAdmin
       .from('tender')
-      .select('id')
-      .in('id', missingIds)
-      .eq('keep_tracking_despite_missing', true);
-    const stickyIds = new Set((stickyRows || []).map((r) => r.id as string));
-    const flippableIds = missingIds.filter((id) => !stickyIds.has(id));
+      .select('id, status, keep_tracking_despite_missing')
+      .in('id', missingIds);
+    const stickyIds = new Set(
+      (tenderRows || [])
+        .filter((r) => r.keep_tracking_despite_missing as boolean)
+        .map((r) => r.id as string),
+    );
+    const statusById = new Map(
+      (tenderRows || []).map((r) => [r.id as string, r.status as string]),
+    );
+    const flippable = plan.missing.filter((m) => !stickyIds.has(m.id));
 
-    if (flippableIds.length > 0) {
+    if (flippable.length > 0) {
       await supabaseAdmin
         .from('tender')
         .update({ missing_from_last_upload: true })
-        .in('id', flippableIds);
+        .in('id', flippable.map((m) => m.id));
+
       await recordPresenceEventsBatch(
-        plan.missing
-          .filter((m) => !stickyIds.has(m.id))
-          .map((m) => ({
-            tender_id: m.id,
-            event_type: 'disappeared' as const,
-            agency: m.agency as string,
-            upload_id: uploadId,
-          })),
+        flippable.map((m) => ({
+          tender_id: m.id,
+          event_type: 'disappeared' as const,
+          agency: m.agency as string,
+          upload_id: uploadId,
+        })),
       );
+
+      // Only write a status transition if the tender wasn't already in
+      // missing_pending_decision (idempotent across repeat absences).
+      const transitioning = flippable.filter(
+        (m) => statusById.get(m.id) !== 'missing_pending_decision',
+      );
+      if (transitioning.length > 0) {
+        const { data: sysUser } = await supabaseAdmin
+          .from('users')
+          .select('id')
+          .eq('email', 'system@mpua.gov.gy')
+          .single();
+        if (sysUser) {
+          await recordStatusTransitionsBatch(
+            transitioning.map((m) => ({
+              tender_id: m.id,
+              status_before: (statusById.get(m.id) as 'active' | undefined) ?? 'active',
+              status_after: 'missing_pending_decision',
+              decided_by: sysUser.id as string,
+              decided_role: 'system',
+              reason_code: 'absent_from_upload',
+            })),
+          );
+        }
+      }
     }
   }
 
@@ -365,9 +438,11 @@ export async function cancelPsipUpload(uploadId: string): Promise<void> {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 async function fetchExistingSnapshots(): Promise<ExistingTenderSnapshot[]> {
-  // Archived tenders are explicitly excluded — they should not be candidates
-  // for matching (their archival was a deliberate decision) and should not
-  // be flipped to missing on subsequent uploads.
+  // Phase 2: only active and missing_pending_decision tenders participate
+  // in matching. Archived/withdrawn/completed_outside_psip/agency_error
+  // tenders represent deliberate human decisions about identity; rows
+  // that look like them in a future upload become NEW tenders rather
+  // than silently overriding the prior decision.
   const { data, error } = await supabaseAdmin
     .from('tender')
     .select(`
@@ -378,9 +453,10 @@ async function fetchExistingSnapshots(): Promise<ExistingTenderSnapshot[]> {
       date_eval_sent_nptab, date_of_award,
       contractor, implementation_start_date, implementation_end_date,
       implementation_status_pct, remarks,
-      awarded_at, first_appearance_already_awarded
+      awarded_at, first_appearance_already_awarded,
+      status
     `)
-    .is('archived_at', null);
+    .in('status', ['active', 'missing_pending_decision']);
   if (error) throw error;
   return ((data || []) as unknown) as ExistingTenderSnapshot[];
 }

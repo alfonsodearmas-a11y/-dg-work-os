@@ -5,6 +5,7 @@ import { archiveTender, listMissingTenders } from '@/lib/tender/queries';
 import { supabaseAdmin } from '@/lib/db';
 import { recordDecision } from '@/lib/procurement/decisions';
 import { recordPresenceEvent } from '@/lib/procurement/presence';
+import { recordStatusTransition } from '@/lib/procurement/status';
 import { ARCHIVE_REASON_CODES, type ArchiveReasonCode } from '@/lib/tender/types';
 import { logger } from '@/lib/logger';
 
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     if (action === 'resurrect') {
       const { data: tender, error: fetchErr } = await supabaseAdmin
         .from('tender')
-        .select('agency, archived_at')
+        .select('agency, status, archived_at')
         .eq('id', tenderId)
         .single();
       if (fetchErr || !tender) {
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
       });
 
       const reasonText = (body?.reason_text as string | undefined) ?? null;
-      await recordDecision({
+      const decisionId = await recordDecision({
         decision_type: 'resurrect',
         target_kind: 'tender',
         target_id: tenderId,
@@ -86,6 +87,16 @@ export async function POST(request: NextRequest) {
         actor_role: session.user.role,
         reason_code: null,
         reason_text: reasonText,
+      });
+
+      await recordStatusTransition({
+        tender_id: tenderId,
+        status_before: tender.status as 'active' | 'missing_pending_decision',
+        status_after: 'active',
+        decision_id: decisionId,
+        decided_by: session.user.id,
+        decided_role: session.user.role,
+        reason_code: 'resurrect',
       });
 
       return NextResponse.json({ success: true, action: 'resurrect' });
@@ -107,7 +118,7 @@ export async function POST(request: NextRequest) {
 
       const { data: tender, error: fetchErr } = await supabaseAdmin
         .from('tender')
-        .select('agency, archived_at')
+        .select('agency, status, archived_at')
         .eq('id', tenderId)
         .single();
       if (fetchErr || !tender) {
@@ -125,7 +136,7 @@ export async function POST(request: NextRequest) {
         actorRole: session.user.role,
       });
 
-      await recordDecision({
+      const decisionId = await recordDecision({
         decision_type: 'archive',
         target_kind: 'tender',
         target_id: tenderId,
@@ -134,6 +145,16 @@ export async function POST(request: NextRequest) {
         actor_role: session.user.role,
         reason_code: reasonCode,
         reason_text: reasonText,
+      });
+
+      await recordStatusTransition({
+        tender_id: tenderId,
+        status_before: tender.status as 'active' | 'missing_pending_decision',
+        status_after: 'archived',
+        decision_id: decisionId,
+        decided_by: session.user.id,
+        decided_role: session.user.role,
+        reason_code: reasonCode,
       });
 
       return NextResponse.json({ success: true, action: 'archive' });

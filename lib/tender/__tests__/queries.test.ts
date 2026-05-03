@@ -38,15 +38,18 @@ describe('listTenders — rollover exclusion', () => {
     fromMock.mockReset();
   });
 
-  it('excludes rollovers by default', async () => {
+  it('excludes rollovers and non-active statuses by default', async () => {
     const tenderCall = makeChain();
     fromMock.mockImplementationOnce(() => tenderCall.chain);
 
     await listTenders();
 
     const eqCalls = tenderCall.calls.filter((c) => c.method === 'eq');
+    const inCalls = tenderCall.calls.filter((c) => c.method === 'in');
     expect(eqCalls).toContainEqual({ method: 'eq', args: ['is_rollover', false] });
-    expect(eqCalls).toContainEqual({ method: 'eq', args: ['missing_from_last_upload', false] });
+    // Phase 2: missing_from_last_upload filter replaced by status='active'
+    // applied via .in('status', ['active', ...]).
+    expect(inCalls).toContainEqual({ method: 'in', args: ['status', ['active']] });
   });
 
   it('includes rollovers when includeRollovers=true', async () => {
@@ -76,7 +79,7 @@ describe('getPipelineStats — rollover exclusion', () => {
     fromMock.mockReset();
   });
 
-  it('always excludes rollovers from stage counts', async () => {
+  it('always excludes rollovers and non-active statuses from stage counts', async () => {
     const statsCall = makeChain();
     fromMock.mockImplementationOnce(() => statsCall.chain);
 
@@ -84,7 +87,7 @@ describe('getPipelineStats — rollover exclusion', () => {
 
     const eqCalls = statsCall.calls.filter((c) => c.method === 'eq');
     expect(eqCalls).toContainEqual({ method: 'eq', args: ['is_rollover', false] });
-    expect(eqCalls).toContainEqual({ method: 'eq', args: ['missing_from_last_upload', false] });
+    expect(eqCalls).toContainEqual({ method: 'eq', args: ['status', 'active'] });
   });
 });
 

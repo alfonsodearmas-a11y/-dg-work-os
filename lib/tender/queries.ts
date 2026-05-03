@@ -28,6 +28,7 @@ const TENDER_COLUMNS = [
   'contractor', 'implementation_start_date',
   'implementation_end_date', 'implementation_status_pct',
   'remarks',
+  'status',
   'missing_from_last_upload',
   'keep_tracking_despite_missing',
   'first_seen_upload_id', 'last_seen_upload_id',
@@ -123,6 +124,7 @@ function enrichTender(row: Record<string, unknown>): Tender {
     implementation_end_date: (row.implementation_end_date as string) ?? null,
     implementation_status_pct: (row.implementation_status_pct as number) ?? null,
     remarks: (row.remarks as string) ?? null,
+    status: (row.status as Tender['status']) ?? 'active',
     missing_from_last_upload: Boolean(row.missing_from_last_upload),
     keep_tracking_despite_missing: Boolean(row.keep_tracking_despite_missing),
     first_seen_upload_id: (row.first_seen_upload_id as string) ?? null,
@@ -154,25 +156,27 @@ function enrichTender(row: Record<string, unknown>): Tender {
 export async function listTenders(
   opts: { agency?: string; includeMissing?: boolean; includeRollovers?: boolean; includeArchived?: boolean } = {},
 ): Promise<Tender[]> {
+  // Status is the Phase 2 authoritative filter. Default surface is
+  // status='active'. Callers opt into other states explicitly.
+  const statuses: string[] = ['active'];
+  if (opts.includeMissing) statuses.push('missing_pending_decision');
+  if (opts.includeArchived) {
+    statuses.push('archived', 'withdrawn', 'completed_outside_psip', 'agency_error');
+  }
+
   let query = supabaseAdmin
     .from('tender')
     .select(TENDER_COLUMNS)
+    .in('status', statuses)
     .order('updated_at', { ascending: false });
 
   if (opts.agency) {
     query = query.eq('agency', opts.agency.toUpperCase());
   }
-  if (!opts.includeMissing) {
-    query = query.eq('missing_from_last_upload', false);
-  }
   // Rollovers are prior-year awards under execution — contracts, not tenders.
   // Excluded from the pipeline tracker by default; admin/debug views opt in.
   if (!opts.includeRollovers) {
     query = query.eq('is_rollover', false);
-  }
-  // Archived tenders never appear in active surfaces — only in /procurement/archived.
-  if (!opts.includeArchived) {
-    query = query.is('archived_at', null);
   }
 
   const { data, error } = await query;
@@ -465,9 +469,8 @@ export async function getPipelineStats(agency?: string): Promise<PipelineStats> 
     .select('id, stage, created_at, updated_at, date_of_award, missing_from_last_upload');
 
   if (agency) query = query.eq('agency', agency.toUpperCase());
-  query = query.eq('missing_from_last_upload', false);
+  query = query.eq('status', 'active');
   query = query.eq('is_rollover', false);
-  query = query.is('archived_at', null);
 
   const { data, error } = await query;
   if (error) throw error;
@@ -511,9 +514,11 @@ export async function getPipelineStats(agency?: string): Promise<PipelineStats> 
 // ── Missing & review ──────────────────────────────────────────────────────────
 
 export async function listMissingTenders(agency?: string): Promise<Tender[]> {
-  return listTenders({ agency, includeMissing: true, includeRollovers: true }).then((all) =>
-    all.filter((t) => t.missing_from_last_upload),
-  );
+  // Phase 2: missing_pending_decision is the authoritative status. Rollovers
+  // are included in the underlying query so a rolled-over tender that goes
+  // missing is still surfaced for human decision.
+  const all = await listTenders({ agency, includeMissing: true, includeRollovers: true });
+  return all.filter((t) => t.status === 'missing_pending_decision');
 }
 
 // ── Awarded archive + banner ──────────────────────────────────────────────────
@@ -552,7 +557,7 @@ export async function getAwardedSinceLastUpload(opts: { agency?: string } = {}):
     .from('tender')
     .select(TENDER_COLUMNS)
     .eq('stage', 'award')
-    .is('archived_at', null)
+    .eq('status', 'active')
     .gt('awarded_at', ref.uploaded_at)
     .order('awarded_at', { ascending: false });
   if (opts.agency) query = query.eq('agency', opts.agency.toUpperCase());
@@ -574,8 +579,7 @@ export async function listAwardedTenders(opts: { agency?: string } = {}): Promis
     .from('tender')
     .select(TENDER_COLUMNS)
     .eq('stage', 'award')
-    .eq('missing_from_last_upload', false)
-    .is('archived_at', null)
+    .eq('status', 'active')
     .order('awarded_at', { ascending: false, nullsFirst: false });
   if (opts.agency) query = query.eq('agency', opts.agency.toUpperCase());
   const { data, error } = await query;
@@ -590,7 +594,7 @@ export async function listArchivedTenders(opts: { agency?: string } = {}): Promi
   let query = supabaseAdmin
     .from('tender')
     .select(TENDER_COLUMNS)
-    .not('archived_at', 'is', null)
+    .eq('status', 'archived')
     .order('archived_at', { ascending: false });
   if (opts.agency) query = query.eq('agency', opts.agency.toUpperCase());
   const { data, error } = await query;

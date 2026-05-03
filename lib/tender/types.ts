@@ -6,8 +6,9 @@ import type {
   TenderMethod,
   TenderStageSource,
 } from '@/lib/psip/types';
+import type { TenderStatus } from '@/lib/procurement/status';
 
-export type { TenderAgency, TenderStage, TenderMethod, TenderStageSource };
+export type { TenderAgency, TenderStage, TenderMethod, TenderStageSource, TenderStatus };
 
 export type TenderSource = 'psip' | 'trello' | 'manual';
 
@@ -117,6 +118,7 @@ export interface Tender {
   implementation_end_date: string | null;
   implementation_status_pct: number | null;
   remarks: string | null;
+  status: TenderStatus;
   missing_from_last_upload: boolean;
   keep_tracking_despite_missing: boolean;
   first_seen_upload_id: string | null;
