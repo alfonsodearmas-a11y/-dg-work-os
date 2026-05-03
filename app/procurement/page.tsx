@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import {
   ArrowLeft, ShoppingCart, LayoutDashboard, BarChart3, Plus, Upload,
-  Inbox, TrendingUp, EyeOff, Award,
+  Inbox, Activity, Archive as ArchiveIcon, Award, ScrollText,
 } from 'lucide-react';
 import { Tabs, type Tab } from '@/components/ui/Tabs';
 import { MenuButton, type MenuItem } from '@/components/ui/MenuButton';
@@ -21,10 +21,11 @@ const tabs: Tab[] = [
 ];
 
 const OVERFLOW_ITEMS: MenuItem[] = [
-  { label: 'Archive', href: '/procurement/archive', icon: Award },
-  { label: 'What Moved', href: '/procurement/changes', icon: TrendingUp },
-  { label: 'Review', href: '/procurement/review', icon: Inbox },
-  { label: 'Missing', href: '/procurement/missing', icon: EyeOff },
+  { label: 'Decisions Required', href: '/procurement/inbox', icon: Inbox },
+  { label: 'Activity Feed', href: '/procurement/activity', icon: Activity },
+  { label: 'Decisions Log', href: '/procurement/decisions', icon: ScrollText },
+  { label: 'Awarded Archive', href: '/procurement/archive', icon: Award },
+  { label: 'Archived Tenders', href: '/procurement/archived', icon: ArchiveIcon },
 ];
 
 export default function ProcurementPage() {
