@@ -271,6 +271,9 @@ export async function cancelPsipUpload(uploadId: string): Promise<void> {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 async function fetchExistingSnapshots(): Promise<ExistingTenderSnapshot[]> {
+  // Archived tenders are explicitly excluded — they should not be candidates
+  // for matching (their archival was a deliberate decision) and should not
+  // be flipped to missing on subsequent uploads.
   const { data, error } = await supabaseAdmin
     .from('tender')
     .select(`
@@ -282,7 +285,8 @@ async function fetchExistingSnapshots(): Promise<ExistingTenderSnapshot[]> {
       contractor, implementation_start_date, implementation_end_date,
       implementation_status_pct, remarks,
       awarded_at, first_appearance_already_awarded
-    `);
+    `)
+    .is('archived_at', null);
   if (error) throw error;
   return ((data || []) as unknown) as ExistingTenderSnapshot[];
 }

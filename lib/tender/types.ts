@@ -73,6 +73,23 @@ export const AGENCY_CODES: TenderAgency[] = [
   'MPUA', 'GPL', 'GWI', 'HECI', 'CJIA', 'GCAA', 'MARAD', 'HINTERLAND_AIRSTRIPS',
 ];
 
+// ── Archive vocabulary ────────────────────────────────────────────────────────
+
+export const ARCHIVE_REASON_CODES = [
+  'withdrawn',
+  'completed_outside_psip',
+  'agency_error',
+  'superseded',
+] as const;
+export type ArchiveReasonCode = typeof ARCHIVE_REASON_CODES[number];
+
+export const ARCHIVE_REASON_LABELS: Record<ArchiveReasonCode, string> = {
+  withdrawn: 'Withdrawn',
+  completed_outside_psip: 'Completed (off PSIP)',
+  agency_error: 'Agency error',
+  superseded: 'Superseded',
+};
+
 // ── Entity interfaces ─────────────────────────────────────────────────────────
 
 export interface Tender {
@@ -108,6 +125,12 @@ export interface Tender {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  // Soft archive
+  archived_at: string | null;
+  archived_by: string | null;
+  archived_role: string | null;
+  archive_reason_code: ArchiveReasonCode | null;
+  archive_reason_text: string | null;
   // Derived
   agency_name: string;
   days_at_current_stage: number | null;

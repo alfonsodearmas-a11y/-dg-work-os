@@ -3,6 +3,7 @@ import { logger } from '@/lib/logger';
 import {
   AGENCY_LABEL,
   TENDER_STAGES,
+  type ArchiveReasonCode,
   type PipelineStats,
   type Tender,
   type TenderAgency,
@@ -30,6 +31,8 @@ const TENDER_COLUMNS = [
   'missing_from_last_upload',
   'first_seen_upload_id', 'last_seen_upload_id',
   'awarded_at', 'first_appearance_already_awarded',
+  'archived_at', 'archived_by', 'archived_role',
+  'archive_reason_code', 'archive_reason_text',
   'created_by', 'created_at', 'updated_at',
 ].join(', ');
 
@@ -124,6 +127,11 @@ function enrichTender(row: Record<string, unknown>): Tender {
     last_seen_upload_id: (row.last_seen_upload_id as string) ?? null,
     awarded_at: (row.awarded_at as string) ?? null,
     first_appearance_already_awarded: Boolean(row.first_appearance_already_awarded),
+    archived_at: (row.archived_at as string) ?? null,
+    archived_by: (row.archived_by as string) ?? null,
+    archived_role: (row.archived_role as string) ?? null,
+    archive_reason_code: (row.archive_reason_code as ArchiveReasonCode) ?? null,
+    archive_reason_text: (row.archive_reason_text as string) ?? null,
     created_by: (row.created_by as string) ?? null,
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
@@ -142,7 +150,7 @@ function enrichTender(row: Record<string, unknown>): Tender {
 // ── Queries ───────────────────────────────────────────────────────────────────
 
 export async function listTenders(
-  opts: { agency?: string; includeMissing?: boolean; includeRollovers?: boolean } = {},
+  opts: { agency?: string; includeMissing?: boolean; includeRollovers?: boolean; includeArchived?: boolean } = {},
 ): Promise<Tender[]> {
   let query = supabaseAdmin
     .from('tender')
@@ -159,6 +167,10 @@ export async function listTenders(
   // Excluded from the pipeline tracker by default; admin/debug views opt in.
   if (!opts.includeRollovers) {
     query = query.eq('is_rollover', false);
+  }
+  // Archived tenders never appear in active surfaces — only in /procurement/archived.
+  if (!opts.includeArchived) {
+    query = query.is('archived_at', null);
   }
 
   const { data, error } = await query;
@@ -461,6 +473,7 @@ export async function getPipelineStats(agency?: string): Promise<PipelineStats> 
   if (agency) query = query.eq('agency', agency.toUpperCase());
   query = query.eq('missing_from_last_upload', false);
   query = query.eq('is_rollover', false);
+  query = query.is('archived_at', null);
 
   const { data, error } = await query;
   if (error) throw error;
@@ -545,6 +558,7 @@ export async function getAwardedSinceLastUpload(opts: { agency?: string } = {}):
     .from('tender')
     .select(TENDER_COLUMNS)
     .eq('stage', 'award')
+    .is('archived_at', null)
     .gt('awarded_at', ref.uploaded_at)
     .order('awarded_at', { ascending: false });
   if (opts.agency) query = query.eq('agency', opts.agency.toUpperCase());
@@ -567,10 +581,61 @@ export async function listAwardedTenders(opts: { agency?: string } = {}): Promis
     .select(TENDER_COLUMNS)
     .eq('stage', 'award')
     .eq('missing_from_last_upload', false)
+    .is('archived_at', null)
     .order('awarded_at', { ascending: false, nullsFirst: false });
   if (opts.agency) query = query.eq('agency', opts.agency.toUpperCase());
   const { data, error } = await query;
   if (error) throw error;
   const rows = (data || []) as unknown as Record<string, unknown>[];
   return rows.map((r) => enrichTender(r));
+}
+
+// ── Soft archive ──────────────────────────────────────────────────────────────
+
+export async function listArchivedTenders(opts: { agency?: string } = {}): Promise<Tender[]> {
+  let query = supabaseAdmin
+    .from('tender')
+    .select(TENDER_COLUMNS)
+    .not('archived_at', 'is', null)
+    .order('archived_at', { ascending: false });
+  if (opts.agency) query = query.eq('agency', opts.agency.toUpperCase());
+  const { data, error } = await query;
+  if (error) throw error;
+  const rows = (data || []) as unknown as Record<string, unknown>[];
+  return rows.map((r) => enrichTender(r));
+}
+
+export async function archiveTender(input: {
+  tenderId: string;
+  reasonCode: ArchiveReasonCode;
+  reasonText?: string | null;
+  actorId: string;
+  actorRole: string;
+}): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('tender')
+    .update({
+      archived_at: new Date().toISOString(),
+      archived_by: input.actorId,
+      archived_role: input.actorRole,
+      archive_reason_code: input.reasonCode,
+      archive_reason_text: input.reasonText ?? null,
+    })
+    .eq('id', input.tenderId)
+    .is('archived_at', null);
+  if (error) throw error;
+}
+
+export async function unarchiveTender(tenderId: string): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('tender')
+    .update({
+      archived_at: null,
+      archived_by: null,
+      archived_role: null,
+      archive_reason_code: null,
+      archive_reason_text: null,
+    })
+    .eq('id', tenderId);
+  if (error) throw error;
 }

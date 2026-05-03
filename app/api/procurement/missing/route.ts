@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { MINISTRY_ROLES } from '@/lib/people-types';
-import { listMissingTenders } from '@/lib/tender/queries';
+import { archiveTender, listMissingTenders } from '@/lib/tender/queries';
 import { supabaseAdmin } from '@/lib/db';
+import { recordDecision } from '@/lib/procurement/decisions';
+import { ARCHIVE_REASON_CODES, type ArchiveReasonCode } from '@/lib/tender/types';
 import { logger } from '@/lib/logger';
 
 export async function GET() {
@@ -23,9 +25,11 @@ export async function GET() {
 
 /**
  * POST /api/procurement/missing
- * body: { tender_id, action: 'resurrect' | 'archive' }
- * 'resurrect' flips missing_from_last_upload back to false.
- * 'archive' deletes the tender (only DG).
+ * body: { tender_id, action: 'resurrect' | 'archive', reason_code?, reason_text? }
+ * - resurrect: flips missing_from_last_upload back to false. (Sticky semantics
+ *   ship in R4; in R2 this is unchanged from the prior implementation.)
+ * - archive: soft-archives the tender (DG only). Requires reason_code from
+ *   ARCHIVE_REASON_CODES. Records a procurement_decision row.
  */
 export async function POST(request: NextRequest) {
   const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
@@ -55,7 +59,47 @@ export async function POST(request: NextRequest) {
       if (session.user.role !== 'dg') {
         return NextResponse.json({ error: 'Only DG can archive tenders' }, { status: 403 });
       }
-      await supabaseAdmin.from('tender').delete().eq('id', tenderId);
+
+      const reasonCode = body?.reason_code as string | undefined;
+      const reasonText = (body?.reason_text as string | undefined) ?? null;
+      if (!reasonCode || !ARCHIVE_REASON_CODES.includes(reasonCode as ArchiveReasonCode)) {
+        return NextResponse.json(
+          { error: `reason_code is required and must be one of: ${ARCHIVE_REASON_CODES.join(', ')}` },
+          { status: 400 },
+        );
+      }
+
+      const { data: tender, error: fetchErr } = await supabaseAdmin
+        .from('tender')
+        .select('agency, archived_at')
+        .eq('id', tenderId)
+        .single();
+      if (fetchErr || !tender) {
+        return NextResponse.json({ error: 'Tender not found' }, { status: 404 });
+      }
+      if (tender.archived_at) {
+        return NextResponse.json({ error: 'Tender already archived' }, { status: 409 });
+      }
+
+      await archiveTender({
+        tenderId,
+        reasonCode: reasonCode as ArchiveReasonCode,
+        reasonText,
+        actorId: session.user.id,
+        actorRole: session.user.role,
+      });
+
+      await recordDecision({
+        decision_type: 'archive',
+        target_kind: 'tender',
+        target_id: tenderId,
+        agency: tender.agency as string,
+        actor_id: session.user.id,
+        actor_role: session.user.role,
+        reason_code: reasonCode,
+        reason_text: reasonText,
+      });
+
       return NextResponse.json({ success: true, action: 'archive' });
     }
 
