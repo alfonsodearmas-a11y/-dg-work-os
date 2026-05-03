@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { createNotification } from '@/lib/notifications/notification-service';
+import { NotificationDeliveryError } from '@/lib/notifications/errors';
 import { MINISTRY_ROLES } from '@/lib/people-types';
 import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
@@ -145,7 +146,13 @@ export const PATCH = withErrorHandler(async (
             taskStatus: updated.status,
             isOverdue,
           },
-        }).catch((err: unknown) => logger.error({ err }, '[task-patch] Assignment notification failed'));
+        }).catch((err: unknown) => {
+          if (err instanceof NotificationDeliveryError) {
+            logger.error(err.toLogContext(), '[task-patch] notification delivery failed');
+          } else {
+            logger.error({ err }, '[task-patch] notification delivery failed (unexpected error type)');
+          }
+        });
       }
 
       // Task blocked notification — notify all DG users + task owner (dedup if owner is a DG)
@@ -170,7 +177,13 @@ export const PATCH = withErrorHandler(async (
             referenceUrl: '/tasks',
             metadata: { taskId: id },
             tierContext: { taskStatus: 'blocked' },
-          }).catch((err: unknown) => logger.error({ err }, '[task-patch] Blocked notification (DG) failed'));
+          }).catch((err: unknown) => {
+            if (err instanceof NotificationDeliveryError) {
+              logger.error(err.toLogContext(), '[task-patch] notification delivery failed');
+            } else {
+              logger.error({ err }, '[task-patch] notification delivery failed (unexpected error type)');
+            }
+          });
         }
 
         // Also notify the task owner if not already notified as a DG user
@@ -186,7 +199,13 @@ export const PATCH = withErrorHandler(async (
             referenceUrl: '/tasks',
             metadata: { taskId: id },
             tierContext: { taskStatus: 'blocked' },
-          }).catch((err: unknown) => logger.error({ err }, '[task-patch] Blocked notification (owner) failed'));
+          }).catch((err: unknown) => {
+            if (err instanceof NotificationDeliveryError) {
+              logger.error(err.toLogContext(), '[task-patch] notification delivery failed');
+            } else {
+              logger.error({ err }, '[task-patch] notification delivery failed (unexpected error type)');
+            }
+          });
         }
       }
 
@@ -203,7 +222,13 @@ export const PATCH = withErrorHandler(async (
           referenceUrl: '/tasks',
           metadata: { taskId: id },
           tierContext: { taskStatus: data.status },
-        }).catch((err: unknown) => logger.error({ err }, '[task-patch] Status change notification failed'));
+        }).catch((err: unknown) => {
+          if (err instanceof NotificationDeliveryError) {
+            logger.error(err.toLogContext(), '[task-patch] notification delivery failed');
+          } else {
+            logger.error({ err }, '[task-patch] notification delivery failed (unexpected error type)');
+          }
+        });
       }
 
       // Task completed notification — notify the assigner
@@ -219,7 +244,13 @@ export const PATCH = withErrorHandler(async (
           referenceUrl: '/tasks',
           metadata: { taskId: id },
           tierContext: { taskStatus: 'done' },
-        }).catch((err: unknown) => logger.error({ err }, '[task-patch] Completed notification failed'));
+        }).catch((err: unknown) => {
+          if (err instanceof NotificationDeliveryError) {
+            logger.error(err.toLogContext(), '[task-patch] notification delivery failed');
+          } else {
+            logger.error({ err }, '[task-patch] notification delivery failed (unexpected error type)');
+          }
+        });
       }
     } catch (err) {
       logger.error({ err }, '[task-patch] Notification block failed');

@@ -1,5 +1,6 @@
 import { insertNotification } from '../notifications';
 import type { Notification, GenerateResult, GenerateContext } from '../notifications';
+import { NotificationDeliveryError } from '../notifications/errors';
 import { getDelayedProjects, getProjectsList } from '../project-queries';
 import { MINISTRY_ROLES } from '../people-types';
 import { logger } from '@/lib/logger';
@@ -18,29 +19,37 @@ export async function generateProjectNotifications(ctx: GenerateContext): Promis
     const delayed = await getDelayedProjects();
     for (const p of delayed) {
       if (p.days_overdue > 3) continue;
-      const inserted = await insertNotification({
-        user_id: ctx.userId,
-        type: 'project_newly_delayed',
-        title: `Project delayed: ${p.project_name || 'Unnamed'}`,
-        body: `${p.executing_agency || 'Unknown agency'} — ${p.days_overdue} day${p.days_overdue !== 1 ? 's' : ''} overdue (${p.completion_pct}% complete)`,
-        icon: 'project',
-        priority: 'high',
-        reference_type: 'project',
-        reference_id: p.project_id,
-        reference_url: `/projects/${p.id}`,
-        scheduled_for: morningSlot,
-        category: 'projects',
-        source_module: 'projects',
-        action_required: true,
-        action_type: 'review',
-        metadata: {
-          agency: p.executing_agency,
-          completion_pct: p.completion_pct,
-          days_overdue: p.days_overdue,
-          contract_value: p.contract_value,
-        },
-      });
-      if (inserted) created.push(inserted);
+      try {
+        const inserted = await insertNotification({
+          user_id: ctx.userId,
+          type: 'project_newly_delayed',
+          title: `Project delayed: ${p.project_name || 'Unnamed'}`,
+          body: `${p.executing_agency || 'Unknown agency'} — ${p.days_overdue} day${p.days_overdue !== 1 ? 's' : ''} overdue (${p.completion_pct}% complete)`,
+          icon: 'project',
+          priority: 'high',
+          reference_type: 'project',
+          reference_id: p.project_id,
+          reference_url: `/projects/${p.id}`,
+          scheduled_for: morningSlot,
+          category: 'projects',
+          source_module: 'projects',
+          action_required: true,
+          action_type: 'review',
+          metadata: {
+            agency: p.executing_agency,
+            completion_pct: p.completion_pct,
+            days_overdue: p.days_overdue,
+            contract_value: p.contract_value,
+          },
+        });
+        if (inserted) created.push(inserted);
+      } catch (err) {
+        if (err instanceof NotificationDeliveryError) {
+          logger.error(err.toLogContext(), '[project-gen] notification delivery failed');
+        } else {
+          logger.error({ err }, '[project-gen] notification delivery failed (unexpected error type)');
+        }
+      }
     }
 
     // 2. Stalled projects: <50% complete with <30 days left
@@ -52,28 +61,36 @@ export async function generateProjectNotifications(ctx: GenerateContext): Promis
       const daysLeft = Math.ceil((endDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
       if (daysLeft < 0 || daysLeft > 30) continue;
 
-      const inserted = await insertNotification({
-        user_id: ctx.userId,
-        type: 'project_stalled',
-        title: `Project at risk: ${p.project_name || 'Unnamed'}`,
-        body: `${p.completion_pct}% complete with ${daysLeft} days remaining — ${p.executing_agency || 'Unknown'}`,
-        icon: 'project',
-        priority: 'high',
-        reference_type: 'project',
-        reference_id: p.project_id,
-        reference_url: `/projects/${p.id}`,
-        scheduled_for: morningSlot,
-        category: 'projects',
-        source_module: 'projects',
-        action_required: false,
-        metadata: {
-          agency: p.executing_agency,
-          completion_pct: p.completion_pct,
-          days_remaining: daysLeft,
-          contract_value: p.contract_value,
-        },
-      });
-      if (inserted) created.push(inserted);
+      try {
+        const inserted = await insertNotification({
+          user_id: ctx.userId,
+          type: 'project_stalled',
+          title: `Project at risk: ${p.project_name || 'Unnamed'}`,
+          body: `${p.completion_pct}% complete with ${daysLeft} days remaining — ${p.executing_agency || 'Unknown'}`,
+          icon: 'project',
+          priority: 'high',
+          reference_type: 'project',
+          reference_id: p.project_id,
+          reference_url: `/projects/${p.id}`,
+          scheduled_for: morningSlot,
+          category: 'projects',
+          source_module: 'projects',
+          action_required: false,
+          metadata: {
+            agency: p.executing_agency,
+            completion_pct: p.completion_pct,
+            days_remaining: daysLeft,
+            contract_value: p.contract_value,
+          },
+        });
+        if (inserted) created.push(inserted);
+      } catch (err) {
+        if (err instanceof NotificationDeliveryError) {
+          logger.error(err.toLogContext(), '[project-gen] notification delivery failed');
+        } else {
+          logger.error({ err }, '[project-gen] notification delivery failed (unexpected error type)');
+        }
+      }
     }
   } catch (err) {
     logger.error({ err }, 'Error generating project notifications');

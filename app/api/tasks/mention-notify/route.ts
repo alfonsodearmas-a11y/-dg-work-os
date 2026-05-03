@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { createNotification } from '@/lib/notifications/notification-service';
+import { NotificationDeliveryError } from '@/lib/notifications/errors';
 import { cleanMentionBody } from '@/lib/notifications/mention-utils';
 import { logger } from '@/lib/logger';
 
@@ -44,7 +45,11 @@ export async function POST(request: NextRequest) {
         metadata: { taskId },
         tierContext: { taskStatus },
       }).catch((err: unknown) => {
-        logger.error({ err, userId }, '[mention-notify] Failed to create notification');
+        if (err instanceof NotificationDeliveryError) {
+          logger.error(err.toLogContext(), '[mention-notify] notification delivery failed');
+        } else {
+          logger.error({ err }, '[mention-notify] notification delivery failed (unexpected error type)');
+        }
         return null;
       })
     );

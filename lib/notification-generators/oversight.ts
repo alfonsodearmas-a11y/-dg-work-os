@@ -2,6 +2,7 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { insertNotification } from '../notifications';
 import type { Notification, GenerateResult, GenerateContext } from '../notifications';
+import { NotificationDeliveryError } from '../notifications/errors';
 import { MINISTRY_ROLES } from '../people-types';
 import { logger } from '@/lib/logger';
 
@@ -66,29 +67,37 @@ export async function generateOversightNotifications(ctx: GenerateContext): Prom
       if (summary.atRisk > 0) parts.push(`${summary.atRisk} at risk`);
       if (summary.endingSoon > 0) parts.push(`${summary.endingSoon} ending soon`);
 
-      const inserted = await insertNotification({
-        user_id: ctx.userId,
-        type: 'oversight_overdue_summary',
-        title: `Oversight: ${parts.join(', ')}`,
-        body: `${data.overdue.length + data.atRisk.length + data.endingSoon.length} projects need attention across the portfolio`,
-        icon: 'oversight',
-        priority: summary.overdue > 10 ? 'high' : 'medium',
-        reference_type: 'oversight',
-        reference_id: `oversight-summary-${today.toISOString().split('T')[0]}`,
-        reference_url: '/projects',
-        scheduled_for: morningSlot,
-        category: 'oversight',
-        source_module: 'oversight',
-        action_required: true,
-        action_type: 'review',
-        metadata: {
-          overdue_count: summary.overdue,
-          at_risk_count: summary.atRisk,
-          ending_soon_count: summary.endingSoon,
-          scrape_date: data.metadata.generatedAt,
-        },
-      });
-      if (inserted) created.push(inserted);
+      try {
+        const inserted = await insertNotification({
+          user_id: ctx.userId,
+          type: 'oversight_overdue_summary',
+          title: `Oversight: ${parts.join(', ')}`,
+          body: `${data.overdue.length + data.atRisk.length + data.endingSoon.length} projects need attention across the portfolio`,
+          icon: 'oversight',
+          priority: summary.overdue > 10 ? 'high' : 'medium',
+          reference_type: 'oversight',
+          reference_id: `oversight-summary-${today.toISOString().split('T')[0]}`,
+          reference_url: '/projects',
+          scheduled_for: morningSlot,
+          category: 'oversight',
+          source_module: 'oversight',
+          action_required: true,
+          action_type: 'review',
+          metadata: {
+            overdue_count: summary.overdue,
+            at_risk_count: summary.atRisk,
+            ending_soon_count: summary.endingSoon,
+            scrape_date: data.metadata.generatedAt,
+          },
+        });
+        if (inserted) created.push(inserted);
+      } catch (err) {
+        if (err instanceof NotificationDeliveryError) {
+          logger.error(err.toLogContext(), '[oversight-gen] notification delivery failed');
+        } else {
+          logger.error({ err }, '[oversight-gen] notification delivery failed (unexpected error type)');
+        }
+      }
     }
 
     // 2. Individual at-risk alerts for high-value projects (>$1B, max 3)
@@ -97,30 +106,38 @@ export async function generateOversightNotifications(ctx: GenerateContext): Prom
       .slice(0, 3);
 
     for (const p of highValueAtRisk) {
-      const inserted = await insertNotification({
-        user_id: ctx.userId,
-        type: 'oversight_at_risk',
-        title: `At risk: ${p.projectName || 'Unnamed project'}`,
-        body: `${p.subAgency || p.executingAgency || 'Unknown'} — ${formatValue(p.contractValue)} — ${p.daysRemaining ?? '?'} days remaining`,
-        icon: 'oversight',
-        priority: 'high',
-        reference_type: 'oversight',
-        reference_id: `oversight-${p.p3Id}`,
-        reference_url: '/projects',
-        scheduled_for: morningSlot,
-        category: 'oversight',
-        source_module: 'oversight',
-        action_required: false,
-        metadata: {
-          p3_id: p.p3Id,
-          project_name: p.projectName,
-          agency: p.subAgency || p.executingAgency,
-          contract_value: p.contractValue,
-          days_remaining: p.daysRemaining,
-          risk: p.risk,
-        },
-      });
-      if (inserted) created.push(inserted);
+      try {
+        const inserted = await insertNotification({
+          user_id: ctx.userId,
+          type: 'oversight_at_risk',
+          title: `At risk: ${p.projectName || 'Unnamed project'}`,
+          body: `${p.subAgency || p.executingAgency || 'Unknown'} — ${formatValue(p.contractValue)} — ${p.daysRemaining ?? '?'} days remaining`,
+          icon: 'oversight',
+          priority: 'high',
+          reference_type: 'oversight',
+          reference_id: `oversight-${p.p3Id}`,
+          reference_url: '/projects',
+          scheduled_for: morningSlot,
+          category: 'oversight',
+          source_module: 'oversight',
+          action_required: false,
+          metadata: {
+            p3_id: p.p3Id,
+            project_name: p.projectName,
+            agency: p.subAgency || p.executingAgency,
+            contract_value: p.contractValue,
+            days_remaining: p.daysRemaining,
+            risk: p.risk,
+          },
+        });
+        if (inserted) created.push(inserted);
+      } catch (err) {
+        if (err instanceof NotificationDeliveryError) {
+          logger.error(err.toLogContext(), '[oversight-gen] notification delivery failed');
+        } else {
+          logger.error({ err }, '[oversight-gen] notification delivery failed (unexpected error type)');
+        }
+      }
     }
   } catch (err) {
     // File may not exist yet or be malformed — skip silently
