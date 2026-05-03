@@ -27,6 +27,7 @@ export interface TodaySignal {
   dueDate: string | null;    // ISO date
   ageDays: number | null;    // days-overdue | days-over-SLA | days-past-due
   computedAt: string;        // ISO timestamp signal was built
+  rollupCount?: number;      // # of underlying records this signal represents; set on rollup kinds, treat undefined as 1
 }
 
 export interface TodaySourceHealth {
