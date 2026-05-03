@@ -4,8 +4,10 @@ import { requireRole, canAssignTasks } from '@/lib/auth-helpers';
 import { MINISTRY_ROLES } from '@/lib/people-types';
 import { supabaseAdmin } from '@/lib/db';
 import { insertNotification } from '@/lib/notifications';
+import { NotificationDeliveryError } from '@/lib/notifications/errors';
 import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
 import { TASK_COLUMNS, flattenTaskOwner } from '@/lib/task-types';
+import { logger } from '@/lib/logger';
 
 const createTaskSchema = z.object({
   title: z.string().min(1),
@@ -154,22 +156,32 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   });
 
   if (data.assignee_id && canAssignTasks(session.user.role) && data.assignee_id !== session.user.id) {
-    await insertNotification({
-      user_id: data.assignee_id,
-      type: 'task_assigned',
-      title: 'New task assigned to you',
-      body: task.title,
-      icon: 'task',
-      priority: task.priority === 'high' || task.priority === 'critical' ? 'high' : 'medium',
-      reference_type: 'task',
-      reference_id: task.id,
-      reference_url: '/tasks',
-      scheduled_for: new Date().toISOString(),
-      category: 'tasks',
-      source_module: 'tasks',
-      action_required: true,
-      action_type: 'acknowledge',
-    });
+    try {
+      await insertNotification({
+        user_id: data.assignee_id,
+        type: 'task_assigned',
+        title: 'New task assigned to you',
+        body: task.title,
+        icon: 'task',
+        priority: task.priority === 'high' || task.priority === 'critical' ? 'high' : 'medium',
+        reference_type: 'task',
+        reference_id: task.id,
+        reference_url: '/tasks',
+        scheduled_for: new Date().toISOString(),
+        category: 'tasks',
+        source_module: 'tasks',
+        action_required: true,
+        action_type: 'acknowledge',
+      });
+    } catch (err) {
+      if (err instanceof NotificationDeliveryError) {
+        logger.error(err.toLogContext(), '[tasks-create] notification delivery failed');
+      } else {
+        logger.error({ err }, '[tasks-create] notification delivery failed (unexpected error type)');
+      }
+      // Task was created — don't fail the create flow because the assignment
+      // notification couldn't be delivered.
+    }
   }
 
   return NextResponse.json({ task: flatTask });

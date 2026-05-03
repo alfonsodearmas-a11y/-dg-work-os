@@ -4,8 +4,10 @@ import crypto from 'crypto';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { insertNotification } from '@/lib/notifications';
+import { NotificationDeliveryError } from '@/lib/notifications/errors';
 import { sendInviteEmail } from '@/lib/invite-email';
 import { withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 import { grantModuleAccess, bulkUpsertModulePermissions } from '@/lib/modules/access';
 import { ROLE_LABELS, MINISTRY_ROLES } from '@/lib/people-types';
 import type { Role } from '@/lib/people-types';
@@ -120,20 +122,30 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     );
   }
 
-  await insertNotification({
-    user_id: session.user.id,
-    type: 'invite_sent',
-    title: 'Invite sent',
-    body: `Invite sent to ${newUser.name} (${newUser.email})`,
-    icon: 'user',
-    priority: 'low',
-    reference_type: 'system',
-    reference_id: newUser.id,
-    reference_url: '/admin/people',
-    scheduled_for: new Date().toISOString(),
-    category: 'system',
-    source_module: 'admin',
-  });
+  try {
+    await insertNotification({
+      user_id: session.user.id,
+      type: 'invite_sent',
+      title: 'Invite sent',
+      body: `Invite sent to ${newUser.name} (${newUser.email})`,
+      icon: 'user',
+      priority: 'low',
+      reference_type: 'system',
+      reference_id: newUser.id,
+      reference_url: '/admin/people',
+      scheduled_for: new Date().toISOString(),
+      category: 'system',
+      source_module: 'admin',
+    });
+  } catch (err) {
+    if (err instanceof NotificationDeliveryError) {
+      logger.error(err.toLogContext(), '[admin-users] notification delivery failed');
+    } else {
+      logger.error({ err }, '[admin-users] notification delivery failed (unexpected error type)');
+    }
+    // Invite was created — don't fail the user-create flow because the
+    // confirmation notification couldn't be delivered.
+  }
 
   return NextResponse.json({
     user: newUser,

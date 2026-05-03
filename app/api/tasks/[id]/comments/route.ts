@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { createNotification } from '@/lib/notifications/notification-service';
+import { NotificationDeliveryError } from '@/lib/notifications/errors';
 import { cleanMentionBody } from '@/lib/notifications/mention-utils';
 import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
@@ -127,7 +128,13 @@ export const POST = withErrorHandler(async (
           referenceUrl: '/tasks',
           metadata: { taskId: id },
           tierContext: { taskStatus },
-        }).catch((err: unknown) => logger.error({ err }, '[task-comments] Mention notification failed'));
+        }).catch((err: unknown) => {
+          if (err instanceof NotificationDeliveryError) {
+            logger.error(err.toLogContext(), '[task-comments] notification delivery failed');
+          } else {
+            logger.error({ err }, '[task-comments] notification delivery failed (unexpected error type)');
+          }
+        });
       }
 
       // If this is a reply, notify the parent comment author
@@ -152,7 +159,13 @@ export const POST = withErrorHandler(async (
             referenceUrl: '/tasks',
             metadata: { taskId: id },
             tierContext: { taskStatus },
-          }).catch((err: unknown) => logger.error({ err }, '[task-comments] Reply notification failed'));
+          }).catch((err: unknown) => {
+            if (err instanceof NotificationDeliveryError) {
+              logger.error(err.toLogContext(), '[task-comments] notification delivery failed');
+            } else {
+              logger.error({ err }, '[task-comments] notification delivery failed (unexpected error type)');
+            }
+          });
         }
       }
     } catch (err) {

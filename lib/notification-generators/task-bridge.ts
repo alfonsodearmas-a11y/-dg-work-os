@@ -1,5 +1,6 @@
 import { insertNotification } from '../notifications';
 import type { Notification, GenerateResult, GenerateContext } from '../notifications';
+import { NotificationDeliveryError } from '../notifications/errors';
 import { query } from '../db-pg';
 import { MINISTRY_ROLES } from '../people-types';
 import { logger } from '@/lib/logger';
@@ -48,30 +49,38 @@ export async function generateTaskBridgeNotifications(ctx: GenerateContext): Pro
       if (row.agency) bodyParts.push(row.agency);
       if (row.message) bodyParts.push(row.message);
 
-      const inserted = await insertNotification({
-        user_id: ctx.userId,
-        type: config.notifType,
-        title: `${row.type === 'task_overdue' ? 'Task overdue' : row.type === 'task_submitted' ? 'Task submitted' : 'Extension requested'}: ${taskTitle}`,
-        body: bodyParts.join(' — '),
-        icon: 'task',
-        priority: config.priority,
-        reference_type: 'task',
-        reference_id: row.task_id || row.id,
-        reference_url: '/admin/tasks',
-        scheduled_for: morningSlot,
-        category: 'tasks',
-        source_module: 'task-management',
-        action_required: config.actionRequired,
-        action_type: row.type === 'task_submitted' ? 'review' : row.type === 'extension_requested' ? 'review' : 'view',
-        metadata: {
-          pg_notification_id: row.id,
-          task_id: row.task_id,
-          assignee: row.assignee_name,
-          agency: row.agency,
-          original_type: row.type,
-        },
-      });
-      if (inserted) created.push(inserted);
+      try {
+        const inserted = await insertNotification({
+          user_id: ctx.userId,
+          type: config.notifType,
+          title: `${row.type === 'task_overdue' ? 'Task overdue' : row.type === 'task_submitted' ? 'Task submitted' : 'Extension requested'}: ${taskTitle}`,
+          body: bodyParts.join(' — '),
+          icon: 'task',
+          priority: config.priority,
+          reference_type: 'task',
+          reference_id: row.task_id || row.id,
+          reference_url: '/admin/tasks',
+          scheduled_for: morningSlot,
+          category: 'tasks',
+          source_module: 'task-management',
+          action_required: config.actionRequired,
+          action_type: row.type === 'task_submitted' ? 'review' : row.type === 'extension_requested' ? 'review' : 'view',
+          metadata: {
+            pg_notification_id: row.id,
+            task_id: row.task_id,
+            assignee: row.assignee_name,
+            agency: row.agency,
+            original_type: row.type,
+          },
+        });
+        if (inserted) created.push(inserted);
+      } catch (err) {
+        if (err instanceof NotificationDeliveryError) {
+          logger.error(err.toLogContext(), '[task-bridge-gen] notification delivery failed');
+        } else {
+          logger.error({ err }, '[task-bridge-gen] notification delivery failed (unexpected error type)');
+        }
+      }
     }
   } catch (err) {
     // task_notifications table may not exist yet

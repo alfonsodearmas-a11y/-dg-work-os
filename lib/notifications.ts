@@ -2,6 +2,7 @@ import { supabaseAdmin } from './db';
 import { fetchWeekEvents } from './google-calendar';
 import { MINISTRY_ROLES } from './people-types';
 import { logger } from '@/lib/logger';
+import { NotificationDeliveryError } from './notifications/errors';
 
 // --- Types ---
 
@@ -229,7 +230,10 @@ function getCachedPreferences(userId: string): NotificationPrefs | undefined {
 }
 
 export async function insertNotification(n: InsertNotificationInput): Promise<Notification | null> {
-  // Check user preferences before inserting (cached within generateAll cycle)
+  // Check user preferences before inserting (cached within generateAll cycle).
+  // A failure here used to be caught-and-proceed — that silent masking is exactly
+  // what hid the 2026-04-13 schema drift. Now the error propagates as a typed
+  // NotificationDeliveryError so callers can log structured context and decide.
   try {
     let prefs = getCachedPreferences(n.user_id);
     if (!prefs) {
@@ -244,7 +248,14 @@ export async function insertNotification(n: InsertNotificationInput): Promise<No
     const catPref = CATEGORY_TO_PREFERENCE[n.category || ''];
     if (catPref && prefs[catPref] === false) return null;
   } catch (err) {
-    logger.error({ err, userId: n.user_id }, 'insertNotification: preference check failed, proceeding with insert');
+    if (err instanceof NotificationDeliveryError) throw err;
+    throw new NotificationDeliveryError({
+      eventType: n.type,
+      recipientId: n.user_id,
+      parentEntityType: null,
+      parentEntityId: null,
+      cause: err,
+    });
   }
 
   if (await exists(n.type, n.reference_id || '', n.scheduled_for)) {
@@ -261,8 +272,17 @@ export async function insertNotification(n: InsertNotificationInput): Promise<No
   };
   const { data, error } = await supabaseAdmin.from('notifications').insert(row).select().single();
   if (error) {
-    logger.error({ err: error }, 'Failed to insert notification');
-    return null;
+    // Legacy path: parent_entity_type / parent_entity_id are not tracked here
+    // (this predates the v2 entity taxonomy). Pass null and accept the gap —
+    // structured logs still carry user_id, event_type (= legacy n.type), and
+    // the underlying pg error code/name/message.
+    throw new NotificationDeliveryError({
+      eventType: n.type,
+      recipientId: n.user_id,
+      parentEntityType: null,
+      parentEntityId: null,
+      cause: error,
+    });
   }
   return data as Notification;
 }

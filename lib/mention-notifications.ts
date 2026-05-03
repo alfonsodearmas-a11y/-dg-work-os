@@ -1,5 +1,6 @@
 import { query } from './db-pg';
 import { insertNotification } from './notifications';
+import { NotificationDeliveryError } from './notifications/errors';
 import { logger } from '@/lib/logger';
 
 /**
@@ -70,7 +71,11 @@ export async function notifyMentionedUsers(
         source_module: 'tasks',
       });
     } catch (err) {
-      logger.error({ err: err as Error }, 'mention-notifications: failed to create notification');
+      if (err instanceof NotificationDeliveryError) {
+        logger.error(err.toLogContext(), 'mention-notifications: notification delivery failed');
+      } else {
+        logger.error({ err }, 'mention-notifications: notification delivery failed (unexpected error type)');
+      }
     }
   }
 }

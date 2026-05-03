@@ -8,6 +8,21 @@ import {
 } from './classify-tier';
 import { DEFAULT_EVENT_PREFERENCES, type EventPrefEntry } from '@/lib/notifications';
 import { sendInstantEmailForNotification } from './send-instant-email';
+import { NotificationDeliveryError } from './errors';
+
+// Event types we emit a positive-signal "delivered" log for. Gated also by
+// NOTIFICATIONS_DELIVERY_LOG env var so prod can disable without a code change.
+// Rationale: detect future silent-failure regressions by absence of positive
+// signal, not just by presence of error logs.
+const LOUD_EVENT_TYPES: ReadonlySet<string> = new Set([
+  'comment_mention',
+  'task_assigned',
+  'task_blocked',
+]);
+
+function deliveryLogEnabled(): boolean {
+  return (process.env.NOTIFICATIONS_DELIVERY_LOG ?? 'on') !== 'off';
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -131,32 +146,27 @@ export async function getUserEventPreferences(
   userId: string,
   eventType: string,
 ): Promise<EventPreference> {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('notification_preferences')
-      .select('event_preferences')
-      .eq('user_id', userId)
-      .maybeSingle();
+  // Throws on database failure (raw pg error) so the caller can wrap it into
+  // NotificationDeliveryError with full context. Silent default-on-error here
+  // is exactly the masking pattern that hid the 2026-04-13 schema drift.
+  const { data, error } = await supabaseAdmin
+    .from('notification_preferences')
+    .select('event_preferences')
+    .eq('user_id', userId)
+    .maybeSingle();
 
-    if (error) {
-      logger.error({ err: error, userId, eventType }, 'Failed to fetch notification preferences');
-      return DEFAULTS[eventType] ?? FALLBACK_PREFERENCE;
-    }
+  if (error) throw error;
 
-    if (!data?.event_preferences) {
-      return DEFAULTS[eventType] ?? FALLBACK_PREFERENCE;
-    }
-
-    const prefs = data.event_preferences as Record<string, EventPreference>;
-    if (prefs[eventType]) {
-      return prefs[eventType];
-    }
-
-    return DEFAULTS[eventType] ?? FALLBACK_PREFERENCE;
-  } catch (err) {
-    logger.error({ err, userId, eventType }, 'Unexpected error fetching notification preferences');
+  if (!data?.event_preferences) {
     return DEFAULTS[eventType] ?? FALLBACK_PREFERENCE;
   }
+
+  const prefs = data.event_preferences as Record<string, EventPreference>;
+  if (prefs[eventType]) {
+    return prefs[eventType];
+  }
+
+  return DEFAULTS[eventType] ?? FALLBACK_PREFERENCE;
 }
 
 // ---------------------------------------------------------------------------
@@ -230,8 +240,13 @@ export async function createNotification(
         .single();
 
       if (updateError) {
-        logger.error({ err: updateError, notificationId: existing.id }, 'Failed to update deduped notification');
-        return null;
+        throw new NotificationDeliveryError({
+          eventType,
+          recipientId,
+          parentEntityType: parentEntityType ?? null,
+          parentEntityId: parentEntityId ?? null,
+          cause: updateError,
+        });
       }
 
       logger.info({ notificationId: existing.id, eventType }, 'Notification deduped — updated existing row');
@@ -283,14 +298,29 @@ export async function createNotification(
       .single();
 
     if (insertError) {
-      logger.error({ err: insertError, recipientId, eventType }, 'Failed to insert notification');
-      return null;
+      throw new NotificationDeliveryError({
+        eventType,
+        recipientId,
+        parentEntityType: parentEntityType ?? null,
+        parentEntityId: parentEntityId ?? null,
+        cause: insertError,
+      });
     }
 
-    logger.info(
-      { notificationId: inserted.id, recipientId, eventType, tier: importanceTier },
-      'Notification created',
-    );
+    // Positive-signal "delivered" log — gated by env + event type. Detects
+    // future silent-failure regressions by absence-of-positive-signal.
+    if (deliveryLogEnabled() && LOUD_EVENT_TYPES.has(eventType)) {
+      logger.info(
+        {
+          user_id: recipientId,
+          event_type: eventType,
+          parent_entity_type: parentEntityType ?? null,
+          parent_entity_id: parentEntityId ?? null,
+          notification_id: inserted.id,
+        },
+        '[notifications] delivered',
+      );
+    }
 
     // 8. Fire-and-forget instant email (non-blocking)
     if (prefs.email === 'instant' && inserted) {
@@ -301,8 +331,14 @@ export async function createNotification(
 
     return inserted as NotificationRow;
   } catch (err) {
-    logger.error({ err, recipientId, eventType }, 'Unexpected error creating notification');
-    return null;
+    if (err instanceof NotificationDeliveryError) throw err;
+    throw new NotificationDeliveryError({
+      eventType,
+      recipientId,
+      parentEntityType: parentEntityType ?? null,
+      parentEntityId: parentEntityId ?? null,
+      cause: err,
+    });
   }
 }
 
