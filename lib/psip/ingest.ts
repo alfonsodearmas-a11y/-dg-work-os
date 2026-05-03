@@ -52,14 +52,40 @@ export interface IngestContext {
   storagePath: string;
 }
 
+// ── In-batch dedup ───────────────────────────────────────────────────────────
+//
+// Drop rows whose fingerprint has already appeared in the same parse. The
+// matcher then sees one row per fingerprint, so 'new' classifications never
+// double-insert and 'update' classifications never double-write
+// tender_field_change entries. Order of arrival is preserved; the FIRST row
+// per fingerprint wins.
+function dedupRowsByFingerprint(rows: ParsedTender[]): ParsedTender[] {
+  const seen = new Map<string, ParsedTender>();
+  for (const row of rows) {
+    const fp = computeRowFingerprint(row);
+    if (seen.has(fp)) continue;
+    seen.set(fp, row);
+  }
+  return Array.from(seen.values());
+}
+
 // ── Preview ──────────────────────────────────────────────────────────────────
 
 export async function previewPsipUpload(buffer: Buffer, ctx: IngestContext): Promise<PreviewOutcome> {
   const parse = parsePsipWorkbook(buffer);
   const existing = await fetchExistingSnapshots();
 
+  // In-batch dedup by fingerprint: if the spreadsheet contains multiple rows
+  // with the same (agency, programme, sub-programme, programme_activity,
+  // description), keep the FIRST and drop the rest. Without this, rows that
+  // would classify as 'new' produce duplicate active tenders, and rows that
+  // classify as 'update' produce redundant tender_field_change entries. R5's
+  // review-insert dedup catches the 'review' case via fingerprint already.
+  const dedupedRows = dedupRowsByFingerprint(parse.tenders);
+  const intra_batch_dups = parse.tenders.length - dedupedRows.length;
+
   // Route incoming rows through persisted Skip/Match decisions before matching.
-  const preprocess = await preprocessIncomingRows(parse.tenders, existing);
+  const preprocess = await preprocessIncomingRows(dedupedRows, existing);
   const plan = matchTenders(preprocess.remaining, existing);
   plan.results.push(...preprocess.injectedResults);
   plan.stats.updated += preprocess.prior_supersedes_count;
@@ -81,6 +107,7 @@ export async function previewPsipUpload(buffer: Buffer, ctx: IngestContext): Pro
         excluded_via_skip: preprocess.excluded_count,
         prior_supersedes: preprocess.prior_supersedes_count,
         prior_duplicates: preprocess.prior_duplicates_count,
+        intra_batch_dups,
       },
     })
     .select('id, uploaded_at')
@@ -191,11 +218,13 @@ export async function applyPsipUpload(uploadId: string, buffer: Buffer, userId: 
 
   // Re-parse + re-match to ensure the preview wasn't drifted. This also guards
   // against applying an upload whose preview-time state no longer matches.
-  // The same preprocess (exclusions + prior match decisions) runs on apply so
-  // late-added Skip/Match decisions are honored.
+  // The same preprocess (exclusions + prior match decisions) and in-batch
+  // dedup run on apply so late-added Skip/Match decisions are honored and
+  // duplicate-fingerprint rows do not cause double-writes.
   const parse = parsePsipWorkbook(buffer);
   const existing = await fetchExistingSnapshots();
-  const preprocess = await preprocessIncomingRows(parse.tenders, existing);
+  const dedupedRows = dedupRowsByFingerprint(parse.tenders);
+  const preprocess = await preprocessIncomingRows(dedupedRows, existing);
   const plan = matchTenders(preprocess.remaining, existing);
   plan.results.push(...preprocess.injectedResults);
   plan.stats.updated += preprocess.prior_supersedes_count;
