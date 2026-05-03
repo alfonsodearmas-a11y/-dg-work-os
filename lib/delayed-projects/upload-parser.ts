@@ -12,13 +12,28 @@ function normalize(s: string): string {
 
 /**
  * Known spreadsheet columns → database field mapping.
- * The spreadsheet has 13 columns with consistent headers.
+ * Patterns are substring-matched against the normalized header (lowercase,
+ * punctuation stripped, whitespace collapsed). The first matching entry wins,
+ * so order matters: put more-specific entries before less-specific ones.
+ *
+ * `sub_agency` is intentionally listed before `executing_agency` so a header
+ * like "Sub Agency Short Name" wins on `sub_agency` rather than being stolen
+ * by `executing_agency`'s broader `'agency'` pattern.
+ *
+ * TODO(header-mapping): Airstrips bulk upload (components/airstrips/
+ * BulkUploadAirstripsModal.tsx + lib/airstrip-upload-parser.ts) lets users
+ * remap unrecognized columns interactively. Delayed-projects uses static
+ * patterns here. They should probably converge on a shared header-mapping
+ * component long-term, but the trade-off is that delayed-projects targets a
+ * single known export (oversight.gov.gy) where pattern aliasing is usually
+ * enough and a remap UI is friction. Revisit if the export format keeps
+ * drifting.
  */
 const COLUMN_MAP: { pattern: string[]; field: string }[] = [
   { pattern: ['project reference'], field: 'project_reference' },
-  { pattern: ['executing agency'], field: 'executing_agency' },
   { pattern: ['sub agency', 'subagency'], field: 'sub_agency' },
-  { pattern: ['project name'], field: 'project_name' },
+  { pattern: ['executing agency', 'agency short name', 'agency'], field: 'executing_agency' },
+  { pattern: ['project name', 'project title'], field: 'project_name' },
   { pattern: ['region'], field: 'region' },
   { pattern: ['tender board type', 'tender board'], field: 'tender_board_type' },
   { pattern: ['contract value'], field: 'contract_value' },
@@ -29,12 +44,16 @@ const COLUMN_MAP: { pattern: string[]; field: string }[] = [
   { pattern: ['has images'], field: 'has_images' },
 ];
 
-/** Columns to skip (not mapped to DB fields). */
-const SKIP_PATTERNS = ['view project', 'view'];
+/**
+ * Columns to skip (not mapped to DB fields). Anchored regexes — bare
+ * substrings here are dangerous (a substring 'view' silently drops 'Overview',
+ * 'Preview', 'Reviewed', etc.).
+ */
+const SKIP_PATTERNS: RegExp[] = [/^view( project)?$/];
 
 function mapHeader(header: string): string | null {
   const norm = normalize(header);
-  if (SKIP_PATTERNS.some((p) => norm.includes(p))) return null;
+  if (SKIP_PATTERNS.some((re) => re.test(norm))) return null;
   for (const entry of COLUMN_MAP) {
     if (entry.pattern.some((p) => norm.includes(p))) return entry.field;
   }
@@ -64,6 +83,12 @@ export interface ParsedUploadResult {
   skippedCount: number;
   headers: string[];
   headerMapping: Record<string, string | null>;
+  /** Required fields that no header mapped to. Non-empty = upload should not proceed. */
+  missingRequiredFields: string[];
+  /** True when no header mapped to executing_agency, so the 'MOPUA' fallback was applied. */
+  executingAgencyDefaulted: boolean;
+  /** Number of imported rows whose executing_agency was filled by the 'MOPUA' fallback. */
+  executingAgencyDefaultedCount: number;
 }
 
 // ── Main Parser ─────────────────────────────────────────────────────────────
@@ -85,11 +110,16 @@ export function parseDelayedProjectsFile(
   // Check required columns are mapped
   const mappedFields = new Set(Object.values(headerMapping).filter(Boolean));
   const required = ['project_reference', 'project_name', 'sub_agency'];
+  const missingRequiredFields: string[] = [];
+  const headersList = result.headers.length > 0 ? result.headers.join(', ') : '(none)';
   for (const req of required) {
     if (!mappedFields.has(req)) {
-      warnings.push(`Required column not found: ${req}`);
+      warnings.push(`Required column not found: ${req}. Found these headers: ${headersList}`);
+      missingRequiredFields.push(req);
     }
   }
+  const executingAgencyDefaulted = !mappedFields.has('executing_agency');
+  let executingAgencyDefaultedCount = 0;
 
   const rows: ParsedDelayedProject[] = [];
 
@@ -147,6 +177,8 @@ export function parseDelayedProjectsFile(
     const hasImagesNum = parseInt(hasImagesRaw, 10);
     const hasImages = hasImagesRaw === 'true' || hasImagesRaw === 'yes' || (!isNaN(hasImagesNum) && hasImagesNum > 0);
 
+    if (executingAgencyDefaulted) executingAgencyDefaultedCount++;
+
     rows.push({
       project_reference: ref,
       executing_agency: mapped.executing_agency?.trim() || 'MOPUA',
@@ -169,5 +201,8 @@ export function parseDelayedProjectsFile(
     skippedCount,
     headers: result.headers,
     headerMapping,
+    missingRequiredFields,
+    executingAgencyDefaulted,
+    executingAgencyDefaultedCount,
   };
 }

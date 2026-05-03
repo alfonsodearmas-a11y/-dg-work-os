@@ -142,47 +142,96 @@ export function UploadModal({ isOpen, onClose, onUploaded }: UploadModalProps) {
           )}
 
           {/* Step 1: Validation + Upload */}
-          {step === 1 && !uploadResult && validation && (
+          {step === 1 && !uploadResult && validation && parseResult && (
             <>
               {/* File info */}
               <div className="flex items-center gap-3 p-3 bg-navy-950/60 rounded-lg border border-navy-800">
                 <FileSpreadsheet className="h-5 w-5 text-gold-500 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-white font-medium truncate">{file?.name}</p>
-                  <p className="text-xs text-navy-600">{parseResult?.rows.length} rows parsed</p>
+                  <p className="text-xs text-navy-600">{parseResult.rows.length} rows parsed</p>
                 </div>
                 <button onClick={reset} className="text-xs text-navy-600 hover:text-white">Change file</button>
               </div>
 
-              {/* Parse warnings */}
-              {parseResult && parseResult.warnings.length > 0 && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                  <p className="text-xs text-amber-400 font-medium mb-1">Parse warnings ({parseResult.warnings.length})</p>
-                  <ul className="text-xs text-amber-300/70 space-y-0.5 max-h-20 overflow-y-auto">
-                    {parseResult.warnings.slice(0, 10).map((w, i) => <li key={i}>{w}</li>)}
-                    {parseResult.warnings.length > 10 && <li>...and {parseResult.warnings.length - 10} more</li>}
-                  </ul>
+              {parseResult.missingRequiredFields.length > 0 ? (
+                /* Header mismatch — short-circuit the row-level summary entirely. */
+                <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg space-y-3">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-red-300">Your file is missing a required column</p>
+                      <p className="text-xs text-red-300/80 mt-1">
+                        We could not find a column for{' '}
+                        <span className="font-mono">
+                          {parseResult.missingRequiredFields.join(', ')}
+                        </span>
+                        . Rename the matching column in your spreadsheet, or re-export from oversight.gov.gy.
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-red-300/70 font-medium mb-1">Headers found in your file:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {parseResult.headers.length > 0 ? (
+                        parseResult.headers.map((h) => (
+                          <span key={h} className="px-2 py-0.5 rounded text-xs font-mono bg-navy-950/60 text-red-200/80 border border-red-500/20">
+                            {h}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-red-300/60">(none)</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
+              ) : (
+                <>
+                  {/* Parse warnings (non-header issues only — header issues handled above). */}
+                  {parseResult.warnings.length > 0 && (
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                      <p className="text-xs text-amber-400 font-medium mb-1">Parse warnings ({parseResult.warnings.length})</p>
+                      <ul className="text-xs text-amber-300/70 space-y-0.5 max-h-20 overflow-y-auto">
+                        {parseResult.warnings.slice(0, 10).map((w, i) => <li key={i}>{w}</li>)}
+                        {parseResult.warnings.length > 10 && <li>...and {parseResult.warnings.length - 10} more</li>}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Agency-fallback notice — when no executing_agency column was mapped. */}
+                  {parseResult.executingAgencyDefaulted && parseResult.executingAgencyDefaultedCount > 0 && (
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-300/80">
+                        Agency defaulted to <span className="font-mono">MOPUA</span> for{' '}
+                        <span className="font-semibold">{parseResult.executingAgencyDefaultedCount}</span> row
+                        {parseResult.executingAgencyDefaultedCount === 1 ? '' : 's'} because no
+                        <span className="font-mono"> executing_agency</span> column was mapped. If your
+                        spreadsheet has agency data in a different column, rename it before re-uploading.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Validation summary */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-center">
+                      <p className="text-lg font-bold text-emerald-400">{validation.valid}</p>
+                      <p className="text-xs text-emerald-400/70">Valid</p>
+                    </div>
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-center">
+                      <p className="text-lg font-bold text-amber-400">{validation.warnings}</p>
+                      <p className="text-xs text-amber-400/70">Warnings</p>
+                    </div>
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-center">
+                      <p className="text-lg font-bold text-red-400">{validation.blocked}</p>
+                      <p className="text-xs text-red-400/70">Blocked</p>
+                    </div>
+                  </div>
+                </>
               )}
 
-              {/* Validation summary */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-center">
-                  <p className="text-lg font-bold text-emerald-400">{validation.valid}</p>
-                  <p className="text-xs text-emerald-400/70">Valid</p>
-                </div>
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-center">
-                  <p className="text-lg font-bold text-amber-400">{validation.warnings}</p>
-                  <p className="text-xs text-amber-400/70">Warnings</p>
-                </div>
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-center">
-                  <p className="text-lg font-bold text-red-400">{validation.blocked}</p>
-                  <p className="text-xs text-red-400/70">Blocked</p>
-                </div>
-              </div>
-
               {/* Warning rows */}
-              {validation.warnings > 0 && (
+              {parseResult.missingRequiredFields.length === 0 && validation.warnings > 0 && (
                 <div>
                   <button
                     onClick={() => setShowWarnings(!showWarnings)}
@@ -205,7 +254,7 @@ export function UploadModal({ isOpen, onClose, onUploaded }: UploadModalProps) {
               )}
 
               {/* Blocked rows */}
-              {validation.blocked > 0 && (
+              {parseResult.missingRequiredFields.length === 0 && validation.blocked > 0 && (
                 <div>
                   <button
                     onClick={() => setShowBlocked(!showBlocked)}
@@ -296,7 +345,12 @@ export function UploadModal({ isOpen, onClose, onUploaded }: UploadModalProps) {
               <button onClick={reset} className="btn-navy px-4 py-2 text-sm">Back</button>
               <button
                 onClick={handleUpload}
-                disabled={uploading || !validation || validation.valid + validation.warnings === 0}
+                disabled={
+                  uploading ||
+                  !validation ||
+                  (parseResult?.missingRequiredFields.length ?? 0) > 0 ||
+                  validation.valid + validation.warnings === 0
+                }
                 className="btn-gold px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-50"
               >
                 {uploading ? (
