@@ -118,6 +118,7 @@ export interface Tender {
   implementation_status_pct: number | null;
   remarks: string | null;
   missing_from_last_upload: boolean;
+  keep_tracking_despite_missing: boolean;
   first_seen_upload_id: string | null;
   last_seen_upload_id: string | null;
   awarded_at: string | null;

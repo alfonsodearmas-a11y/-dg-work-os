@@ -245,23 +245,37 @@ export async function applyPsipUpload(uploadId: string, buffer: Buffer, userId: 
     // REVIEW rows are left as pending tender_match_review entries for human resolution.
   }
 
-  // Flag missing. Disappearance events are written to tender_presence_event
-  // (not the field-change log) so the audit surface stays focused on real
-  // field diffs.
+  // Flag missing. Disappearance events go to tender_presence_event so
+  // the field-change log stays focused on real field diffs. Sticky-tracked
+  // tenders (keep_tracking_despite_missing=true, set via Resurrect) are
+  // excluded from both the flag flip and the presence event — the user has
+  // already asserted the tender should keep being tracked through absences.
   const missingIds = plan.missing.map((m) => m.id);
   if (missingIds.length > 0) {
-    await supabaseAdmin
+    const { data: stickyRows } = await supabaseAdmin
       .from('tender')
-      .update({ missing_from_last_upload: true })
-      .in('id', missingIds);
-    await recordPresenceEventsBatch(
-      plan.missing.map((m) => ({
-        tender_id: m.id,
-        event_type: 'disappeared' as const,
-        agency: m.agency as string,
-        upload_id: uploadId,
-      })),
-    );
+      .select('id')
+      .in('id', missingIds)
+      .eq('keep_tracking_despite_missing', true);
+    const stickyIds = new Set((stickyRows || []).map((r) => r.id as string));
+    const flippableIds = missingIds.filter((id) => !stickyIds.has(id));
+
+    if (flippableIds.length > 0) {
+      await supabaseAdmin
+        .from('tender')
+        .update({ missing_from_last_upload: true })
+        .in('id', flippableIds);
+      await recordPresenceEventsBatch(
+        plan.missing
+          .filter((m) => !stickyIds.has(m.id))
+          .map((m) => ({
+            tender_id: m.id,
+            event_type: 'disappeared' as const,
+            agency: m.agency as string,
+            upload_id: uploadId,
+          })),
+      );
+    }
   }
 
   // Freshness snapshot + stagnant_weeks bookkeeping.

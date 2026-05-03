@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import {
   Package, MessageSquare, Send, FileText, Upload, Download,
   ArrowRight, Trash2, Loader2, History, Repeat, AlertTriangle, Award, HelpCircle,
+  Eye, EyeOff,
 } from 'lucide-react';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
 import { SlidePanel } from '@/components/layout/SlidePanel';
@@ -193,6 +194,22 @@ export function ProcurementDetailPanel({ tenderId, isOpen, onClose, onDeleted }:
     }
   };
 
+  const handleRevokeTracking = async () => {
+    if (!tenderId) return;
+    try {
+      const res = await fetch(`/api/procurement/${tenderId}/revoke-tracking`, { method: 'POST' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || 'Failed to revoke tracking');
+        return;
+      }
+      toast.success('Sticky tracking revoked');
+      fetchTender();
+    } catch {
+      toast.error('Network error');
+    }
+  };
+
   const handleDelete = async () => {
     if (!tenderId) return;
     setDeleting(true);
@@ -264,6 +281,11 @@ export function ProcurementDetailPanel({ tenderId, isOpen, onClose, onDeleted }:
                   {tender.first_appearance_already_awarded && (
                     <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" title="Tender first appeared already at Award — true transition date unknown">
                       <Award className="h-3 w-3" /> Inherited Award
+                    </span>
+                  )}
+                  {tender.keep_tracking_despite_missing && (
+                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30" title="Resurrected. Subsequent uploads that omit this tender will not flag it as missing again.">
+                      <Eye className="h-3 w-3" /> Tracked despite missing
                     </span>
                   )}
                 </div>
@@ -488,9 +510,20 @@ export function ProcurementDetailPanel({ tenderId, isOpen, onClose, onDeleted }:
                         </div>
                       </div>
                     ) : (
-                      <button onClick={() => setConfirmingDelete(true)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors">
-                        <Trash2 className="h-4 w-4" /> Delete tender
-                      </button>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button onClick={() => setConfirmingDelete(true)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors">
+                          <Trash2 className="h-4 w-4" /> Delete tender
+                        </button>
+                        {tender.keep_tracking_despite_missing && (
+                          <button
+                            onClick={handleRevokeTracking}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-violet-300 hover:bg-violet-500/10 transition-colors"
+                            title="Stop tracking this tender once PSIP omits it again"
+                          >
+                            <EyeOff className="h-4 w-4" /> Revoke sticky tracking
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </>

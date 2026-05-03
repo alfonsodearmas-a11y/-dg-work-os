@@ -56,7 +56,18 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Cannot resurrect an archived tender — unarchive first' }, { status: 409 });
       }
 
-      await supabaseAdmin.from('tender').update({ missing_from_last_upload: false }).eq('id', tenderId);
+      // Resurrect = sticky tracking. Setting keep_tracking_despite_missing
+      // tells the matcher to suppress auto-flip-to-missing on subsequent
+      // uploads where this tender remains absent. The user has explicitly
+      // asserted the tender should keep being tracked.
+      await supabaseAdmin
+        .from('tender')
+        .update({
+          missing_from_last_upload: false,
+          keep_tracking_despite_missing: true,
+        })
+        .eq('id', tenderId);
+
       await recordPresenceEvent({
         tender_id: tenderId,
         event_type: 'reappeared',
@@ -64,6 +75,19 @@ export async function POST(request: NextRequest) {
         actor_id: session.user.id,
         actor_role: session.user.role,
       });
+
+      const reasonText = (body?.reason_text as string | undefined) ?? null;
+      await recordDecision({
+        decision_type: 'resurrect',
+        target_kind: 'tender',
+        target_id: tenderId,
+        agency: tender.agency as string,
+        actor_id: session.user.id,
+        actor_role: session.user.role,
+        reason_code: null,
+        reason_text: reasonText,
+      });
+
       return NextResponse.json({ success: true, action: 'resurrect' });
     }
 
