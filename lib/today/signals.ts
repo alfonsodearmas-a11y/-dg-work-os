@@ -382,6 +382,7 @@ export async function fetchStagnantTenderSignals(
       dueDate: null,
       ageDays: maxWeeks * 7,
       computedAt: nowISO,
+      rollupCount: count,
     });
   }
 
@@ -478,6 +479,7 @@ export async function fetchIncompletePsipDataSignals(
       dueDate: null,
       ageDays: maxAgeDays,
       computedAt: nowISO,
+      rollupCount: count,
     });
   }
 

@@ -10,6 +10,8 @@ interface CollapsibleSectionProps {
   badge?: { text: string; variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'gold' };
   icon?: LucideIcon;
   defaultOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   children: ReactNode;
   className?: string;
 }
@@ -20,10 +22,18 @@ export function CollapsibleSection({
   badge,
   icon: Icon,
   defaultOpen = true,
+  open,
+  onOpenChange,
   children,
   className = '',
 }: CollapsibleSectionProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [internalOpen, setInternalOpen] = useState(defaultOpen);
+  const isControlled = open !== undefined;
+  const isOpen = isControlled ? open : internalOpen;
+  const setIsOpen = (next: boolean) => {
+    if (!isControlled) setInternalOpen(next);
+    onOpenChange?.(next);
+  };
 
   return (
     <div className={`rounded-xl border border-navy-800 bg-navy-900/50 ${className}`}>

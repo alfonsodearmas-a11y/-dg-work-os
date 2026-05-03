@@ -1,8 +1,9 @@
 'use client';
 
 import { CheckCircle2, AlertCircle } from 'lucide-react';
-import { TodaySignalCard } from './TodaySignalCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { groupSignals } from './grouping';
+import { TodayGroup } from './TodayGroup';
 import type { TodayPayload } from '@/lib/today/types';
 
 const SOURCE_LABEL: Record<keyof TodayPayload['sources'], string> = {
@@ -34,7 +35,7 @@ export function TodayView({ payload, userName }: { payload: TodayPayload; userNa
       <header>
         <p className="text-xs uppercase tracking-wider text-navy-600">{formatToday(generatedAt)}</p>
         <h1 className="mt-1 text-2xl font-semibold text-white">
-          {firstName ? `Good morning, ${firstName}` : 'Today'}
+          {firstName ? `Hello, ${firstName}` : 'Today'}
         </h1>
         <p className="mt-1 text-sm text-navy-600">
           {counts.total === 0
@@ -62,9 +63,9 @@ export function TodayView({ payload, userName }: { payload: TodayPayload; userNa
           description="No overdue projects, SLA breaches, or open action items. Check back later."
         />
       ) : (
-        <div className="space-y-2">
-          {signals.map((s) => (
-            <TodaySignalCard key={s.id} signal={s} />
+        <div className="space-y-3">
+          {groupSignals(signals).map((g, i) => (
+            <TodayGroup key={g.key} group={g} firstLoadOpen={i === 0} />
           ))}
         </div>
       )}
