@@ -2,12 +2,41 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { DIFFABLE_FIELDS } from '@/lib/psip/matcher';
+import { computeRowFingerprint } from '@/lib/psip/fingerprint';
+import { recordDecision } from '@/lib/procurement/decisions';
 import { logger } from '@/lib/logger';
 import type { ParsedTender, TenderStage } from '@/lib/psip/types';
 
 const VALID_STAGES: TenderStage[] = ['design', 'advertised', 'evaluation', 'awaiting_award', 'award'];
 
-/** POST /api/procurement/review/[id] — resolve a review-queue row */
+const SKIP_REASON_CODES = ['defer', 'header_or_subtotal', 'not_a_tender', 'agency_error'] as const;
+type SkipReasonCode = typeof SKIP_REASON_CODES[number];
+const PERMANENT_SKIP_REASONS: SkipReasonCode[] = ['header_or_subtotal', 'not_a_tender', 'agency_error'];
+
+const MATCH_REASON_CODES = ['supersedes', 'duplicates'] as const;
+type MatchReasonCode = typeof MATCH_REASON_CODES[number];
+
+/**
+ * POST /api/procurement/review/[id] — resolve a review-queue row.
+ *
+ * action='match'  body: { tender_id, reason_code: 'supersedes' | 'duplicates', reason_text? }
+ *   - 'supersedes': fold the parsed row's diffs into the chosen tender (the
+ *     pre-R5 'match' behavior). Writes a procurement_match_decision so future
+ *     uploads of the same fingerprint auto-route here.
+ *   - 'duplicates': bind the row to the chosen tender WITHOUT applying diffs.
+ *     The chosen tender is canonical; this row is a redundant copy. Future
+ *     uploads of the same fingerprint silently drop.
+ *
+ * action='create' body: { stage? (required for ambiguous_stage), reason_text? }
+ *   Creates a new tender from the parsed row. Writes a procurement_decision
+ *   (decision_type='create_from_review').
+ *
+ * action='skip' body: { reason_code: 'defer'|'header_or_subtotal'|'not_a_tender'|'agency_error', reason_text? }
+ *   - 'defer': mark resolved=skipped; the next upload's preprocess will resurface
+ *     this row by appending its upload_id and flipping status back to 'pending'.
+ *   - permanent reasons: write a procurement_excluded_fingerprint row so future
+ *     uploads silently drop matching parsed rows at the parse/match boundary.
+ */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
@@ -18,8 +47,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const body = await request.json();
     const action = body?.action as 'match' | 'create' | 'skip';
     const targetTenderId = body?.tender_id as string | undefined;
-    // For ambiguous_stage reviews, the human assigns a stage.
     const assignedStage = body?.stage as TenderStage | undefined;
+    const rawReasonCode = body?.reason_code as string | undefined;
+    const reasonText = (body?.reason_text as string | undefined) ?? null;
 
     if (!['match', 'create', 'skip'].includes(action)) {
       return NextResponse.json({ error: 'action must be match | create | skip' }, { status: 400 });
@@ -27,7 +57,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const { data: review, error: revErr } = await supabaseAdmin
       .from('tender_match_review')
-      .select('id, upload_id, incoming_row, status, review_reason')
+      .select('id, upload_id, incoming_row, status, review_reason, parsed_row_fingerprint')
       .eq('id', id)
       .single();
     if (revErr || !review) return NextResponse.json({ error: 'Review row not found' }, { status: 404 });
@@ -38,6 +68,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const incoming = review.incoming_row as unknown as ParsedTender;
     const uploadId = review.upload_id as string;
     const reviewReason = (review.review_reason as string) || 'ambiguous_match';
+    const fingerprint = (review.parsed_row_fingerprint as string | null) || computeRowFingerprint(incoming);
+    const agency = (incoming.agency as string) || '';
 
     // Fetch the upload's uploaded_at so we can honestly stamp awarded_at
     // if the resolution creates/moves a tender into the 'award' stage.
@@ -48,7 +80,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .single();
     const uploadedAt = (uploadMeta?.uploaded_at as string) || new Date().toISOString();
 
-    // Validate stage assignment for ambiguous_stage reviews.
     if (reviewReason === 'ambiguous_stage' && action === 'create') {
       if (!assignedStage || !VALID_STAGES.includes(assignedStage)) {
         return NextResponse.json({ error: 'stage is required for ambiguous_stage reviews' }, { status: 400 });
@@ -57,7 +88,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     if (action === 'match') {
       if (!targetTenderId) return NextResponse.json({ error: 'tender_id is required for action=match' }, { status: 400 });
-      // Apply diffs to the chosen tender.
+      if (!rawReasonCode || !MATCH_REASON_CODES.includes(rawReasonCode as MatchReasonCode)) {
+        return NextResponse.json(
+          { error: `reason_code is required and must be one of: ${MATCH_REASON_CODES.join(', ')}` },
+          { status: 400 },
+        );
+      }
+      const matchReason = rawReasonCode as MatchReasonCode;
+
       const { data: existing, error: getErr } = await supabaseAdmin
         .from('tender')
         .select('*')
@@ -65,6 +103,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         .single();
       if (getErr || !existing) return NextResponse.json({ error: 'Candidate tender not found' }, { status: 404 });
 
+      // 'duplicates' binds without applying diffs; 'supersedes' folds diffs in.
       const existingRow = existing as Record<string, unknown>;
       const updatePayload: Record<string, unknown> = {
         last_seen_upload_id: uploadId,
@@ -72,56 +111,88 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         missing_from_last_upload: false,
       };
       const diffs: Array<{ field: string; old: unknown; new: unknown }> = [];
-      for (const f of DIFFABLE_FIELDS) {
-        const oVal = existingRow[f];
-        const nVal = (incoming as unknown as Record<string, unknown>)[f];
-        if (String(oVal ?? '') !== String(nVal ?? '')) {
-          updatePayload[f] = nVal;
-          diffs.push({ field: f, old: oVal, new: nVal });
-        }
-      }
-      // Award-tracking: first transition to award stamps awarded_at, never overwrites.
-      const stageDiff = diffs.find((d) => d.field === 'stage');
-      const transitioningToAward = stageDiff && stageDiff.new === 'award' && stageDiff.old !== 'award';
-      const existingAwardedAt = (existingRow.awarded_at as string | null) ?? null;
-      if (transitioningToAward && !existingAwardedAt) {
-        updatePayload.awarded_at = uploadedAt;
-      }
 
-      await supabaseAdmin.from('tender').update(updatePayload).eq('id', targetTenderId);
-      if (diffs.length > 0) {
-        await supabaseAdmin.from('tender_field_change').insert(
-          diffs.map((d) => ({
+      if (matchReason === 'supersedes') {
+        for (const f of DIFFABLE_FIELDS) {
+          const oVal = existingRow[f];
+          const nVal = (incoming as unknown as Record<string, unknown>)[f];
+          if (String(oVal ?? '') !== String(nVal ?? '')) {
+            updatePayload[f] = nVal;
+            diffs.push({ field: f, old: oVal, new: nVal });
+          }
+        }
+        const stageDiff = diffs.find((d) => d.field === 'stage');
+        const transitioningToAward = stageDiff && stageDiff.new === 'award' && stageDiff.old !== 'award';
+        const existingAwardedAt = (existingRow.awarded_at as string | null) ?? null;
+        if (transitioningToAward && !existingAwardedAt) {
+          updatePayload.awarded_at = uploadedAt;
+        }
+
+        await supabaseAdmin.from('tender').update(updatePayload).eq('id', targetTenderId);
+        if (diffs.length > 0) {
+          await supabaseAdmin.from('tender_field_change').insert(
+            diffs.map((d) => ({
+              tender_id: targetTenderId,
+              field_name: d.field,
+              old_value: d.old as unknown as object,
+              new_value: d.new as unknown as object,
+              upload_id: uploadId,
+              changed_by: session.user.id,
+            })),
+          );
+        }
+        if (transitioningToAward && !existingAwardedAt) {
+          await supabaseAdmin.from('tender_field_change').insert({
             tender_id: targetTenderId,
-            field_name: d.field,
-            old_value: d.old as unknown as object,
-            new_value: d.new as unknown as object,
+            field_name: 'awarded_at',
+            old_value: null,
+            new_value: uploadedAt,
             upload_id: uploadId,
             changed_by: session.user.id,
-          })),
-        );
+          });
+        }
+      } else {
+        // 'duplicates' — touch only last_seen / missing flags so the canonical
+        // tender's freshness is correctly observed; do not overwrite its fields.
+        await supabaseAdmin.from('tender').update(updatePayload).eq('id', targetTenderId);
       }
-      if (transitioningToAward && !existingAwardedAt) {
-        await supabaseAdmin.from('tender_field_change').insert({
-          tender_id: targetTenderId,
-          field_name: 'awarded_at',
-          old_value: null,
-          new_value: uploadedAt,
-          upload_id: uploadId,
-          changed_by: session.user.id,
-        });
-      }
+
+      // Persist the match decision so future uploads with the same fingerprint
+      // auto-route to this tender without surfacing the row again.
+      await supabaseAdmin.from('procurement_match_decision').insert({
+        fingerprint,
+        resolution_tender_id: targetTenderId,
+        reason_code: matchReason,
+        agency,
+        decided_by: session.user.id,
+        decided_role: session.user.role,
+      });
+
       await supabaseAdmin
         .from('tender_match_review')
-        .update({ status: 'matched', resolution_tender_id: targetTenderId, resolved_at: new Date().toISOString(), resolved_by: session.user.id })
+        .update({
+          status: 'matched',
+          resolution_tender_id: targetTenderId,
+          resolved_at: new Date().toISOString(),
+          resolved_by: session.user.id,
+        })
         .eq('id', id);
-      return NextResponse.json({ success: true, action: 'match', tender_id: targetTenderId });
+
+      await recordDecision({
+        decision_type: 'match',
+        target_kind: 'review_row',
+        target_id: id,
+        agency,
+        actor_id: session.user.id,
+        actor_role: session.user.role,
+        reason_code: matchReason,
+        reason_text: reasonText,
+      });
+
+      return NextResponse.json({ success: true, action: 'match', tender_id: targetTenderId, reason_code: matchReason });
     }
 
     if (action === 'create') {
-      // For ambiguous_stage reviews, the human-assigned stage overrides the
-      // incoming row's provisional 'design'. stage_source flips to manual_override
-      // since this is a human call, not a parser inference.
       const finalStage: TenderStage = reviewReason === 'ambiguous_stage' ? (assignedStage as TenderStage) : incoming.stage;
       const finalStageSource = reviewReason === 'ambiguous_stage' ? 'manual_override' : incoming.stage_source;
       const alreadyAwarded = finalStage === 'award';
@@ -161,9 +232,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         .single();
       if (insErr || !inserted) return NextResponse.json({ error: 'Failed to create tender' }, { status: 500 });
 
-      // No '__created' sentinel: provenance for review-resolved NEW tenders
-      // lives on tender.first_seen_upload_id and will be carried by the
-      // procurement_decision row written by R5 (decision_type='create_from_review').
       if (alreadyAwarded) {
         await supabaseAdmin.from('tender_field_change').insert({
           tender_id: inserted.id,
@@ -177,17 +245,75 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
       await supabaseAdmin
         .from('tender_match_review')
-        .update({ status: 'created', resolution_tender_id: inserted.id, resolved_at: new Date().toISOString(), resolved_by: session.user.id })
+        .update({
+          status: 'created',
+          resolution_tender_id: inserted.id,
+          resolved_at: new Date().toISOString(),
+          resolved_by: session.user.id,
+        })
         .eq('id', id);
+
+      await recordDecision({
+        decision_type: 'create_from_review',
+        target_kind: 'review_row',
+        target_id: id,
+        agency,
+        actor_id: session.user.id,
+        actor_role: session.user.role,
+        reason_code: reviewReason === 'ambiguous_stage' ? `assigned_stage:${finalStage}` : null,
+        reason_text: reasonText,
+      });
+
       return NextResponse.json({ success: true, action: 'create', tender_id: inserted.id });
     }
 
     // skip
+    if (!rawReasonCode || !SKIP_REASON_CODES.includes(rawReasonCode as SkipReasonCode)) {
+      return NextResponse.json(
+        { error: `reason_code is required and must be one of: ${SKIP_REASON_CODES.join(', ')}` },
+        { status: 400 },
+      );
+    }
+    const skipReason = rawReasonCode as SkipReasonCode;
+
+    if (PERMANENT_SKIP_REASONS.includes(skipReason)) {
+      // Persist the exclusion so future uploads silently drop this fingerprint.
+      await supabaseAdmin
+        .from('procurement_excluded_fingerprint')
+        .upsert(
+          {
+            fingerprint,
+            reason_code: skipReason,
+            agency,
+            example_incoming: incoming as unknown as Record<string, unknown>,
+            decided_by: session.user.id,
+            decided_role: session.user.role,
+          },
+          { onConflict: 'fingerprint' },
+        );
+    }
+
     await supabaseAdmin
       .from('tender_match_review')
-      .update({ status: 'skipped', resolved_at: new Date().toISOString(), resolved_by: session.user.id })
+      .update({
+        status: 'skipped',
+        resolved_at: new Date().toISOString(),
+        resolved_by: session.user.id,
+      })
       .eq('id', id);
-    return NextResponse.json({ success: true, action: 'skip' });
+
+    await recordDecision({
+      decision_type: PERMANENT_SKIP_REASONS.includes(skipReason) ? 'permanent_ignore' : 'skip',
+      target_kind: 'review_row',
+      target_id: id,
+      agency,
+      actor_id: session.user.id,
+      actor_role: session.user.role,
+      reason_code: skipReason,
+      reason_text: reasonText,
+    });
+
+    return NextResponse.json({ success: true, action: 'skip', reason_code: skipReason });
   } catch (err) {
     logger.error({ err, id }, 'Error resolving review row');
     return NextResponse.json({ error: 'Failed to resolve' }, { status: 500 });

@@ -19,6 +19,11 @@ import { fetchMissingTenders, groupByAgency, type MissingTenderRow } from '@/lib
 import { loadSettings, loadFocalPoints, runEventForAgency, markResolvedForAgency } from '@/lib/psip/nag/send';
 import { TODAY_THRESHOLDS } from '@/lib/today/thresholds';
 import { recordPresenceEventsBatch } from '@/lib/procurement/presence';
+import {
+  computeRowFingerprint,
+  findExistingReviewByFingerprint,
+  preprocessIncomingRows,
+} from './fingerprint';
 import { logger } from '@/lib/logger';
 
 export interface PreviewOutcome {
@@ -52,7 +57,15 @@ export interface IngestContext {
 export async function previewPsipUpload(buffer: Buffer, ctx: IngestContext): Promise<PreviewOutcome> {
   const parse = parsePsipWorkbook(buffer);
   const existing = await fetchExistingSnapshots();
-  const plan = matchTenders(parse.tenders, existing);
+
+  // Route incoming rows through persisted Skip/Match decisions before matching.
+  const preprocess = await preprocessIncomingRows(parse.tenders, existing);
+  const plan = matchTenders(preprocess.remaining, existing);
+  plan.results.push(...preprocess.injectedResults);
+  plan.stats.updated += preprocess.prior_supersedes_count;
+  if (preprocess.supersededTenderIds.size > 0) {
+    plan.missing = plan.missing.filter((m) => !preprocess.supersededTenderIds.has(m.id));
+  }
 
   // Persist an upload row in 'preview' state.
   const { data: uploadRow, error: uploadErr } = await supabaseAdmin
@@ -65,37 +78,71 @@ export async function previewPsipUpload(buffer: Buffer, ctx: IngestContext): Pro
       stats: {
         ...parse.stats,
         ...plan.stats,
+        excluded_via_skip: preprocess.excluded_count,
+        prior_supersedes: preprocess.prior_supersedes_count,
+        prior_duplicates: preprocess.prior_duplicates_count,
       },
     })
     .select('id, uploaded_at')
     .single();
   if (uploadErr || !uploadRow) throw uploadErr || new Error('Failed to insert upload row');
 
-  // Persist review queue rows with review_reason so the UI can split
-  // ambiguous-match from ambiguous-stage reviews.
+  // Persist review queue rows with fingerprint-based dedup. If a pending or
+  // skipped review row with the same fingerprint already exists, append this
+  // upload's id to seen_in_uploads (and reset to 'pending' if it was a defer)
+  // instead of inserting a duplicate.
   const reviewResults = plan.results.filter((r) => r.kind === 'review');
-  const reviewInserts = reviewResults.map((r) => ({
-    upload_id: uploadRow.id,
-    incoming_row: r.incoming as unknown as Record<string, unknown>,
-    candidate_tender_ids: (r.candidates ?? []).map((c) => c.tender_id),
-    scores: Object.fromEntries((r.candidates ?? []).map((c) => [c.tender_id, c.score])),
-    status: 'pending' as const,
-    review_reason: (r.review_reason ?? 'ambiguous_match') as ReviewReason,
-  }));
+  const reviewItems: PreviewOutcome['review_items'] = [];
+  for (const r of reviewResults) {
+    const fingerprint = computeRowFingerprint(r.incoming);
+    const existingReview = await findExistingReviewByFingerprint(fingerprint);
 
-  let reviewItems: PreviewOutcome['review_items'] = [];
-  if (reviewInserts.length > 0) {
-    const { data: inserted, error: revErr } = await supabaseAdmin
+    if (existingReview) {
+      const seen = Array.from(new Set([...(existingReview.seen_in_uploads ?? []), uploadRow.id as string]));
+      const updatePayload: Record<string, unknown> = { seen_in_uploads: seen };
+      if (existingReview.status === 'skipped') {
+        // Defer-skipped rows resurface on next sighting (the only skip
+        // reason that can reach here — permanent skips are filtered by
+        // procurement_excluded_fingerprint upstream).
+        updatePayload.status = 'pending';
+        updatePayload.resolved_at = null;
+        updatePayload.resolved_by = null;
+      }
+      const { error: upErr } = await supabaseAdmin
+        .from('tender_match_review')
+        .update(updatePayload)
+        .eq('id', existingReview.id);
+      if (upErr) throw upErr;
+      reviewItems.push({
+        id: existingReview.id,
+        incoming: r.incoming,
+        candidates: r.candidates,
+        review_reason: (r.review_reason ?? 'ambiguous_match') as ReviewReason,
+      });
+      continue;
+    }
+
+    const { data: inserted, error: insErr } = await supabaseAdmin
       .from('tender_match_review')
-      .insert(reviewInserts)
-      .select('id, incoming_row, candidate_tender_ids, scores, review_reason');
-    if (revErr) throw revErr;
-    reviewItems = (inserted || []).map((row: Record<string, unknown>, i) => ({
-      id: row.id as string,
-      incoming: reviewResults[i].incoming,
-      candidates: reviewResults[i].candidates,
-      review_reason: (row.review_reason as ReviewReason) || 'ambiguous_match',
-    }));
+      .insert({
+        upload_id: uploadRow.id,
+        incoming_row: r.incoming as unknown as Record<string, unknown>,
+        candidate_tender_ids: (r.candidates ?? []).map((c) => c.tender_id),
+        scores: Object.fromEntries((r.candidates ?? []).map((c) => [c.tender_id, c.score])),
+        status: 'pending' as const,
+        review_reason: (r.review_reason ?? 'ambiguous_match') as ReviewReason,
+        parsed_row_fingerprint: fingerprint,
+        seen_in_uploads: [uploadRow.id],
+      })
+      .select('id')
+      .single();
+    if (insErr || !inserted) throw insErr || new Error('Failed to insert tender_match_review row');
+    reviewItems.push({
+      id: inserted.id as string,
+      incoming: r.incoming,
+      candidates: r.candidates,
+      review_reason: (r.review_reason ?? 'ambiguous_match') as ReviewReason,
+    });
   }
 
   const newTenders = plan.results.filter((r) => r.kind === 'new').map((r) => r.incoming);
@@ -144,9 +191,17 @@ export async function applyPsipUpload(uploadId: string, buffer: Buffer, userId: 
 
   // Re-parse + re-match to ensure the preview wasn't drifted. This also guards
   // against applying an upload whose preview-time state no longer matches.
+  // The same preprocess (exclusions + prior match decisions) runs on apply so
+  // late-added Skip/Match decisions are honored.
   const parse = parsePsipWorkbook(buffer);
   const existing = await fetchExistingSnapshots();
-  const plan = matchTenders(parse.tenders, existing);
+  const preprocess = await preprocessIncomingRows(parse.tenders, existing);
+  const plan = matchTenders(preprocess.remaining, existing);
+  plan.results.push(...preprocess.injectedResults);
+  plan.stats.updated += preprocess.prior_supersedes_count;
+  if (preprocess.supersededTenderIds.size > 0) {
+    plan.missing = plan.missing.filter((m) => !preprocess.supersededTenderIds.has(m.id));
+  }
   const snapshotById = new Map(existing.map((e) => [e.id, e]));
 
   let newCount = 0;

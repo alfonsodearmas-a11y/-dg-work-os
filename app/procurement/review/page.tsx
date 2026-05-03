@@ -6,6 +6,20 @@ import { ArrowLeft, Inbox, Check, Plus, SkipForward, HelpCircle } from 'lucide-r
 import { useToast } from '@/components/ui/Toast';
 import { STAGE_CONFIG, TENDER_STAGES, type TenderStage } from '@/lib/tender/types';
 
+const SKIP_REASONS = [
+  { value: 'defer', label: 'Defer (resurfaces next upload)' },
+  { value: 'header_or_subtotal', label: 'Header or subtotal (permanent)' },
+  { value: 'not_a_tender', label: 'Not a tender (permanent)' },
+  { value: 'agency_error', label: 'Agency error (permanent)' },
+] as const;
+type SkipReason = typeof SKIP_REASONS[number]['value'];
+
+const MATCH_REASONS = [
+  { value: 'supersedes', label: 'Supersedes (fold in)' },
+  { value: 'duplicates', label: 'Duplicate (drop)' },
+] as const;
+type MatchReason = typeof MATCH_REASONS[number]['value'];
+
 interface ReviewRow {
   id: string;
   upload_id: string;
@@ -30,6 +44,8 @@ export default function ReviewPage() {
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [stageChoices, setStageChoices] = useState<Record<string, TenderStage>>({});
+  const [skipReasons, setSkipReasons] = useState<Record<string, SkipReason>>({});
+  const [matchReasons, setMatchReasons] = useState<Record<string, MatchReason>>({});
 
   const load = useCallback(async () => {
     const res = await fetch('/api/procurement/review');
@@ -55,12 +71,17 @@ export default function ReviewPage() {
   const resolve = async (
     id: string,
     action: 'match' | 'create' | 'skip',
-    opts: { tenderId?: string; stage?: TenderStage } = {},
+    opts: { tenderId?: string; stage?: TenderStage; reasonCode?: string } = {},
   ) => {
     const res = await fetch(`/api/procurement/review/${id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, tender_id: opts.tenderId, stage: opts.stage }),
+      body: JSON.stringify({
+        action,
+        tender_id: opts.tenderId,
+        stage: opts.stage,
+        reason_code: opts.reasonCode,
+      }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -70,6 +91,9 @@ export default function ReviewPage() {
     toast.success(`Resolved as ${action}`);
     setReviews((prev) => prev.filter((r) => r.id !== id));
   };
+
+  const skipReasonFor = (id: string): SkipReason => skipReasons[id] || 'defer';
+  const matchReasonFor = (id: string): MatchReason => matchReasons[id] || 'supersedes';
 
   return (
     <div className="space-y-5">
@@ -81,7 +105,7 @@ export default function ReviewPage() {
           <h1 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
             <Inbox className="h-5 w-5 text-gold-500" /> Review Queue
           </h1>
-          <p className="text-xs md:text-sm text-navy-600">Ambiguous rows from recent uploads. Assign a stage, match, or skip.</p>
+          <p className="text-xs md:text-sm text-navy-600">Ambiguous rows from recent uploads. Skip with a reason, match with a reason, or create.</p>
         </div>
       </div>
 
@@ -131,12 +155,23 @@ export default function ReviewPage() {
                       >
                         <Plus className="h-3 w-3" /> Create with stage
                       </button>
-                      <button
-                        onClick={() => resolve(r.id, 'skip')}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 border border-navy-800 hover:border-navy-700 transition-colors"
-                      >
-                        <SkipForward className="h-3 w-3" /> Skip
-                      </button>
+                      <div className="flex items-center gap-1 ml-auto">
+                        <select
+                          value={skipReasonFor(r.id)}
+                          onChange={(e) => setSkipReasons((prev) => ({ ...prev, [r.id]: e.target.value as SkipReason }))}
+                          className="px-2 py-1.5 bg-navy-950 border border-navy-800 rounded-lg text-xs text-slate-300 focus:outline-none focus:border-navy-700"
+                        >
+                          {SKIP_REASONS.map((s) => (
+                            <option key={s.value} value={s.value}>{s.label}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => resolve(r.id, 'skip', { reasonCode: skipReasonFor(r.id) })}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 border border-navy-800 hover:border-navy-700 transition-colors"
+                        >
+                          <SkipForward className="h-3 w-3" /> Skip
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -149,7 +184,7 @@ export default function ReviewPage() {
               <div className="flex items-center gap-2">
                 <Inbox className="h-4 w-4 text-gold-500" />
                 <h2 className="text-sm font-semibold text-white">Ambiguous matches ({ambiguousMatches.length})</h2>
-                <span className="text-xs text-navy-600">Fuzzy match below the high-confidence threshold. Pick a candidate or create new.</span>
+                <span className="text-xs text-navy-600">Fuzzy match below the high-confidence threshold. Pick a candidate with a reason, or create new.</span>
               </div>
               {ambiguousMatches.map((r) => {
                 const inc = r.incoming_row;
@@ -163,7 +198,18 @@ export default function ReviewPage() {
                       </div>
                     </div>
                     <div className="mb-3">
-                      <div className="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Candidates</div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[11px] uppercase tracking-wider text-slate-400">Candidates</span>
+                        <select
+                          value={matchReasonFor(r.id)}
+                          onChange={(e) => setMatchReasons((prev) => ({ ...prev, [r.id]: e.target.value as MatchReason }))}
+                          className="px-2 py-1 bg-navy-950 border border-navy-800 rounded-md text-[11px] text-slate-300 focus:outline-none focus:border-navy-700"
+                        >
+                          {MATCH_REASONS.map((m) => (
+                            <option key={m.value} value={m.value}>{m.label}</option>
+                          ))}
+                        </select>
+                      </div>
                       {r.candidates.length === 0 && <div className="text-xs text-navy-600">(none)</div>}
                       <div className="space-y-2">
                         {r.candidates.map((c) => {
@@ -176,7 +222,7 @@ export default function ReviewPage() {
                                 <div className="text-[10px] text-navy-600">{snap.agency} · {snap.stage} · score {c.score.toFixed(2)}</div>
                               </div>
                               <button
-                                onClick={() => resolve(r.id, 'match', { tenderId: c.tender_id })}
+                                onClick={() => resolve(r.id, 'match', { tenderId: c.tender_id, reasonCode: matchReasonFor(r.id) })}
                                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors"
                               >
                                 <Check className="h-3 w-3" /> Match
@@ -193,12 +239,23 @@ export default function ReviewPage() {
                       >
                         <Plus className="h-3 w-3" /> Create new
                       </button>
-                      <button
-                        onClick={() => resolve(r.id, 'skip')}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 border border-navy-800 hover:border-navy-700 transition-colors"
-                      >
-                        <SkipForward className="h-3 w-3" /> Skip
-                      </button>
+                      <div className="flex items-center gap-1 ml-auto">
+                        <select
+                          value={skipReasonFor(r.id)}
+                          onChange={(e) => setSkipReasons((prev) => ({ ...prev, [r.id]: e.target.value as SkipReason }))}
+                          className="px-2 py-1.5 bg-navy-950 border border-navy-800 rounded-lg text-xs text-slate-300 focus:outline-none focus:border-navy-700"
+                        >
+                          {SKIP_REASONS.map((s) => (
+                            <option key={s.value} value={s.value}>{s.label}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => resolve(r.id, 'skip', { reasonCode: skipReasonFor(r.id) })}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 border border-navy-800 hover:border-navy-700 transition-colors"
+                        >
+                          <SkipForward className="h-3 w-3" /> Skip
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );

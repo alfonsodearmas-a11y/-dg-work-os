@@ -141,7 +141,7 @@ function equal(a: unknown, b: unknown): boolean {
   return String(a) === String(b);
 }
 
-function fieldDiffs(incoming: ParsedTender, existing: ExistingTenderSnapshot): Array<{ field: string; old: unknown; new: unknown }> {
+export function fieldDiffs(incoming: ParsedTender, existing: ExistingTenderSnapshot): Array<{ field: string; old: unknown; new: unknown }> {
   const diffs: Array<{ field: string; old: unknown; new: unknown }> = [];
   for (const f of DIFFABLE_FIELDS) {
     const nVal = incoming[f as keyof ParsedTender];
