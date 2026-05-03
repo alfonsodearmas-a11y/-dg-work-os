@@ -161,14 +161,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         .single();
       if (insErr || !inserted) return NextResponse.json({ error: 'Failed to create tender' }, { status: 500 });
 
-      await supabaseAdmin.from('tender_field_change').insert({
-        tender_id: inserted.id,
-        field_name: '__created',
-        old_value: null,
-        new_value: { source: 'psip', stage: finalStage, agency: incoming.agency, from_review: true, review_reason: reviewReason },
-        upload_id: uploadId,
-        changed_by: session.user.id,
-      });
+      // No '__created' sentinel: provenance for review-resolved NEW tenders
+      // lives on tender.first_seen_upload_id and will be carried by the
+      // procurement_decision row written by R5 (decision_type='create_from_review').
       if (alreadyAwarded) {
         await supabaseAdmin.from('tender_field_change').insert({
           tender_id: inserted.id,

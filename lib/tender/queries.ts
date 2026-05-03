@@ -307,18 +307,11 @@ export async function createManualTender(input: {
   if (error) throw error;
 
   const tender = enrichTender(data as unknown as Record<string, unknown>);
-  const changes: Array<Record<string, unknown>> = [
-    {
-      tender_id: tender.id,
-      field_name: '__created',
-      old_value: null,
-      new_value: { source: 'manual', stage: tender.stage, agency: tender.agency },
-      upload_id: null,
-      changed_by: input.created_by,
-    },
-  ];
+  // No '__created' sentinel: provenance for manually-created tenders lives
+  // on tender.created_by + tender.created_at. Only real field changes go
+  // into tender_field_change.
   if (alreadyAwarded) {
-    changes.push({
+    await supabaseAdmin.from('tender_field_change').insert({
       tender_id: tender.id,
       field_name: 'awarded_at',
       old_value: null,
@@ -327,7 +320,6 @@ export async function createManualTender(input: {
       changed_by: input.created_by,
     });
   }
-  await supabaseAdmin.from('tender_field_change').insert(changes);
   return tender;
 }
 

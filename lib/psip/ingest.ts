@@ -18,6 +18,7 @@ import {
 import { fetchMissingTenders, groupByAgency, type MissingTenderRow } from '@/lib/psip/nag/missing';
 import { loadSettings, loadFocalPoints, runEventForAgency, markResolvedForAgency } from '@/lib/psip/nag/send';
 import { TODAY_THRESHOLDS } from '@/lib/today/thresholds';
+import { recordPresenceEventsBatch } from '@/lib/procurement/presence';
 import { logger } from '@/lib/logger';
 
 export interface PreviewOutcome {
@@ -156,14 +157,9 @@ export async function applyPsipUpload(uploadId: string, buffer: Buffer, userId: 
     if (r.kind === 'new') {
       const inserted = await insertNewTender(r.incoming, uploadId, uploadedAt);
       if (inserted) {
-        await supabaseAdmin.from('tender_field_change').insert({
-          tender_id: inserted,
-          field_name: '__created',
-          old_value: null,
-          new_value: { source: 'psip', stage: r.incoming.stage, agency: r.incoming.agency },
-          upload_id: uploadId,
-          changed_by: userId,
-        });
+        // Provenance for NEW tenders lives on tender.first_seen_upload_id +
+        // upload.stats.new — no '__created' sentinel is written into the
+        // field-change log (which is reserved for real field diffs).
         // Stamp first-Award field_change when incoming is already at award.
         if (r.incoming.stage === 'award') {
           await supabaseAdmin.from('tender_field_change').insert({
@@ -194,21 +190,21 @@ export async function applyPsipUpload(uploadId: string, buffer: Buffer, userId: 
     // REVIEW rows are left as pending tender_match_review entries for human resolution.
   }
 
-  // Flag missing.
+  // Flag missing. Disappearance events are written to tender_presence_event
+  // (not the field-change log) so the audit surface stays focused on real
+  // field diffs.
   const missingIds = plan.missing.map((m) => m.id);
   if (missingIds.length > 0) {
     await supabaseAdmin
       .from('tender')
       .update({ missing_from_last_upload: true })
       .in('id', missingIds);
-    await supabaseAdmin.from('tender_field_change').insert(
-      missingIds.map((id) => ({
-        tender_id: id,
-        field_name: '__presence',
-        old_value: 'present',
-        new_value: 'missing',
+    await recordPresenceEventsBatch(
+      plan.missing.map((m) => ({
+        tender_id: m.id,
+        event_type: 'disappeared' as const,
+        agency: m.agency as string,
         upload_id: uploadId,
-        changed_by: userId,
       })),
     );
   }

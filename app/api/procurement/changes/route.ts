@@ -38,6 +38,10 @@ export async function GET(request: Request) {
         .from('tender_field_change')
         .select('id, tender_id, field_name, old_value, new_value, changed_at')
         .eq('upload_id', upload_id)
+        // Sentinels ('__created', '__presence') are no longer written as of R3,
+        // but legacy rows from before the migration remain in the DB. Filter
+        // them out so the "What Moved" feed only shows real field diffs.
+        .not('field_name', 'in', '(__created,__presence)')
         .order('changed_at', { ascending: false })
         .limit(2000),
     ]);

@@ -4,6 +4,7 @@ import { MINISTRY_ROLES } from '@/lib/people-types';
 import { archiveTender, listMissingTenders } from '@/lib/tender/queries';
 import { supabaseAdmin } from '@/lib/db';
 import { recordDecision } from '@/lib/procurement/decisions';
+import { recordPresenceEvent } from '@/lib/procurement/presence';
 import { ARCHIVE_REASON_CODES, type ArchiveReasonCode } from '@/lib/tender/types';
 import { logger } from '@/lib/logger';
 
@@ -43,14 +44,25 @@ export async function POST(request: NextRequest) {
     if (!tenderId || !action) return NextResponse.json({ error: 'tender_id and action are required' }, { status: 400 });
 
     if (action === 'resurrect') {
+      const { data: tender, error: fetchErr } = await supabaseAdmin
+        .from('tender')
+        .select('agency, archived_at')
+        .eq('id', tenderId)
+        .single();
+      if (fetchErr || !tender) {
+        return NextResponse.json({ error: 'Tender not found' }, { status: 404 });
+      }
+      if (tender.archived_at) {
+        return NextResponse.json({ error: 'Cannot resurrect an archived tender — unarchive first' }, { status: 409 });
+      }
+
       await supabaseAdmin.from('tender').update({ missing_from_last_upload: false }).eq('id', tenderId);
-      await supabaseAdmin.from('tender_field_change').insert({
+      await recordPresenceEvent({
         tender_id: tenderId,
-        field_name: '__presence',
-        old_value: 'missing',
-        new_value: 'present',
-        upload_id: null,
-        changed_by: session.user.id,
+        event_type: 'reappeared',
+        agency: tender.agency as string,
+        actor_id: session.user.id,
+        actor_role: session.user.role,
       });
       return NextResponse.json({ success: true, action: 'resurrect' });
     }
