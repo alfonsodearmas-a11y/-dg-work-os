@@ -18,6 +18,7 @@ import type {
   ReviewReason,
 } from './types';
 import { normalizeDescription } from './parser';
+import { normalizeDateLike } from '@/lib/tender/freshness';
 
 export const MATCH_THRESHOLD_HIGH = 0.92;
 export const MATCH_THRESHOLD_REVIEW = 0.8;
@@ -133,6 +134,48 @@ function scopeKey(t: {
 }
 
 // ── Field diff ────────────────────────────────────────────────────────────────
+//
+// fieldDiffs is the source of truth for what becomes a tender_field_change
+// row. We normalize values before comparing so that representational
+// artifacts (Excel serial dates vs ISO strings, casing, whitespace) do not
+// look like real changes. The DIFF entry retains the *raw* values so
+// downstream readers see exactly what the workbook said.
+//
+// Date fields are normalized through normalizeDateLike (already used by
+// freshness snapshots; centralizing here closes the gap noted in R3 where
+// matcher and freshness disagreed about whether a date had moved).
+//
+// Free-text fields are normalized to lowercase + collapsed whitespace.
+
+const DATE_DIFF_FIELDS: ReadonlySet<string> = new Set([
+  'date_advertised',
+  'date_closed',
+  'date_eval_sent_mtb_rtb',
+  'date_eval_sent_nptab',
+  'date_of_award',
+  'implementation_start_date',
+  'implementation_end_date',
+]);
+
+const TEXT_DIFF_FIELDS: ReadonlySet<string> = new Set([
+  'description',
+  'contractor',
+  'programme_activity',
+  'remarks',
+]);
+
+function normalizeText(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim().toLowerCase().replace(/\s+/g, ' ');
+  return s === '' ? null : s;
+}
+
+function normalizeForDiff(field: string, v: unknown): unknown {
+  if (v === null || v === undefined) return null;
+  if (DATE_DIFF_FIELDS.has(field)) return normalizeDateLike(v);
+  if (TEXT_DIFF_FIELDS.has(field)) return normalizeText(v);
+  return v;
+}
 
 function equal(a: unknown, b: unknown): boolean {
   if (a === b) return true;
@@ -144,10 +187,10 @@ function equal(a: unknown, b: unknown): boolean {
 export function fieldDiffs(incoming: ParsedTender, existing: ExistingTenderSnapshot): Array<{ field: string; old: unknown; new: unknown }> {
   const diffs: Array<{ field: string; old: unknown; new: unknown }> = [];
   for (const f of DIFFABLE_FIELDS) {
-    const nVal = incoming[f as keyof ParsedTender];
-    const oVal = existing[f as keyof ExistingTenderSnapshot];
-    if (!equal(oVal, nVal)) {
-      diffs.push({ field: f, old: oVal, new: nVal });
+    const nRaw = incoming[f as keyof ParsedTender];
+    const oRaw = existing[f as keyof ExistingTenderSnapshot];
+    if (!equal(normalizeForDiff(f, oRaw), normalizeForDiff(f, nRaw))) {
+      diffs.push({ field: f, old: oRaw, new: nRaw });
     }
   }
   return diffs;
