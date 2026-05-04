@@ -230,3 +230,9 @@ CREATE TABLE IF NOT EXISTS failed_extractions (
 CREATE INDEX IF NOT EXISTS idx_failed_extractions_unresolved
   ON failed_extractions(attempted_at DESC)
   WHERE resolved_at IS NULL;
+
+-- ----------------------------------------------------------------------------
+-- Compatibility note: existing users_agency_check constraint (migration 021)
+-- requires agency IS NULL for dg/minister/ps. is_agency_head is independent
+-- of agency: Minister/PS can have is_agency_head=true with agency=NULL.
+-- ----------------------------------------------------------------------------
