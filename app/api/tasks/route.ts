@@ -19,6 +19,19 @@ const createTaskSchema = z.object({
   role: z.string().optional(),
   assignee_id: z.string().optional(),
   source_meeting_id: z.string().optional(),
+  // Extraction provenance — populated when an item lands here from
+  // /api/action-items/review/[extractionId] or any other extraction path.
+  source: z.enum(['manual', 'extraction']).optional(),
+  extraction_id: z.string().uuid().nullable().optional(),
+  extraction_item_idx: z.number().int().nullable().optional(),
+  source_timestamp: z.string().nullable().optional(),
+  source_quote: z.string().nullable().optional(),
+  owner_name_raw: z.string().nullable().optional(),
+  verb_category: z.enum(['correspondence','decision','information','scheduling','project_update','analysis']).nullable().optional(),
+  due_trigger: z.string().nullable().optional(),
+  confidence_overall: z.number().min(0).max(1).nullable().optional(),
+  confidence_reasons: z.array(z.string()).nullable().optional(),
+  visibility_scope: z.enum(['agency_normal','dg_only']).optional(),
 });
 
 export const dynamic = 'force-dynamic';
@@ -156,6 +169,17 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       owner_user_id: ownerId,
       assigned_by_user_id: data.assignee_id && canAssignTasks(session.user.role) ? session.user.id : null,
       source_meeting_id: data.source_meeting_id || null,
+      source: data.source ?? 'manual',
+      extraction_id: data.extraction_id ?? null,
+      extraction_item_idx: data.extraction_item_idx ?? null,
+      source_timestamp: data.source_timestamp ?? null,
+      source_quote: data.source_quote ?? null,
+      owner_name_raw: data.owner_name_raw ?? null,
+      verb_category: data.verb_category ?? null,
+      due_trigger: data.due_trigger ?? null,
+      confidence_overall: data.confidence_overall ?? null,
+      confidence_reasons: data.confidence_reasons ?? null,
+      visibility_scope: data.visibility_scope ?? 'agency_normal',
     })
     .select(`${TASK_COLUMNS}, owner:users!owner_user_id(id, name)`)
     .single();
