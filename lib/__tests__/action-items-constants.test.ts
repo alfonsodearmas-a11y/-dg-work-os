@@ -13,6 +13,8 @@ import {
   CLOSURE_MODES,
   VISIBILITY_SCOPES,
   PRIORITIES,
+  FAILURE_REASONS,
+  EVENT_TYPES,
 } from '@/lib/action-items/constants';
 
 describe('action-items constants', () => {
@@ -77,6 +79,18 @@ describe('action-items constants', () => {
     expect(REVIEW_STATUSES).toEqual(['pending','in_review','complete','skipped','failed']);
     expect(PIPELINE_ACTIONS).toEqual([
       'extracted','skipped_out_of_scope','queued','failed','manually_processed',
+    ]);
+  });
+
+  it('failure_reasons and event_types match schema CHECK constraints', () => {
+    expect(FAILURE_REASONS).toEqual([
+      'claude_error', 'malformed_json', 'transcript_unavailable',
+      'speaker_collapse_virtual', 'transcript_partial', 'quota_exceeded', 'other',
+    ]);
+    expect(EVENT_TYPES).toEqual([
+      'created', 'accepted', 'edited', 'rejected', 'status_change',
+      'dispute_raised', 'dispute_resolved', 'superseded_by', 'supersedes',
+      'attribution_error_flagged',
     ]);
   });
 });

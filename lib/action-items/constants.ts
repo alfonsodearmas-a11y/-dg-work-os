@@ -56,10 +56,14 @@ export const BANNED_PHRASES = [
   // 'address the issue of' excluded: contains approved verb "issue" as a whole
   // word, which would fail the test invariant. The validator (Plan 4) handles
   // this pattern via standalone-token matching instead.
-  // 'handle' and 'work on' are excluded from the substring list because they
-  // contain no approved-verb collisions and are matched as standalone tokens
-  // by the validator (Plan 4) — keeping them here as substrings would block
-  // legitimate sentences like "investigate handle valves".
+  // Three banned phrases from the spec are NOT in this substring list:
+  //   - 'handle' and 'work on' — substring matching would block legitimate
+  //     noun-phrase usage ("investigate handle valves", "close the work-on-site
+  //     order"). The validator (Plan 4) matches them as sentence-initial
+  //     standalone tokens only.
+  //   - 'address the issue of' — contains the approved verb 'issue' as a whole
+  //     word, which would fire the constants invariant test. The validator
+  //     (Plan 4) matches it as a phrase sequence rather than substring.
 ] as const;
 export type BannedPhrase = (typeof BANNED_PHRASES)[number];
 
