@@ -1,12 +1,15 @@
-// Data handling: this project already runs on Anthropic for Gyaff and S3,
-// and ZDR is confirmed contractually. The Vercel AI Gateway alternate path
-// from earlier drafts is dropped — only the direct path is wired.
+// Data handling:
+//   ANTHROPIC_ZDR_CONFIRMED is treated as a "user has acknowledged data
+//   retention posture" tripwire, not a contractual ZDR claim. Org does not
+//   have ZDR; transcripts route through Anthropic standard 30-day retention.
+//   Decision logged 2026-05-04 by user.
 //
 // Required env at runtime:
 //   - ANTHROPIC_API_KEY            (the secret)
-//   - ANTHROPIC_ZDR_CONFIRMED=true (a tripwire — fail loudly if not set,
-//                                   so the route never quietly falls back
-//                                   to a non-ZDR posture)
+//   - ANTHROPIC_ZDR_CONFIRMED=true (acknowledgment tripwire — fail loudly if
+//                                   not set, so the route never quietly
+//                                   processes transcripts without an
+//                                   intentional posture decision)
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
 
