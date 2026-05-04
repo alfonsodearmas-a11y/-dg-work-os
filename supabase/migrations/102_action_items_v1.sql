@@ -77,3 +77,88 @@ CREATE INDEX IF NOT EXISTS idx_extractions_review_status
   WHERE review_status IN ('pending','in_review');
 CREATE INDEX IF NOT EXISTS idx_extractions_meeting_date
   ON action_item_extractions(meeting_date DESC);
+
+-- ----------------------------------------------------------------------------
+-- Widen tasks: extraction provenance, verification flow, supersession,
+-- visibility scope. The canonical commitment record is tasks; extraction
+-- writes into tasks with source='extraction' and provenance fields set.
+-- ----------------------------------------------------------------------------
+
+-- Extraction provenance
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'manual'
+  CHECK (source IN ('manual','extraction'));
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS extraction_id       UUID REFERENCES action_item_extractions(id);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS extraction_item_idx INTEGER;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS source_meeting_id   TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS source_timestamp    TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS source_quote        TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS owner_name_raw      TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS delegated_to_id     UUID REFERENCES users(id);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS verb_category       TEXT
+  CHECK (verb_category IN ('correspondence','decision','information',
+                           'scheduling','project_update','analysis')
+         OR verb_category IS NULL);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS due_trigger         TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS confidence_overall  NUMERIC(3,2);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS confidence_reasons  TEXT[];
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS task_embedding      VECTOR(1536);
+
+-- Verification flow
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS completion_note TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS completed_by    UUID REFERENCES users(id);
+-- completed_at already exists from migration 029 — do nothing.
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS verified_by     UUID REFERENCES users(id);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS verified_at     TIMESTAMPTZ;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS dispute_note    TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS disputed_at     TIMESTAMPTZ;
+
+-- Supersession (self-FK)
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS supersedes_id UUID REFERENCES tasks(id);
+
+-- Visibility (default agency_normal; extraction sets dg_only for external meetings)
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS visibility_scope TEXT NOT NULL DEFAULT 'agency_normal'
+  CHECK (visibility_scope IN ('agency_normal','dg_only'));
+
+-- Widen status enum
+ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_status_check;
+ALTER TABLE tasks ADD CONSTRAINT tasks_status_check
+  CHECK (status IN ('new','active','blocked','done',
+                    'awaiting_verification','superseded'));
+
+-- Source-conditional integrity: extraction tasks must carry full provenance.
+ALTER TABLE tasks DROP CONSTRAINT IF EXISTS extraction_provenance_required;
+ALTER TABLE tasks ADD CONSTRAINT extraction_provenance_required CHECK (
+  source = 'manual' OR
+  (extraction_id IS NOT NULL
+   AND source_meeting_id IS NOT NULL
+   AND extraction_item_idx IS NOT NULL
+   AND confidence_overall IS NOT NULL)
+);
+
+-- Disable the migration-022 RLS policy in favor of app-layer enforcement.
+-- Rationale: this module's verification + dispute + visibility flows already
+-- live in app-layer code (canSeeTask helper + scoped queries). Mixing RLS
+-- with app-layer guards is the project's standing footgun rule.
+DROP POLICY IF EXISTS tasks_access ON tasks;
+ALTER TABLE tasks DISABLE ROW LEVEL SECURITY;
+
+-- Indexes for the new lifecycle and supersession workloads
+CREATE INDEX IF NOT EXISTS idx_tasks_status_due_open
+  ON tasks(status, due_date)
+  WHERE status IN ('new','active','blocked','awaiting_verification');
+CREATE INDEX IF NOT EXISTS idx_tasks_owner_status_open
+  ON tasks(owner_user_id, status)
+  WHERE status IN ('new','active','blocked','awaiting_verification');
+CREATE INDEX IF NOT EXISTS idx_tasks_supersedes
+  ON tasks(supersedes_id) WHERE supersedes_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_tasks_extraction
+  ON tasks(extraction_id) WHERE extraction_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_tasks_embedding
+  ON tasks USING ivfflat (task_embedding vector_cosine_ops);
+
+COMMENT ON COLUMN tasks.source IS
+  'manual = created via Add Task; extraction = created from Fireflies pipeline.';
+COMMENT ON COLUMN tasks.visibility_scope IS
+  'agency_normal = standard role-based visibility; dg_only = DG sees only.';
+COMMENT ON COLUMN tasks.delegated_to_id IS
+  'Set when DG owns the task but staff executes. Delegate sees but cannot close.';
