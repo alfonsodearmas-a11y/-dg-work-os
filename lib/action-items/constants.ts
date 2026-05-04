@@ -16,11 +16,11 @@ export type MeetingType = (typeof MEETING_TYPES)[number];
 export const MODALITIES = ['virtual', 'in_person', 'mixed'] as const;
 export type Modality = (typeof MODALITIES)[number];
 
-export const ITEM_STATUSES = [
-  'open', 'in_progress', 'awaiting_verification',
-  'complete', 'cancelled', 'superseded', 'disputed',
+export const TASK_STATUSES = [
+  'new', 'active', 'blocked', 'done',
+  'awaiting_verification', 'superseded',
 ] as const;
-export type ItemStatus = (typeof ITEM_STATUSES)[number];
+export type TaskStatus = (typeof TASK_STATUSES)[number];
 
 export const REVIEW_STATUSES = [
   'pending', 'in_review', 'complete', 'skipped', 'failed',

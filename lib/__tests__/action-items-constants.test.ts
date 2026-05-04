@@ -3,7 +3,7 @@ import {
   AGENCIES,
   MEETING_TYPES,
   MODALITIES,
-  ITEM_STATUSES,
+  TASK_STATUSES,
   REVIEW_STATUSES,
   PIPELINE_ACTIONS,
   VERB_CATEGORIES,
@@ -30,10 +30,10 @@ describe('action-items constants', () => {
     expect(MODALITIES).toEqual(['virtual','in_person','mixed']);
   });
 
-  it('exports the 7 item statuses including superseded and disputed', () => {
-    expect(ITEM_STATUSES).toEqual([
-      'open','in_progress','awaiting_verification',
-      'complete','cancelled','superseded','disputed',
+  it('exports the 6 task statuses including awaiting_verification and superseded', () => {
+    expect(TASK_STATUSES).toEqual([
+      'new','active','blocked','done',
+      'awaiting_verification','superseded',
     ]);
   });
 
