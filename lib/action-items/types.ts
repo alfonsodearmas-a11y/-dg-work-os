@@ -83,7 +83,6 @@ export interface ActionItemExtractionRow {
   modality: Modality;
   meeting_type_overridden: boolean;
   modality_overridden: boolean;
-  agency_name: Agency | null;
   transcript_url: string | null;
   transcript_hash: string | null;
   prompt_version: string;
@@ -119,7 +118,6 @@ export interface MeetingsSeenRow {
   meeting_date: string | null;
   detected_type: MeetingType | null;
   detected_modality: Modality | null;
-  detected_agency_name: Agency | null;
   attendee_emails: string[] | null;
   transcript_ready_at: string | null;
   pipeline_action: PipelineAction;
