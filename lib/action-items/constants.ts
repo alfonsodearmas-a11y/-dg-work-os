@@ -81,6 +81,11 @@ export type VisibilityScope = (typeof VISIBILITY_SCOPES)[number];
 export const PRIORITIES = ['P0', 'P1', 'P2', 'P3'] as const;
 export type Priority = (typeof PRIORITIES)[number];
 
+// Legacy tasks.priority enum from migration 029 (low|medium|high|critical, nullable).
+// The pipeline's canonical PRIORITIES (P0-P3) are mapped to this scale at extraction.
+export const LEGACY_TASK_PRIORITIES = ['low', 'medium', 'high', 'critical'] as const;
+export type LegacyTaskPriority = (typeof LEGACY_TASK_PRIORITIES)[number];
+
 export const FAILURE_REASONS = [
   'claude_error', 'malformed_json', 'transcript_unavailable',
   'speaker_collapse_virtual', 'transcript_partial', 'quota_exceeded', 'other',

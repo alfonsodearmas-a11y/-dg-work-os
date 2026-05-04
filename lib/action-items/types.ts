@@ -2,11 +2,11 @@ import { z } from 'zod';
 import {
   AGENCIES, MEETING_TYPES, MODALITIES, TASK_STATUSES,
   REVIEW_STATUSES, PIPELINE_ACTIONS, VERB_CATEGORIES,
-  CLOSURE_MODES, VISIBILITY_SCOPES, PRIORITIES,
+  CLOSURE_MODES, VISIBILITY_SCOPES, PRIORITIES, LEGACY_TASK_PRIORITIES,
   FAILURE_REASONS, EVENT_TYPES,
   type Agency, type MeetingType, type Modality, type TaskStatus,
   type ReviewStatus, type PipelineAction, type VerbCategory,
-  type ClosureMode, type VisibilityScope, type Priority,
+  type ClosureMode, type VisibilityScope, type Priority, type LegacyTaskPriority,
   type FailureReason, type EventType,
 } from './constants';
 
@@ -30,7 +30,7 @@ export interface TaskWithExtensions {
   title: string;
   description: string | null;
   status: TaskStatus;
-  priority: Priority | null;        // existing low|medium|high|critical, NULL allowed historically
+  priority: LegacyTaskPriority | null;  // tasks.priority from migration 029 (low|medium|high|critical, nullable)
   due_date: string | null;          // DATE
   agency: string | null;            // freeform; canonical enum used by extraction
   role: string | null;
@@ -67,7 +67,11 @@ export interface TaskWithExtensions {
   visibility_scope: VisibilityScope;
 }
 
-/** Existing PRIORITIES note: import alias kept for downstream Plan 4 priority mapping. */
+/**
+ * Canonical pipeline priority (P0-P3). Mapped to LegacyTaskPriority at extraction
+ * write time per spec §6.5. Distinct from `TaskWithExtensions.priority`, which is
+ * the on-disk legacy enum.
+ */
 export type TaskPriority = Priority;
 
 export interface ActionItemExtractionRow {
@@ -160,12 +164,13 @@ export const PipelineActionZ  = z.enum(PIPELINE_ACTIONS);
 export const VerbCategoryZ    = z.enum(VERB_CATEGORIES);
 export const ClosureModeZ     = z.enum(CLOSURE_MODES);
 export const VisibilityScopeZ = z.enum(VISIBILITY_SCOPES);
-export const PriorityZ        = z.enum(PRIORITIES);
-export const FailureReasonZ   = z.enum(FAILURE_REASONS);
+export const PriorityZ            = z.enum(PRIORITIES);
+export const LegacyTaskPriorityZ  = z.enum(LEGACY_TASK_PRIORITIES);
+export const FailureReasonZ       = z.enum(FAILURE_REASONS);
 export const EventTypeZ       = z.enum(EVENT_TYPES);
 
 export type {
   Agency, MeetingType, Modality, TaskStatus, ReviewStatus,
-  PipelineAction, VerbCategory, ClosureMode, VisibilityScope, Priority,
+  PipelineAction, VerbCategory, ClosureMode, VisibilityScope, Priority, LegacyTaskPriority,
   FailureReason, EventType,
 };

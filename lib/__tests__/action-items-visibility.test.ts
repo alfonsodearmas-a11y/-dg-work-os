@@ -7,7 +7,7 @@ const baseTask: TaskWithExtensions = {
   title: 'Issue notification of termination to InterEnergy',
   description: null,
   status: 'new',
-  priority: null,
+  priority: 'medium',
   due_date: null,
   agency: 'GPL',
   role: null,

@@ -13,6 +13,7 @@ import {
   CLOSURE_MODES,
   VISIBILITY_SCOPES,
   PRIORITIES,
+  LEGACY_TASK_PRIORITIES,
   FAILURE_REASONS,
   EVENT_TYPES,
 } from '@/lib/action-items/constants';
@@ -73,6 +74,7 @@ describe('action-items constants', () => {
     expect(CLOSURE_MODES).toEqual(['self_close','dg_managed']);
     expect(VISIBILITY_SCOPES).toEqual(['agency_normal','dg_only']);
     expect(PRIORITIES).toEqual(['P0','P1','P2','P3']);
+    expect(LEGACY_TASK_PRIORITIES).toEqual(['low','medium','high','critical']);
   });
 
   it('review_statuses and pipeline_actions match schema CHECK constraints', () => {
