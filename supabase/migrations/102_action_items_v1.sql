@@ -238,3 +238,19 @@ CREATE INDEX IF NOT EXISTS idx_failed_extractions_unresolved
 -- The existing tasks_status_check from migration 029 has been replaced above
 -- with the widened set including awaiting_verification and superseded.
 -- ----------------------------------------------------------------------------
+
+-- ----------------------------------------------------------------------------
+-- Register the action-items module so the admin UI can grant per-user access.
+-- Ministry roles bypass module access checks (per useModuleAccess hook), so
+-- the entry mainly matters for agency_admin/officer accounts that may need
+-- the review queue surface in later phases.
+-- ----------------------------------------------------------------------------
+
+INSERT INTO modules (slug, name, description, default_roles)
+VALUES (
+  'action-items',
+  'Action Items',
+  'Extraction pipeline that creates Tasks from Fireflies meeting transcripts. Sidebar entry points at the review queue.',
+  ARRAY['dg','minister','ps','parl_sec']
+)
+ON CONFLICT (slug) DO NOTHING;
