@@ -1,12 +1,18 @@
 'use client';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function ProcessPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [id, setId] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    const m = searchParams.get('meeting_id');
+    if (m) setId(m);
+  }, [searchParams]);
 
   async function submit() {
     setBusy(true); setErr(null);
@@ -25,9 +31,9 @@ export default function ProcessPage() {
 
   return (
     <div className="max-w-xl mx-auto p-6 space-y-4">
-      <h1 className="text-xl text-white">Manual extraction trigger</h1>
+      <h1 className="text-xl text-white">Run extraction</h1>
       <p className="text-sm text-navy-600">
-        Provide a Fireflies meeting ID. The pipeline runs Claude with the virtual prompt and redirects to the review queue.
+        The pipeline runs Claude with the virtual prompt and redirects to the review queue.
       </p>
       <input value={id} onChange={e => setId(e.target.value)} placeholder="Fireflies meeting id"
         className="w-full bg-navy-900 border border-navy-800 rounded px-3 py-2 text-sm" />
