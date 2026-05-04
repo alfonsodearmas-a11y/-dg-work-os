@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Trash2, Loader2, Plus, X, Square, CheckSquare } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { Task, TaskUpdate, Subtask, TaskActivity } from '@/lib/task-types';
 import { TaskComments } from './TaskComments';
 import { TaskHeader } from './TaskHeader';
 import { TaskMetadata } from './TaskMetadata';
 import { TaskActivityLog } from './TaskActivityLog';
+import { CompleteDialog } from '@/components/action-items/CompleteDialog';
 
 interface UserOption {
   id: string;
@@ -34,6 +37,14 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
   const [savedFlash, setSavedFlash] = useState('');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [completeOpen, setCompleteOpen] = useState(false);
+
+  const { data: session } = useSession();
+  const router = useRouter();
+
+  const isOwner = !!task && session?.user?.id === task.owner_user_id;
+  const canMarkComplete =
+    isOwner && task && (['new', 'active', 'blocked'] as const).includes(task.status as 'new' | 'active' | 'blocked');
 
   // Consolidated dropdown state: only one dropdown open at a time
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
@@ -328,7 +339,7 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
         <TaskActivityLog activities={activities} />
       </div>
 
-      {/* Footer — delete */}
+      {/* Footer — actions */}
       <div className="shrink-0 p-4 border-t border-navy-800" style={isMobile ? { paddingBottom: 'max(16px, env(safe-area-inset-bottom))' } : undefined}>
         {confirmingDelete ? (
           <div className="space-y-2">
@@ -353,16 +364,38 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
             </div>
           </div>
         ) : (
-          <button
-            onClick={() => setConfirmingDelete(true)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-            style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
-          >
-            <Trash2 className="h-4 w-4" />
-            Delete task
-          </button>
+          <div className="flex items-center gap-2">
+            {canMarkComplete && (
+              <button
+                type="button"
+                onClick={() => setCompleteOpen(true)}
+                className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-gold-500 text-navy-950 rounded-lg hover:bg-gold-500/90 transition-colors"
+                style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+                aria-label="Mark task complete"
+              >
+                <CheckSquare className="h-3.5 w-3.5" />
+                Mark complete
+              </button>
+            )}
+            <button
+              onClick={() => setConfirmingDelete(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+              style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete task
+            </button>
+          </div>
         )}
       </div>
+
+      {completeOpen && task && (
+        <CompleteDialog
+          taskId={task.id}
+          onClose={() => setCompleteOpen(false)}
+          onDone={() => { setCompleteOpen(false); router.refresh(); }}
+        />
+      )}
     </div>
   );
 
