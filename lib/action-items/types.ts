@@ -1,62 +1,74 @@
 import { z } from 'zod';
 import {
-  AGENCIES, MEETING_TYPES, MODALITIES, ITEM_STATUSES,
+  AGENCIES, MEETING_TYPES, MODALITIES, TASK_STATUSES,
   REVIEW_STATUSES, PIPELINE_ACTIONS, VERB_CATEGORIES,
   CLOSURE_MODES, VISIBILITY_SCOPES, PRIORITIES,
   FAILURE_REASONS, EVENT_TYPES,
-  type Agency, type MeetingType, type Modality, type ItemStatus,
+  type Agency, type MeetingType, type Modality, type TaskStatus,
   type ReviewStatus, type PipelineAction, type VerbCategory,
   type ClosureMode, type VisibilityScope, type Priority,
   type FailureReason, type EventType,
 } from './constants';
 
 // ============================================================================
-// DB row types — mirror migration 102 column-for-column.
+// DB row types — mirror migration 102 + the existing tasks columns from
+// migrations 022 / 029. The canonical commitment record is `tasks`; this
+// project widens it. `ActionItemEventRow` and the others mirror new tables.
 // ============================================================================
 
-export interface ActionItemRow {
+/**
+ * The Task row as it exists AFTER migration 102 — i.e., the existing tasks
+ * columns plus the extension columns added by this project.
+ *
+ * Note: `tasks.priority` is the existing low|medium|high|critical enum from
+ * migration 029. Internal P-tier values (P0–P3) are mapped to this scale at
+ * extraction time per spec §6.5.
+ */
+export interface TaskWithExtensions {
+  // Existing tasks columns (migration 022 + 029)
   id: string;
-  source: 'extraction' | 'manual';
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  priority: Priority | null;        // existing low|medium|high|critical, NULL allowed historically
+  due_date: string | null;          // DATE
+  agency: string | null;            // freeform; canonical enum used by extraction
+  role: string | null;
+  owner_user_id: string;
+  assigned_by_user_id: string | null;
+  source_meeting_id: string | null; // existed pre-migration as UUID; widened to TEXT below
+  blocked_reason: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+
+  // Migration 102 extension columns
+  source: 'manual' | 'extraction';
   extraction_id: string | null;
   extraction_item_idx: number | null;
-  source_meeting_id: string | null;
   source_timestamp: string | null;
   source_quote: string | null;
-  created_by: string | null;
-
-  agency_name: Agency;
-  owner_id: string;
-  owner_name_raw: string;
+  owner_name_raw: string | null;
   delegated_to_id: string | null;
-
-  verb_category: VerbCategory;
-  task: string;
-  due_at: string | null;
+  verb_category: VerbCategory | null;
   due_trigger: string | null;
-  priority: Priority;
-
-  status: ItemStatus;
-  reviewed_by: string | null;
-  reviewed_at: string | null;
-  completed_by: string | null;
-  completed_at: string | null;
-  completion_note: string | null;
-  verified_by: string | null;
-  verified_at: string | null;
-  disputed_at: string | null;
-  dispute_note: string | null;
-
-  supersedes_id: string | null;
-
   confidence_overall: number | null;
   confidence_reasons: string[] | null;
   task_embedding: number[] | null;
 
-  visibility_scope: VisibilityScope;
+  completion_note: string | null;
+  completed_by: string | null;
+  verified_by: string | null;
+  verified_at: string | null;
+  dispute_note: string | null;
+  disputed_at: string | null;
 
-  created_at: string;
-  updated_at: string;
+  supersedes_id: string | null;
+  visibility_scope: VisibilityScope;
 }
+
+/** Existing PRIORITIES note: import alias kept for downstream Plan 4 priority mapping. */
+export type TaskPriority = Priority;
 
 export interface ActionItemExtractionRow {
   id: string;
@@ -89,7 +101,7 @@ export interface ActionItemExtractionRow {
 
 export interface ActionItemEventRow {
   id: string;
-  item_id: string;
+  task_id: string;                  // renamed from item_id (rev b)
   event_type: EventType;
   actor_id: string | null;
   payload: Record<string, unknown>;
@@ -136,13 +148,13 @@ export interface UserStaffFields {
 }
 
 // ============================================================================
-// Zod schemas for runtime validation at API boundaries.
+// Zod schemas
 // ============================================================================
 
 export const AgencyZ          = z.enum(AGENCIES);
 export const MeetingTypeZ     = z.enum(MEETING_TYPES);
 export const ModalityZ        = z.enum(MODALITIES);
-export const ItemStatusZ      = z.enum(ITEM_STATUSES);
+export const TaskStatusZ      = z.enum(TASK_STATUSES);
 export const ReviewStatusZ    = z.enum(REVIEW_STATUSES);
 export const PipelineActionZ  = z.enum(PIPELINE_ACTIONS);
 export const VerbCategoryZ    = z.enum(VERB_CATEGORIES);
@@ -152,9 +164,8 @@ export const PriorityZ        = z.enum(PRIORITIES);
 export const FailureReasonZ   = z.enum(FAILURE_REASONS);
 export const EventTypeZ       = z.enum(EVENT_TYPES);
 
-// Exported for sibling tasks; downstream plans extend this.
 export type {
-  Agency, MeetingType, Modality, ItemStatus, ReviewStatus,
+  Agency, MeetingType, Modality, TaskStatus, ReviewStatus,
   PipelineAction, VerbCategory, ClosureMode, VisibilityScope, Priority,
   FailureReason, EventType,
 };
