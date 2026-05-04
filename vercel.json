@@ -46,7 +46,7 @@
     },
     {
       "path": "/api/action-items/digest",
-      "schedule": "0 11 * * *"
+      "schedule": "5 11 * * *"
     }
   ]
 }

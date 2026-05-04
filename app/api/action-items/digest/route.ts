@@ -23,8 +23,14 @@ async function handler(request: NextRequest) {
   const summary = await buildDailyDigest();
   const body = formatDigestBody(summary);
 
+  // Recipients: DG + ministry-level principals (Minister, PS, parl_sec). All four
+  // are super admins / political principals per spec §0 #12 and receive the
+  // digest push together. DailyDigestCard on /action-items/meetings is an
+  // additional surface, not a substitute.
   const { data: recipients } = await supabaseAdmin
-    .from('users').select('id').eq('role', 'dg').eq('is_active', true);
+    .from('users').select('id')
+    .in('role', ['dg', 'minister', 'ps', 'parl_sec'])
+    .eq('is_active', true);
 
   const now = new Date().toISOString();
   let pushed = 0;
