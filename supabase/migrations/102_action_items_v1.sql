@@ -27,6 +27,6 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS is_agency_head BOOLEAN NOT NULL DEFAU
 COMMENT ON COLUMN users.aliases IS
   'Alternative spoken names heard in transcripts. E.g., {"Kesh","Cash","Keche"} for Kesh Nandlall.';
 COMMENT ON COLUMN users.closure_mode IS
-  'self_close: user can mark their own items complete (default). dg_managed: only DG closes (Minister, PS, President).';
+  'self_close: user can mark their own items complete (default). dg_managed: only DG closes (Minister, PS, Parliamentary Secretary, President).';
 COMMENT ON COLUMN users.is_agency_head IS
   'True for the head of any portfolio agency, plus Minister and PS. Triggers mandatory review on owned items.';
