@@ -21,7 +21,7 @@ import {
 describe('action-items constants', () => {
   it('exports the 10 agency enum values', () => {
     expect(AGENCIES).toEqual([
-      'GPL','GWI','GCAA','CJIA','MARAD','HCI','HA',
+      'gpl','gwi','gcaa','cjia','marad','heci','has',
       'MPUA-DG','MPUA-Minister','MPUA-PS',
     ]);
   });

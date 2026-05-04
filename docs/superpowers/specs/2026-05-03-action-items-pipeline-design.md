@@ -50,13 +50,14 @@ These are non-negotiable in v1. Each was settled during brainstorming.
 2. **Scope of recording.** Fireflies records only meetings on the DG's MPUA Google Workspace calendar. No personal accounts, no NCN/UG/City Council. Every transcript in Fireflies is in-scope. No detection logic in the pipeline.
 3. **Meeting type taxonomy.** Three types only: `internal | agency | external`. Type is auto-detected at ingest from Fireflies metadata; manual override available.
 4. **Modality taxonomy.** Three modalities: `virtual | in_person | mixed`. Auto-detected from Fireflies metadata.
-5. **Agency taxonomy.** Seven portfolio agencies enumerated: `GPL | GWI | GCAA | CJIA | MARAD | HCI | HA`. Plus `MPUA-DG | MPUA-Minister | MPUA-PS`. The existing `tasks.agency` column carries this routing value (CHECK constraint added in migration 102).
+5. **Agency taxonomy.** Seven portfolio agencies enumerated (lowercase, production-canonical): `gpl | gwi | gcaa | cjia | marad | heci | has`. Plus ministry-routing values `MPUA-DG | MPUA-Minister | MPUA-PS`. The existing `tasks.agency` column carries this routing value (CHECK constraint added in migration 102). Plan 4 prompts and `lib/action-items/constants.ts` must use these exact lowercase values — earlier drafts used `HCI`/`HA`, which are wrong.
 6. **Failure ranking.** Political risk first, time burden second, accuracy drift third. All design tradeoffs honor this order.
 7. **Owner uniqueness.** Single owner per item. The existing `tasks.owner_user_id` carries this. `delegated_to_id` (new column) handles DG-led-staff-executed items.
-8. **Closure model.** Owner self-close → status `awaiting_verification` → DG one-tap confirm/dispute. DG can bulk-close directly. `dg_managed` users (Minister, PS, President) skip self-close — only DG closes their items.
+8. **Closure model.** Owner self-close → status `awaiting_verification` → DG one-tap confirm/dispute. DG can bulk-close directly. `dg_managed` users (Minister, PS, parl_sec) skip self-close — only DG closes their items.
 9. **Canonical commitment layer is `tasks`.** Manual tasks (existing) and AI-extracted commitments (new) share schema, lifecycle, and visibility. AI extraction is an additional creation path, not a parallel store.
 10. **Visibility ≠ ownership.** Default visibility is per meeting type. Owner pool can include staff who can't see the item by default (e.g., external-meeting item owned by Kesh, visible to DG only until shared).
 11. **No regression metrics in schema.** No `re_promise_count`, no auto-cancel on supersession, no fields that quantify how often someone re-committed.
+12. **`is_agency_head` vs `closure_mode='dg_managed'` — distinct populations, shared gate.** `is_agency_head=true` identifies the seven portfolio agency CEOs only (Ghir/CJIA, Sulaman/GCAA, Nandlall/GPL, David/GWI, St. Louis/HAS, Williams/HECI, Thomas/MARAD). `closure_mode='dg_managed'` identifies ministry-level political principals (Minister, PS, parl_sec) — these are super admins who already see everything via role-based visibility (`role IN ('dg', 'minister', 'ps', 'parl_sec')` bypasses agency filtering in `canSeeTask`). The two flags are NOT redundant and NOT a hierarchy: agency CEO ≠ ministry principal. Plan 4's political-risk gate triggers on EITHER `is_agency_head=true` OR `closure_mode='dg_managed'` — both populations get mandatory review forever, never auto-accept, regardless of earned-trust scores. Same gate, two flag sources, distinct semantics. Production state at lock time: 7 `is_agency_head=true`, 3 `closure_mode='dg_managed'`, zero overlap.
 
 ---
 
@@ -410,7 +411,7 @@ From any War Room view, DG can directly mark a task `done` (the existing bulk ac
 
 ### 10.4 dg_managed users
 
-Items where `owner.closure_mode = 'dg_managed'` (Minister, PS, President):
+Items where `owner.closure_mode = 'dg_managed'` (Minister, PS, parl_sec):
 
 - Hidden from the owner's My Tasks self-close action.
 - Skip `awaiting_verification`. DG flips `new|active` → `done` directly.
