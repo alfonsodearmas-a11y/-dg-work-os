@@ -39,6 +39,14 @@
     {
       "path": "/api/cron/psip-nag-weekly",
       "schedule": "0 10 * * 1"
+    },
+    {
+      "path": "/api/action-items/poll-fireflies",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/action-items/digest",
+      "schedule": "0 11 * * *"
     }
   ]
 }
