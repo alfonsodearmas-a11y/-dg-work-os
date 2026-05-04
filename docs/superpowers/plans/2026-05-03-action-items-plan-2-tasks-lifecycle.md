@@ -1642,7 +1642,121 @@ git commit -m "feat(action-items): from-meeting badge on extracted tasks in War 
 
 ---
 
-## Task 9: End-to-end verification
+## Task 9: Owner-side "Mark complete" button in War Room task-detail UI
+
+**Files:**
+- Modify: `components/tasks/TaskDetailPanel.tsx`
+
+The lifecycle endpoint `/api/tasks/[id]/complete` is unreachable from the existing UI (the task-detail panel uses direct status PATCH, which is now blocked from entering `awaiting_verification`). Without a UI trigger, the verification flow can only be exercised by curl — which defeats Plan 2's purpose of validating the closure flow end-to-end without AI dependency. This task adds the trigger button.
+
+**Visibility rule:** the button is rendered iff
+- `session.user.id === task.owner_user_id`, AND
+- `task.status ∈ {'new','active','blocked'}`.
+
+If the owner is `dg_managed` (Minister/PS/parl_sec/President), the `/complete` endpoint will reject the call with 403 (already enforced server-side in Task 4). The UI does not need to gate on `closure_mode` separately — surfacing the rejection to the owner is acceptable (`dg_managed` users almost never log in to DGOS in v1; the gate is server-side defense-in-depth).
+
+The dialog is `CompleteDialog` from Task 6 — already built, no changes needed. On success, the panel calls `onUpdate(task.id, {})` so the parent (`KanbanBoard`) refetches; the panel itself doesn't directly mutate task state because the `/complete` endpoint already updated the row.
+
+- [ ] **Step 1: Locate the action-button area in `TaskDetailPanel.tsx`.**
+
+```bash
+grep -n "Trash2\|onDelete\|setConfirmingDelete\|deleting" components/tasks/TaskDetailPanel.tsx | head -10
+```
+
+The existing Delete button is the natural neighbor. Place the Mark complete button **before** the Delete button so it's the most prominent action when an owner has the panel open.
+
+- [ ] **Step 2: Wire up `useSession`, `CompleteDialog`, and the button.**
+
+At the top of `components/tasks/TaskDetailPanel.tsx`, add to the imports:
+
+```tsx
+import { useSession } from 'next-auth/react';
+import { CompleteDialog } from '@/components/action-items/CompleteDialog';
+```
+
+Inside the component body, near the other `useState` declarations:
+
+```tsx
+const { data: session } = useSession();
+const [completeOpen, setCompleteOpen] = useState(false);
+
+const isOwner = !!task && session?.user?.id === task.owner_user_id;
+const canMarkComplete =
+  isOwner && task && (['new', 'active', 'blocked'] as const).includes(task.status as 'new' | 'active' | 'blocked');
+```
+
+Render the button next to the existing Delete button. The exact JSX shape depends on where Delete is rendered (likely a footer or toolbar with `confirmingDelete` and `setConfirmingDelete`). Insert immediately before the Delete-button block:
+
+```tsx
+{canMarkComplete && (
+  <button
+    type="button"
+    onClick={() => setCompleteOpen(true)}
+    className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-gold-500 text-navy-950 rounded-lg hover:bg-gold-500/90 transition-colors"
+    aria-label="Mark task complete"
+  >
+    <CheckSquare className="h-3.5 w-3.5" />
+    Mark complete
+  </button>
+)}
+```
+
+`CheckSquare` is already imported in the file.
+
+Then render the dialog at the bottom of the component's JSX (e.g., just before the closing `</div>` of the panel, or after the dialog tree the file already uses):
+
+```tsx
+{completeOpen && task && (
+  <CompleteDialog
+    taskId={task.id}
+    onClose={() => setCompleteOpen(false)}
+    onDone={async () => {
+      setCompleteOpen(false);
+      // Trigger parent refetch via onUpdate with no fields — the /complete
+      // endpoint already updated the row server-side; this just refreshes the
+      // panel/board view.
+      await onUpdate(task.id, {});
+    }}
+  />
+)}
+```
+
+If `onUpdate` rejects on empty updates (the existing PATCH zod requires at least one optional field, and an empty body won't match the validator), use a no-op refresh path instead — the cleanest is a `router.refresh()` from `next/navigation`:
+
+```tsx
+import { useRouter } from 'next/navigation';
+// inside the component:
+const router = useRouter();
+// in the dialog onDone:
+onDone={() => { setCompleteOpen(false); router.refresh(); }}
+```
+
+Choose `router.refresh()` over the empty-update path; it's both simpler and avoids surfacing a confusing 400 in the network tab.
+
+- [ ] **Step 3: Confirm the button does not appear for non-owners or wrong status.**
+
+Type-check:
+
+```bash
+npx tsc --noEmit
+```
+
+Build:
+
+```bash
+npm run build
+```
+
+- [ ] **Step 4: Commit.**
+
+```bash
+git add components/tasks/TaskDetailPanel.tsx
+git commit -m "feat(action-items): Mark complete button on task-detail panel (owner self-close)"
+```
+
+---
+
+## Task 10: End-to-end verification
 
 **Files:** none modified.
 
@@ -1675,18 +1789,16 @@ npm run dev
 Walk through:
 
 1. Sign in as DG. Visit `/tasks`. War Room renders. Verification surface above Kanban shows nothing yet (no `awaiting_verification` items in DB).
-2. Sign out, sign in as officer. Open one of their existing tasks (`status='active'` or `'new'`). Use the existing UI to mark complete via the new completion flow — wire-up: there is no UI in Plan 2 that exposes the `/api/tasks/[id]/complete` endpoint to officers via War Room. **For the smoke test, call the API directly:**
+2. Sign out, sign in as officer. Open one of their existing tasks (`status='active'` or `'new'`) by clicking it on the Kanban; the task-detail panel opens. Click **Mark complete**. Enter a 10+ char completion note (e.g., `delivered to legal counsel`). Submit. Expected: dialog closes, panel refreshes, task status is `awaiting_verification`. The Mark complete button no longer renders (owner-only + status-gated).
+
+Verify by hitting the API to confirm the row state:
 
 ```bash
-curl -X POST http://localhost:3000/api/tasks/<task-id>/complete \
-  -H 'cookie: <officer session cookie>' \
-  -H 'content-type: application/json' \
-  -d '{"note":"delivered to legal counsel"}'
+curl http://localhost:3000/api/tasks?status=awaiting_verification \
+  -H 'cookie: <officer session cookie>'
 ```
 
-Expected: 200 OK, status changes to `awaiting_verification`.
-
-> **Note:** Adding the "Mark complete (with note)" button to the existing task-detail UI is a small UX addition that this plan deliberately leaves to a future plan. The endpoint, the validation, and the verification surface all work end-to-end; only the officer-side trigger button is missing. Surface this to the user at end of Plan 2.
+Expected: the task appears with `status='awaiting_verification'`, `completion_note` populated, `completed_by`=officer-id, `completed_at` set.
 
 3. Sign in as DG. Visit `/tasks`. The Awaiting your verification section now lists the task. Click **Confirm**. The task disappears from the queue; status is `done`; `verified_by` and `verified_at` are set.
 4. Repeat the cycle but click **Dispute** with a 20+ char note. Status reverts to `active`; `dispute_note` is set; the officer receives a `task_disputed` notification (verify in `notifications` table or browser).
@@ -1705,11 +1817,9 @@ Expected: 200 OK; an `action_item_events` row with `event_type='dispute_resolved
 7. Visit any task detail. Confirm the `action_item_events` for that task contain at least: `status_change → awaiting_verification`, `dispute_raised`, `dispute_resolved (pushback)`, `status_change → done (via bulk)`.
 8. (Optional) Insert a manual task whose `source='extraction'` via SQL to exercise the `SourceProvenanceBadge` rendering in the Kanban. Confirm the badge appears and the popover shows the source quote.
 
-- [ ] **Step 4: Officer-side completion-button gap surfaced.**
+- [ ] **Step 4: Confirm the closure flow is exercisable end-to-end without curl.**
 
-Surface to the user at end of Plan 2:
-
-> Plan 2's lifecycle endpoint `/api/tasks/[id]/complete` is implemented and tested. The existing War Room task-detail UI does not yet expose a "Mark complete (with note)" button to officers — it currently uses direct status-PATCH which is now blocked from entering `awaiting_verification`. Adding that button is a small UI task; recommended as a Plan 2.1 follow-up or rolled into Plan 4 alongside the extraction wiring.
+The full owner → DG round-trip should be reachable from the UI alone: officer marks complete via the panel button → DG sees the queue at top of `/tasks` → confirm or dispute. If any step still requires API calls, file a follow-up. Plan 2's purpose is to validate this path without AI; "user can do it via the browser" is the success criterion.
 
 ---
 
@@ -1718,7 +1828,7 @@ Surface to the user at end of Plan 2:
 **Spec coverage** (against rev b):
 
 - §6.1 validation (banned phrases, verb taxonomy, required fields) → Task 2.
-- §10.1 owner self-close → Task 4.
+- §10.1 owner self-close → Task 4 (endpoint) + Task 9 (UI trigger button on War Room task-detail panel).
 - §10.2 DG verification (Confirm + Dispute) → Tasks 4–5 + Task 6 verification surface.
 - §10.3 DG bulk-close (skips awaiting_verification round-trip) → Task 3 bulk-PATCH extension.
 - §10.4 dg_managed users (Minister/PS/parl_sec/President skip self-close) → Task 4 step 1 enforces the closure_mode='dg_managed' guard.
@@ -1734,7 +1844,6 @@ Surface to the user at end of Plan 2:
 - Plan 3: Fireflies polling, `meetings_seen` population, daily digest, `/action-items/meetings` list, "Process manually" CTA → War Room Add Task with query-param prefill.
 - Plan 4: extraction (Anthropic), prompt files, validation hook for extraction-specific fields (`source_quote` substring), three-bucket review UI, keyboard shortcuts, political-risk gate, supersession suggestion display, manual extraction trigger, eval data capture.
 - Plan 5: supersession matcher, drift detector, earned-trust tracker, eval dashboard.
-- Officer-side "Mark complete (with note)" button in War Room task-detail UI — surfaced as a gap; recommended for Plan 2.1 or rolled into Plan 4.
 
 **Placeholder scan:** every step has concrete code or a concrete command. No "TBD".
 
@@ -1761,7 +1870,7 @@ These are choices made autonomously while writing this plan. Flag any that shoul
 7. **"Re-affirm dispute" is the existing dispute action, re-fired** when an owner re-completes after a dispute. No dedicated re-affirm endpoint or UI. Keeps the state machine narrow.
 8. **"Accept pushback" reuses bulk-close** (`PATCH /api/tasks/bulk` with `status='done'`). Spec §10.5 says accept-pushback is treated as DG-direct close; the bulk endpoint already does that with `verified_by`/`verified_at` stamping after Task 3's extension.
 9. **Notifications use `insertNotification` with the rich tier-system shape** (`event_type`, `importance_tier`, `entity_type`, `entity_id`). If the live notifications schema doesn't carry the tier columns yet, the call's `importance_tier`/`event_type` fields will be silently ignored — they're optional in the type. Functional correctness does not depend on them.
-10. **No officer-side "Mark complete (with note)" button in War Room in this plan.** The endpoint is built, but the existing task-detail UI surfaces the lifecycle gap. Surfaced explicitly at end of Plan 2 — a small, well-bounded follow-up. I judged that adding it here would balloon scope into the existing War Room UI, which the spec is deliberately keeping at arm's length.
+10. **Mark complete button rendered conditionally on `task.status ∈ {'new','active','blocked'}`** — `blocked` is included because spec §10.1 says owners can self-close active items, and a blocked task moving to awaiting_verification is the natural unblock-and-close path. If this is wrong, narrow to `{'new','active'}` only — single-line change in the `canMarkComplete` predicate.
 11. **`InlineExtractionAddItem` component sends fields the existing POST `/api/tasks` does not yet accept** (`extraction_id`, `extraction_item_idx`, `source_quote`, etc.). Plan 4 widens the POST schema. This component is unwired in Plan 2 and unit-tested only as a build-and-typecheck artifact.
 12. **Bulk-close events log writes one row per task ID via a loop**, not a single aggregate event. Per-task event rows make the audit trail queryable per-task without payload-decoding. Volume is low (handful of bulk closes per session).
 
