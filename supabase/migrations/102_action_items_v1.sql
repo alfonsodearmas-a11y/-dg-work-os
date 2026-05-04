@@ -73,3 +73,94 @@ CREATE INDEX IF NOT EXISTS idx_extractions_review_status
   WHERE review_status IN ('pending','in_review');
 CREATE INDEX IF NOT EXISTS idx_extractions_meeting_date
   ON action_item_extractions(meeting_date DESC);
+
+-- ----------------------------------------------------------------------------
+-- action_items — canonical commitment record
+-- Single owner (delegation modeled as separate field, not co-owner).
+-- ----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS action_items (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- Source
+  source              TEXT NOT NULL DEFAULT 'extraction'
+                        CHECK (source IN ('extraction','manual')),
+  extraction_id       UUID REFERENCES action_item_extractions(id),
+  extraction_item_idx INTEGER,
+  source_meeting_id   TEXT,
+  source_timestamp    TEXT,
+  source_quote        TEXT,
+  created_by          UUID REFERENCES users(id),
+
+  -- Routing
+  agency_name         TEXT NOT NULL CHECK (agency_name IN
+                        ('GPL','GWI','GCAA','CJIA','MARAD','HCI','HA',
+                         'MPUA-DG','MPUA-Minister','MPUA-PS')),
+  owner_id            UUID NOT NULL REFERENCES users(id),
+  owner_name_raw      TEXT NOT NULL,
+  delegated_to_id     UUID REFERENCES users(id),
+
+  -- Content
+  verb_category       TEXT NOT NULL CHECK (verb_category IN
+                        ('correspondence','decision','information',
+                         'scheduling','project_update','analysis')),
+  task                TEXT NOT NULL CHECK (char_length(task) <= 500),
+  due_at              TIMESTAMPTZ,
+  due_trigger         TEXT,
+  priority            TEXT NOT NULL CHECK (priority IN ('P0','P1','P2','P3')),
+
+  -- Lifecycle
+  status              TEXT NOT NULL DEFAULT 'open' CHECK (status IN
+                        ('open','in_progress','awaiting_verification',
+                         'complete','cancelled','superseded','disputed')),
+  reviewed_by         UUID REFERENCES users(id),
+  reviewed_at         TIMESTAMPTZ,
+  completed_by        UUID REFERENCES users(id),
+  completed_at        TIMESTAMPTZ,
+  completion_note     TEXT,
+  verified_by         UUID REFERENCES users(id),
+  verified_at         TIMESTAMPTZ,
+  disputed_at         TIMESTAMPTZ,
+  dispute_note        TEXT,
+
+  -- Supersession
+  supersedes_id       UUID REFERENCES action_items(id),
+
+  -- QA
+  confidence_overall  NUMERIC(3,2),
+  confidence_reasons  TEXT[],
+  task_embedding      VECTOR(1536),
+
+  -- Visibility (spec §11.5)
+  visibility_scope    TEXT NOT NULL DEFAULT 'agency_normal'
+                        CHECK (visibility_scope IN ('agency_normal','dg_only')),
+
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  CONSTRAINT extraction_fields_required CHECK (
+    source = 'manual' OR
+    (extraction_id IS NOT NULL
+     AND source_meeting_id IS NOT NULL
+     AND extraction_item_idx IS NOT NULL
+     AND confidence_overall IS NOT NULL)
+  ),
+  CONSTRAINT manual_creator_required CHECK (
+    source = 'extraction' OR created_by IS NOT NULL
+  )
+);
+
+CREATE INDEX IF NOT EXISTS idx_items_agency_owner_status
+  ON action_items(agency_name, owner_id, status)
+  WHERE status IN ('open','in_progress','awaiting_verification');
+CREATE INDEX IF NOT EXISTS idx_items_owner_status
+  ON action_items(owner_id, status);
+CREATE INDEX IF NOT EXISTS idx_items_status_due
+  ON action_items(status, due_at)
+  WHERE status IN ('open','in_progress');
+CREATE INDEX IF NOT EXISTS idx_items_supersedes
+  ON action_items(supersedes_id) WHERE supersedes_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_items_extraction
+  ON action_items(extraction_id);
+CREATE INDEX IF NOT EXISTS idx_items_embedding
+  ON action_items USING ivfflat (task_embedding vector_cosine_ops);
