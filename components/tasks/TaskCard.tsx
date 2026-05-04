@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Calendar, CalendarPlus, GripVertical, MoreHorizontal } from 'lucide-react';
 import { Task } from '@/lib/task-types';
 import { TaskTooltip } from './TaskTooltip';
+import { SourceProvenanceBadge } from '@/components/action-items/SourceProvenanceBadge';
 import { format, isToday, isPast, parseISO } from 'date-fns';
 
 interface TaskCardProps {
@@ -278,7 +279,7 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
           </div>
 
           {/* Badges Row — only rendered when at least one badge exists */}
-          {(task.agency || task.role) && (
+          {(task.agency || task.role || task.source === 'extraction') && (
             <div className="flex flex-wrap gap-1.5 mb-2">
               {task.agency && (
                 <span className={`px-2 py-0.5 rounded text-xs font-medium border ${AGENCY_COLORS[task.agency] || 'bg-navy-800 text-slate-400 border-[#3d4a62]'}`}>
@@ -290,6 +291,12 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
                   {task.role}
                 </span>
               )}
+              <SourceProvenanceBadge
+                source={task.source}
+                source_meeting_id={task.source_meeting_id}
+                source_timestamp={task.source_timestamp}
+                source_quote={task.source_quote}
+              />
             </div>
           )}
 
