@@ -87,7 +87,7 @@ export interface BoardState {
   panelOpen: boolean;
 
   // Undo delete
-  pendingDelete: { task: Task; column: TaskStatus } | null;
+  pendingDelete: { task: Task; column: keyof TasksByStatus } | null;
 
   // Pagination
   listPage: number;
@@ -176,8 +176,8 @@ export type BoardAction =
 
   // Task mutations (optimistic)
   | { type: 'UPDATE_TASK_OPTIMISTIC'; taskId: string; updates: Partial<Task> }
-  | { type: 'MOVE_TASK_OPTIMISTIC'; taskId: string; from: TaskStatus; to: TaskStatus }
-  | { type: 'ADD_TASK'; task: Task; status: TaskStatus }
+  | { type: 'MOVE_TASK_OPTIMISTIC'; taskId: string; from: keyof TasksByStatus; to: keyof TasksByStatus }
+  | { type: 'ADD_TASK'; task: Task; status: keyof TasksByStatus }
   | { type: 'REMOVE_TASK'; taskId: string }
   | { type: 'REMOVE_TASKS'; taskIds: string[] }
   | { type: 'BULK_UPDATE_OPTIMISTIC'; taskIds: string[]; updates: Partial<Task> };

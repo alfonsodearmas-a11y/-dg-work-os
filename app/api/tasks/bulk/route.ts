@@ -10,7 +10,7 @@ const bulkPatchSchema = z.object({
     due_date: z.string().nullable().optional(),
     assignee_id: z.string().nullable().optional(),
     agency: z.string().nullable().optional(),
-    status: z.enum(['new', 'active', 'blocked', 'done']).optional(),
+    status: z.enum(['new', 'active', 'blocked', 'done', 'awaiting_verification', 'superseded']).optional(),
     blocked_reason: z.string().nullable().optional(),
   }),
 });
@@ -18,6 +18,7 @@ const bulkPatchSchema = z.object({
 export const PATCH = withErrorHandler(async (request: NextRequest) => {
   const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
   if (result instanceof NextResponse) return result;
+  const { session } = result;
 
   const { data, error: validationError } = await parseBody(request, bulkPatchSchema);
   if (validationError) return validationError;
@@ -33,6 +34,8 @@ export const PATCH = withErrorHandler(async (request: NextRequest) => {
     updatePayload.status = data.updates.status;
     if (data.updates.status === 'done') {
       updatePayload.completed_at = new Date().toISOString();
+      updatePayload.verified_by = session.user.id;
+      updatePayload.verified_at = new Date().toISOString();
     } else {
       updatePayload.completed_at = null;
     }
@@ -51,6 +54,16 @@ export const PATCH = withErrorHandler(async (request: NextRequest) => {
 
   if (error) {
     return apiError('DB_ERROR', error.message, 500);
+  }
+
+  if (data.updates.status !== undefined) {
+    const { logEvent } = await import('@/lib/action-items/events');
+    for (const id of data.taskIds) {
+      await logEvent({
+        taskId: id, eventType: 'status_change', actorId: session.user.id,
+        payload: { to: data.updates.status, via: 'bulk' },
+      });
+    }
   }
 
   return NextResponse.json({ success: true });

@@ -12,7 +12,7 @@ import { TASK_COLUMNS, flattenTaskOwner } from '@/lib/task-types';
 const patchTaskSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
-  status: z.enum(['new', 'active', 'blocked', 'done']).optional(),
+  status: z.enum(['new', 'active', 'blocked', 'done', 'awaiting_verification', 'superseded']).optional(),
   priority: z.enum(['low', 'medium', 'high', 'critical']).nullable().optional(),
   due_date: z.string().nullable().optional(),
   agency: z.string().nullable().optional(),
@@ -41,6 +41,18 @@ export const PATCH = withErrorHandler(async (
 
   if (!task) {
     return apiError('NOT_FOUND', 'Task not found', 404);
+  }
+
+  if (data.status !== undefined) {
+    const tryingToEnterLifecycle = data.status === 'awaiting_verification';
+    const tryingToLeaveLifecycle = task.status === 'awaiting_verification' && data.status !== 'awaiting_verification';
+    if (tryingToEnterLifecycle || tryingToLeaveLifecycle) {
+      return apiError(
+        'INVALID_TRANSITION',
+        'Use /api/tasks/[id]/{complete,verify,dispute} for verification-flow transitions.',
+        409,
+      );
+    }
   }
 
   const isOwner = task.owner_user_id === session.user.id;

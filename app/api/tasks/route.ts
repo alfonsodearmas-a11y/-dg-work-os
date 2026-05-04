@@ -124,6 +124,25 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   // Non-ministry users: force agency to their own
   const taskAgency = isMinistry ? (data.agency || null) : (session.user.agency?.toUpperCase() || data.agency || null);
 
+  const { validateTaskDraft } = await import('@/lib/action-items/validation');
+  const v = validateTaskDraft({
+    source: 'manual',
+    title: data.title,
+    // Pass resolved agency and owner — if agency is null (ministry cross-agency task),
+    // the validator will flag it but we only surface title-level issues here since
+    // auth + form already enforce owner and agency for agency-scoped users.
+    agency: taskAgency,
+    owner_user_id: ownerId,
+    owner_name_raw: null,
+    verb_category: null,
+  });
+  if (!v.ok) {
+    const titleIssues = v.issues.filter(i => i.field === 'title');
+    if (titleIssues.length > 0) {
+      return NextResponse.json({ error: 'Validation failed', issues: titleIssues }, { status: 400 });
+    }
+  }
+
   const { data: task, error } = await supabaseAdmin
     .from('tasks')
     .insert({

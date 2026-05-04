@@ -1,6 +1,6 @@
 // Shared task types for the native tasks system
 
-export const TASK_COLUMNS = 'id, title, description, status, priority, due_date, agency, role, owner_user_id, assigned_by_user_id, source_meeting_id, blocked_reason, completed_at, created_at, updated_at';
+export const TASK_COLUMNS = 'id, title, description, status, priority, due_date, agency, role, owner_user_id, assigned_by_user_id, source_meeting_id, blocked_reason, completed_at, created_at, updated_at, source, extraction_id, source_quote, source_timestamp, owner_name_raw, delegated_to_id, verb_category, completion_note, completed_by, verified_by, verified_at, dispute_note, disputed_at, supersedes_id, visibility_scope, confidence_overall';
 
 /** Flatten the Supabase owner join (may be array or object) into owner_name. */
 export function flattenTaskOwner<T extends Record<string, unknown>>(row: T): T & { owner_name: string | null } {
@@ -9,7 +9,7 @@ export function flattenTaskOwner<T extends Record<string, unknown>>(row: T): T &
   return { ...row, owner_name: owner?.name || null, owner: undefined } as T & { owner_name: string | null };
 }
 
-export type TaskStatus = 'new' | 'active' | 'blocked' | 'done';
+export type TaskStatus = 'new' | 'active' | 'blocked' | 'done' | 'awaiting_verification' | 'superseded';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
 
 export interface Task {
@@ -29,6 +29,22 @@ export interface Task {
   source_meeting_id: string | null;
   created_at: string;
   updated_at: string;
+  source: 'manual' | 'extraction';
+  extraction_id: string | null;
+  source_quote: string | null;
+  source_timestamp: string | null;
+  owner_name_raw: string | null;
+  delegated_to_id: string | null;
+  verb_category: 'correspondence' | 'decision' | 'information' | 'scheduling' | 'project_update' | 'analysis' | null;
+  completion_note: string | null;
+  completed_by: string | null;
+  verified_by: string | null;
+  verified_at: string | null;
+  dispute_note: string | null;
+  disputed_at: string | null;
+  supersedes_id: string | null;
+  visibility_scope: 'agency_normal' | 'dg_only';
+  confidence_overall: number | null;
 }
 
 export interface TaskUpdate {

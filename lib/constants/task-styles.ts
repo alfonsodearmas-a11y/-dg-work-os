@@ -8,6 +8,8 @@ export const STATUS_DOT: Record<TaskStatus, string> = {
   active: 'bg-gold-500',
   blocked: 'bg-red-400',
   done: 'bg-emerald-400',
+  awaiting_verification: 'bg-purple-400',
+  superseded: 'bg-gray-400',
 };
 
 export const STATUS_PILL: Record<string, string> = {

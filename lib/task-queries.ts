@@ -20,6 +20,9 @@ const CANONICAL_TO_PG: Record<TaskStatus, PgTaskStatus> = {
   active: 'in_progress',
   blocked: 'delayed',
   done: 'done',
+  // lifecycle-only statuses don't exist in the legacy PG enum; fall back to 'new'
+  awaiting_verification: 'new',
+  superseded: 'done',
 };
 
 const PG_TO_CANONICAL: Record<string, TaskStatus> = {
