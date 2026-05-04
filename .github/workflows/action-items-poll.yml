@@ -1,0 +1,27 @@
+name: action-items poll Fireflies
+
+# Vercel Hobby caps cron frequency at daily. We need */10 for the
+# action-items pipeline, so the schedule lives here. If the project is
+# ever upgraded to Vercel Pro, move this entry back into vercel.json
+# and delete this file.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: action-items-poll
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger /api/action-items/poll-fireflies
+        env:
+          POLL_URL: ${{ secrets.POLL_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl --fail-with-body --max-time 60 -sS \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -X POST "$POLL_URL"
