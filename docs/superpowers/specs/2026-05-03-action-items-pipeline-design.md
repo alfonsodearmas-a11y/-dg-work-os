@@ -325,7 +325,9 @@ Two prompt files, both producing the same JSON schema. Same validation runs agai
 
 ### 5.1 Common rules (both prompts)
 
-The full prompt body lives in the source file. Key points:
+**Prompt source-of-truth rule.** The TypeScript files under `lib/action-items/prompts/` are the canonical text of every prompt. This spec describes structure and rules, not the prompt body. When prompt text changes — for any reason: a banned phrase added, a rule reworded, a new addendum — bump the version filename (`extraction-virtual-v0.1.ts` → `extraction-virtual-v0.2.ts`), keep the old file checked in, and update `prompt_version` strings in the extractor. Old extractions reference the prompt they ran against by filename. Never edit a versioned prompt file in place.
+
+Key points:
 
 1. Owner: name as spoken; `name_raw` only — no resolution attempted in prompt.
 2. Task: rewrite as canonical sentence. Approved verbs only; banned phrases never used. Max 500 chars.
@@ -410,7 +412,19 @@ Edge case: if `meeting_date` is Friday afternoon and phrase is `this week`, reso
 
 "Weekdays" = Mon–Fri, no holiday calendar.
 
-### 6.4 Priority assignment (post-extraction, programmatic)
+### 6.4 Resolution: `agency_name` (the work-concerns agency)
+
+`item.agency_name` and `owner.agency` are independent fields by design (Q5). For that independence to be implementable rather than aspirational, the resolver needs a default rule. Order of precedence:
+
+1. **AI-inferred from task content.** The extraction prompt asks the model for an `agency_guess` per item (the agency the task concerns, inferred from proper nouns, project names, and context). If the guess is one of the 9 enum values and confidence ≥ 0.7, use it.
+2. **Owner's home agency.** If the AI can't infer (returns `unknown` or low confidence), fall back to `owner.agency`. For Kesh as owner, this defaults to `GPL`. Reviewer can override.
+3. **Reviewer override.** Always available in the review queue, even when 1 or 2 produced a value. The override is a dropdown of the 9 enum values; selecting one is a one-tap operation.
+
+For manual-add items: the freestanding form requires `agency_name` as a user-selected dropdown (no AI step). Default selection: `owner.agency` if owner already chosen, else blank.
+
+If `agency_name` cannot be set by any of these paths at accept time, the item is blocked from leaving the review queue — accepting forces the reviewer to pick. There is no "unrouted" bucket.
+
+### 6.5 Priority assignment (post-extraction, programmatic)
 
 | Tier | Rule |
 |------|------|
@@ -548,7 +562,27 @@ Items where `owner.closure_mode = 'dg_managed'` (Minister, PS, President):
 - Skip `awaiting_verification`. DG flips `open` → `complete` directly.
 - Show in agency-grouped views under the appropriate `agency_name` (e.g., `MPUA-Minister → Indar`).
 
-### 10.5 Delegation
+### 10.5 Dispute resolution flow
+
+The dispute path is the most politically charged interaction in the system — owner says done, DG says not done. v1 specs the full loop, not just the status flip.
+
+**When DG disputes** (one tap → modal):
+
+1. DG enters `dispute_note` (required, ≥20 chars — forces a substantive reason, not a reflexive reject).
+2. `action_item_events` row written: `event_type='dispute_raised'`, `actor_id=DG`, `payload={completion_note, dispute_note, prior_completed_at}`.
+3. `action_items` row updated: `status='open'`, `dispute_note`, `disputed_at` set; `completed_by`, `completed_at`, `completion_note` cleared (preserved in the event row, removed from the live row to keep the open-list clean).
+4. Owner notified via existing web push: title `"Action item disputed: <task first 60 chars>"`, body `<dispute_note first 120 chars>`. Tap → goes to `/action-items/[id]`.
+
+**Owner's options** when seeing the dispute on `/action-items/[id]`:
+
+- **Re-attempt completion.** Marks complete again with a new `completion_note` (the previous attempt's note is still in the event log; visible in the item history). Status → `awaiting_verification`. Normal verification cycle.
+- **Push back via comment.** Posts a `comment` (free text, ≥20 chars). Writes `action_item_events` row with `event_type='dispute_resolved'` payload `{action:'pushback', text:<comment>}` — but **does not** change item status. Item stays `open`. The comment surfaces as a new card in DG's daily briefing under a *Pushbacks needing your attention* section, with the item, the original dispute_note, and the owner's comment side-by-side. DG can: re-confirm dispute (one tap, no further action — item stays open, owner sees DG re-affirmed), accept the pushback (one tap → status `complete`, treated as DG-bulk-close), or open the item for a longer reply.
+
+**Re-disputes are allowed.** A pushback that DG re-disputes after re-completion just appends another event row. The full dispute history is queryable from the item detail page.
+
+**Why this matters:** without spec'ing the loop, the dispute path collapses to "owner sees red badge, doesn't know what to do, item rots open forever." The pushback channel is the safety valve that keeps the verification flow honest in both directions.
+
+### 10.6 Delegation
 
 `delegated_to_id` is set when DG is owner but task is executed by staff. Default visibility: visible to delegate (no opt-in switch — sensitive items shouldn't be in DGOS).
 
@@ -660,10 +694,12 @@ The original Phase 0 eval runs in production for the first 4 internal-virtual me
 
 **Activate earned auto-accept (per `(virtual, internal, MPUA-DG)`) when:**
 
-- Recall ≥ 90%
-- Precision ≥ 85%
-- Owner accuracy ≥ 85%
-- Overconfidence ≤ 5%
+- Recall ≥ 95%
+- Precision ≥ 90%
+- Owner accuracy ≥ 90%
+- Overconfidence ≤ 3%
+
+The strictness is the point. Below these thresholds, mandatory review is the correct posture, not a failure to overcome. If the extractor can't hit them, the political-risk gate continues doing its job and the system is still useful — it's just not auto-accepting anything.
 
 If thresholds miss after 4 meetings: tune to `extraction-virtual-v0.2`, run 4 more.
 
@@ -781,7 +817,7 @@ For traceability against `action_items_plan.md`:
 | In-person prompt unused at launch but expected by users to "just work" | Medium | Daily digest + meeting card explicitly flags `skipped_out_of_scope` with "Process manually" CTA. UX makes the skip visible. |
 | pgvector not enabled on Supabase | Low (verifiable) | Pre-flight check before migration runs. If unavailable, supersession matcher falls back to noun-overlap + verb-category only. |
 | Anthropic ZDR not contractually in place at launch | Medium | Switch to Vercel AI Gateway with ZDR enabled; documented in extract.ts header. |
-| DG reviews 4 meetings, none of them clean enough for trust activation; review burden persists indefinitely | Medium | After 8 meetings without trust activation, redesign review UX rather than further prompt-tune (signal that the system shape is wrong, not the prompt). |
+| Trust activation never happens — `(virtual, internal, MPUA-DG)` doesn't reach §13 thresholds | Medium | After 8 meetings without activation, **stop trying**. Virtual-internal items remain mandatory-review indefinitely. This is the system honestly reporting that the political-risk threshold isn't safely crossable for this prompt + attendee universe. It is not a UX redesign signal and not a prompt-tuning signal — it is the gate working. The system remains useful: extraction still runs, items still flow into the agency-grouped views, the political-risk gate catches everything. The only thing v1 doesn't get is the time-saving auto-accept lane, which was always conditional. |
 | Agency head's name changes (new CEO appointed) | Low | Two-line admin job: flip `is_agency_head` flags. Documented runbook. |
 | External-meeting item visibility leak (`dg_only` flag bypassed) | Low / High impact | App-layer enforcement on every list endpoint. Test coverage required for visibility filter. |
 | Drift detector false positives swamp Monday digest | Medium | Threshold tunable; start at 0.75, raise if noisy. |
@@ -791,10 +827,12 @@ For traceability against `action_items_plan.md`:
 
 ## 17 — Open questions for v1.5+ (intentionally not in v1)
 
-- When does in_person extraction wire on? Probably after 4 weeks of v1 data shows what % of meetings are skipped.
-- Cross-module matching to Procurement / Projects / War Room — what's the trigger UX?
-- Co-owner first-class — only if 13 April-style transcripts show >10% joint commitments.
-- Webhook upgrade from polling — only if Fireflies plan supports and meeting cadence pressures the 10-min interval.
+- **In_person extraction wiring.** Probably after 4 weeks of v1 data shows what % of meetings are skipped.
+- **Cross-module matching** to Procurement / Projects / War Room — what's the trigger UX?
+- **Co-owner first-class** — only if 13 April-style transcripts show >10% joint commitments.
+- **Webhook upgrade from polling** — only if Fireflies plan supports and meeting cadence pressures the 10-min interval.
+- **Freestanding manual-add for non-meeting commitments.** v1 ships with the freestanding form for items from `meetings_seen` cards (`pipeline_action='skipped_out_of_scope'` → "Process manually" CTA), since that's load-bearing on day one. v1 does *not* ship a "create action item from nothing" entry point — i.e., no top-level *New action item* button divorced from any meeting. If hallway/email commitments accumulate as a real volume gap, add the entry point in v1.5. The form itself is reusable; only the entry surface is new.
+- **Finer-grained visibility sharing.** v1 visibility is binary: `agency_normal | dg_only`. v1.5 may add per-agency or per-user share targets if real usage patterns surface the need (e.g., "share this external-meeting item with GPL only, not GWI").
 
 ---
 
