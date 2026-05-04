@@ -162,3 +162,71 @@ COMMENT ON COLUMN tasks.visibility_scope IS
   'agency_normal = standard role-based visibility; dg_only = DG sees only.';
 COMMENT ON COLUMN tasks.delegated_to_id IS
   'Set when DG owns the task but staff executes. Delegate sees but cannot close.';
+
+-- ----------------------------------------------------------------------------
+-- action_item_events — append-only audit log for the pipeline + verification
+-- flow, attached to the task. Coexists with task_activities (the human-action
+-- log scoped to the existing Tasks UI) by design — different concerns.
+-- ----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS action_item_events (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id       UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  event_type    TEXT NOT NULL CHECK (event_type IN
+                  ('created','accepted','edited','rejected','status_change',
+                   'dispute_raised','dispute_resolved','superseded_by','supersedes',
+                   'attribution_error_flagged')),
+  actor_id      UUID REFERENCES users(id),
+  payload       JSONB NOT NULL,
+  occurred_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_events_task
+  ON action_item_events(task_id, occurred_at DESC);
+
+-- ----------------------------------------------------------------------------
+-- meetings_seen — every Fireflies meeting we observe (drives daily digest)
+-- ----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS meetings_seen (
+  id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  fireflies_meeting_id  TEXT NOT NULL UNIQUE,
+  meeting_title         TEXT,
+  meeting_date          TIMESTAMPTZ,
+  detected_type         TEXT CHECK (detected_type IN ('internal','agency','external')),
+  detected_modality     TEXT CHECK (detected_modality IN ('virtual','in_person','mixed')),
+  detected_agency_name  TEXT,
+  attendee_emails       TEXT[],
+  transcript_ready_at   TIMESTAMPTZ,
+  pipeline_action       TEXT NOT NULL CHECK (pipeline_action IN
+                          ('extracted','skipped_out_of_scope','queued','failed','manually_processed')),
+  skip_reason           TEXT,
+  extraction_id         UUID REFERENCES action_item_extractions(id),
+  observed_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_meetings_seen_date
+  ON meetings_seen(meeting_date DESC);
+CREATE INDEX IF NOT EXISTS idx_meetings_seen_action
+  ON meetings_seen(pipeline_action);
+
+-- ----------------------------------------------------------------------------
+-- failed_extractions — quarantine table
+-- ----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS failed_extractions (
+  id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  fireflies_meeting_id  TEXT NOT NULL,
+  attempted_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  failure_reason        TEXT NOT NULL CHECK (failure_reason IN
+                          ('claude_error','malformed_json','transcript_unavailable',
+                           'speaker_collapse_virtual','transcript_partial','quota_exceeded','other')),
+  failure_detail        TEXT,
+  retry_count           INTEGER NOT NULL DEFAULT 0,
+  resolved_at           TIMESTAMPTZ,
+  resolved_by           TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_failed_extractions_unresolved
+  ON failed_extractions(attempted_at DESC)
+  WHERE resolved_at IS NULL;
