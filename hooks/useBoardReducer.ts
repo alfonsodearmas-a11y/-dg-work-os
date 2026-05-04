@@ -64,6 +64,7 @@ export interface BoardState {
   newDueDate: string;
   newAssignee: string;
   newDescription: string;
+  newSourceMeetingId: string;
   creatingTask: boolean;
   showTemplates: boolean;
 
@@ -143,6 +144,7 @@ export type BoardAction =
   | { type: 'SET_NEW_DUE_DATE'; date: string }
   | { type: 'SET_NEW_ASSIGNEE'; assignee: string }
   | { type: 'SET_NEW_DESCRIPTION'; description: string }
+  | { type: 'SET_NEW_SOURCE_MEETING_ID'; meetingId: string }
   | { type: 'SET_CREATING_TASK'; creating: boolean }
   | { type: 'SET_SHOW_TEMPLATES'; show: boolean }
   | { type: 'RESET_NEW_TASK_FORM' }
@@ -234,6 +236,7 @@ export function createInitialState(initialViewMode?: ViewMode): BoardState {
     newDueDate: '',
     newAssignee: '',
     newDescription: '',
+    newSourceMeetingId: '',
     creatingTask: false,
     showTemplates: false,
 
@@ -389,6 +392,8 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
       return { ...state, newAssignee: action.assignee };
     case 'SET_NEW_DESCRIPTION':
       return { ...state, newDescription: action.description };
+    case 'SET_NEW_SOURCE_MEETING_ID':
+      return { ...state, newSourceMeetingId: action.meetingId };
     case 'SET_CREATING_TASK':
       return { ...state, creatingTask: action.creating };
     case 'SET_SHOW_TEMPLATES':
@@ -402,6 +407,7 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
         newDueDate: '',
         newAssignee: '',
         newDescription: '',
+        newSourceMeetingId: '',
         showNewTask: false,
         showTemplates: false,
       };

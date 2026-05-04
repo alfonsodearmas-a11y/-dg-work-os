@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useCallback, useMemo, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { Task, TaskUpdate, TasksByStatus, TaskTemplate, TaskStatus } from '@/lib/task-types';
 import { KanbanColumn } from './KanbanColumn';
@@ -91,6 +92,8 @@ function KanbanBoardInner() {
   const isMobile = useIsMobile();
   const { state, dispatch } = useBoardReducer();
   const { selectedIds, selectionMode, toggleSelect, clearSelection } = useSelection();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const pendingDeleteTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -98,6 +101,24 @@ function KanbanBoardInner() {
   useEffect(() => {
     localStorage.setItem('dg-task-view', state.viewMode);
   }, [state.viewMode]);
+
+  // Auto-open Add Task modal with meeting prefill from /action-items/meetings deep link.
+  useEffect(() => {
+    if (searchParams.get('action') !== 'add') return;
+    const meetingId = searchParams.get('meeting_id');
+    if (!meetingId) return;
+    const meetingTitle = searchParams.get('meeting_title') ?? '';
+    const meetingDate = searchParams.get('meeting_date') ?? '';
+    const dateStr = meetingDate
+      ? new Date(meetingDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+      : '';
+    dispatch({ type: 'SET_NEW_TITLE', title: `From: ${meetingTitle || meetingId}` });
+    dispatch({ type: 'SET_NEW_DESCRIPTION', description: `From meeting: ${meetingTitle || meetingId}${dateStr ? ` (${dateStr})` : ''}` });
+    dispatch({ type: 'SET_NEW_SOURCE_MEETING_ID', meetingId });
+    dispatch({ type: 'SET_SHOW_NEW_TASK', show: true });
+    router.replace('/tasks');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Data fetching
@@ -333,6 +354,7 @@ function KanbanBoardInner() {
           priority: overrides?.priority || state.newPriority,
           due_date: overrides?.due_date || state.newDueDate || undefined,
           assignee_id: overrides?.assignee_id || state.newAssignee || undefined,
+          source_meeting_id: overrides ? undefined : (state.newSourceMeetingId || undefined),
           status: overrides?.status || 'new',
         }),
       });
@@ -350,7 +372,7 @@ function KanbanBoardInner() {
     } finally {
       dispatch({ type: 'SET_CREATING_TASK', creating: false });
     }
-  }, [state.newTitle, state.newDescription, state.newAgency, state.newPriority, state.newDueDate, state.newAssignee, dispatch]);
+  }, [state.newTitle, state.newDescription, state.newAgency, state.newPriority, state.newDueDate, state.newAssignee, state.newSourceMeetingId, dispatch]);
 
   const applyTemplate = useCallback((template: TaskTemplate) => {
     dispatch({ type: 'SET_NEW_TITLE', title: template.name });
