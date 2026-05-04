@@ -8,6 +8,12 @@
 - Disables the existing `tasks` RLS policy from migration 022 (visibility moves to app-layer for this module's flows).
 - Enables pgvector.
 
+**Note on `tasks.source_meeting_id`.** Migration 102's
+`ADD COLUMN IF NOT EXISTS source_meeting_id TEXT` is a no-op because the column
+already exists from migration 022 as UUID. The production-safe widen lives in
+migration 103 (forward-only, runs after 102). Run 103 before any extraction
+writes Fireflies meeting IDs to this column.
+
 There is **no** `action_items` table — the spec was corrected before any
 database execution. The canonical commitment layer is the existing `tasks`
 table widened in this migration.
