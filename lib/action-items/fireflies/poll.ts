@@ -24,17 +24,35 @@ function transcriptDateIso(d: FirefliesTranscriptMeta['date']): string {
 }
 
 function isTranscriptReady(t: FirefliesTranscriptMeta): boolean {
-  if (t.transcript_status && t.transcript_status.toLowerCase() !== 'complete') return false;
-  return true;
+  // Fireflies tenant exposes readiness on meeting_info.summary_status.
+  // Treat 'processed' as ready; missing/unknown defaults to ready (the tenant
+  // returns null for older records that pre-date the summary feature).
+  const status = t.meeting_info?.summary_status?.toLowerCase();
+  if (!status) return true;
+  return status === 'processed';
 }
 
 async function tryAcquireLock(instance: string): Promise<boolean> {
-  const staleCutoff = new Date(Date.now() - STALE_LOCK_MS).toISOString();
+  // Read-then-update. PostgREST applies filter columns to the RETURNING
+  // clause too, so chaining `.or('locked_at.is.null,...').update({ locked_at: <now> })`
+  // returns an empty array even when the UPDATE succeeded — the post-update
+  // row no longer matches `locked_at IS NULL`. We split the read and the
+  // write. Race window is ~one round-trip; downstream is idempotent
+  // (UNIQUE on meetings_seen.fireflies_meeting_id), so the worst-case of two
+  // simultaneous pollers is double Fireflies API spend, not data corruption.
+  const { data: cur } = await supabaseAdmin
+    .from('polling_state')
+    .select('locked_at')
+    .eq('id', POLLER_ID)
+    .single();
+  if (cur?.locked_at) {
+    const lockedMs = new Date(cur.locked_at).getTime();
+    if (Date.now() - lockedMs < STALE_LOCK_MS) return false;
+  }
   const { data } = await supabaseAdmin
     .from('polling_state')
     .update({ locked_at: new Date().toISOString(), locked_by: instance })
     .eq('id', POLLER_ID)
-    .or(`locked_at.is.null,locked_at.lt.${staleCutoff}`)
     .select('id');
   return Array.isArray(data) && data.length > 0;
 }

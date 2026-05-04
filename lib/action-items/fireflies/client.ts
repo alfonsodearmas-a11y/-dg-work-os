@@ -41,11 +41,17 @@ async function firefliesFetch<T>(query: string, variables: Record<string, unknow
   throw lastErr instanceof Error ? lastErr : new FirefliesError(String(lastErr));
 }
 
+// Field-name notes (verified against the live Fireflies tenant 2026-05-04):
+// - `source` and `transcript_status` do NOT exist on Transcript here.
+// - Readiness lives on `meeting_info.summary_status` (enum: processing|processed|failed).
+// - `calendar_type` carries 'google'/'outlook'/null; platform info (Meet/Zoom/mobile)
+//   is encoded in `meeting_link` URL when present.
 const LIST_QUERY = `
   query ListTranscripts($fromDate: DateTime, $limit: Int) {
     transcripts(fromDate: $fromDate, limit: $limit) {
       id title date duration transcript_url meeting_link
-      organizer_email source transcript_status
+      organizer_email calendar_type
+      meeting_info { summary_status silent_meeting }
       meeting_attendees { email name displayName }
     }
   }
@@ -55,7 +61,8 @@ const GET_QUERY = `
   query GetTranscript($id: String!) {
     transcript(id: $id) {
       id title date duration transcript_url meeting_link
-      organizer_email source transcript_status
+      organizer_email calendar_type
+      meeting_info { summary_status silent_meeting }
       meeting_attendees { email name displayName }
       sentences { speaker_name text start_time end_time }
     }

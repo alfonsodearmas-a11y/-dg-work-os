@@ -12,6 +12,8 @@ export default auth((req) => {
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/push/') ||
     pathname.startsWith('/api/notifications/generate') ||
+    pathname.startsWith('/api/action-items/poll-fireflies') ||
+    pathname.startsWith('/api/action-items/digest') ||
     pathname.startsWith('/api/webhooks/') ||
     pathname.startsWith('/api/integrations/trello/webhook') ||
     pathname.startsWith('/api/ai/precompute-daily') ||

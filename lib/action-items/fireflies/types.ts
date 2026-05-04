@@ -6,6 +6,14 @@ export const FirefliesAttendeeZ = z.object({
   displayName: z.string().nullable().optional(),
 });
 
+export const FirefliesMeetingInfoZ = z.object({
+  // Fireflies summary lifecycle: processing | processed | failed.
+  // Replaces the older `transcript_status` field which doesn't exist on this
+  // tenant's GraphQL schema. We treat 'processed' as ready.
+  summary_status: z.string().nullable().optional(),
+  silent_meeting: z.boolean().nullable().optional(),
+});
+
 export const FirefliesTranscriptMetaZ = z.object({
   id: z.string(),
   title: z.string().nullable().optional(),
@@ -14,8 +22,11 @@ export const FirefliesTranscriptMetaZ = z.object({
   transcript_url: z.string().url().nullable().optional(),
   meeting_link: z.string().nullable().optional(),
   organizer_email: z.string().nullable().optional(),
-  source: z.string().nullable().optional(),
-  transcript_status: z.string().nullable().optional(),
+  // `calendar_type` carries values like 'google' / 'outlook'. The platform
+  // (Google Meet / Zoom / mobile-recording) is encoded in the `meeting_link`
+  // URL when present; downstream consumers can parse it if needed.
+  calendar_type: z.string().nullable().optional(),
+  meeting_info: FirefliesMeetingInfoZ.nullable().optional(),
   attendees: z.array(FirefliesAttendeeZ).default([]),
   meeting_attendees: z.array(FirefliesAttendeeZ).optional(),
 });
