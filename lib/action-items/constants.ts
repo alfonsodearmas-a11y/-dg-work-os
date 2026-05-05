@@ -55,7 +55,7 @@ export const APPROVED_VERBS: Record<VerbCategory, readonly string[]> = {
   scheduling:     ['schedule', 'convene', 'arrange', 'coordinate',
                    'book', 'set', 'plan', 'defer', 'postpone'],
   project_update: ['update', 'submit', 'mark', 'close', 'reopen',
-                   'upload', 'deploy', 'complete', 'deliver'],
+                   'upload', 'deploy', 'complete', 'deliver', 'provide'],
   analysis:       ['calculate', 'analyze', 'assess', 'compare', 'evaluate',
                    'review', 'examine', 'audit', 'investigate', 'study'],
 };
