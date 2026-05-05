@@ -87,9 +87,16 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ extraction
     accepted++;
     if (d.was_edited) edited++;
 
-    // Resolve owner: must be set (the UI prevents accept of unresolved items via mandatory bucket).
+    // Resolve owner: must be set on every accepted item. The strict resolver
+    // (post-2026-05-05) returns null instead of fuzzy-matching, so the
+    // reviewer must explicitly pick an owner via the dropdown before
+    // accepting. Differentiate from the undecided-items 400 above.
     if (!d.edits.owner_user_id) {
-      return NextResponse.json({ error: `Item ${d.index} has no resolved owner` }, { status: 400 });
+      return NextResponse.json({
+        error: `Item ${d.index} is set to accept but has no owner — pick an owner before submitting`,
+        failing_index: d.index,
+        code: 'accepted_without_owner',
+      }, { status: 400 });
     }
     const { data: ownerRow } = await supabaseAdmin
       .from('users').select('agency').eq('id', d.edits.owner_user_id).maybeSingle();
@@ -120,22 +127,36 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ extraction
       visibility_scope: 'agency_normal',
     };
 
-    // Idempotent insert: the partial unique index uniq_tasks_extraction_item
-    // (migration 105) makes (extraction_id, extraction_item_idx) globally
-    // unique among extraction-source tasks. Upsert with ignoreDuplicates
-    // turns retries after partial failures into a no-op for items that
-    // already landed. See incident 2026-05-05 (extraction 99049fe3).
+    // Idempotent insert. Postgres partial-index inference in ON CONFLICT
+    // requires the matching WHERE clause on the INSERT, which supabase-js's
+    // .upsert() can't emit (it only sends a column tuple). Earlier attempt
+    // with .upsert({ onConflict: 'extraction_id,extraction_item_idx' })
+    // failed against migration 105's partial index on 2026-05-05.
+    //
+    // Fallback: pre-check via SELECT, then INSERT. The migration-105 index
+    // still backstops concurrent races at the DB layer — if a true race
+    // happens, the second INSERT raises 23505 (unique_violation) and we
+    // treat it as already-landed.
+    const { data: existing } = await supabaseAdmin
+      .from('tasks')
+      .select('id')
+      .eq('extraction_id', extractionId)
+      .eq('extraction_item_idx', d.index)
+      .maybeSingle();
+    if (existing) {
+      // Already inserted by a prior submit attempt. Skip embed + logEvent
+      // — they fired the first time. Counters still reflect the user's
+      // current decision and overwrite at end-of-loop.
+      continue;
+    }
     const { data: ins, error: insErr } = await supabaseAdmin
       .from('tasks')
-      .upsert(insertPayload, { onConflict: 'extraction_id,extraction_item_idx', ignoreDuplicates: true })
+      .insert(insertPayload)
       .select('id')
-      .maybeSingle();
-    if (insErr) return NextResponse.json({ error: `Insert failed at item ${d.index}: ${insErr.message}` }, { status: 500 });
-    if (!ins) {
-      // Already inserted by a prior submit attempt. Skip the embed call
-      // and the logEvent — they fired the first time. Counters still
-      // reflect the user's current decision and overwrite at end-of-loop.
-      continue;
+      .single();
+    if (insErr) {
+      if (insErr.code === '23505') continue;   // race-lost: another writer landed it.
+      return NextResponse.json({ error: `Insert failed at item ${d.index}: ${insErr.message}` }, { status: 500 });
     }
     const task = ins;
 
