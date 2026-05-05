@@ -6,7 +6,7 @@ import { getTranscript } from '@/lib/action-items/fireflies/client';
 import { ExtractionToolInputZ, type ExtractedItem } from './types';
 import {
   buildVirtualSystemPrompt, VIRTUAL_TOOL_SCHEMA, PROMPT_VERSION as VIRTUAL_PROMPT_VERSION,
-} from '@/lib/action-items/prompts/extraction-virtual-v0.3';
+} from '@/lib/action-items/prompts/extraction-virtual-v0.4';
 import { chunkTranscriptIfNeeded } from './chunk';
 import type { Modality } from '@/lib/action-items/constants';
 import { logger } from '@/lib/logger';
