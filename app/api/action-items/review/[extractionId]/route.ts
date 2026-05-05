@@ -120,9 +120,24 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ extraction
       visibility_scope: 'agency_normal',
     };
 
-    const { data: task, error: insErr } = await supabaseAdmin
-      .from('tasks').insert(insertPayload).select('id').single();
+    // Idempotent insert: the partial unique index uniq_tasks_extraction_item
+    // (migration 105) makes (extraction_id, extraction_item_idx) globally
+    // unique among extraction-source tasks. Upsert with ignoreDuplicates
+    // turns retries after partial failures into a no-op for items that
+    // already landed. See incident 2026-05-05 (extraction 99049fe3).
+    const { data: ins, error: insErr } = await supabaseAdmin
+      .from('tasks')
+      .upsert(insertPayload, { onConflict: 'extraction_id,extraction_item_idx', ignoreDuplicates: true })
+      .select('id')
+      .maybeSingle();
     if (insErr) return NextResponse.json({ error: `Insert failed at item ${d.index}: ${insErr.message}` }, { status: 500 });
+    if (!ins) {
+      // Already inserted by a prior submit attempt. Skip the embed call
+      // and the logEvent — they fired the first time. Counters still
+      // reflect the user's current decision and overwrite at end-of-loop.
+      continue;
+    }
+    const task = ins;
 
     // Fire-and-forget; embedding failure must not block accept. The drift
     // detector (Plan 5 Task 5) recovers any tasks that fail to embed.
