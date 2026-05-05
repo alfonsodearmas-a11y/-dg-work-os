@@ -108,6 +108,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ extraction
       .from('tasks').insert(insertPayload).select('id').single();
     if (insErr) return NextResponse.json({ error: `Insert failed at item ${d.index}: ${insErr.message}` }, { status: 500 });
 
+    // Fire-and-forget; embedding failure must not block accept. The drift
+    // detector (Plan 5 Task 5) recovers any tasks that fail to embed.
+    fetch(`${process.env.NEXTAUTH_URL ?? ''}/api/action-items/embed`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'cookie': req.headers.get('cookie') ?? '' },
+      body: JSON.stringify({ task_id: task.id }),
+    }).catch(() => undefined);
+
     await logEvent({
       taskId: task.id as string,
       eventType: d.was_edited ? 'edited' : 'accepted',
