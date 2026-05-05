@@ -5,6 +5,7 @@ import { ExtractionToolInputZ } from '@/lib/action-items/extraction/types';
 import { resolveExtractedItem, type ReviewableItem } from '@/lib/action-items/resolution/resolve';
 import { requiresMandatoryReview } from '@/lib/action-items/gate';
 import { ReviewClient } from '@/components/action-items/ReviewClient';
+import { getTranscript } from '@/lib/action-items/fireflies/client';
 import type { UserStaffFields } from '@/lib/action-items/types';
 
 const ALLOWED = new Set(['dg', 'ps', 'parl_sec']);
@@ -55,13 +56,23 @@ export default async function ReviewPage({ params }: { params: Promise<{ extract
   const attendeeEmails = new Set(((meetingRow?.attendee_emails as string[] | null) ?? []).map(e => e.toLowerCase()));
   const attendees = allUsers.filter(u => u.email && attendeeEmails.has(u.email.toLowerCase()));
 
-  // Resolution runs without transcript text here (validation happens at submit
-  // with full transcript; per Plan 4 correction #2 the batch endpoint re-validates
-  // every accepted source_quote against the live transcript).
+  // Fetch the transcript so resolveExtractedItem's quote-substring check has
+  // real text to match against. Without this every item shows the
+  // "quote_fabricated" warning at render. The same transcript is fetched
+  // again at submit by the batch endpoint's authoritative gate (Plan 4
+  // correction #2); one extra Fireflies fetch per page load is cheap and
+  // gives reviewers visibility into real quote problems before Submit.
+  const transcript = await getTranscript(ext.meeting_id as string);
+  const transcriptText = transcript
+    ? (transcript.sentences ?? [])
+        .map(s => `[${s.start_time ?? '?'}] ${s.speaker_name ?? '?'}: ${s.text}`)
+        .join('\n')
+    : '';
+
   const ctx = {
     meeting_date: ext.meeting_date ? new Date(ext.meeting_date as string) : new Date(),
     attendees, allUsers,
-    transcript_text: '',
+    transcript_text: transcriptText,
     speaker_role: 'officer' as const,
   };
 
