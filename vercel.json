@@ -47,6 +47,10 @@
     {
       "path": "/api/action-items/drift",
       "schedule": "0 2 * * 0"
+    },
+    {
+      "path": "/api/action-items/auto-archive",
+      "schedule": "0 3 * * *"
     }
   ]
 }
