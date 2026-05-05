@@ -1,3 +1,8 @@
+// OpenAI used for embeddings (text-embedding-3-small, 1536-dim).
+// Anthropic does not ship dedicated embeddings; OpenAI is the established
+// alternative. User maintains an OpenAI account; this is the intended vendor.
+// Voyage AI was considered as the Anthropic-aligned alternative and rejected
+// because the OpenAI integration already exists.
 import 'server-only';
 import OpenAI from 'openai';
 

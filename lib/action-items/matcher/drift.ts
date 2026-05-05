@@ -8,6 +8,13 @@ export interface DriftFinding {
   candidates: Array<{ task_id: string; title: string; score: number }>;
 }
 
+// Sampling: 100% until corpus exceeds FULL_THRESHOLD, then proportional
+// down-sample so we inspect ~FULL_THRESHOLD per run regardless of volume.
+// Low-volume early weeks need full coverage — at N<10 a fixed 10% rate
+// inspects zero, which is the v1 bug this corrects.
+const FULL_THRESHOLD = 500;
+const FETCH_LIMIT = 5000;
+
 export async function runDriftDetector(): Promise<{ inspected: number; findings: DriftFinding[] }> {
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const { data: recent } = await supabaseAdmin
@@ -17,8 +24,10 @@ export async function runDriftDetector(): Promise<{ inspected: number; findings:
     .gte('created_at', since)
     .is('supersedes_id', null)
     .not('task_embedding', 'is', null)
-    .limit(200);
-  const sample = (recent ?? []).filter((_, i) => i % 10 === 0);   // 10% sample, deterministic
+    .limit(FETCH_LIMIT);
+  const all = recent ?? [];
+  const stride = all.length <= FULL_THRESHOLD ? 1 : Math.ceil(all.length / FULL_THRESHOLD);
+  const sample = stride === 1 ? all : all.filter((_, i) => i % stride === 0);
   const findings: DriftFinding[] = [];
   for (const t of sample) {
     const cands = await findSupersessionCandidates({
