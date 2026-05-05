@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReviewableItem } from '@/lib/action-items/resolution/resolve';
 import { VERB_CATEGORIES, type VerbCategory } from '@/lib/action-items/constants';
 import { SupersessionSuggestion } from './SupersessionSuggestion';
@@ -29,7 +29,14 @@ export function ReviewItemCard({
   decision: ReviewDecision | null;
   onChange: (d: ReviewDecision) => void;
 }) {
+  const undecided = decision === null;
+  // For rendering only — we never persist this synthetic decision unless the
+  // user clicks. The persistence path runs through onChange().
   const cur: ReviewDecision = decision ?? { index, action: defaultAction, edits: {}, was_edited: false };
+  const checkboxRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (checkboxRef.current) checkboxRef.current.indeterminate = undecided;
+  }, [undecided]);
   const [task, setTask] = useState<string>(cur.edits.task ?? item.raw.task);
   const [verb, setVerb] = useState<VerbCategory>(cur.edits.verb_category ?? item.raw.verb_category);
   const [ownerId, setOwnerId] = useState<string>(cur.edits.owner_user_id ?? item.owner_id ?? '');
@@ -43,10 +50,19 @@ export function ReviewItemCard({
   const issues = item.validation_issues;
 
   return (
-    <div className={`bg-navy-900 border border-navy-800 rounded-lg p-3 ${cur.action === 'reject' ? 'opacity-60' : ''}`}>
+    <div className={`bg-navy-900 border ${undecided ? 'border-red-500/40' : 'border-navy-800'} rounded-lg p-3 ${!undecided && cur.action === 'reject' ? 'opacity-60' : ''}`}>
       <div className="flex items-start gap-3">
-        <input type="checkbox" checked={cur.action === 'accept'}
-          onChange={e => onChange({ ...cur, action: e.target.checked ? 'accept' : 'reject' })} />
+        <div className="flex flex-col items-center gap-1">
+          <input ref={checkboxRef} type="checkbox" checked={!undecided && cur.action === 'accept'}
+            onChange={e => onChange({ ...cur, action: e.target.checked ? 'accept' : 'reject' })} />
+          {undecided && <span className="text-[9px] uppercase text-red-400">decide</span>}
+          {!undecided && (
+            <button type="button" onClick={() => onChange({ ...cur, action: cur.action === 'accept' ? 'reject' : 'accept' })}
+              className="text-[9px] uppercase text-navy-600 hover:text-white">
+              {cur.action}
+            </button>
+          )}
+        </div>
         <div className="flex-1 space-y-2">
           <textarea value={task}
             onChange={e => { setTask(e.target.value); set('task', e.target.value, item.raw.task); }}

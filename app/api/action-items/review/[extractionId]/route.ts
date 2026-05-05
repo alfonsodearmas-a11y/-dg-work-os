@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { ExtractionToolInputZ } from '@/lib/action-items/extraction/types';
+import { findUndecidedIndices } from '@/lib/action-items/extraction/decisions';
 import { logEvent } from '@/lib/action-items/events';
 import { getTranscript } from '@/lib/action-items/fireflies/client';
 import { quoteAppearsInTranscript } from '@/lib/action-items/validation/quote-substring';
@@ -39,6 +40,21 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ extraction
 
   const items = ExtractionToolInputZ.safeParse(ext.raw_response);
   if (!items.success) return NextResponse.json({ error: 'Extraction raw_response invalid' }, { status: 500 });
+
+  // Explicit-decision gate. Every extracted item must carry an explicit
+  // accept/reject from the reviewer; the prior version silently treated
+  // missing entries as rejections, which closed extraction 99049fe3 with
+  // 4 rejected / 0 accepted on 2026-05-05 even though the items were
+  // good. The submit endpoint now refuses to close an extraction unless
+  // all indices are decided. The UI surfaces the undecided count and
+  // disables the Submit button accordingly.
+  const undecided = findUndecidedIndices(items.data.items.length, parsed.data.decisions);
+  if (undecided.length > 0) {
+    return NextResponse.json(
+      { error: 'Some items have no decision', undecided_indices: undecided, code: 'undecided_items' },
+      { status: 400 },
+    );
+  }
 
   // Quote re-validation gate (Plan 4 correction #2). Fetch the transcript
   // once, normalize once, then verify every accepted source_quote still

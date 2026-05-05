@@ -24,11 +24,16 @@ export function ReviewClient({ extractionId, meetingTitle, meetingDate, buckets,
   const router = useRouter();
   const [decisions, setDecisions] = useState<Map<number, ReviewDecision>>(() => {
     const m = new Map<number, ReviewDecision>();
-    // Mandatory default to no decision (forces explicit accept/reject); quick-scan defaults to accept.
+    // Mandatory items start UNDECIDED — forces an explicit accept/reject click
+    // and the server-side gate refuses to close the extraction unless every
+    // index is decided. Quick-scan and auto-accepted items are pre-accepted
+    // per spec §7 (gate-pass means low political risk).
     for (const it of buckets.quickScan) m.set(it.index, { index: it.index, action: 'accept', edits: {}, was_edited: false });
     for (const it of buckets.autoAccepted) m.set(it.index, { index: it.index, action: 'accept', edits: {}, was_edited: false });
     return m;
   });
+  const totalItems = buckets.mandatory.length + buckets.quickScan.length + buckets.autoAccepted.length;
+  const undecidedCount = totalItems - decisions.size;
   const setDecision = useCallback((d: ReviewDecision) => {
     setDecisions(prev => { const next = new Map(prev); next.set(d.index, d); return next; });
   }, []);
@@ -46,6 +51,7 @@ export function ReviewClient({ extractionId, meetingTitle, meetingDate, buckets,
   }, [buckets]);
 
   async function submit() {
+    if (undecidedCount > 0) return;
     const arr = Array.from(decisions.values());
     const res = await fetch(`/api/action-items/review/${extractionId}`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
@@ -67,9 +73,20 @@ export function ReviewClient({ extractionId, meetingTitle, meetingDate, buckets,
         ownerOptions={ownerOptions} decisions={decisions} setDecision={setDecision} />
       <ReviewBucket title="🟢 Auto-accepted" items={buckets.autoAccepted} defaultAction="accept"
         ownerOptions={ownerOptions} decisions={decisions} setDecision={setDecision} collapsed />
-      <div className="flex justify-end gap-2">
+      <div className="flex items-center justify-end gap-3">
+        {undecidedCount > 0 && (
+          <span className="text-xs text-red-400">
+            {undecidedCount} item{undecidedCount === 1 ? '' : 's'} undecided — accept or reject each to enable Submit
+          </span>
+        )}
         <button onClick={acceptAll} className="px-3 py-1 text-xs border border-navy-800 rounded">Accept all</button>
-        <button onClick={submit} className="px-3 py-1 text-xs bg-gold-500 text-navy-950 rounded">Submit (⌘↵)</button>
+        <button
+          onClick={submit}
+          disabled={undecidedCount > 0}
+          className="px-3 py-1 text-xs bg-gold-500 text-navy-950 rounded disabled:bg-navy-800 disabled:text-navy-600 disabled:cursor-not-allowed"
+        >
+          Submit (⌘↵)
+        </button>
       </div>
       <ReviewKeyboardShortcuts onAcceptAll={acceptAll} onSubmit={submit} />
     </div>
