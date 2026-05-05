@@ -1,5 +1,6 @@
 import 'server-only';
 import { supabaseAdmin } from '@/lib/db';
+import type { DriftFinding } from './matcher/drift';
 
 export interface DigestSummary {
   date_range: { start: string; end: string };
@@ -11,6 +12,7 @@ export interface DigestSummary {
   by_type: Record<string, number>;
   by_modality: Record<string, number>;
   failed_extraction_count: number;
+  drift_findings?: DriftFinding[];
 }
 
 export async function buildDailyDigest(asOf: Date = new Date()): Promise<DigestSummary> {
