@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { ExtractionToolInputZ } from '@/lib/action-items/extraction/types';
 import { resolveExtractedItem, type ReviewableItem } from '@/lib/action-items/resolution/resolve';
 import { requiresMandatoryReview } from '@/lib/action-items/gate';
+import { evaluateTrust } from '@/lib/action-items/trust/tracker';
 import { ReviewClient } from '@/components/action-items/ReviewClient';
 import { getTranscript } from '@/lib/action-items/fireflies/client';
 import type { UserStaffFields } from '@/lib/action-items/types';
@@ -37,6 +38,10 @@ export default async function ReviewPage({ params }: { params: Promise<{ extract
     detected_modality: (meetingRow?.detected_modality ?? null) as 'virtual' | 'in_person' | 'mixed' | null,
     inaudible_pct: 0,   // Plan 4.1 will count [inaudible] markers; v1 stub
   };
+
+  const trust = (meeting.detected_type && meeting.detected_modality)
+    ? await evaluateTrust(meeting.detected_type, meeting.detected_modality)
+    : { activated: false } as { activated: boolean };
 
   const { data: usersRaw } = await supabaseAdmin
     .from('users')
@@ -102,8 +107,8 @@ export default async function ReviewPage({ params }: { params: Promise<{ extract
       meeting, owner,
     );
     if (mand) buckets.mandatory.push(r);
+    else if (trust.activated && (r.item.confidence_overall ?? 0) >= 0.9) buckets.autoAccepted.push(r);
     else buckets.quickScan.push(r);
-    // Auto-accepted bucket is empty in v1 (trust disabled). Plan 5 fills it.
   }
 
   return (
