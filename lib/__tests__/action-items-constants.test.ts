@@ -38,12 +38,18 @@ describe('action-items constants', () => {
     ]);
   });
 
-  it('every approved verb maps to exactly one verb category', () => {
-    const seen = new Map<string, string>();
-    for (const [cat, verbs] of Object.entries(APPROVED_VERBS)) {
+  it('approved verbs may appear in multiple categories', () => {
+    // Verbs like "send", "distribute", "investigate" intentionally belong to
+    // more than one category — Claude picks the category based on intent and
+    // the validator only checks (verb, category) membership. Spec §6.1.
+    // This test asserts the data shape (every entry is a non-empty lowercase
+    // string) rather than uniqueness.
+    for (const [, verbs] of Object.entries(APPROVED_VERBS)) {
+      expect(verbs.length).toBeGreaterThan(0);
       for (const v of verbs) {
-        expect(seen.has(v), `verb "${v}" in two categories`).toBe(false);
-        seen.set(v, cat);
+        expect(typeof v).toBe('string');
+        expect(v.length).toBeGreaterThan(0);
+        expect(v).toBe(v.toLowerCase());
       }
     }
   });

@@ -42,13 +42,22 @@ export const VERB_CATEGORIES = [
 ] as const;
 export type VerbCategory = (typeof VERB_CATEGORIES)[number];
 
+// Approved-verb allow-lists were too narrow on first smoke; the prompt v0.2
+// change (contiguous quotes, no ellipsis-concatenation) rides with this
+// expanded list to match how meetings actually use English. Spec §6.1.
 export const APPROVED_VERBS: Record<VerbCategory, readonly string[]> = {
-  correspondence: ['write', 'issue', 'send', 'draft', 'publish', 'distribute'],
-  decision:       ['approve', 'sign', 'authorize', 'clear', 'reject'],
-  information:    ['obtain', 'verify', 'confirm', 'report', 'investigate'],
-  scheduling:     ['schedule', 'convene', 'arrange', 'coordinate'],
-  project_update: ['update', 'submit', 'mark', 'close', 'reopen'],
-  analysis:       ['calculate', 'analyze', 'assess', 'compare', 'evaluate'],
+  correspondence: ['write', 'issue', 'send', 'draft', 'publish', 'distribute',
+                   'email', 'call', 'message', 'contact', 'reply', 'respond'],
+  decision:       ['approve', 'sign', 'authorize', 'clear', 'reject',
+                   'decide', 'choose', 'incorporate', 'adopt', 'accept'],
+  information:    ['obtain', 'verify', 'confirm', 'report', 'investigate',
+                   'provide', 'share', 'send', 'distribute', 'enter', 'input', 'post'],
+  scheduling:     ['schedule', 'convene', 'arrange', 'coordinate',
+                   'book', 'set', 'plan', 'defer', 'postpone'],
+  project_update: ['update', 'submit', 'mark', 'close', 'reopen',
+                   'upload', 'deploy', 'complete', 'deliver'],
+  analysis:       ['calculate', 'analyze', 'assess', 'compare', 'evaluate',
+                   'review', 'examine', 'audit', 'investigate', 'study'],
 };
 
 export const BANNED_PHRASES = [
