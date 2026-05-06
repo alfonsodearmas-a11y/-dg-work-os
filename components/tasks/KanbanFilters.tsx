@@ -4,6 +4,8 @@ import {
   Search, X, User, SlidersHorizontal, ArrowUpDown,
   LayoutGrid, List, Zap, Plus, RefreshCw, Maximize2, Minimize2,
 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { Dispatch } from 'react';
 import type {
   BoardAction, BoardState, DueDateFilter,
@@ -96,6 +98,13 @@ export function KanbanToolbar({
 }: KanbanToolbarProps) {
   const active = hasActiveFilters(state);
 
+  // W29 — capture sort trigger rect so the menu can render via portal at a
+  // fixed position. Avoids the "tiny popover with only the arrow visible"
+  // bug on mobile where the toolbar's flex layout was squishing the menu.
+  const [sortBtnRect, setSortBtnRect] = useState<DOMRect | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   return (
     <div className="flex flex-wrap items-center gap-2 md:gap-3">
       {/* View Toggle */}
@@ -171,19 +180,32 @@ export function KanbanToolbar({
       </button>
 
       {/* Sort */}
-      <div className="relative">
+      <div>
         <button
-          onClick={() => dispatch({ type: 'SET_SHOW_SORT_MENU', show: !state.showSortMenu })}
+          onClick={(e) => {
+            setSortBtnRect((e.currentTarget as HTMLElement).getBoundingClientRect());
+            dispatch({ type: 'SET_SHOW_SORT_MENU', show: !state.showSortMenu });
+          }}
           className="flex items-center gap-2 px-3 py-2.5 rounded-lg border bg-navy-900 border-navy-800 text-slate-400 hover:border-[#3d4a62] transition-colors"
           style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
         >
           <ArrowUpDown className="h-4 w-4" />
           {!isMobile && 'Sort'}
         </button>
-        {state.showSortMenu && (
+        {mounted && state.showSortMenu && sortBtnRect && createPortal(
           <>
-            <div className="fixed inset-0 z-40" onClick={() => dispatch({ type: 'SET_SHOW_SORT_MENU', show: false })} />
-            <div className="absolute top-full right-0 mt-1 z-50 rounded-xl bg-[#142238] border border-navy-800 shadow-xl py-1 min-w-[180px]">
+            <div
+              className="fixed inset-0 z-[9998]"
+              onClick={() => dispatch({ type: 'SET_SHOW_SORT_MENU', show: false })}
+            />
+            <div
+              className="fixed z-[9999] rounded-xl bg-[#142238] border border-navy-800 shadow-xl py-1"
+              style={{
+                top: Math.min(sortBtnRect.bottom + 4, window.innerHeight - 350),
+                left: Math.max(8, Math.min(sortBtnRect.right - 200, window.innerWidth - 208)),
+                minWidth: 200,
+              }}
+            >
               {([
                 { field: 'status' as SortField, label: 'Status' },
                 { field: 'due_date' as SortField, label: 'Due Date' },
@@ -211,7 +233,8 @@ export function KanbanToolbar({
                 </button>
               ))}
             </div>
-          </>
+          </>,
+          document.body
         )}
       </div>
 
