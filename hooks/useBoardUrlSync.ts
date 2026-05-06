@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import type { BoardState, BoardAction, ViewMode, DueDateFilter } from '@/hooks/useBoardReducer';
 import type { SortField, SortDir } from '@/components/tasks/TaskListView';
@@ -13,17 +13,21 @@ import type { SortField, SortDir } from '@/components/tasks/TaskListView';
  * via `router.replace()` so refresh + share-link both restore the same view.
  *
  * Defaults are NOT written — the URL stays clean for the cold-start case.
+ *
+ * Hydration uses a state-backed flag (not a ref) so the write-back effect
+ * is gated until React has applied the hydration dispatches in a single
+ * batched re-render. Without this, the write-back fires once with default
+ * state values and clears the URL before hydration completes.
  */
 export function useBoardUrlSync(state: BoardState, dispatch: (a: BoardAction) => void) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const hydrated = useRef(false);
+  const [hydrated, setHydrated] = useState(false);
 
   // Hydrate on mount only.
   useEffect(() => {
-    if (hydrated.current) return;
-    hydrated.current = true;
+    if (hydrated) return;
 
     const status = searchParams.get('status')?.split(',').filter(Boolean) ?? [];
     for (const s of status) dispatch({ type: 'TOGGLE_STATUS_FILTER', status: s });
@@ -69,12 +73,17 @@ export function useBoardUrlSync(state: BoardState, dispatch: (a: BoardAction) =>
 
     const page = parseInt(searchParams.get('page') || '', 10);
     if (Number.isFinite(page) && page > 1) dispatch({ type: 'SET_LIST_PAGE', page });
+
+    // Flip the gate once. React batches all the dispatches above with this
+    // setState, so the next render has the fully hydrated state in place.
+    setHydrated(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Flush state to URL whenever any synced slice changes.
+  // Flush state to URL whenever any synced slice changes — but only after
+  // hydration has flipped, so we never overwrite the URL with default values.
   useEffect(() => {
-    if (!hydrated.current) return;
+    if (!hydrated) return;
     const params = new URLSearchParams();
 
     if (state.statusFilter.length) params.set('status', state.statusFilter.join(','));
@@ -99,6 +108,7 @@ export function useBoardUrlSync(state: BoardState, dispatch: (a: BoardAction) =>
       router.replace(next, { scroll: false });
     }
   }, [
+    hydrated,
     state.statusFilter,
     state.priorityFilter,
     state.agencyFilter,
