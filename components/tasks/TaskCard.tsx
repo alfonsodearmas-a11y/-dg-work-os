@@ -279,7 +279,7 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
           </div>
 
           {/* Badges Row — only rendered when at least one badge exists */}
-          {(task.agency || task.role || task.source === 'extraction') && (
+          {(task.agency || task.role || task.source === 'extraction' || task.status === 'awaiting_verification') && (
             <div className="flex flex-wrap gap-1.5 mb-2">
               {task.agency && (
                 <span className={`px-2 py-0.5 rounded text-xs font-medium border ${AGENCY_COLORS[task.agency] || 'bg-navy-800 text-slate-400 border-[#3d4a62]'}`}>
@@ -289,6 +289,14 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
               {task.role && (
                 <span className="px-2 py-0.5 rounded text-xs font-medium bg-navy-800 text-slate-400">
                   {task.role}
+                </span>
+              )}
+              {task.status === 'awaiting_verification' && (
+                <span
+                  className="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/15 text-purple-300 border border-purple-500/30"
+                  title="Owner has marked complete; awaiting DG verification"
+                >
+                  Awaiting verification
                 </span>
               )}
               <SourceProvenanceBadge
