@@ -185,11 +185,13 @@ export function KanbanToolbar({
             <div className="fixed inset-0 z-40" onClick={() => dispatch({ type: 'SET_SHOW_SORT_MENU', show: false })} />
             <div className="absolute top-full right-0 mt-1 z-50 rounded-xl bg-[#142238] border border-navy-800 shadow-xl py-1 min-w-[180px]">
               {([
+                { field: 'status' as SortField, label: 'Status' },
                 { field: 'due_date' as SortField, label: 'Due Date' },
                 { field: 'priority' as SortField, label: 'Priority' },
                 { field: 'created_at' as SortField, label: 'Created' },
                 { field: 'owner_name' as SortField, label: 'Assignee' },
                 { field: 'agency' as SortField, label: 'Agency' },
+                { field: 'title' as SortField, label: 'Title' },
               ]).map(opt => (
                 <button
                   key={opt.field}
