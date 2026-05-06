@@ -1,0 +1,23 @@
+{
+  "test": "T16 — Bulk verify guard 409 (D6 / F3)",
+  "endpoint": "PATCH /api/tasks/bulk",
+  "user": "DG (Alfonso de Armas)",
+  "production_url": "https://dg-work-os.vercel.app",
+  "captured_at": "2026-05-06T15:17:00Z",
+  "request": {
+    "taskIds": [
+      "859f0058-df68-4061-817a-29d557b96d95 (synthetic, awaiting_verification)",
+      "03dab3fc-952f-4577-af0a-508f5a29760f (active)"
+    ],
+    "updates": { "status": "done" }
+  },
+  "response": {
+    "status": 409,
+    "body": {
+      "error": "verification_required",
+      "message": "1 task require DG verification. Use the verify flow instead.",
+      "blockedIds": ["859f0058-df68-4061-817a-29d557b96d95"]
+    }
+  },
+  "verdict": "PASS — D6 pre-check intercepts bulk-done that would bypass the verify gate; awaiting_verification id surfaced in blockedIds for client-side messaging."
+}

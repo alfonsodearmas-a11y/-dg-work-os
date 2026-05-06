@@ -1,0 +1,25 @@
+{
+  "test": "T17 — API 6-bucket payload (D8)",
+  "endpoint": "/api/tasks?show_completed=1",
+  "user": "DG (Alfonso de Armas)",
+  "production_url": "https://dg-work-os.vercel.app",
+  "captured_at": "2026-05-06T15:14:57Z",
+  "result": {
+    "status": 200,
+    "older_completed_count": 30,
+    "buckets": [
+      { "bucket": "new", "count": 35, "hasSynthetic": false },
+      { "bucket": "active", "count": 35, "hasSynthetic": false },
+      { "bucket": "blocked", "count": 1, "hasSynthetic": false },
+      { "bucket": "awaiting_verification", "count": 1, "hasSynthetic": true },
+      { "bucket": "done", "count": 9, "hasSynthetic": false },
+      { "bucket": "superseded", "count": 0, "hasSynthetic": false }
+    ],
+    "synthetic_task": {
+      "id": "859f0058-df68-4061-817a-29d557b96d95",
+      "status": "awaiting_verification",
+      "title": "[T17 SYNTHETIC] Verify MARAD inspection report on ML Thompson docking"
+    }
+  },
+  "verdict": "PASS — D8 emits 6 buckets, synthetic correctly bucketed by status; older_completed_count surfaces grace-period overflow."
+}
