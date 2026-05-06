@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { X } from 'lucide-react';
 import { Task, TaskStatus, TaskUpdate } from '@/lib/task-types';
 import { STATUS_OPTIONS, STATUS_PILL } from '@/lib/constants/task-styles';
+import { SourceProvenanceBadge } from '@/components/action-items/SourceProvenanceBadge';
 
 export const STATUSES = STATUS_OPTIONS;
 
@@ -21,6 +22,7 @@ interface TaskHeaderProps {
   titleValue: string;
   savedFlash: string;
   openDropdown: string | null;
+  meetingTitle?: string | null;
   onEditingTitleChange: (editing: boolean) => void;
   onTitleValueChange: (value: string) => void;
   onOpenDropdownChange: (dropdown: string | null) => void;
@@ -35,6 +37,7 @@ export function TaskHeader({
   titleValue,
   savedFlash,
   openDropdown,
+  meetingTitle,
   onEditingTitleChange,
   onTitleValueChange,
   onOpenDropdownChange,
@@ -77,8 +80,9 @@ export function TaskHeader({
             {task.title}
           </h2>
         )}
-        {/* Status pill */}
-        <div className="relative mt-2">
+        {/* Status pill + source provenance (F1 / W23) */}
+        <div className="flex flex-wrap items-center gap-2 mt-2">
+        <div className="relative">
           <button
             onClick={() => onOpenDropdownChange(openDropdown === 'status' ? null : 'status')}
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border capitalize transition-colors ${statusPill}`}
@@ -109,6 +113,15 @@ export function TaskHeader({
               ))}
             </div>
           )}
+        </div>
+        <SourceProvenanceBadge
+          source={task.source}
+          source_meeting_id={task.source_meeting_id}
+          source_timestamp={task.source_timestamp}
+          source_quote={task.source_quote}
+          meetingTitle={meetingTitle}
+          size="lg"
+        />
         </div>
         {savedFlash && (
           <span className="text-xs text-emerald-400 mt-1 inline-block animate-fade-in">Saved</span>
