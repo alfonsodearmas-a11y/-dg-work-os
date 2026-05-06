@@ -54,6 +54,28 @@ export function canAssignTasks(userRole: Role): boolean {
   return ['dg', 'minister', 'ps', 'parl_sec', 'agency_admin'].includes(userRole);
 }
 
+/**
+ * Whether the user can verify a completed task (D7 — drives the role-aware
+ * Pending Verification column). Ministry roles can verify any task; an
+ * agency_admin can verify only tasks scoped to their portfolio agency.
+ *
+ * `taskAgency` is optional: when omitted, the helper answers the broad
+ * question "could this user ever verify *some* task?", which is what the
+ * board uses to decide whether to render a Pending Verification column.
+ */
+export function canVerify(
+  userRole: Role,
+  userAgency: string | null,
+  taskAgency?: string | null
+): boolean {
+  if (['dg', 'minister', 'ps', 'parl_sec'].includes(userRole)) return true;
+  if (userRole === 'agency_admin' && userAgency) {
+    if (!taskAgency) return true;
+    return userAgency === taskAgency.toUpperCase();
+  }
+  return false;
+}
+
 // PSIP upload is ministry-only (dg/minister/ps). Deprecated GWI-specific
 // helper retained as a thin alias for any callers that haven't moved yet.
 export function canAccessPsipSync(userRole: Role, _userAgency: string | null | undefined): boolean {

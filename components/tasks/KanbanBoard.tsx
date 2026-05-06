@@ -19,6 +19,7 @@ import { MINISTRY_ROLES } from '@/lib/people-types';
 import { useViewAsFetch } from '@/hooks/useViewAsFetch';
 import { useBoardReducer, COLUMNS } from '@/hooks/useBoardReducer';
 import { useBoardUrlSync } from '@/hooks/useBoardUrlSync';
+import { canVerify } from '@/lib/auth-helpers';
 import { BoardSelectionProvider, useSelection } from './BoardSelectionContext';
 import {
   KanbanToolbar,
@@ -42,6 +43,7 @@ const COLUMN_LABELS: Record<string, string> = {
   new: 'New',
   active: 'Active',
   blocked: 'Blocked',
+  awaiting_verification: 'Pending Verification',
   done: 'Done',
 };
 
@@ -51,6 +53,7 @@ const COLUMN_TAB_STYLES: Record<string, { active: string; dot: string }> = {
   new: { active: 'border-blue-400 text-blue-400', dot: STATUS_DOT.new },
   active: { active: 'border-gold-500 text-gold-500', dot: STATUS_DOT.active },
   blocked: { active: 'border-red-400 text-red-400', dot: STATUS_DOT.blocked },
+  awaiting_verification: { active: 'border-purple-400 text-purple-300', dot: 'bg-purple-400' },
   done: { active: 'border-emerald-400 text-emerald-400', dot: STATUS_DOT.done },
 };
 
@@ -544,6 +547,46 @@ function KanbanBoardInner() {
     if (!selectedIds.size) return [] as string[];
     return allTasks.filter(t => selectedIds.has(t.id)).map(t => t.status);
   }, [allTasks, selectedIds]);
+
+  // D7 — role-aware Kanban columns. Verify-permission users see a 5th
+  // "Pending Verification" column. agency_admin users see it only when
+  // looking at their portfolio (no agency filter, or filter ⊆ portfolio).
+  // Officers and non-portfolio agency_admins keep the 4-column board, with
+  // awaiting_verification rows folded into Done so the owner can still see
+  // their pending-sign-off tasks.
+  const showVerificationColumn = useMemo(() => {
+    if (effectiveUser.role === 'agency_admin') {
+      // Show only when no agency filter active OR the filter scopes to the
+      // user's portfolio agency.
+      if (state.agencyFilter.length === 0) {
+        return canVerify(effectiveUser.role as Parameters<typeof canVerify>[0], effectiveUser.agency);
+      }
+      const inPortfolio = state.agencyFilter.every(
+        a => effectiveUser.agency && a.toUpperCase() === effectiveUser.agency.toUpperCase()
+      );
+      return inPortfolio && canVerify(effectiveUser.role as Parameters<typeof canVerify>[0], effectiveUser.agency);
+    }
+    return canVerify(effectiveUser.role as Parameters<typeof canVerify>[0], effectiveUser.agency);
+  }, [effectiveUser.role, effectiveUser.agency, state.agencyFilter]);
+
+  const boardColumns: (keyof typeof state.tasks)[] = useMemo(
+    () => (showVerificationColumn
+      ? ['new', 'active', 'blocked', 'awaiting_verification', 'done']
+      : ['new', 'active', 'blocked', 'done']),
+    [showVerificationColumn]
+  );
+
+  // For the 4-column layout, fold awaiting_verification rows into Done so
+  // the owner can still see their pending-sign-off tasks (with the D5 pill
+  // on the card differentiating them).
+  const displayTasks = useMemo(() => {
+    if (showVerificationColumn) return state.tasks;
+    return {
+      ...state.tasks,
+      done: [...state.tasks.awaiting_verification, ...state.tasks.done],
+      awaiting_verification: [] as Task[],
+    };
+  }, [state.tasks, showVerificationColumn]);
   const filterPills = useMemo(() => buildFilterPills(state, dispatch), [state, dispatch]);
 
   // ---------------------------------------------------------------------------
@@ -707,10 +750,10 @@ function KanbanBoardInner() {
           {/* Mobile: Tab Bar */}
           {isMobile && (
             <div className="flex overflow-x-auto gap-1 -mx-1 px-1 pb-1 scrollbar-none">
-              {COLUMNS.map((col) => {
+              {boardColumns.map((col) => {
                 const isActive = state.mobileTab === col;
                 const tabStyle = COLUMN_TAB_STYLES[col];
-                const count = filterTasks(state.tasks[col]).length;
+                const count = filterTasks(displayTasks[col]).length;
                 return (
                   <button
                     key={col}
@@ -742,7 +785,7 @@ function KanbanBoardInner() {
                 key={state.mobileTab}
                 id={state.mobileTab}
                 title={COLUMN_LABELS[state.mobileTab] || state.mobileTab}
-                tasks={filterTasks(state.tasks[state.mobileTab])}
+                tasks={filterTasks(displayTasks[state.mobileTab as keyof typeof displayTasks] ?? [])}
                 isMobile={true}
                 draggingId={null}
                 selectedIds={selectedIds}
@@ -769,12 +812,32 @@ function KanbanBoardInner() {
             </>
           ) : (
             <div className="flex gap-4 overflow-x-auto pb-4">
-              {COLUMNS.map((column) => (
+              {boardColumns.map((column) => {
+                const colTasks = filterTasks(displayTasks[column] ?? []);
+                // D7 — Pending Verification column auto-collapses to a thin
+                // gutter when empty. Click expands.
+                const isVerifColumnEmpty = column === 'awaiting_verification' && colTasks.length === 0;
+                if (isVerifColumnEmpty) {
+                  return (
+                    <button
+                      key={column}
+                      onClick={() => dispatch({ type: 'SET_MOBILE_TAB', tab: column })}
+                      className="shrink-0 w-8 rounded-xl border border-purple-500/15 bg-purple-500/5 hover:bg-purple-500/10 transition-colors flex items-center justify-center"
+                      title="Pending Verification (empty) — click to expand"
+                      aria-label="Pending Verification column (empty)"
+                    >
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-purple-300/70" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                        Pending
+                      </span>
+                    </button>
+                  );
+                }
+                return (
                 <div key={column} className="flex-1 min-w-[280px] max-w-[320px]">
                   <KanbanColumn
                     id={column}
                     title={COLUMN_LABELS[column] || column}
-                    tasks={filterTasks(state.tasks[column])}
+                    tasks={colTasks}
                     isMobile={false}
                     draggingId={state.draggingId}
                     selectedIds={selectedIds}
@@ -801,7 +864,8 @@ function KanbanBoardInner() {
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </>
