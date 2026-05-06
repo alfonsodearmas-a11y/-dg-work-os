@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Calendar, CalendarPlus, GripVertical, MoreHorizontal } from 'lucide-react';
+import { Calendar, CalendarPlus, GripVertical, MoreHorizontal, ChevronDown, ChevronUp } from 'lucide-react';
 import { Task } from '@/lib/task-types';
 import { TaskTooltip } from './TaskTooltip';
 import { SourceProvenanceBadge } from '@/components/action-items/SourceProvenanceBadge';
@@ -77,7 +77,9 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
     setShowTooltip(false);
   }, []);
 
-  // Click handling
+  // Click handling. W15/W27: primary click on the card body opens the
+  // detail panel (TaskDetailPanel on desktop, full-screen modal on mobile).
+  // Inline expand is now a secondary affordance via the chevron button.
   const handleClick = useCallback((e: React.MouseEvent) => {
     // Don't trigger if click came from a button or checkbox inside
     if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('input[type="checkbox"]')) return;
@@ -88,29 +90,9 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
       return;
     }
 
-    if (isMobile) {
-      setExpanded(prev => !prev);
-      return;
-    }
-
-    // Desktop: single click = expand, double click = open modal
-    clickCountRef.current += 1;
-    if (clickCountRef.current === 1) {
-      clickTimerRef.current = setTimeout(() => {
-        if (clickCountRef.current === 1) {
-          setExpanded(prev => !prev);
-          setShowTooltip(false);
-        }
-        clickCountRef.current = 0;
-      }, 250);
-    } else if (clickCountRef.current >= 2) {
-      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
-      clickCountRef.current = 0;
-      setExpanded(false);
-      setShowTooltip(false);
-      onOpenModal();
-    }
-  }, [isMobile, selectionMode, onToggleSelect, task.id, onOpenModal]);
+    setShowTooltip(false);
+    onOpenModal();
+  }, [selectionMode, onToggleSelect, task.id, onOpenModal]);
 
   // Right-click context menu (desktop)
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -232,29 +214,44 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
           </div>
         )}
 
-        {/* ... Menu Button */}
+        {/* Card-level action buttons: chevron (inline expand) + 3-dot (options menu) */}
         {!selectionMode && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (isMobile) {
-                onBottomSheet(task);
-              } else {
-                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                onContextMenu(task, { x: rect.right, y: rect.bottom });
-              }
-            }}
-            className={`absolute right-2 top-2 p-1.5 rounded-lg text-navy-600 hover:text-white hover:bg-navy-800 transition-all z-10 ${
-              isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-            }`}
-            style={{ minWidth: 28, minHeight: 28, touchAction: 'manipulation' }}
-            aria-label="Task options"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
+          <div className="absolute right-2 top-2 z-10 flex items-center gap-0.5">
+            {/* Chevron — secondary affordance for the inline preview (W15/W27).
+                Primary click on the card body opens the detail panel. */}
+            <button
+              onClick={(e) => { e.stopPropagation(); setExpanded(prev => !prev); setShowTooltip(false); }}
+              className={`p-1.5 rounded-lg text-navy-600 hover:text-white hover:bg-navy-800 transition-all ${
+                isMobile ? 'opacity-100' : (expanded ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')
+              }`}
+              style={{ minWidth: 28, minHeight: 28, touchAction: 'manipulation' }}
+              aria-label={expanded ? 'Collapse preview' : 'Expand preview'}
+              aria-expanded={expanded}
+            >
+              {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isMobile) {
+                  onBottomSheet(task);
+                } else {
+                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                  onContextMenu(task, { x: rect.right, y: rect.bottom });
+                }
+              }}
+              className={`p-1.5 rounded-lg text-navy-600 hover:text-white hover:bg-navy-800 transition-all ${
+                isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              }`}
+              style={{ minWidth: 28, minHeight: 28, touchAction: 'manipulation' }}
+              aria-label="Task options"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </div>
         )}
 
-        <div className={`${isMobile ? (selectionMode ? 'pl-6 pr-2' : 'pr-8') : (selectionMode ? 'pl-6 pr-2' : 'pl-4 pr-8')}`}>
+        <div className={`${isMobile ? (selectionMode ? 'pl-6 pr-2' : 'pr-14') : (selectionMode ? 'pl-6 pr-2' : 'pl-4 pr-14')}`}>
           {/* Title row with priority dot */}
           <div className="flex items-start gap-2 mb-2">
             <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${task.priority ? (PRIORITY_DOT[task.priority] || PRIORITY_DOT.medium) : 'bg-[#3d4a62]'}`} aria-label={`Priority: ${task.priority || 'none'}`} />
@@ -279,7 +276,7 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
           </div>
 
           {/* Badges Row — only rendered when at least one badge exists */}
-          {(task.agency || task.role || task.source === 'extraction') && (
+          {(task.agency || task.role || task.source === 'extraction' || task.status === 'awaiting_verification') && (
             <div className="flex flex-wrap gap-1.5 mb-2">
               {task.agency && (
                 <span className={`px-2 py-0.5 rounded text-xs font-medium border ${AGENCY_COLORS[task.agency] || 'bg-navy-800 text-slate-400 border-[#3d4a62]'}`}>
@@ -289,6 +286,14 @@ export function TaskCard({ task, isMobile, isDragging, isSelected, selectionMode
               {task.role && (
                 <span className="px-2 py-0.5 rounded text-xs font-medium bg-navy-800 text-slate-400">
                   {task.role}
+                </span>
+              )}
+              {task.status === 'awaiting_verification' && (
+                <span
+                  className="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/15 text-purple-300 border border-purple-500/30"
+                  title="Owner has marked complete; awaiting DG verification"
+                >
+                  Awaiting verification
                 </span>
               )}
               <SourceProvenanceBadge

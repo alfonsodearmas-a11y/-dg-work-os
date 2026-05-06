@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   if (e1) return NextResponse.json({ error: e1.message }, { status: 500 });
 
   const { error: e2 } = await supabaseAdmin.from('tasks')
-    .update({ status: 'superseded', updated_at: now }).eq('id', priorId);
+    .update({ status: 'superseded', completed_at: now, updated_at: now }).eq('id', priorId);
   if (e2) return NextResponse.json({ error: e2.message }, { status: 500 });
 
   await logEvent({ taskId: id, eventType: 'supersedes', actorId: a.session.user.id, payload: { prior_id: priorId } });

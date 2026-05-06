@@ -57,6 +57,9 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
   // Activity
   const [activities, setActivities] = useState<TaskActivity[]>([]);
 
+  // Meeting title for source provenance (W23)
+  const [meetingTitle, setMeetingTitle] = useState<string | null>(null);
+
   const descRef = useRef<HTMLTextAreaElement>(null);
   const panelDialogRef = useRef<HTMLDivElement>(null);
 
@@ -68,9 +71,20 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
       setEditingTitle(false);
       setEditingDesc(false);
       setOpenDropdown(null);
+      setMeetingTitle(null);
       // Fetch subtasks and activity
       fetchSubtasks(task.id);
       fetchActivity(task.id);
+      // Resolve source meeting title for the provenance badge (W23)
+      if (task.source === 'extraction' && task.source_meeting_id) {
+        const mid = task.source_meeting_id;
+        fetch(`/api/meetings/${encodeURIComponent(mid)}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => {
+            if (data?.meeting?.title) setMeetingTitle(data.meeting.title);
+          })
+          .catch(() => { /* best-effort — fall back to ULID display */ });
+      }
     }
   }, [task?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -205,6 +219,7 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
         titleValue={titleValue}
         savedFlash={savedFlash}
         openDropdown={openDropdown}
+        meetingTitle={meetingTitle}
         onEditingTitleChange={setEditingTitle}
         onTitleValueChange={setTitleValue}
         onOpenDropdownChange={setOpenDropdown}

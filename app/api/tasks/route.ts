@@ -6,8 +6,12 @@ import { supabaseAdmin } from '@/lib/db';
 import { insertNotification } from '@/lib/notifications';
 import { NotificationDeliveryError } from '@/lib/notifications/errors';
 import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
-import { TASK_COLUMNS, flattenTaskOwner } from '@/lib/task-types';
+import { TASK_COLUMNS, flattenTaskOwner, type TaskStatus } from '@/lib/task-types';
 import { logger } from '@/lib/logger';
+
+const ALL_STATUSES: TaskStatus[] = ['new', 'active', 'blocked', 'awaiting_verification', 'done', 'superseded'];
+const TERMINAL_STATUSES: TaskStatus[] = ['done', 'superseded'];
+const GRACE_PERIOD_DAYS = parseInt(process.env.TASKS_GRACE_PERIOD_DAYS || '7', 10);
 
 const createTaskSchema = z.object({
   title: z.string().min(1),
@@ -45,6 +49,7 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status');
   const agency = searchParams.get('agency');
   const overdue = searchParams.get('overdue');
+  const showCompleted = searchParams.get('show_completed') === 'true';
   const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
   const limit = Math.min(1000, Math.max(1, parseInt(searchParams.get('limit') || '500', 10)));
 
@@ -53,6 +58,14 @@ export async function GET(request: NextRequest) {
   const viewAsAgency = session.user.role === 'dg' ? searchParams.get('viewAsAgency') : null;
   const effectiveRole = viewAsRole || session.user.role;
   const effectiveAgency = viewAsAgency || session.user.agency;
+
+  // Grace-period filter (D1): hide done/superseded older than TASKS_GRACE_PERIOD_DAYS
+  // unless the caller explicitly opts in (?show_completed=true) or pins a single
+  // status with ?status=done|superseded.
+  const applyGraceFilter = !showCompleted && !status;
+  const graceCutoff = applyGraceFilter
+    ? new Date(Date.now() - GRACE_PERIOD_DAYS * 86400000).toISOString()
+    : null;
 
   let query = supabaseAdmin
     .from('tasks')
@@ -73,6 +86,13 @@ export async function GET(request: NextRequest) {
     const today = new Date().toISOString().split('T')[0];
     query = query.lt('due_date', today).neq('status', 'done');
   }
+  if (graceCutoff) {
+    // Keep all non-terminal rows AND terminals whose completed_at is within the
+    // grace window. Backfill in migration 107 ensures terminals have a value.
+    query = query.or(
+      `status.not.in.(done,superseded),completed_at.gte.${graceCutoff}`
+    );
+  }
 
   const from = (page - 1) * limit;
   query = query.range(from, from + limit - 1);
@@ -82,20 +102,48 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Flatten the joined owner name and group by status
-  interface TaskRow { status: string; [key: string]: unknown }
-  const grouped: Record<string, TaskRow[]> = {
+  // D8 — explicit 6-bucket grouping. No catch-all: unknown statuses log a
+  // warning and are dropped (defensive against schema drift).
+  interface TaskRow { id: string; status: string; [key: string]: unknown }
+  const grouped: Record<TaskStatus, TaskRow[]> = {
     new: [],
     active: [],
     blocked: [],
+    awaiting_verification: [],
     done: [],
+    superseded: [],
   };
 
   for (const t of data || []) {
     const task = flattenTaskOwner(t) as TaskRow;
-    const col = grouped[task.status];
-    if (col) col.push(task);
-    else grouped.new.push(task);
+    const col = grouped[task.status as TaskStatus];
+    if (col) {
+      col.push(task);
+    } else {
+      logger.warn(
+        { taskId: task.id, status: task.status },
+        '[/api/tasks] unknown task.status — dropping. Possible schema drift.'
+      );
+    }
+  }
+
+  // Count of grace-pruned terminals (D1 pill driver). Skipped when no grace
+  // filter applied, since the answer is implicitly 0 for the visible view.
+  let olderCompletedCount = 0;
+  if (applyGraceFilter && graceCutoff) {
+    let countQuery = supabaseAdmin
+      .from('tasks')
+      .select('id', { count: 'exact', head: true })
+      .in('status', TERMINAL_STATUSES)
+      .lt('completed_at', graceCutoff);
+    if (effectiveRole === 'officer') {
+      countQuery = countQuery.eq('owner_user_id', session.user.id);
+    } else if (effectiveRole === 'agency_admin' && effectiveAgency) {
+      countQuery = countQuery.ilike('agency', effectiveAgency);
+    }
+    if (agency) countQuery = countQuery.eq('agency', agency);
+    const { count: olderCount } = await countQuery;
+    olderCompletedCount = olderCount || 0;
   }
 
   return NextResponse.json({
@@ -104,6 +152,9 @@ export async function GET(request: NextRequest) {
     total: count || 0,
     page,
     limit,
+    show_completed: showCompleted,
+    grace_period_days: GRACE_PERIOD_DAYS,
+    older_completed_count: olderCompletedCount,
   });
 }
 

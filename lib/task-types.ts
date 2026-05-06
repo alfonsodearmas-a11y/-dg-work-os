@@ -64,7 +64,9 @@ export type TasksByStatus = {
   new: Task[];
   active: Task[];
   blocked: Task[];
+  awaiting_verification: Task[];
   done: Task[];
+  superseded: Task[];
 };
 
 export interface TaskTemplate {

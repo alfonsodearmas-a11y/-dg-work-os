@@ -153,16 +153,22 @@ interface MobileFabProps {
   onClick: () => void;
 }
 
+// Mobile primary action: Add Task. Sits above the global AI Assistant FAB
+// (bottom-20 / 80px on mobile per components/ai/ChatButton.tsx) so the two
+// don't overlap. Higher z-index so it's tappable in front of the AI FAB
+// when both are visible.
 export function MobileFab({ visible, onClick }: MobileFabProps) {
   if (!visible) return null;
 
   return (
     <button
       onClick={onClick}
-      className="fixed z-40 flex items-center justify-center rounded-full shadow-lg"
+      aria-label="Add task"
+      className="fixed flex items-center justify-center rounded-full shadow-lg"
       style={{
-        bottom: 80,
+        bottom: 152,
         right: 20,
+        zIndex: 9999,
         width: 56,
         height: 56,
         background: 'linear-gradient(135deg, #e2c37a, #c9a84c)',

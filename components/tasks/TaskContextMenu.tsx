@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Pencil, ArrowRight, Trash2 } from 'lucide-react';
+import { Pencil, ArrowRight, Trash2, AlertTriangle } from 'lucide-react';
 import { Task, TaskStatus } from '@/lib/task-types';
 
 interface TaskContextMenuProps {
@@ -12,6 +12,9 @@ interface TaskContextMenuProps {
   onEdit: () => void;
   onMove: (taskId: string, status: TaskStatus) => void;
   onDelete: (taskId: string) => void;
+  /** W22 — surface the existing block-with-reason flow from the card menu so
+   *  blocking is reachable without drag-and-drop. */
+  onBlock?: (taskId: string) => void;
 }
 
 const NEXT_STATUS: Record<string, { label: string; value: TaskStatus }> = {
@@ -21,9 +24,11 @@ const NEXT_STATUS: Record<string, { label: string; value: TaskStatus }> = {
   done: { label: 'Reopen (New)', value: 'new' },
 };
 
-export function TaskContextMenu({ task, position, onClose, onEdit, onMove, onDelete }: TaskContextMenuProps) {
+export function TaskContextMenu({ task, position, onClose, onEdit, onMove, onDelete, onBlock }: TaskContextMenuProps) {
   const [confirming, setConfirming] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  const canBlock = onBlock && (task.status === 'new' || task.status === 'active');
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -71,6 +76,15 @@ export function TaskContextMenu({ task, position, onClose, onEdit, onMove, onDel
             >
               <ArrowRight className="h-3.5 w-3.5 text-navy-600 shrink-0" />
               {nextStatus.label}
+            </button>
+          )}
+          {canBlock && onBlock && (
+            <button
+              onClick={() => { onBlock(task.id); onClose(); }}
+              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-amber-400 hover:bg-amber-500/10 transition-colors text-left"
+            >
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              Move to Blocked
             </button>
           )}
           <div className="mx-2 my-1 border-t border-white/[0.06]" />

@@ -94,6 +94,10 @@ export interface BoardState {
   listPage: number;
   listPageSize: number;
   columnShowCount: Record<keyof TasksByStatus, number>;
+
+  // Grace-period reveal (D1)
+  showCompleted: boolean;
+  olderCompletedCount: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -103,8 +107,9 @@ export interface BoardState {
 export type BoardAction =
   // Data loading
   | { type: 'FETCH_START' }
-  | { type: 'FETCH_SUCCESS'; tasks: TasksByStatus; lastSync: string | null }
+  | { type: 'FETCH_SUCCESS'; tasks: TasksByStatus; lastSync: string | null; olderCompletedCount?: number }
   | { type: 'FETCH_ERROR'; error: string }
+  | { type: 'SET_SHOW_COMPLETED'; show: boolean }
   | { type: 'SET_SYNCING'; syncing: boolean }
   | { type: 'SET_USERS'; users: UserOption[] }
   | { type: 'SET_TEMPLATES'; templates: TaskTemplate[] }
@@ -188,10 +193,16 @@ export type BoardAction =
 // Columns constant
 // ---------------------------------------------------------------------------
 
+// COLUMNS lists the buckets the kanban renders. The full set of TaskStatus keys
+// (incl. awaiting_verification + superseded) is wider than this — those buckets
+// exist on the data but are folded into Done for the 4-column board (D7 will
+// make this role-aware in a later task). Iteration helpers below use ALL_STATUS_KEYS
+// so optimistic updates can reach tasks in any bucket regardless of layout.
 export const COLUMNS: (keyof TasksByStatus)[] = ['new', 'active', 'blocked', 'done'];
+const ALL_STATUS_KEYS: (keyof TasksByStatus)[] = ['new', 'active', 'blocked', 'awaiting_verification', 'done', 'superseded'];
 
 const DEFAULT_COLUMN_SHOW = 10;
-const DEFAULT_COLUMN_SHOW_COUNT = Object.fromEntries(COLUMNS.map(c => [c, DEFAULT_COLUMN_SHOW])) as Record<keyof TasksByStatus, number>;
+const DEFAULT_COLUMN_SHOW_COUNT = Object.fromEntries(ALL_STATUS_KEYS.map(c => [c, DEFAULT_COLUMN_SHOW])) as Record<keyof TasksByStatus, number>;
 const PAGINATION_RESET = { listPage: 1, columnShowCount: { ...DEFAULT_COLUMN_SHOW_COUNT } };
 
 // ---------------------------------------------------------------------------
@@ -200,7 +211,7 @@ const PAGINATION_RESET = { listPage: 1, columnShowCount: { ...DEFAULT_COLUMN_SHO
 
 export function createInitialState(initialViewMode?: ViewMode): BoardState {
   return {
-    tasks: { new: [], active: [], blocked: [], done: [] },
+    tasks: { new: [], active: [], blocked: [], awaiting_verification: [], done: [], superseded: [] },
     loading: true,
     fetchError: null,
     syncing: false,
@@ -259,6 +270,9 @@ export function createInitialState(initialViewMode?: ViewMode): BoardState {
     listPage: 1,
     listPageSize: 20,
     columnShowCount: { ...DEFAULT_COLUMN_SHOW_COUNT },
+
+    showCompleted: false,
+    olderCompletedCount: 0,
   };
 }
 
@@ -272,11 +286,13 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
     case 'FETCH_START':
       return { ...state, loading: true };
     case 'FETCH_SUCCESS': {
-      // If the detail panel is open, sync panelTask with the fresh data
+      // If the detail panel is open, sync panelTask with the fresh data.
+      // Walk all 6 buckets — awaiting_verification / superseded are valid
+      // states even when not rendered as their own column.
       let updatedPanelTask = state.panelTask;
       if (updatedPanelTask) {
-        for (const status of COLUMNS) {
-          const fresh = action.tasks[status].find(t => t.id === updatedPanelTask!.id);
+        for (const status of ALL_STATUS_KEYS) {
+          const fresh = action.tasks[status]?.find(t => t.id === updatedPanelTask!.id);
           if (fresh) {
             updatedPanelTask = fresh;
             break;
@@ -291,8 +307,11 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
         syncing: false,
         fetchError: null,
         panelTask: updatedPanelTask,
+        olderCompletedCount: action.olderCompletedCount ?? 0,
       };
     }
+    case 'SET_SHOW_COMPLETED':
+      return { ...state, showCompleted: action.show, ...PAGINATION_RESET };
     case 'FETCH_ERROR':
       return { ...state, fetchError: action.error, loading: false, syncing: false };
     case 'SET_SYNCING':
@@ -462,7 +481,7 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
     case 'UPDATE_TASK_OPTIMISTIC': {
       const newTasks = { ...state.tasks };
       let updatedPanelTask = state.panelTask;
-      for (const status of COLUMNS) {
+      for (const status of ALL_STATUS_KEYS) {
         const index = newTasks[status].findIndex(t => t.id === action.taskId);
         if (index !== -1) {
           const task = newTasks[status][index];
@@ -503,7 +522,7 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
 
     case 'REMOVE_TASK': {
       const newTasks = { ...state.tasks };
-      for (const status of COLUMNS) {
+      for (const status of ALL_STATUS_KEYS) {
         newTasks[status] = newTasks[status].filter(t => t.id !== action.taskId);
       }
       return { ...state, tasks: newTasks };
@@ -512,7 +531,7 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
     case 'REMOVE_TASKS': {
       const ids = new Set(action.taskIds);
       const newTasks = { ...state.tasks };
-      for (const status of COLUMNS) {
+      for (const status of ALL_STATUS_KEYS) {
         newTasks[status] = newTasks[status].filter(t => !ids.has(t.id));
       }
       return { ...state, tasks: newTasks };
@@ -521,7 +540,7 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
     case 'BULK_UPDATE_OPTIMISTIC': {
       const ids = new Set(action.taskIds);
       const newTasks = { ...state.tasks };
-      for (const status of COLUMNS) {
+      for (const status of ALL_STATUS_KEYS) {
         newTasks[status] = newTasks[status].map(t => {
           if (!ids.has(t.id)) return t;
           return { ...t, ...action.updates } as Task;
@@ -530,7 +549,7 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
       // If status changed, move tasks between columns
       if (action.updates.status) {
         const targetStatus = action.updates.status as keyof TasksByStatus;
-        for (const status of COLUMNS) {
+        for (const status of ALL_STATUS_KEYS) {
           if (status === targetStatus) continue;
           const moving = newTasks[status].filter(t => ids.has(t.id));
           newTasks[status] = newTasks[status].filter(t => !ids.has(t.id));
@@ -561,9 +580,12 @@ export function useBoardReducer() {
   const [state, dispatch] = useReducer(boardReducer, createInitialState(initialViewMode));
 
   // Convenience dispatcher for fetch success
-  const setTasks = useCallback((tasks: TasksByStatus, lastSync: string | null) => {
-    dispatch({ type: 'FETCH_SUCCESS', tasks, lastSync });
-  }, []);
+  const setTasks = useCallback(
+    (tasks: TasksByStatus, lastSync: string | null, olderCompletedCount?: number) => {
+      dispatch({ type: 'FETCH_SUCCESS', tasks, lastSync, olderCompletedCount });
+    },
+    []
+  );
 
   return { state, dispatch, setTasks };
 }
