@@ -18,6 +18,7 @@ import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import { MINISTRY_ROLES } from '@/lib/people-types';
 import { useViewAsFetch } from '@/hooks/useViewAsFetch';
 import { useBoardReducer, COLUMNS } from '@/hooks/useBoardReducer';
+import { useBoardUrlSync } from '@/hooks/useBoardUrlSync';
 import { BoardSelectionProvider, useSelection } from './BoardSelectionContext';
 import {
   KanbanToolbar,
@@ -94,6 +95,9 @@ function KanbanBoardInner() {
   const { selectedIds, selectionMode, toggleSelect, clearSelection } = useSelection();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // URL-sync filter / sort / search / view / page state (D3).
+  useBoardUrlSync(state, dispatch);
 
   const pendingDeleteTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
