@@ -15,6 +15,8 @@ interface BulkActionBarProps {
   count: number;
   isMobile: boolean;
   users: UserOption[];
+  /** Statuses of the currently selected tasks. Drives D6 verification guard. */
+  selectedStatuses?: string[];
   onClear: () => void;
   onBulkUpdate: (updates: Record<string, unknown>) => Promise<void>;
   onBulkDelete: () => void;
@@ -25,7 +27,8 @@ import { STATUS_OPTIONS as STATUSES } from '@/lib/constants/task-styles';
 
 type ActivePopover = 'date' | 'assignee' | 'agency' | 'status' | 'delete' | null;
 
-export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, onBulkDelete }: BulkActionBarProps) {
+export function BulkActionBar({ count, isMobile, users, selectedStatuses = [], onClear, onBulkUpdate, onBulkDelete }: BulkActionBarProps) {
+  const hasAwaitingVerification = selectedStatuses.includes('awaiting_verification');
   const [activePopover, setActivePopover] = useState<ActivePopover>(null);
   const [dateValue, setDateValue] = useState('');
   const [blockedReason, setBlockedReason] = useState('');
@@ -236,18 +239,27 @@ export function BulkActionBar({ count, isMobile, users, onClear, onBulkUpdate, o
               {activePopover === 'status' && (
                 <div className={`${popoverBase} ${popoverLeft}`}>
                   <div className="space-y-0.5 mb-2">
-                    {STATUSES.filter(s => s.value !== 'blocked').map((s) => (
-                      <button
-                        key={s.value}
-                        onClick={() => handleAction({ status: s.value })}
-                        disabled={loading}
-                        className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-navy-800 transition-colors"
-                        style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
-                      >
-                        <span className={`w-2 h-2 rounded-full ${s.dot}`} />
-                        {s.label}
-                      </button>
-                    ))}
+                    {STATUSES.filter(s => s.value !== 'blocked').map((s) => {
+                      const blockedByVerify = s.value === 'done' && hasAwaitingVerification;
+                      return (
+                        <button
+                          key={s.value}
+                          onClick={() => !blockedByVerify && handleAction({ status: s.value })}
+                          disabled={loading || blockedByVerify}
+                          title={blockedByVerify ? 'Selection includes tasks awaiting DG verification — use the verify flow.' : undefined}
+                          className={`w-full flex items-center gap-2 text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                            blockedByVerify
+                              ? 'text-navy-600 cursor-not-allowed opacity-50'
+                              : 'text-slate-200 hover:bg-navy-800'
+                          }`}
+                          style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+                        >
+                          <span className={`w-2 h-2 rounded-full ${s.dot}`} />
+                          {s.label}
+                          {blockedByVerify && <span className="ml-auto text-[10px] text-navy-600">verification required</span>}
+                        </button>
+                      );
+                    })}
                   </div>
                   <div className="border-t border-navy-800 pt-2">
                     <label className="block text-xs text-amber-400 mb-1.5">Block with reason:</label>

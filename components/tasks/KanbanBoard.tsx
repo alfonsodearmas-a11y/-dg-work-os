@@ -301,7 +301,18 @@ function KanbanBoardInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskIds: ids, updates }),
       });
-      if (!res.ok) fetchTasks();
+      if (!res.ok) {
+        // D6 verification-bypass guard returns 409 with a structured error.
+        if (res.status === 409) {
+          try {
+            const body = await res.json();
+            if (body?.error === 'verification_required' && typeof body.message === 'string') {
+              if (typeof window !== 'undefined') window.alert(body.message);
+            }
+          } catch { /* ignore parse error */ }
+        }
+        fetchTasks();
+      }
     } catch {
       fetchTasks();
     }
@@ -511,11 +522,13 @@ function KanbanBoardInner() {
     });
   }, [state.searchQuery, state.agencyFilter, state.priorityFilter, state.myTasksOnly, state.assigneeFilter, state.dueDateFilter, state.statusFilter, effectiveUser.id]);
 
-  // All tasks flat
+  // All tasks flat — walks every bucket the API returns (incl. awaiting_verification
+  // and superseded), so list view, count, and bulk-status detection don't drop rows
+  // that aren't currently rendered as their own column.
   const allTasks = useMemo(() => {
     const all: Task[] = [];
-    for (const col of COLUMNS) {
-      all.push(...state.tasks[col]);
+    for (const bucket of Object.values(state.tasks)) {
+      if (Array.isArray(bucket)) all.push(...bucket);
     }
     return all;
   }, [state.tasks]);
@@ -524,6 +537,13 @@ function KanbanBoardInner() {
   const filteredAllTasks = useMemo(() => filterTasks(allTasks), [allTasks, filterTasks]);
 
   const totalTasks = COLUMNS.reduce((sum, col) => sum + state.tasks[col].length, 0);
+
+  // Statuses of the currently-selected tasks (for the D6 verification guard
+  // surfaced in BulkActionBar).
+  const selectedTaskStatuses = useMemo(() => {
+    if (!selectedIds.size) return [] as string[];
+    return allTasks.filter(t => selectedIds.has(t.id)).map(t => t.status);
+  }, [allTasks, selectedIds]);
   const filterPills = useMemo(() => buildFilterPills(state, dispatch), [state, dispatch]);
 
   // ---------------------------------------------------------------------------
@@ -864,6 +884,7 @@ function KanbanBoardInner() {
         count={selectedIds.size}
         isMobile={isMobile}
         users={state.users}
+        selectedStatuses={selectedTaskStatuses}
         onClear={clearSelection}
         onBulkUpdate={bulkUpdate}
         onBulkDelete={bulkDelete}
