@@ -135,12 +135,13 @@ export const ROLE_DISPLAY_ORDER: Record<string, number> = {
   minister: 1, dg: 2, parl_sec: 3, ps: 4, agency_admin: 5, officer: 6,
 };
 
+// Canonical UPPERCASE values per migration 106 (2026-05-05).
 export const MPUA_AGENCIES = [
-  { value: 'gpl', label: 'GPL — Guyana Power & Light' },
-  { value: 'gwi', label: 'GWI — Guyana Water Inc' },
-  { value: 'cjia', label: 'CJIA — Cheddi Jagan International Airport' },
-  { value: 'gcaa', label: 'GCAA — Guyana Civil Aviation Authority' },
-  { value: 'marad', label: 'MARAD — Maritime Administration' },
-  { value: 'heci', label: 'HECI — Hinterland Electrification Company' },
-  { value: 'has', label: 'HAS — Hinterland Airstrips' },
+  { value: 'GPL', label: 'GPL — Guyana Power & Light' },
+  { value: 'GWI', label: 'GWI — Guyana Water Inc' },
+  { value: 'CJIA', label: 'CJIA — Cheddi Jagan International Airport' },
+  { value: 'GCAA', label: 'GCAA — Guyana Civil Aviation Authority' },
+  { value: 'MARAD', label: 'MARAD — Maritime Administration' },
+  { value: 'HECI', label: 'HECI — Hinterland Electrification Company' },
+  { value: 'HAS', label: 'HAS — Hinterland Airstrips' },
 ];

@@ -56,14 +56,15 @@ const STATUS_LABELS: Record<string, string> = {
   archived: 'Archived',
 };
 
+// Canonical UPPERCASE values per migration 106; users.agency CHECK enforces.
 const AGENCY_OPTIONS = [
-  { value: 'gpl', label: 'GPL' },
-  { value: 'gwi', label: 'GWI' },
-  { value: 'cjia', label: 'CJIA' },
-  { value: 'gcaa', label: 'GCAA' },
-  { value: 'heci', label: 'HECI' },
-  { value: 'marad', label: 'MARAD' },
-  { value: 'has', label: 'HAS' },
+  { value: 'GPL', label: 'GPL' },
+  { value: 'GWI', label: 'GWI' },
+  { value: 'CJIA', label: 'CJIA' },
+  { value: 'GCAA', label: 'GCAA' },
+  { value: 'HECI', label: 'HECI' },
+  { value: 'MARAD', label: 'MARAD' },
+  { value: 'HAS', label: 'HAS' },
 ];
 
 const FILTER_STATUS_OPTIONS = [

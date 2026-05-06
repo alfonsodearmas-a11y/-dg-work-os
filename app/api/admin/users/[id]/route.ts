@@ -20,7 +20,7 @@ async function logAudit(actorId: string, targetUserId: string, action: string, m
 const patchUserSchema = z.object({
   action: z.enum(['suspend', 'reactivate', 'archive', 'restore', 'force_signout', 'resend_invite']).optional(),
   role: z.enum(['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer'] as const).optional(),
-  agency: z.enum(['gpl', 'cjia', 'gwi', 'gcaa', 'heci', 'marad', 'has'] as const).nullable().optional(),
+  agency: z.enum(['GPL', 'CJIA', 'GWI', 'GCAA', 'HECI', 'MARAD', 'HAS'] as const).nullable().optional(),
   name: z.string().min(1).optional(),
   formal_title: z.string().min(1).optional(),
   is_active: z.boolean().optional(),

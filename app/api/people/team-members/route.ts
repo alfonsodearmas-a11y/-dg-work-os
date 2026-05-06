@@ -38,7 +38,7 @@ export async function GET() {
 }
 
 const VALID_INVITE_ROLES = ['agency_admin', 'officer'] as const;
-const VALID_AGENCIES = ['gpl', 'cjia', 'gwi', 'gcaa', 'heci', 'marad', 'has'] as const;
+const VALID_AGENCIES = ['GPL', 'CJIA', 'GWI', 'GCAA', 'HECI', 'MARAD', 'HAS'] as const;
 
 const inviteSchema = z.object({
   email: z.string().email().min(1),

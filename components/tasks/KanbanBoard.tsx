@@ -475,7 +475,9 @@ function KanbanBoardInner() {
     return columnTasks.filter((task) => {
       const matchesSearch = !state.searchQuery ||
         task.title.toLowerCase().includes(state.searchQuery.toLowerCase());
-      const matchesAgency = state.agencyFilter.length === 0 || (task.agency && state.agencyFilter.some(a => a.toLowerCase() === task.agency!.toLowerCase()));
+      // Exact match: tasks.agency is canonical uppercase per migration 106 and
+      // KanbanFilters' AGENCIES constant is already uppercase.
+      const matchesAgency = state.agencyFilter.length === 0 || (task.agency != null && state.agencyFilter.includes(task.agency));
       const matchesPriority = state.priorityFilter.length === 0 || (task.priority && state.priorityFilter.includes(task.priority));
       const matchesMy = !state.myTasksOnly || task.owner_user_id === effectiveUser.id;
       const matchesAssignee = !state.assigneeFilter || task.owner_user_id === state.assigneeFilter;

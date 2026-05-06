@@ -22,11 +22,12 @@ const PRIORITY_OPTIONS = [
   { value: 'urgent', label: 'Urgent' },
 ];
 
+// Canonical UPPERCASE values per migration 106.
 const AGENCY_OPTIONS = [
-  { value: 'gpl', label: 'GPL' },
-  { value: 'gwi', label: 'GWI' },
-  { value: 'cjia', label: 'CJIA' },
-  { value: 'gcaa', label: 'GCAA' },
+  { value: 'GPL', label: 'GPL' },
+  { value: 'GWI', label: 'GWI' },
+  { value: 'CJIA', label: 'CJIA' },
+  { value: 'GCAA', label: 'GCAA' },
 ];
 
 export default function NewApplicationPage() {

@@ -4,12 +4,13 @@
 // constraint changes, both the SQL and this file move together. Tests in
 // lib/__tests__/action-items-constants.test.ts enforce the invariants.
 
-// Production-canonical agency values are LOWERCASE: gpl|gwi|gcaa|cjia|marad|heci|has.
-// Earlier drafts used 'HCI'/'HA' — those are wrong. Plan 4 prompts and any new
-// extraction writes must emit lowercase. Existing rows in `tasks.agency` are
-// mixed-case (legacy); reads should case-fold before comparing.
+// Production-canonical agency values are UPPERCASE: GPL|GWI|GCAA|CJIA|MARAD|HECI|HAS.
+// Migration 106 (2026-05-05) folded all existing rows to uppercase and added
+// CHECK constraints on users.agency and tasks.agency to lock the canonical
+// case. Plan 4 prompts and any new extraction writes must emit uppercase.
+// 'Ministry' (mixed-case) is a separate routing value preserved by tasks_agency_check.
 export const AGENCIES = [
-  'gpl', 'gwi', 'gcaa', 'cjia', 'marad', 'heci', 'has',
+  'GPL', 'GWI', 'GCAA', 'CJIA', 'MARAD', 'HECI', 'HAS',
   'MPUA-DG', 'MPUA-Minister', 'MPUA-PS',
 ] as const;
 export type Agency = (typeof AGENCIES)[number];

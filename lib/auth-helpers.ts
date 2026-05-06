@@ -23,13 +23,18 @@ export async function requireRole(allowedRoles: Role[]) {
   return { session };
 }
 
+// Canonical agency form is UPPERCASE per migration 106 (2026-05-05): the
+// users.agency column CHECK constraint enforces it. Helper does exact
+// match against the canonical form; the target is uppercased once at the
+// boundary so the ~70 legacy call-sites passing 'gpl' continue to work
+// without a coordinated rename.
 export function canAccessAgency(
   userRole: Role,
   userAgency: string | null,
   targetAgency: string
 ): boolean {
   if (MINISTRY_ROLES.includes(userRole)) return true;
-  return userAgency?.toLowerCase() === targetAgency.toLowerCase();
+  return userAgency === targetAgency.toUpperCase();
 }
 
 export function canUploadData(
@@ -40,7 +45,7 @@ export function canUploadData(
   if (userRole === 'dg') return true;
   if (userRole === 'minister' || userRole === 'ps' || userRole === 'parl_sec') return false;
   if (userRole === 'agency_admin' || userRole === 'officer') {
-    return userAgency?.toLowerCase() === targetAgency.toLowerCase();
+    return userAgency === targetAgency.toUpperCase();
   }
   return false;
 }

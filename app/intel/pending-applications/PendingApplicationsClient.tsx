@@ -54,7 +54,7 @@ export default function PendingApplicationsClient(_props: Props) {
   // GPL-only users see restricted tabs
   const allowedTabs = isDG
     ? ALL_TABS
-    : userAgency === 'gpl'
+    : userAgency === 'GPL'
       ? ALL_TABS.filter(t => t.key === 'gpl' || t.key === 'upload')
       : [];
 
@@ -66,7 +66,7 @@ export default function PendingApplicationsClient(_props: Props) {
   };
 
   // Non-GPL JWT users who somehow reach this page
-  if (!isDG && userAgency !== 'gpl') {
+  if (!isDG && userAgency !== 'GPL') {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
         <ShieldAlert className="h-12 w-12 text-red-400" />
@@ -136,7 +136,7 @@ export default function PendingApplicationsClient(_props: Props) {
       {activeTab === 'upload' && (
         <UploadPanel
           onSuccess={handleUploadSuccess}
-          lockedAgency={!isDG && userAgency === 'gpl' ? 'GPL' : undefined}
+          lockedAgency={!isDG && userAgency === 'GPL' ? 'GPL' : undefined}
         />
       )}
     </div>
