@@ -124,18 +124,25 @@ function KanbanBoardInner() {
   // Data fetching
   // ---------------------------------------------------------------------------
 
+  const showCompleted = state.showCompleted;
   const fetchTasks = useCallback(async () => {
     try {
-      const res = await fetch(withViewAs('/api/tasks'));
+      const url = withViewAs(showCompleted ? '/api/tasks?show_completed=true' : '/api/tasks');
+      const res = await fetch(url);
       const data = await res.json();
       if (data.tasks) {
-        dispatch({ type: 'FETCH_SUCCESS', tasks: data.tasks, lastSync: data.lastSync });
+        dispatch({
+          type: 'FETCH_SUCCESS',
+          tasks: data.tasks,
+          lastSync: data.lastSync,
+          olderCompletedCount: data.older_completed_count,
+        });
       }
     } catch (error) {
       console.error('Failed to fetch tasks:', error);
       dispatch({ type: 'FETCH_ERROR', error: error instanceof Error ? error.message : 'Failed to load tasks' });
     }
-  }, [dispatch, withViewAs]);
+  }, [dispatch, withViewAs, showCompleted]);
 
   const fetchUsers = useCallback(async () => {
     try {
