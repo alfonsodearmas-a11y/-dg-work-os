@@ -29,6 +29,11 @@ interface KanbanColumnProps {
   onQuickAdd?: (status: TaskStatus) => void;
   visibleCount?: number;
   onShowMore?: () => void;
+  /** W14 / W10 — when active, swap "No tasks" for "No matches" + Clear filters,
+   *  and hide the "+ Add task" CTA so users don't silently create tasks that
+   *  the filter immediately hides. */
+  filtersActive?: boolean;
+  onClearFilters?: () => void;
 }
 
 import { STATUS_DOT, STATUS_PILL } from '@/lib/constants/task-styles';
@@ -45,6 +50,7 @@ export function KanbanColumn({
   selectedIds, selectionMode, onToggleSelect,
   onOpenModal, onCalendar, onDrop, onContextMenu, onBottomSheet,
   onQuickAdd, visibleCount, onShowMore,
+  filtersActive, onClearFilters,
 }: KanbanColumnProps) {
   const [isOver, setIsOver] = useState(false);
 
@@ -147,13 +153,30 @@ export function KanbanColumn({
         )}
 
         {tasks.length === 0 && (
-          <div className="flex items-center justify-center h-24 text-white/30 text-sm">
-            No tasks
-          </div>
+          filtersActive ? (
+            <div className="flex flex-col items-center justify-center gap-2 h-32 text-white/30 text-sm px-3 text-center">
+              <span>No matches</span>
+              {onClearFilters && (
+                <button
+                  onClick={onClearFilters}
+                  className="px-3 py-1.5 rounded-lg text-xs text-gold-500 border border-gold-500/30 hover:bg-gold-500/10 transition-colors"
+                  style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-24 text-white/30 text-sm">
+              No tasks
+            </div>
+          )
         )}
 
-        {/* Quick Add button at bottom of column */}
-        {!isMobile && onQuickAdd && (
+        {/* Quick Add button at bottom of column — hidden when filters/search are
+            active so users don't silently create tasks that immediately fall
+            outside the visible set (W14 / W10). */}
+        {!isMobile && onQuickAdd && !filtersActive && (
           <button
             onClick={() => onQuickAdd(id as TaskStatus)}
             className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs text-navy-600 hover:text-gold-500 hover:bg-gold-500/5 border border-transparent hover:border-gold-500/20 transition-all"

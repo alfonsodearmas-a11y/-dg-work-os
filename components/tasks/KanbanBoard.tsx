@@ -20,6 +20,7 @@ import { useViewAsFetch } from '@/hooks/useViewAsFetch';
 import { useBoardReducer, COLUMNS } from '@/hooks/useBoardReducer';
 import { useBoardUrlSync } from '@/hooks/useBoardUrlSync';
 import { canVerify } from '@/lib/auth-helpers';
+import { hasActiveFilters } from './KanbanFilters';
 import { BoardSelectionProvider, useSelection } from './BoardSelectionContext';
 import {
   KanbanToolbar,
@@ -587,6 +588,16 @@ function KanbanBoardInner() {
       awaiting_verification: [] as Task[],
     };
   }, [state.tasks, showVerificationColumn]);
+
+  // W14 / W10 — drives the empty-state swap. Treat `showCompleted` as a filter
+  // toggle: if the user has revealed older completed, "Add task" hidden makes
+  // sense too (otherwise creating a task into a column whose default-hidden
+  // tail just got revealed is confusing).
+  const filtersActive = hasActiveFilters(state) || state.showCompleted;
+  const handleClearFilters = useCallback(() => {
+    dispatch({ type: 'CLEAR_ALL_FILTERS' });
+    if (state.showCompleted) dispatch({ type: 'SET_SHOW_COMPLETED', show: false });
+  }, [dispatch, state.showCompleted]);
   const filterPills = useMemo(() => buildFilterPills(state, dispatch), [state, dispatch]);
 
   // ---------------------------------------------------------------------------
@@ -786,6 +797,8 @@ function KanbanBoardInner() {
                 id={state.mobileTab}
                 title={COLUMN_LABELS[state.mobileTab] || state.mobileTab}
                 tasks={filterTasks(displayTasks[state.mobileTab as keyof typeof displayTasks] ?? [])}
+                filtersActive={filtersActive}
+                onClearFilters={handleClearFilters}
                 isMobile={true}
                 draggingId={null}
                 selectedIds={selectedIds}
@@ -838,6 +851,8 @@ function KanbanBoardInner() {
                     id={column}
                     title={COLUMN_LABELS[column] || column}
                     tasks={colTasks}
+                    filtersActive={filtersActive}
+                    onClearFilters={handleClearFilters}
                     isMobile={false}
                     draggingId={state.draggingId}
                     selectedIds={selectedIds}
