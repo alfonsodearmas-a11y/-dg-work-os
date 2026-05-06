@@ -896,6 +896,7 @@ function KanbanBoardInner() {
           onEdit={() => openPanel(state.contextMenu!.task)}
           onMove={moveTask}
           onDelete={deleteTask}
+          onBlock={(taskId) => dispatch({ type: 'SET_BLOCKED_PROMPT', prompt: { taskId, targetStatus: 'blocked' } })}
         />
       )}
 
