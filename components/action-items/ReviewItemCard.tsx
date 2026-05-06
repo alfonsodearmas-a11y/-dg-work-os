@@ -31,8 +31,17 @@ export function ReviewItemCard({
 }) {
   const undecided = decision === null;
   // For rendering only — we never persist this synthetic decision unless the
-  // user clicks. The persistence path runs through onChange().
-  const cur: ReviewDecision = decision ?? { index, action: defaultAction, edits: {}, was_edited: false };
+  // user clicks. The persistence path runs through onChange(). The synthetic
+  // decision carries the resolver-resolved owner so that the first click
+  // (accept) lands a complete decision payload — without this, mandatory
+  // items toggled accept submit with edits.owner_user_id=undefined and the
+  // server gate 400s "no owner" even though the dropdown shows the right
+  // person. See incident 2026-05-05 (extraction 3f95d9d2).
+  const cur: ReviewDecision = decision ?? {
+    index, action: defaultAction,
+    edits: item.owner_id ? { owner_user_id: item.owner_id } : {},
+    was_edited: false,
+  };
   const checkboxRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (checkboxRef.current) checkboxRef.current.indeterminate = undecided;

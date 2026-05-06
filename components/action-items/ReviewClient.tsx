@@ -22,14 +22,22 @@ interface Props {
 
 export function ReviewClient({ extractionId, meetingTitle, meetingDate, buckets, ownerOptions }: Props) {
   const router = useRouter();
+  // Carry the resolver-resolved owner_id into each seeded decision. Without
+  // this, quick-scan items that the resolver matched (the dropdown shows
+  // the right name) submit with edits.owner_user_id=undefined and the gate
+  // 400s "no owner" — the desync that blocked the 40-item smoke on
+  // 2026-05-05 (extraction 3f95d9d2). The dropdown's local state was the
+  // only place the resolved owner lived; now it lives in the decision too.
+  const seedEdits = (it: { item: ReviewableItem }): ReviewDecision['edits'] =>
+    it.item.owner_id ? { owner_user_id: it.item.owner_id } : {};
   const [decisions, setDecisions] = useState<Map<number, ReviewDecision>>(() => {
     const m = new Map<number, ReviewDecision>();
     // Mandatory items start UNDECIDED — forces an explicit accept/reject click
     // and the server-side gate refuses to close the extraction unless every
     // index is decided. Quick-scan and auto-accepted items are pre-accepted
     // per spec §7 (gate-pass means low political risk).
-    for (const it of buckets.quickScan) m.set(it.index, { index: it.index, action: 'accept', edits: {}, was_edited: false });
-    for (const it of buckets.autoAccepted) m.set(it.index, { index: it.index, action: 'accept', edits: {}, was_edited: false });
+    for (const it of buckets.quickScan) m.set(it.index, { index: it.index, action: 'accept', edits: seedEdits(it), was_edited: false });
+    for (const it of buckets.autoAccepted) m.set(it.index, { index: it.index, action: 'accept', edits: seedEdits(it), was_edited: false });
     return m;
   });
   const totalItems = buckets.mandatory.length + buckets.quickScan.length + buckets.autoAccepted.length;
@@ -43,7 +51,8 @@ export function ReviewClient({ extractionId, meetingTitle, meetingDate, buckets,
       for (const b of [buckets.mandatory, buckets.quickScan, buckets.autoAccepted]) {
         for (const it of b) {
           const cur = next.get(it.index);
-          next.set(it.index, { index: it.index, action: 'accept', edits: cur?.edits ?? {}, was_edited: cur?.was_edited ?? false });
+          const edits = cur?.edits ?? seedEdits(it);
+          next.set(it.index, { index: it.index, action: 'accept', edits, was_edited: cur?.was_edited ?? false });
         }
       }
       return next;

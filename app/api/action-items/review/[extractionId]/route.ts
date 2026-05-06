@@ -50,8 +50,20 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ extraction
   // disables the Submit button accordingly.
   const undecided = findUndecidedIndices(items.data.items.length, parsed.data.decisions);
   if (undecided.length > 0) {
+    console.error('[review-submit] undecided_items', {
+      extraction_id: extractionId,
+      undecided_zero_idx: undecided,
+      decisions_total: parsed.data.decisions.length,
+      items_total: items.data.items.length,
+    });
+    const humanPositions = undecided.map(i => i + 1).join(', ');
     return NextResponse.json(
-      { error: 'Some items have no decision', undecided_indices: undecided, code: 'undecided_items' },
+      {
+        error: `${undecided.length} item${undecided.length === 1 ? '' : 's'} have no decision (item${undecided.length === 1 ? '' : 's'} ${humanPositions}) — accept or reject before submitting`,
+        undecided_indices: undecided,
+        human_positions: undecided.map(i => i + 1),
+        code: 'undecided_items',
+      },
       { status: 400 },
     );
   }
@@ -92,9 +104,23 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ extraction
     // reviewer must explicitly pick an owner via the dropdown before
     // accepting. Differentiate from the undecided-items 400 above.
     if (!d.edits.owner_user_id) {
+      const taskExcerpt = raw.task.length > 60 ? raw.task.slice(0, 60) + '…' : raw.task;
+      const ownerNameRaw = raw.owner_name_raw || '(no name spoken)';
+      console.error('[review-submit] accepted_without_owner', {
+        extraction_id: extractionId,
+        zero_idx: d.index,
+        human_position: d.index + 1,
+        decision: d,
+        owner_name_raw: raw.owner_name_raw,
+        task_excerpt: taskExcerpt,
+        decisions_total: parsed.data.decisions.length,
+        items_total: items.data.items.length,
+      });
       return NextResponse.json({
-        error: `Item ${d.index} is set to accept but has no owner — pick an owner before submitting`,
+        error: `Item ${d.index + 1} ("${taskExcerpt}") is set to accept but the resolver could not match owner "${ownerNameRaw}" — pick an owner manually or reject the item`,
         failing_index: d.index,
+        human_position: d.index + 1,
+        owner_name_raw: raw.owner_name_raw,
         code: 'accepted_without_owner',
       }, { status: 400 });
     }
