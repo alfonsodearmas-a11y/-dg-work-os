@@ -4,3 +4,7 @@ export { StatusBadge } from './StatusBadge';
 export { Sparkline } from './Sparkline';
 export { TrendIndicator } from './TrendIndicator';
 export { ProgressBar } from './ProgressBar';
+export { BentoCard } from './BentoCard';
+export { CardHead } from './CardHead';
+export { DeltaTile } from './DeltaTile';
+export { formatCompactNumber, formatDelta } from './format';
