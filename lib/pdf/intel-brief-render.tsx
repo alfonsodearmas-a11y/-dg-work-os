@@ -117,15 +117,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: T.RULE_HEIGHT,
     borderBottomColor: T.RULE,
   },
-  articleSeal: {
-    width: T.SEAL.size,
-    height: T.SEAL.size,
-    backgroundColor: T.SEAL.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  articleSealText: { ...T.TYPE.ownerInitials },
   articleBody: { flex: 1 },
   articleTitle: { ...T.TYPE.articleTitle },
   articleMeta: { ...T.TYPE.meta, marginTop: 4 },
@@ -194,18 +185,6 @@ const styles = StyleSheet.create({
 const MIDDLE_DOT = '·';
 
 const ROMAN = ['', 'i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii'];
-
-function initialsFromName(name: string | null | undefined): string {
-  if (!name) return '—';
-  const parts = name
-    .replace(/[()].*$/g, '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (parts.length === 0) return '—';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
 
 const PLACEHOLDER_OWNER_PATTERN = /placeholder|\bTBD\b|\bunassigned\b|^—$/i;
 
@@ -346,14 +325,10 @@ function OpenTasksChapter({ data, isFirst }: { data: AgencyIntelData; isFirst: b
     <Chapter ordinal={1} headline="Open work." lede={lede} isFirst={isFirst}>
       {tasks.slice(0, 30).map((t, idx) => (
         <View key={t.id} style={idx === 0 ? styles.articleRowFirst : styles.articleRow} wrap={false}>
-          <View style={styles.articleSeal}>
-            <Text style={styles.articleSealText}>{initialsFromName(t.owner_name)}</Text>
-          </View>
           <View style={styles.articleBody}>
             <Text style={styles.articleTitle}>{t.title}</Text>
             <Text style={t.is_overdue ? styles.articleMetaOverdue : styles.articleMeta}>
               {t.status.toUpperCase()}
-              {t.owner_name ? ` ${MIDDLE_DOT} ${t.owner_name}` : ''}
               {t.due_date
                 ? ` ${MIDDLE_DOT} due ${t.due_date}${t.is_overdue ? '. overdue.' : ''}`
                 : ` ${MIDDLE_DOT} no due date`}
