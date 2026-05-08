@@ -382,6 +382,11 @@ function KanbanBoardInner() {
           assignee_id: overrides?.assignee_id || state.newAssignee || undefined,
           source_meeting_id: overrides ? undefined : (state.newSourceMeetingId || undefined),
           status: overrides?.status || 'new',
+          // Watchers are only meaningful from the full modal flow (not quick-add overrides).
+          watchers:
+            overrides || state.newWatchers.length === 0
+              ? undefined
+              : state.newWatchers,
         }),
       });
       const data = await res.json();
@@ -398,7 +403,7 @@ function KanbanBoardInner() {
     } finally {
       dispatch({ type: 'SET_CREATING_TASK', creating: false });
     }
-  }, [state.newTitle, state.newDescription, state.newAgency, state.newPriority, state.newDueDate, state.newAssignee, state.newSourceMeetingId, dispatch]);
+  }, [state.newTitle, state.newDescription, state.newAgency, state.newPriority, state.newDueDate, state.newAssignee, state.newSourceMeetingId, state.newWatchers, dispatch]);
 
   const applyTemplate = useCallback((template: TaskTemplate) => {
     dispatch({ type: 'SET_NEW_TITLE', title: template.name });
@@ -727,6 +732,7 @@ function KanbanBoardInner() {
         priority={state.newPriority}
         dueDate={state.newDueDate}
         assignee={state.newAssignee}
+        watchers={state.newWatchers}
         users={state.users}
         templates={state.templates}
         showTemplates={state.showTemplates}
@@ -739,6 +745,7 @@ function KanbanBoardInner() {
         onPriorityChange={(v) => dispatch({ type: 'SET_NEW_PRIORITY', priority: v })}
         onDueDateChange={(v) => dispatch({ type: 'SET_NEW_DUE_DATE', date: v })}
         onAssigneeChange={(v) => dispatch({ type: 'SET_NEW_ASSIGNEE', assignee: v })}
+        onWatchersChange={(ids) => dispatch({ type: 'SET_NEW_WATCHERS', watchers: ids })}
         onClose={() => dispatch({ type: 'RESET_NEW_TASK_FORM' })}
         onSubmit={() => createTask()}
         onLoadTemplates={loadTemplates}

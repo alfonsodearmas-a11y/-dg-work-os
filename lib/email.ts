@@ -15,14 +15,29 @@ function createTransporter() {
   });
 }
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer | string;
+  contentType?: string;
+}
+
 interface SendEmailParams {
   to: string | string[];
   subject: string;
   html: string;
   text?: string;
+  attachments?: EmailAttachment[];
+  replyTo?: string;
 }
 
-export async function sendEmail({ to, subject, html, text }: SendEmailParams): Promise<{ success: boolean; error?: string }> {
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+  attachments,
+  replyTo,
+}: SendEmailParams): Promise<{ success: boolean; error?: string }> {
   if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
     logger.error({}, 'sendEmail: GMAIL_USER or GMAIL_APP_PASSWORD is not set');
     return { success: false, error: 'Mailer not configured' };
@@ -36,6 +51,8 @@ export async function sendEmail({ to, subject, html, text }: SendEmailParams): P
       subject,
       html,
       text: text ?? undefined,
+      attachments: attachments ?? undefined,
+      replyTo: replyTo ?? undefined,
     });
     return { success: true };
   } catch (err: any) {

@@ -57,7 +57,7 @@ function tierLabel(tier: EmailNotification['importance_tier']): string {
   }
 }
 
-function escapeHtml(str: string): string {
+export function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -94,13 +94,19 @@ function subjectForEvent(n: EmailNotification): string {
     case 'comment_mention':
       return `[DG Work OS] ${n.actor_name || 'Someone'} mentioned you in ${n.title}`;
     case 'task_assigned':
-      return `[DG Work OS] Task assigned: ${n.title}`;
+      return `[DG Work OS] New task assigned: ${n.title}`;
     case 'task_blocked':
       return `[DG Work OS] BLOCKED: ${n.title}`;
     case 'comment_reply':
       return `[DG Work OS] ${n.actor_name || 'Someone'} replied to your comment`;
     case 'task_completed':
       return `[DG Work OS] Task completed: ${n.title}`;
+    case 'task_watcher_notification':
+      return `[DG Work OS] Watching: ${n.title}`;
+    case 'task_daily_reminder':
+      return `[DG Work OS] ${n.title}`;
+    case 'task_agency_head_notice':
+      return `[DG Work OS] ${n.title}`;
     default:
       return `[DG Work OS] ${n.title}`;
   }
@@ -122,6 +128,7 @@ function htmlFooter(): string {
   return `
         <p style="color: #4a5568; font-size: 12px; line-height: 1.5; margin: 0; border-top: 1px solid #2d3a52; padding-top: 16px;">
           You received this because of your notification preferences in DG Work OS.
+          To manage notifications or stop watching a task, open the item in DG Work OS.
         </p>`;
 }
 

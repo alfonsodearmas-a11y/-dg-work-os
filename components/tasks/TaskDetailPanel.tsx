@@ -9,6 +9,8 @@ import { TaskComments } from './TaskComments';
 import { TaskHeader } from './TaskHeader';
 import { TaskMetadata } from './TaskMetadata';
 import { TaskActivityLog } from './TaskActivityLog';
+import { TaskWatchersSection } from './TaskWatchersSection';
+import { canManageWatchers } from '@/lib/tasks/permissions';
 import { CompleteDialog } from '@/components/action-items/CompleteDialog';
 
 interface UserOption {
@@ -343,6 +345,15 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
               {addingSubtask ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             </button>
           </div>
+        </div>
+
+        {/* WATCHERS section */}
+        <div className="px-4 py-3 border-b border-navy-800">
+          <TaskWatchersSection
+            taskId={task.id}
+            currentUserId={session?.user?.id ?? ''}
+            canManage={canManageWatchers(task, session)}
+          />
         </div>
 
         {/* COMMENTS section */}

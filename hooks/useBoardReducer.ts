@@ -65,6 +65,10 @@ export interface BoardState {
   newAssignee: string;
   newDescription: string;
   newSourceMeetingId: string;
+  // "Also notify" watchers — IDs of users to add to task_watchers on create.
+  // Independent of the primary assignee (newAssignee). Send-time dedup happens
+  // server-side in lib/notifications/notify-task-watchers.
+  newWatchers: string[];
   creatingTask: boolean;
   showTemplates: boolean;
 
@@ -148,6 +152,7 @@ export type BoardAction =
   | { type: 'SET_NEW_PRIORITY'; priority: string }
   | { type: 'SET_NEW_DUE_DATE'; date: string }
   | { type: 'SET_NEW_ASSIGNEE'; assignee: string }
+  | { type: 'SET_NEW_WATCHERS'; watchers: string[] }
   | { type: 'SET_NEW_DESCRIPTION'; description: string }
   | { type: 'SET_NEW_SOURCE_MEETING_ID'; meetingId: string }
   | { type: 'SET_CREATING_TASK'; creating: boolean }
@@ -248,6 +253,7 @@ export function createInitialState(initialViewMode?: ViewMode): BoardState {
     newAssignee: '',
     newDescription: '',
     newSourceMeetingId: '',
+    newWatchers: [],
     creatingTask: false,
     showTemplates: false,
 
@@ -409,6 +415,8 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
       return { ...state, newDueDate: action.date };
     case 'SET_NEW_ASSIGNEE':
       return { ...state, newAssignee: action.assignee };
+    case 'SET_NEW_WATCHERS':
+      return { ...state, newWatchers: action.watchers };
     case 'SET_NEW_DESCRIPTION':
       return { ...state, newDescription: action.description };
     case 'SET_NEW_SOURCE_MEETING_ID':
@@ -427,6 +435,7 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
         newAssignee: '',
         newDescription: '',
         newSourceMeetingId: '',
+        newWatchers: [],
         showNewTask: false,
         showTemplates: false,
       };
