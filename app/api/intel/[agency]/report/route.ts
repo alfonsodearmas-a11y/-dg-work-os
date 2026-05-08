@@ -115,27 +115,23 @@ export async function POST(
     return NextResponse.json({ error: 'Failed to load agency data' }, { status: 500 });
   }
 
-  // Render PDF. Two templates supported:
-  //   - default: the existing dashboard-style report (CoverPage + sections)
-  //   - editorial: "The Intel Brief" (masthead, stats strip, chapters i/ii/iii)
-  // Selection via `?template=editorial` query param. v1 is opt-in; the
-  // dashboard report stays the default until the editorial template has been
-  // visually verified across all seven agencies.
-  const template = request.nextUrl.searchParams.get('template') === 'editorial'
-    ? 'editorial'
-    : 'default';
+  // Render PDF. The editorial Intel Brief is the default; the legacy
+  // dashboard report stays reachable via `?template=legacy` as an escape
+  // hatch in case the editorial render hits an edge case in production.
+  const template =
+    request.nextUrl.searchParams.get('template') === 'legacy' ? 'legacy' : 'editorial';
 
   const generatedBy = session.user.name || session.user.email;
   let pdfBuffer: Buffer;
   try {
-    if (template === 'editorial') {
+    if (template === 'legacy') {
+      pdfBuffer = await renderAgencyIntelReportPDF({ data, generatedBy });
+    } else {
       // The Intel Brief is for the Director General by definition. Resolve
       // the canonical recipient name from the users table; if no DG row
       // exists yet, the sender's name is the safe fallback.
       const recipientName = await resolveDGRecipientName(session.user.name || session.user.email);
       pdfBuffer = await renderIntelBriefPDF({ data, generatedBy, recipientName });
-    } else {
-      pdfBuffer = await renderAgencyIntelReportPDF({ data, generatedBy });
     }
   } catch (err) {
     logger.error({ err, agency: lower, template }, 'report: PDF render failed');

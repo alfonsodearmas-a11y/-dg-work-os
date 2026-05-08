@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useSession } from 'next-auth/react';
 import { FileDown, Loader2, X, Send } from 'lucide-react';
 import { validateEmailList, parseEmailList } from '@/lib/email-validation';
 
@@ -46,12 +45,9 @@ function GenerateReportModal({
   agencyDisplay,
   onClose,
 }: Props & { onClose: () => void }) {
-  const { data: session } = useSession();
-  const isDG = session?.user?.role === 'dg';
   const [recipientInput, setRecipientInput] = useState('');
   const [chips, setChips] = useState<string[]>([]);
   const [message, setMessage] = useState('');
-  const [editorial, setEditorial] = useState(false);
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState<
     | { kind: 'invalid'; bad: string[] }
@@ -110,12 +106,7 @@ function GenerateReportModal({
     setSending(true);
     setFeedback(null);
     try {
-      // The Intel Brief (editorial template) is opt-in for DG-role users
-      // until v1 is verified across all seven agencies.
-      const url = editorial
-        ? `/api/intel/${agency}/report?template=editorial`
-        : `/api/intel/${agency}/report`;
-      const res = await fetch(url, {
+      const res = await fetch(`/api/intel/${agency}/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -243,21 +234,6 @@ function GenerateReportModal({
               placeholder="Optional note to include in the email body"
             />
           </div>
-
-          {isDG ? (
-            <label className="flex items-start gap-2 text-xs text-navy-600 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={editorial}
-                onChange={(e) => setEditorial(e.target.checked)}
-                className="mt-0.5 h-3.5 w-3.5 accent-gold-500"
-              />
-              <span>
-                Use editorial template (The Intel Brief).{' '}
-                <span className="text-navy-700">DG-only preview.</span>
-              </span>
-            </label>
-          ) : null}
 
           {feedback?.kind === 'invalid' ? (
             <p className="text-xs text-red-400">
