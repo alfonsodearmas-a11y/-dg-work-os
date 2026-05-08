@@ -76,6 +76,15 @@ export interface ReliabilityWindow {
 
 export interface GridReliability {
   total_customers_served: number;
+  feeder_count: number;
+  // Latest synced_at across all rows in gpl_feeder_cache; null if cache is
+  // empty. Days computed as floor((now - last_sync) / 86_400_000).
+  feeder_last_sync: string | null;
+  feeder_days_stale: number | null;
+  // Human-readable label for the comparator window, e.g. "vs Apr 1–8 MTD" or
+  // "vs Apr 1–30 (clamped)" when prior month is shorter than the current
+  // day-of-month. Card renders this verbatim under the metric tiles.
+  comparator_label: string;
   mtd: ReliabilityWindow;
   prior_month: ReliabilityWindow;
   delta: {
@@ -352,16 +361,43 @@ function emptyReliabilityWindow(): ReliabilityWindow {
   return { outage_count: 0, customer_hours_lost: 0, saidi_minutes: null, saifi: null };
 }
 
+// Resolves the prior-calendar-month comparator window using same-day-of-month
+// clamping. May 1–8 → Apr 1–8. May 31 → Apr 1–30 (clamped). January → prior
+// December. Returns ISO date strings ready for the date column predicate.
+function resolveComparatorWindow(now: Date): {
+  priorStart: string;
+  priorEnd: string;
+  label: string;
+} {
+  const todayDay = now.getUTCDate();
+  const priorMonth0 = now.getUTCMonth() - 1;
+  const priorYear = priorMonth0 < 0 ? now.getUTCFullYear() - 1 : now.getUTCFullYear();
+  const priorMonth = priorMonth0 < 0 ? 11 : priorMonth0;
+
+  const priorStartDate = new Date(Date.UTC(priorYear, priorMonth, 1));
+  const priorMonthLastDay = new Date(Date.UTC(priorYear, priorMonth + 1, 0)).getUTCDate();
+  const priorEndDay = Math.min(todayDay, priorMonthLastDay);
+  const priorEndDate = new Date(Date.UTC(priorYear, priorMonth, priorEndDay));
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const monthName = priorStartDate.toLocaleString('en-US', {
+    month: 'short',
+    timeZone: 'UTC',
+  });
+  const clamped = todayDay > priorMonthLastDay;
+  const label = clamped
+    ? `vs ${monthName} 1–${priorMonthLastDay} (clamped)`
+    : `vs ${monthName} 1–${todayDay} MTD`;
+  return { priorStart: fmt(priorStartDate), priorEnd: fmt(priorEndDate), label };
+}
+
 async function getGridReliability(): Promise<GridReliability> {
   const now = new Date();
   const mtdStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const priorEnd = new Date(mtdStart);
-  priorEnd.setUTCDate(priorEnd.getUTCDate() - 1);
-  const priorStart = new Date(Date.UTC(priorEnd.getUTCFullYear(), priorEnd.getUTCMonth(), 1));
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const { priorStart, priorEnd, label } = resolveComparatorWindow(now);
 
   const [feedersRes, mtdOutRes, priorOutRes] = await Promise.all([
-    supabaseAdmin.from('gpl_feeder_cache').select('customer_count'),
+    supabaseAdmin.from('gpl_feeder_cache').select('customer_count, synced_at'),
     supabaseAdmin
       .from('gpl_outage_cache')
       .select('customers_affected, duration_minutes')
@@ -370,17 +406,32 @@ async function getGridReliability(): Promise<GridReliability> {
     supabaseAdmin
       .from('gpl_outage_cache')
       .select('customers_affected, duration_minutes')
-      .gte('date', fmt(priorStart))
-      .lte('date', fmt(priorEnd)),
+      .gte('date', priorStart)
+      .lte('date', priorEnd),
   ]);
 
   if (feedersRes.error) {
     logger.error({ err: feedersRes.error }, 'getGridReliability: feeder query failed');
   }
-  const totalCustomers = (feedersRes.data ?? []).reduce(
+  const feederRows = (feedersRes.data ?? []) as Array<{
+    customer_count: number | null;
+    synced_at: string | null;
+  }>;
+  const totalCustomers = feederRows.reduce(
     (s, r) => s + (Number(r.customer_count) || 0),
     0,
   );
+  const feederCount = feederRows.length;
+  let feederLastSync: string | null = null;
+  for (const r of feederRows) {
+    if (r.synced_at && (!feederLastSync || r.synced_at > feederLastSync)) {
+      feederLastSync = r.synced_at;
+    }
+  }
+  const feederDaysStale =
+    feederLastSync != null
+      ? Math.floor((now.getTime() - new Date(feederLastSync).getTime()) / 86_400_000)
+      : null;
 
   function reduce(rows: { customers_affected: unknown; duration_minutes: unknown }[] | null) {
     if (!rows) return emptyReliabilityWindow();
@@ -409,6 +460,10 @@ async function getGridReliability(): Promise<GridReliability> {
 
   return {
     total_customers_served: totalCustomers,
+    feeder_count: feederCount,
+    feeder_last_sync: feederLastSync,
+    feeder_days_stale: feederDaysStale,
+    comparator_label: label,
     mtd,
     prior_month: prior,
     delta: {
