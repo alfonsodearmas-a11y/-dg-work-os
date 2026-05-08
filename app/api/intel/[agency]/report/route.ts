@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
 import { getAgencyIntelData } from '@/lib/intel/get-agency-intel-data';
 import { renderAgencyIntelReportPDF } from '@/lib/pdf/agency-intel-report';
+import { renderIntelBriefPDF } from '@/lib/pdf/intel-brief-render';
 import { validateEmailList, parseEmailList } from '@/lib/email-validation';
 import { escapeHtml } from '@/lib/notifications/email-templates';
 import { isIntelAgency } from '@/lib/agencies';
@@ -114,13 +115,30 @@ export async function POST(
     return NextResponse.json({ error: 'Failed to load agency data' }, { status: 500 });
   }
 
-  // Render PDF
+  // Render PDF. Two templates supported:
+  //   - default: the existing dashboard-style report (CoverPage + sections)
+  //   - editorial: "The Intel Brief" (masthead, stats strip, chapters i/ii/iii)
+  // Selection via `?template=editorial` query param. v1 is opt-in; the
+  // dashboard report stays the default until the editorial template has been
+  // visually verified across all seven agencies.
+  const template = request.nextUrl.searchParams.get('template') === 'editorial'
+    ? 'editorial'
+    : 'default';
+
   const generatedBy = session.user.name || session.user.email;
   let pdfBuffer: Buffer;
   try {
-    pdfBuffer = await renderAgencyIntelReportPDF({ data, generatedBy });
+    if (template === 'editorial') {
+      // The Intel Brief is for the Director General by definition. Resolve
+      // the canonical recipient name from the users table; if no DG row
+      // exists yet, the sender's name is the safe fallback.
+      const recipientName = await resolveDGRecipientName(session.user.name || session.user.email);
+      pdfBuffer = await renderIntelBriefPDF({ data, generatedBy, recipientName });
+    } else {
+      pdfBuffer = await renderAgencyIntelReportPDF({ data, generatedBy });
+    }
   } catch (err) {
-    logger.error({ err, agency: lower }, 'report: PDF render failed');
+    logger.error({ err, agency: lower, template }, 'report: PDF render failed');
     return NextResponse.json({ error: 'Failed to render PDF' }, { status: 500 });
   }
 
@@ -236,6 +254,29 @@ function renderEmailHtml(params: {
       </div>
     </div>
   </body></html>`;
+}
+
+/**
+ * Resolve the canonical Director General name. The Intel Brief is
+ * addressed to the DG regardless of who clicked Generate Report, so we
+ * query the users table for the active dg-role row. When no such row
+ * exists (or a senior role is acting), fall back to the sender's name so
+ * the lede always renders something sensible.
+ */
+async function resolveDGRecipientName(senderFallback: string): Promise<string> {
+  const { data, error } = await supabaseAdmin
+    .from('users')
+    .select('name')
+    .eq('role', 'dg')
+    .eq('is_active', true)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    logger.warn({ err: error }, 'resolveDGRecipientName: lookup failed; using sender');
+    return senderFallback;
+  }
+  return data?.name || senderFallback;
 }
 
 function renderEmailText(params: {
