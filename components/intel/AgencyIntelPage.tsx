@@ -13,6 +13,7 @@ import {
   CheckSquare,
   ClipboardCheck,
   Droplets,
+  FileSpreadsheet,
   FileText,
   Gauge,
   Lightbulb,
@@ -125,6 +126,15 @@ export function AgencyIntelPage({ slug }: Props) {
               <p className="text-navy-600 text-sm truncate">{meta.subtitle}</p>
             </div>
           </div>
+          {slug === 'gpl' ? (
+            <Link
+              href="/intel/gpl/dbis"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-navy-900 border border-navy-800 hover:border-gold-500 text-slate-300 hover:text-white text-sm transition-colors"
+            >
+              <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
+              Daily DBIS upload
+            </Link>
+          ) : null}
           <GenerateReportButton agency={slug} agencyDisplay={meta.display} />
         </div>
         <div className="h-px bg-gradient-to-r from-transparent via-navy-800 to-transparent" />
