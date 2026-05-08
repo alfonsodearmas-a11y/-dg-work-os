@@ -1,74 +1,112 @@
-'use client';
+import { AlertCircle } from 'lucide-react';
+import type { TodayPayload, TodaySignal, TodaySourceHealth } from '@/lib/today/types';
+import type { SlaSummary } from '@/lib/today/sla-summary';
+import type { CalendarToday } from '@/lib/today/schedule';
+import type { TopTasks } from '@/lib/today/top-tasks';
+import { UrgentHero } from './UrgentHero';
+import { StatSummaryCard } from './StatSummaryCard';
+import { IssuesByAgencyCard } from './IssuesByAgencyCard';
+import { TodaysScheduleCard } from './TodaysScheduleCard';
+import { TasksCard } from './TasksCard';
 
-import { CheckCircle2, AlertCircle } from 'lucide-react';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { groupSignals } from './grouping';
-import { TodayGroup } from './TodayGroup';
-import type { TodayPayload } from '@/lib/today/types';
-
-const SOURCE_LABEL: Record<keyof TodayPayload['sources'], string> = {
-  delayed_projects: 'delayed projects',
-  tenders: 'procurement',
-  meeting_actions: 'meeting actions',
-  stagnant_tenders: 'stagnant tenders',
-  incomplete_psip: 'incomplete PSIP data',
-};
-
-function formatToday(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
+interface TodayViewProps {
+  payload: TodayPayload;
+  sla: SlaSummary;
+  schedule: CalendarToday;
+  tasks: TopTasks;
+  userName: string | null;
 }
 
-export function TodayView({ payload, userName }: { payload: TodayPayload; userName: string | null | undefined }) {
-  const { signals, counts, sources, generatedAt } = payload;
-  const unhealthySources = Object.entries(sources)
-    .filter(([, v]) => !v.ok)
-    .map(([k]) => SOURCE_LABEL[k as keyof TodayPayload['sources']]);
+const SOURCE_LABELS: Record<keyof TodayPayload['sources'], string> = {
+  delayed_projects: 'delayed projects',
+  tenders: 'tenders',
+  meeting_actions: 'meeting actions',
+  stagnant_tenders: 'stagnant tenders',
+  incomplete_psip: 'PSIP completeness',
+};
 
-  const firstName = userName?.split(' ')[0] ?? null;
+function formatBriefingDate(now: Date): string {
+  return now
+    .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+    .toUpperCase();
+}
+
+function firstName(userName: string | null): string {
+  if (!userName) return 'there';
+  return userName.split(/\s+/)[0] ?? userName;
+}
+
+function pickTopUrgent(signals: TodaySignal[]): TodaySignal | null {
+  const slaSignals = signals.filter(s => s.kind === 'tender_sla');
+  const severityRank: Record<string, number> = { critical: 0, high: 1, medium: 2 };
+  const sorted = slaSignals.sort((a, b) => {
+    const r = (severityRank[a.severity] ?? 3) - (severityRank[b.severity] ?? 3);
+    if (r !== 0) return r;
+    return (b.ageDays ?? 0) - (a.ageDays ?? 0);
+  });
+  return sorted[0] ?? null;
+}
+
+function agencyBreachCounts(signals: TodaySignal[]): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const s of signals) {
+    if (s.kind !== 'tender_sla' || !s.agency) continue;
+    m.set(s.agency, (m.get(s.agency) ?? 0) + 1);
+  }
+  return m;
+}
+
+function unhealthySources(sources: TodayPayload['sources']): string[] {
+  const out: string[] = [];
+  for (const [key, val] of Object.entries(sources) as Array<[keyof TodayPayload['sources'], TodaySourceHealth]>) {
+    if (!val.ok) out.push(SOURCE_LABELS[key]);
+  }
+  return out;
+}
+
+export function TodayView({ payload, sla, schedule, tasks, userName }: TodayViewProps) {
+  const top = pickTopUrgent(payload.signals);
+  const agencyBreaches = agencyBreachCounts(payload.signals);
+  const unhealthy = unhealthySources(payload.sources);
+  const dateLine = formatBriefingDate(new Date(payload.generatedAt));
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+    <div className="space-y-6">
       <header>
-        <p className="text-xs uppercase tracking-wider text-navy-600">{formatToday(generatedAt)}</p>
-        <h1 className="mt-1 text-2xl font-semibold text-white">
-          {firstName ? `Hello, ${firstName}` : 'Today'}
-        </h1>
-        <p className="mt-1 text-sm text-navy-600">
-          {counts.total === 0
-            ? 'Nothing needs your attention right now.'
-            : `${counts.total} ${counts.total === 1 ? 'item needs' : 'items need'} your attention.`}
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-navy-600">
+          {dateLine} · DG Briefing
         </p>
+        <h1 className="mt-2 text-3xl lg:text-4xl font-bold text-white tracking-tight">
+          Good morning, <span className="text-gold-500">{firstName(userName)}</span>
+        </h1>
       </header>
 
-      {unhealthySources.length > 0 && (
-        <div className="flex items-start gap-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          <div>
-            <p className="font-medium">Partial data</p>
-            <p className="text-red-300/80">
-              Could not load: {unhealthySources.join(', ')}. Other sources shown below.
-            </p>
-          </div>
+      {unhealthy.length > 0 && (
+        <div className="flex items-start gap-2 px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/5">
+          <AlertCircle size={14} className="text-amber-400 mt-0.5 shrink-0" aria-hidden="true" />
+          <p className="text-xs text-amber-400">
+            Some signals are stale: {unhealthy.join(', ')}. Numbers below may be incomplete.
+          </p>
         </div>
       )}
 
-      {signals.length === 0 ? (
-        <EmptyState
-          icon={<CheckCircle2 className="h-10 w-10" />}
-          title="All clear"
-          description="No overdue projects, SLA breaches, or open action items. Check back later."
-        />
-      ) : (
-        <div className="space-y-3">
-          {groupSignals(signals).map((g, i) => (
-            <TodayGroup key={g.key} group={g} firstLoadOpen={i === 0} />
-          ))}
+      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5">
+        <div className="md:col-span-2 xl:col-span-2 xl:row-span-2 min-h-[420px]">
+          <UrgentHero topSignal={top} sla={sla} agencyBreaches={agencyBreaches} />
         </div>
-      )}
+
+        <StatSummaryCard kind="tender_sla" signals={payload.signals} />
+        <StatSummaryCard kind="delayed_project" signals={payload.signals} />
+        <StatSummaryCard kind="incomplete_psip_data" signals={payload.signals} />
+        <IssuesByAgencyCard signals={payload.signals} />
+      </section>
+
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5">
+        <div className="lg:col-span-2">
+          <TodaysScheduleCard schedule={schedule} />
+        </div>
+        <TasksCard tasks={tasks} />
+      </section>
     </div>
   );
 }
