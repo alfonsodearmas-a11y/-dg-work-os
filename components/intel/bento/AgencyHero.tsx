@@ -86,10 +86,14 @@ export function AgencyHero({ slug, data }: AgencyHeroProps) {
       </div>
 
       <dl className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
-        <MetaPill label="Open tasks" value={openTasks} accent={overdueTasks > 0 ? 'warn' : 'mute'} sub={overdueTasks > 0 ? `${overdueTasks} overdue` : null} />
-        <MetaPill label="Delayed projects" value={delayedProjects} accent={delayedProjects > 0 ? 'warn' : 'mute'} />
-        <MetaPill label="Critical procurement" value={criticalTenders} accent={criticalTenders > 0 ? 'warn' : 'mute'} />
-        <MetaPill label="Tenders in evaluation" value={evalTenders} accent="mute" />
+        <MetaPill
+          label="Tasks"
+          value={openTasks}
+          qualifier={overdueTasks > 0 ? `${overdueTasks} overdue` : null}
+        />
+        <MetaPill label="Projects" value={delayedProjects} />
+        <MetaPill label="Procurement" value={criticalTenders} />
+        <MetaPill label="Tenders" value={evalTenders} />
         <span className="text-navy-600 ml-auto whitespace-nowrap">Synced {generatedLabel}</span>
       </dl>
 
@@ -98,23 +102,25 @@ export function AgencyHero({ slug, data }: AgencyHeroProps) {
   );
 }
 
+// Mirrors the card-header right-slot pattern: small uppercase label, white
+// semibold count, muted "· qualifier" trailing. Single visual pattern across
+// the page for the same shape of information.
 function MetaPill({
   label,
   value,
-  accent,
-  sub,
+  qualifier,
 }: {
   label: string;
   value: number;
-  accent: 'warn' | 'mute';
-  sub?: string | null;
+  qualifier?: string | null;
 }) {
-  const valueClass = accent === 'warn' ? 'text-amber-400' : 'text-white';
   return (
     <span className="inline-flex items-baseline gap-1.5">
       <dt className="text-[11px] uppercase tracking-[0.14em] text-navy-600">{label}</dt>
-      <dd className={`text-sm font-semibold tabular-nums ${valueClass}`}>{value}</dd>
-      {sub ? <span className="text-[11px] text-amber-400">({sub})</span> : null}
+      <dd className="text-sm font-semibold tabular-nums text-white">{value}</dd>
+      {qualifier ? (
+        <span className="text-[11px] text-navy-600">· {qualifier}</span>
+      ) : null}
     </span>
   );
 }

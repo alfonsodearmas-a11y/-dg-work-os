@@ -275,6 +275,24 @@ oldest_days = MAX(age)`}
         </p>
       </Section>
 
+      <Section id="delayed-projects" title="Delayed Projects (worst Xd)">
+        <p>
+          Source table: <Code>delayed_projects</Code> filtered to{' '}
+          <Code>sub_agency = &lsquo;GPL&rsquo;</Code>. The card header reads{' '}
+          <Strong>10 · worst 701d</Strong> where the count is the total
+          number of delayed projects and <Strong>worst Xd</Strong> is{' '}
+          <Code>MAX(CURRENT_DATE - project_end_date)</Code> across that set,
+          not the sum of all individual delays.
+        </p>
+        <p className="text-xs text-navy-600">
+          Summing per-project days-overdue across an agency makes a number
+          that&rsquo;s arithmetically real but semantically meaningless. We
+          report the worst-offender so the DG can ask one specific question
+          (&ldquo;what about the 701-day project?&rdquo;) instead of staring
+          at a sum that could be 10 mild slips or 1 catastrophic one.
+        </p>
+      </Section>
+
       <Section id="tender-sla" title="Tender SLA stages (Critical Procurement, Tenders in Evaluation)">
         <p>
           Source table: <Code>tender</Code> in Supabase. SLA thresholds are

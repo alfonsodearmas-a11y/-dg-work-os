@@ -37,7 +37,7 @@ export function TasksCard({ items, href, className, accent }: TasksCardProps) {
           <span className="text-[11px] tabular-nums">
             <span className="text-white font-semibold">{total}</span>
             {overdue > 0 ? (
-              <span className="text-amber-400"> · {overdue} overdue</span>
+              <span className="text-navy-600"> · {overdue} overdue</span>
             ) : null}
           </span>
         }

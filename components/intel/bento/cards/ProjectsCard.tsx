@@ -40,7 +40,7 @@ export function ProjectsCard({ items, href, className, accent }: ProjectsCardPro
           <span className="text-[11px] tabular-nums">
             <span className="text-white font-semibold">{total}</span>
             {overdueCount > 0 && worst > 0 ? (
-              <span className="text-amber-400"> · worst {worst}d</span>
+              <span className="text-navy-600"> · worst {worst}d</span>
             ) : null}
           </span>
         }

@@ -33,7 +33,7 @@ export function ProcurementCard({ items, href, className, accent }: ProcurementC
           <span className="text-[11px] tabular-nums">
             <span className="text-white font-semibold">{total}</span>
             {oldest > 0 ? (
-              <span className="text-amber-400"> · oldest {oldest}d</span>
+              <span className="text-navy-600"> · oldest {oldest}d</span>
             ) : null}
           </span>
         }
