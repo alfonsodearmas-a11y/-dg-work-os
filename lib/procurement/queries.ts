@@ -134,10 +134,21 @@ async function getNextActionMap(
     );
     return { focal: null, head: null };
   }
+  // Discard seed-data placeholder strings so the UI never renders e.g.
+  // "next: GWI focal point (placeholder)". When the table eventually has
+  // real names, those flow through unchanged.
   return {
-    focal: data?.focal_point_name || null,
-    head: data?.agency_head_name || null,
+    focal: cleanName(data?.focal_point_name),
+    head: cleanName(data?.agency_head_name),
   };
+}
+
+function cleanName(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.toLowerCase().includes('(placeholder)')) return null;
+  return trimmed;
 }
 
 /**

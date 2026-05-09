@@ -7,4 +7,4 @@ export { ProgressBar } from './ProgressBar';
 export { BentoCard } from './BentoCard';
 export { CardHead } from './CardHead';
 export { DeltaTile } from './DeltaTile';
-export { formatCompactNumber, formatDelta } from './format';
+export { formatCompactNumber, formatDelta, formatHumanDate } from './format';

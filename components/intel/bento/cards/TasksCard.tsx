@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { CheckSquare } from 'lucide-react';
 import type { AgencyOpenTask } from '@/lib/intel/get-agency-intel-data';
-import { BentoCard, CardHead } from '@/components/intel/common';
+import { BentoCard, CardHead, formatHumanDate } from '@/components/intel/common';
 import { PRIORITY_DOT } from '@/lib/constants/task-styles';
 
 const PREVIEW_COUNT = 4;
@@ -28,20 +28,17 @@ export function TasksCard({ items, href, className, accent }: TasksCardProps) {
   const preview = sorted.slice(0, PREVIEW_COUNT);
 
   return (
-    <BentoCard className={className} ariaLabel={`Open tasks: ${total}`}>
+    <BentoCard className={className} ariaLabel={`Tasks: ${total} open${overdue ? `, ${overdue} overdue` : ''}`}>
       <CardHead
         icon={<CheckSquare size={14} />}
         iconAccent={accent}
-        title="Open Tasks"
+        title="Tasks"
         right={
-          <span className="text-[11px] tabular-nums text-navy-600">
+          <span className="text-[11px] tabular-nums">
+            <span className="text-white font-semibold">{total}</span>
             {overdue > 0 ? (
-              <>
-                <span className="text-red-400 font-semibold">{overdue}</span>
-                <span> overdue · </span>
-              </>
+              <span className="text-amber-400"> · {overdue} overdue</span>
             ) : null}
-            <span className="text-white">{total}</span>
           </span>
         }
       />
@@ -59,17 +56,20 @@ export function TasksCard({ items, href, className, accent }: TasksCardProps) {
                 aria-hidden="true"
               />
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-white truncate leading-snug">{t.title}</p>
-                <p className="text-[11px] text-navy-600">
+                <p className="text-sm text-white leading-snug line-clamp-2">{t.title}</p>
+                <p className="text-[11px] text-navy-600 flex items-center gap-1.5">
+                  {t.is_overdue ? (
+                    <span
+                      className="inline-flex h-1.5 w-1.5 rounded-full bg-red-400 shrink-0"
+                      aria-label="overdue"
+                    />
+                  ) : null}
                   {t.due_date ? (
-                    <span className={t.is_overdue ? 'text-red-400' : ''}>
-                      due {t.due_date}
-                      {t.is_overdue ? ' (overdue)' : ''}
-                    </span>
+                    <span>due {formatHumanDate(t.due_date)}</span>
                   ) : (
                     <span>no due date</span>
                   )}
-                  {t.owner_name ? <span> · {t.owner_name}</span> : null}
+                  {t.owner_name ? <span className="truncate">· {t.owner_name}</span> : null}
                 </p>
               </div>
             </li>

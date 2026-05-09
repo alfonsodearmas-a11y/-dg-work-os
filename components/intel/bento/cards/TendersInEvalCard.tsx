@@ -25,20 +25,17 @@ export function TendersInEvalCard({ items, href, className, accent }: TendersInE
   const oldest = items.reduce((m, r) => Math.max(m, r.days_in_stage ?? 0), 0);
 
   return (
-    <BentoCard className={className} ariaLabel={`Tenders in evaluation: ${total}`}>
+    <BentoCard className={className} ariaLabel={`Tenders: ${total} in evaluation`}>
       <CardHead
         icon={<ClipboardCheck size={14} />}
         iconAccent={accent}
-        title="Tenders in Evaluation"
+        title="Tenders"
         right={
           <span className="text-[11px] tabular-nums">
+            <span className="text-white font-semibold">{total}</span>
             {oldest > 0 ? (
-              <>
-                <span className="text-amber-400 font-semibold">{oldest}d</span>
-                <span className="text-navy-600"> oldest · </span>
-              </>
+              <span className="text-amber-400"> · oldest {oldest}d</span>
             ) : null}
-            <span className="text-white">{total}</span>
           </span>
         }
       />
@@ -56,10 +53,10 @@ export function TendersInEvalCard({ items, href, className, accent }: TendersInE
                 aria-hidden="true"
               />
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-white truncate leading-snug">{t.description}</p>
+                <p className="text-sm text-white leading-snug line-clamp-2">{t.description}</p>
                 <p className="text-[11px] text-navy-600">
                   {t.days_in_stage != null ? <span>{t.days_in_stage}d in stage</span> : null}
-                  {t.next_action_owner ? <span> · next: {t.next_action_owner}</span> : null}
+                  {t.next_action_owner ? <span> · {t.next_action_owner}</span> : null}
                 </p>
               </div>
             </li>

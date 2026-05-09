@@ -21,27 +21,27 @@ interface ProjectsCardProps {
 
 export function ProjectsCard({ items, href, className, accent }: ProjectsCardProps) {
   const total = items.length;
-  const totalDelayDays = items.reduce(
-    (s, p) => s + Math.max(0, p.days_overdue ?? 0),
+  // Worst single overdue, not the sum: "1841d slip" summed across projects
+  // is mathematically meaningless. Worst-offender is the right exec signal.
+  const worst = items.reduce(
+    (m, p) => Math.max(m, Math.max(0, p.days_overdue ?? 0)),
     0,
   );
+  const overdueCount = items.filter((p) => (p.days_overdue ?? 0) > 0).length;
   const preview = items.slice(0, PREVIEW_COUNT);
 
   return (
-    <BentoCard className={className} ariaLabel={`Delayed projects: ${total}`}>
+    <BentoCard className={className} ariaLabel={`Projects: ${total} delayed`}>
       <CardHead
         icon={<AlertTriangle size={14} />}
         iconAccent={accent}
-        title="Delayed Projects"
+        title="Projects"
         right={
           <span className="text-[11px] tabular-nums">
-            {totalDelayDays > 0 ? (
-              <>
-                <span className="text-amber-400 font-semibold">{totalDelayDays}d</span>
-                <span className="text-navy-600"> slip · </span>
-              </>
+            <span className="text-white font-semibold">{total}</span>
+            {overdueCount > 0 && worst > 0 ? (
+              <span className="text-amber-400"> · worst {worst}d</span>
             ) : null}
-            <span className="text-white">{total}</span>
           </span>
         }
       />
@@ -59,13 +59,13 @@ export function ProjectsCard({ items, href, className, accent }: ProjectsCardPro
                 aria-hidden="true"
               />
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-white truncate leading-snug">{p.project_name}</p>
+                <p className="text-sm text-white leading-snug line-clamp-2">{p.project_name}</p>
                 <p className="text-[11px] text-navy-600">
                   {typeof p.completion_percent === 'number'
                     ? `${Math.round(Number(p.completion_percent))}% complete`
                     : '— complete'}
                   {p.days_overdue != null && p.days_overdue > 0 ? (
-                    <span className="text-red-400"> · {p.days_overdue}d overdue</span>
+                    <span> · {p.days_overdue}d overdue</span>
                   ) : null}
                 </p>
               </div>

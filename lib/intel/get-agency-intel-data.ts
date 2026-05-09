@@ -216,12 +216,22 @@ async function getAgencyHead(agency: string): Promise<AgencyIntelData['agency_he
     .eq('agency', agency.toUpperCase())
     .maybeSingle();
 
+  // Strip seed placeholders so they never reach the UI. Real assignments
+  // flow through unchanged.
   return {
-    name: data?.agency_head_name ?? null,
+    name: stripPlaceholder(data?.agency_head_name),
     email: data?.agency_head_email ?? null,
-    focal_point_name: data?.focal_point_name ?? null,
+    focal_point_name: stripPlaceholder(data?.focal_point_name),
     focal_point_email: data?.focal_point_email ?? null,
   };
+}
+
+function stripPlaceholder(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.toLowerCase().includes('(placeholder)')) return null;
+  return trimmed;
 }
 
 // ---------------------------------------------------------------------------
@@ -691,13 +701,19 @@ export async function getAgencyIntelData(agencyParam: string): Promise<AgencyInt
     isHAS ? getHasAirstripOps() : Promise.resolve(null),
   ]);
 
+  // Critical takes precedence: a tender flagged as critical (missing decision,
+  // missing-from-upload, stale-award) drops out of the Evaluation card even if
+  // its stage is 'evaluation'. Stops the same tender appearing in both cards.
+  const criticalIds = new Set(criticalProcurement.map((t) => t.id));
+  const evaluationDeduped = evaluationTenders.filter((t) => !criticalIds.has(t.id));
+
   const data: AgencyIntelData = {
     agency,
     generated_at: new Date().toISOString(),
     open_tasks: openTasks,
     delayed_projects: delayedProjectsResult.projects,
     critical_procurement: criticalProcurement,
-    evaluation_tenders: evaluationTenders,
+    evaluation_tenders: evaluationDeduped,
     agency_head: agencyHead,
   };
 
