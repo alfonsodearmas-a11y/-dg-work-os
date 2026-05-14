@@ -4,7 +4,9 @@ import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 import type { PendingApplicationStats } from '@/lib/pending-applications-types';
 
-const COLUMNS = 'id,agency,customer_reference,first_name,last_name,telephone,region,district,village_ward,street,lot,event_code,event_description,application_date,days_waiting,data_as_of,pipeline_stage,account_type,service_order_type,service_order_number,account_status,cycle,division_code';
+// Reads from the pending_applications_with_wait view (migration 111) so
+// days_waiting is the live Guyana-local computation, not the stored value.
+const COLUMNS = 'id,agency,customer_reference,first_name,last_name,telephone,region,district,village_ward,street,lot,event_code,event_description,application_date,days_waiting,data_as_of,imported_at,pipeline_stage,account_type,service_order_type,service_order_number,account_status,cycle,division_code';
 
 function mapRow(row: Record<string, unknown>) {
   return {
@@ -45,7 +47,8 @@ function buildStats(rows: Record<string, unknown>[]): PendingApplicationStats {
         { label: '15–30 days', min: 15, max: 30, count: 0 },
         { label: '> 30 days', min: 31, max: null, count: 0 },
       ],
-      dataAsOf: '',
+      reportThrough: '',
+      uploadedAt: '',
     };
   }
 
@@ -57,9 +60,19 @@ function buildStats(rows: Record<string, unknown>[]): PendingApplicationStats {
   const longestRow = rows.find(r => Number(r.days_waiting) === maxDaysWaiting);
   const longestWaitCustomer = longestRow ? mapRow(longestRow) : null;
 
+  // application_date drives the "report through" label; imported_at drives
+  // the "uploaded" label. Folded into the same pass that builds the regions.
+  let maxAppDate = '';
+  let maxImportedAt = '';
   const regionMap = new Map<string, { count: number; totalDays: number; maxDays: number; over30: number }>();
   for (const row of rows) {
-    const region = String(row.region || 'Unknown');
+    const appDate = row.application_date ? String(row.application_date) : '';
+    if (appDate && appDate > maxAppDate) maxAppDate = appDate;
+    const imp = row.imported_at ? String(row.imported_at) : '';
+    if (imp && imp > maxImportedAt) maxImportedAt = imp;
+
+    // GPL has rows with NULL region (TOWN column was blank); bucket as Unspecified.
+    const region = String(row.region || 'Unspecified');
     const days = Number(row.days_waiting) || 0;
     const entry = regionMap.get(region) || { count: 0, totalDays: 0, maxDays: 0, over30: 0 };
     entry.count++;
@@ -106,7 +119,17 @@ function buildStats(rows: Record<string, unknown>[]): PendingApplicationStats {
     }))
     .sort((a, b) => b.count - a.count) : undefined;
 
-  return { total, avgDaysWaiting, maxDaysWaiting, longestWaitCustomer, byRegion, waitBrackets, byStage, dataAsOf: String(rows[0].data_as_of || '') };
+  return {
+    total,
+    avgDaysWaiting,
+    maxDaysWaiting,
+    longestWaitCustomer,
+    byRegion,
+    waitBrackets,
+    byStage,
+    reportThrough: maxAppDate,
+    uploadedAt: maxImportedAt,
+  };
 }
 
 export async function GET() {
@@ -115,7 +138,7 @@ export async function GET() {
     if (authResult instanceof NextResponse) return authResult;
 
     const { data: allRows, error } = await supabaseAdmin
-      .from('pending_applications')
+      .from('pending_applications_with_wait')
       .select(COLUMNS);
 
     if (error) {

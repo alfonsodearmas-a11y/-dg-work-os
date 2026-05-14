@@ -45,8 +45,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'agency parameter required (GPL or GWI)' }, { status: 400 });
     }
 
+    // Read from the view (migration 111) so daysWaiting flowing into
+    // computeGPLAnalysis / computeGWIAnalysis is the live Guyana-local value.
     const { data, error } = await supabaseAdmin
-      .from('pending_applications')
+      .from('pending_applications_with_wait')
       .select(PENDING_APP_COLUMNS)
       .eq('agency', agency);
 

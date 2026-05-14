@@ -95,8 +95,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     return NextResponse.json({ error: 'agency field required (GPL or GWI)' }, { status: 400 });
   }
 
+  // Read from the view (migration 111) so days_waiting feeding the AI
+  // prompt reflects live Guyana-local waiting time.
   const { data: rows, error: fetchError } = await supabaseAdmin
-    .from('pending_applications')
+    .from('pending_applications_with_wait')
     .select(PENDING_APP_COLUMNS)
     .eq('agency', agency);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Search,
   ChevronLeft,
@@ -50,6 +50,17 @@ function formatDate(dateStr: string) {
   if (!dateStr) return '—';
   const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// "May 14, 4:10pm" style for the Uploaded label.
+function formatUploadedAt(iso: string) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Guyana' });
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Guyana' })
+    .replace(' AM', 'am').replace(' PM', 'pm').replace(/\s+/g, '');
+  return `${date}, ${time}`;
 }
 
 interface OverviewTabProps {
@@ -157,32 +168,25 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
     { name: '> 30 days', GPL: gplStats.waitBrackets[3]?.count || 0, GWI: gwiStats.waitBrackets[3]?.count || 0 },
   ] : [];
 
-  const regionData = (() => {
-    if (!stats) return [];
-    const src = agencyFilter === 'GPL' ? [gplStats] : agencyFilter === 'GWI' ? [gwiStats] : [gplStats, gwiStats];
-    const map = new Map<string, { count: number; totalDays: number; maxDays: number; over30: number }>();
-    for (const s of src) {
-      if (!s) continue;
-      for (const r of s.byRegion) {
-        const existing = map.get(r.region) || { count: 0, totalDays: 0, maxDays: 0, over30: 0 };
-        existing.count += r.count;
-        existing.totalDays += r.avgDays * r.count;
-        existing.maxDays = Math.max(existing.maxDays, r.maxDays);
-        existing.over30 += r.over30Count;
-        map.set(r.region, existing);
-      }
-    }
-    return Array.from(map.entries())
-      .map(([region, d]) => ({
-        region, count: d.count,
-        avgDays: Math.round(d.totalDays / d.count),
-        maxDays: d.maxDays,
-        pctOver30: d.count > 0 ? Math.round((d.over30 / d.count) * 100) : 0,
-      }))
-      .sort((a, b) => b.count - a.count);
-  })();
+  // GWI uses admin regions (Region 2, Region 3, Region 4EBD, ...). GPL stores
+  // town names plus a large bucket of Unspecified. They never reconcile, so
+  // we render two tables instead of merging.
+  const showGwiRegions = agencyFilter === 'all' || agencyFilter === 'GWI';
+  const showGplRegions = agencyFilter === 'all' || agencyFilter === 'GPL';
 
-  const allRegions = regionData.map(r => r.region);
+  const { gwiRegionRows, gplRegionRows, allRegions } = useMemo(() => {
+    const toRow = (r: { region: string; count: number; avgDays: number; maxDays: number; over30Count: number }) => ({
+      region: r.region, count: r.count, avgDays: r.avgDays, maxDays: r.maxDays,
+      pctOver30: r.count > 0 ? Math.round((r.over30Count / r.count) * 100) : 0,
+    });
+    const gwi = (gwiStats?.byRegion || []).map(toRow);
+    const gpl = (gplStats?.byRegion || []).map(toRow);
+    const regions = Array.from(new Set([
+      ...(showGwiRegions ? gwi.map(r => r.region) : []),
+      ...(showGplRegions ? gpl.map(r => r.region) : []),
+    ]));
+    return { gwiRegionRows: gwi, gplRegionRows: gpl, allRegions: regions };
+  }, [gwiStats, gplStats, showGwiRegions, showGplRegions]);
 
   if (loading) {
     return (
@@ -203,13 +207,23 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Data freshness */}
+      {/* Data freshness: two values per agency, the report window end and when we last ingested. */}
       {stats && (
-        <div className="flex flex-wrap items-center gap-2 text-sm sm:text-xs text-navy-600">
-          <Clock className="h-3.5 w-3.5" />
-          <span>GPL data as of <span className="text-slate-400">{formatDate(gplStats?.dataAsOf || '')}</span></span>
-          <span className="text-navy-800">·</span>
-          <span>GWI data as of <span className="text-slate-400">{formatDate(gwiStats?.dataAsOf || '')}</span></span>
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-x-4 text-sm sm:text-xs text-navy-600">
+          {([
+            { agency: 'GPL', stats: gplStats },
+            { agency: 'GWI', stats: gwiStats },
+          ] as const).map(({ agency, stats: s }) => (
+            <div key={agency} className="flex items-center gap-2">
+              <Clock className="h-3.5 w-3.5" />
+              <span>
+                {agency}: Report through{' '}
+                <span className="text-slate-400">{formatDate(s?.reportThrough || '')}</span>
+                {' · '}Uploaded{' '}
+                <span className="text-slate-400">{formatUploadedAt(s?.uploadedAt || '')}</span>
+              </span>
+            </div>
+          ))}
         </div>
       )}
 
@@ -331,37 +345,22 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
         </div>
       )}
 
-      {/* Region Breakdown */}
-      {regionData.length > 0 && (
-        <div className="card-premium p-4 md:p-6">
-          <h3 className="text-sm font-semibold text-white mb-4">Region Breakdown</h3>
-          <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
-            <table className="w-full text-sm" aria-label="Pending applications by region">
-              <thead>
-                <tr className="text-navy-600 text-sm sm:text-xs uppercase tracking-wider border-b border-navy-800">
-                  <th scope="col" className="text-left py-3 px-3">Region</th>
-                  <th scope="col" className="text-right py-3 px-3">Count</th>
-                  <th scope="col" className="text-right py-3 px-3">Avg Wait</th>
-                  <th scope="col" className="text-right py-3 px-3 hidden sm:table-cell">Max Wait</th>
-                  <th scope="col" className="text-right py-3 px-3">% Over 30d</th>
-                </tr>
-              </thead>
-              <tbody>
-                {regionData.map(r => (
-                  <tr key={r.region} className="border-b border-navy-800/50 hover:bg-navy-900/50">
-                    <td className="py-3 px-3 text-white font-medium">{r.region}</td>
-                    <td className="py-3 px-3 text-right text-slate-400">{r.count}</td>
-                    <td className="py-3 px-3 text-right text-slate-400">{r.avgDays}d</td>
-                    <td className="py-3 px-3 text-right text-slate-400 hidden sm:table-cell">{r.maxDays}d</td>
-                    <td className="py-3 px-3 text-right">
-                      <span className={`${r.pctOver30 > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{r.pctOver30}%</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      {/* GWI Region Breakdown (admin regions: Region 2, Region 3, Region 4EBD, ...) */}
+      {showGwiRegions && gwiRegionRows.length > 0 && (
+        <RegionTable
+          title="GWI by Admin Region"
+          rows={gwiRegionRows}
+          regionLabel="Region"
+        />
+      )}
+
+      {/* GPL Region Breakdown (town names; rows with no town shown as Unspecified) */}
+      {showGplRegions && gplRegionRows.length > 0 && (
+        <RegionTable
+          title="GPL by Town"
+          rows={gplRegionRows}
+          regionLabel="Town"
+        />
       )}
 
       {/* Filters Bar */}
@@ -510,6 +509,43 @@ export function OverviewTab({ refreshKey }: OverviewTabProps) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+type RegionRow = { region: string; count: number; avgDays: number; maxDays: number; pctOver30: number };
+
+function RegionTable({ title, rows, regionLabel }: { title: string; rows: RegionRow[]; regionLabel: string }) {
+  // Rows arrive pre-sorted by count desc from buildStats().
+  return (
+    <div className="card-premium p-4 md:p-6">
+      <h3 className="text-sm font-semibold text-white mb-4">{title}</h3>
+      <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
+        <table className="w-full text-sm" aria-label={title}>
+          <thead>
+            <tr className="text-navy-600 text-sm sm:text-xs uppercase tracking-wider border-b border-navy-800">
+              <th scope="col" className="text-left py-3 px-3">{regionLabel}</th>
+              <th scope="col" className="text-right py-3 px-3">Count</th>
+              <th scope="col" className="text-right py-3 px-3">Avg Wait</th>
+              <th scope="col" className="text-right py-3 px-3 hidden sm:table-cell">Max Wait</th>
+              <th scope="col" className="text-right py-3 px-3">% Over 30d</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.region} className="border-b border-navy-800/50 hover:bg-navy-900/50">
+                <td className="py-3 px-3 text-white font-medium">{r.region}</td>
+                <td className="py-3 px-3 text-right text-slate-400">{r.count}</td>
+                <td className="py-3 px-3 text-right text-slate-400">{r.avgDays}d</td>
+                <td className="py-3 px-3 text-right text-slate-400 hidden sm:table-cell">{r.maxDays}d</td>
+                <td className="py-3 px-3 text-right">
+                  <span className={`${r.pctOver30 > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{r.pctOver30}%</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

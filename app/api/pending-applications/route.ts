@@ -32,8 +32,10 @@ export async function GET(request: NextRequest) {
     const sortCol = sortColumn[sortBy] || 'days_waiting';
     const ascending = order === 'asc';
 
+    // Read from the view (migration 111) so days_waiting and the
+    // .gte/.lte filters below operate on the live computed value.
     let query = supabaseAdmin
-      .from('pending_applications')
+      .from('pending_applications_with_wait')
       .select(COLUMNS, { count: 'exact' });
 
     if (agency !== 'all') {
