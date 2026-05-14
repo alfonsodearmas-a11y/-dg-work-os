@@ -13,17 +13,50 @@ export async function GET(
 
   const { id } = await params;
 
-  const { data: meeting, error } = await supabaseAdmin
-    .from('meetings')
-    .select('*, meeting_actions(*)')
-    .eq('id', id)
-    .single();
+  // Two id formats live side by side:
+  //   - public.meetings.id is a UUID (legacy meetings module)
+  //   - tasks.source_meeting_id holds a Fireflies ULID for extraction-sourced
+  //     tasks; the title lives in public.meetings_seen.meeting_title keyed by
+  //     `fireflies_meeting_id`.
+  // ULIDs are exactly 26 chars and won't validate as UUIDs, so the first
+  // .from('meetings').eq('id', id) raises an "invalid input syntax for type
+  // uuid" error. Detect the format from the id length and skip the UUID
+  // lookup for ULIDs.
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
-  if (error || !meeting) {
-    return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
+  if (isUuid) {
+    const { data: meeting, error } = await supabaseAdmin
+      .from('meetings')
+      .select('*, meeting_actions(*)')
+      .eq('id', id)
+      .single();
+
+    if (!error && meeting) {
+      return NextResponse.json({ meeting });
+    }
   }
 
-  return NextResponse.json({ meeting });
+  // Fallback: ULID lookup against meetings_seen. Returns a synthetic shape so
+  // callers (notably TaskDetailPanel's W23 title resolver) get
+  // `meeting.title` consistently.
+  const { data: seen } = await supabaseAdmin
+    .from('meetings_seen')
+    .select('id, fireflies_meeting_id, meeting_title, meeting_date')
+    .eq('fireflies_meeting_id', id)
+    .maybeSingle();
+
+  if (seen) {
+    return NextResponse.json({
+      meeting: {
+        id: seen.fireflies_meeting_id,
+        title: seen.meeting_title,
+        meeting_date: seen.meeting_date,
+        source: 'meetings_seen',
+      },
+    });
+  }
+
+  return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
 }
 
 const patchMeetingSchema = z.object({

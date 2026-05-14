@@ -37,7 +37,7 @@ function mapRow(row: Record<string, unknown>): PendingApplication {
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer']);
     if (authResult instanceof NextResponse) return authResult;
 
     const agency = request.nextUrl.searchParams.get('agency')?.toUpperCase();
@@ -45,10 +45,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'agency parameter required (GPL or GWI)' }, { status: 400 });
     }
 
+    // Read from the view (migration 111) so daysWaiting flowing into
+    // computeGPLAnalysis / computeGWIAnalysis is the live Guyana-local value.
+    // .range(0, 49999) overrides the Supabase 1000-row default cap; GPL alone
+    // is well past that and the cap silently dropped the rest.
     const { data, error } = await supabaseAdmin
-      .from('pending_applications')
+      .from('pending_applications_with_wait')
       .select(PENDING_APP_COLUMNS)
-      .eq('agency', agency);
+      .eq('agency', agency)
+      .range(0, 49999);
 
     if (error) {
       return NextResponse.json({ error: 'Failed to fetch pending applications' }, { status: 500 });

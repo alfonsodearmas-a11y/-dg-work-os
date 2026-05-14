@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { createNotification } from '@/lib/notifications/notification-service';
 import { NotificationDeliveryError } from '@/lib/notifications/errors';
+import { notifyTaskWatchers } from '@/lib/notifications/notify-task-watchers';
 import { MINISTRY_ROLES } from '@/lib/people-types';
 import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
@@ -12,13 +13,17 @@ import { TASK_COLUMNS, flattenTaskOwner } from '@/lib/task-types';
 const patchTaskSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
-  status: z.enum(['new', 'active', 'blocked', 'done']).optional(),
+  status: z.enum(['new', 'active', 'blocked', 'done', 'awaiting_verification', 'superseded']).optional(),
   priority: z.enum(['low', 'medium', 'high', 'critical']).nullable().optional(),
   due_date: z.string().nullable().optional(),
   agency: z.string().nullable().optional(),
   role: z.string().nullable().optional(),
   blocked_reason: z.string().nullable().optional(),
   owner_user_id: z.string().uuid().optional(),
+  // Watcher mutations. Both arrays are processed in the same request: removes
+  // run before adds so a user can be re-added after self-removal in one round trip.
+  addWatchers: z.array(z.string().uuid()).optional(),
+  removeWatchers: z.array(z.string().uuid()).optional(),
 });
 
 export const PATCH = withErrorHandler(async (
@@ -41,6 +46,18 @@ export const PATCH = withErrorHandler(async (
 
   if (!task) {
     return apiError('NOT_FOUND', 'Task not found', 404);
+  }
+
+  if (data.status !== undefined) {
+    const tryingToEnterLifecycle = data.status === 'awaiting_verification';
+    const tryingToLeaveLifecycle = task.status === 'awaiting_verification' && data.status !== 'awaiting_verification';
+    if (tryingToEnterLifecycle || tryingToLeaveLifecycle) {
+      return apiError(
+        'INVALID_TRANSITION',
+        'Use /api/tasks/[id]/{complete,verify,dispute} for verification-flow transitions.',
+        409,
+      );
+    }
   }
 
   const isOwner = task.owner_user_id === session.user.id;
@@ -123,13 +140,44 @@ export const PATCH = withErrorHandler(async (
     await supabaseAdmin.from('task_activity').insert(activityEntries);
   }
 
+  // --- Watcher mutations ---
+  // Remove first, then add — so a single PATCH can re-add a user after
+  // self-removal without conflict.
+  if (data.removeWatchers && data.removeWatchers.length > 0) {
+    const { error: rmErr } = await supabaseAdmin
+      .from('task_watchers')
+      .delete()
+      .eq('task_id', id)
+      .in('user_id', data.removeWatchers);
+    if (rmErr) {
+      logger.error({ err: rmErr, taskId: id }, '[task-patch] watcher remove failed');
+    }
+  }
+  if (data.addWatchers && data.addWatchers.length > 0) {
+    const rows = data.addWatchers
+      .filter((uid) => uid && uid !== updated.owner_user_id)
+      .map((uid) => ({
+        task_id: id,
+        user_id: uid,
+        added_by_user_id: session.user.id,
+      }));
+    if (rows.length > 0) {
+      const { error: addErr } = await supabaseAdmin
+        .from('task_watchers')
+        .upsert(rows, { onConflict: 'task_id,user_id', ignoreDuplicates: true });
+      if (addErr) {
+        logger.error({ err: addErr, taskId: id }, '[task-patch] watcher add failed');
+      }
+    }
+  }
+
   // --- Notifications (fire-and-forget) ---
   Promise.resolve((async () => {
     try {
       const statusChanged = data.status !== undefined && data.status !== task.status;
       const isOverdue = updated.due_date ? new Date(updated.due_date) < new Date() : false;
 
-      // Task assignment notification
+      // Task assignment notification (reassignment).
       if (data.owner_user_id !== undefined && data.owner_user_id !== task.owner_user_id) {
         createNotification({
           recipientId: data.owner_user_id,
@@ -137,9 +185,9 @@ export const PATCH = withErrorHandler(async (
           eventType: 'task_assigned',
           entityType: 'task',
           entityId: id,
-          title: `You were assigned: ${updated.title}`,
-          body: updated.description?.substring(0, 120) || '',
-          referenceUrl: '/tasks',
+          title: `New task assigned to you: ${updated.title}`,
+          body: updated.description?.substring(0, 160) || '',
+          referenceUrl: `/tasks?taskId=${id}`,
           metadata: { taskId: id },
           tierContext: {
             taskPriority: updated.priority,
@@ -153,6 +201,18 @@ export const PATCH = withErrorHandler(async (
             logger.error({ err }, '[task-patch] notification delivery failed (unexpected error type)');
           }
         });
+
+        // Watchers persist across reassignment — re-fan-out to them so they
+        // see the new assignee in their inbox alongside the new assignee's email.
+        notifyTaskWatchers(id, {
+          taskTitle: updated.title,
+          body: updated.description?.substring(0, 160) || '',
+          actorId: session.user.id,
+          currentAssigneeUserId: data.owner_user_id,
+          referenceUrl: `/tasks?taskId=${id}`,
+        }).catch((err: unknown) =>
+          logger.error({ err, taskId: id }, '[task-patch] watcher fan-out (reassign) failed'),
+        );
       }
 
       // Task blocked notification — notify all DG users + task owner (dedup if owner is a DG)

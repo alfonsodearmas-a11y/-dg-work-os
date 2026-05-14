@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
-import { Plus, X, FileText, Loader2 } from 'lucide-react';
+import { useRef, useEffect, useMemo, useState } from 'react';
+import { Plus, X, FileText, Loader2, UserPlus } from 'lucide-react';
 import { TaskTemplate } from '@/lib/task-types';
 
 const ALL_AGENCIES = ['GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCAA', 'HAS', 'Hinterland', 'Ministry'];
@@ -31,12 +31,15 @@ interface NewTaskModalProps {
   lockedAgency?: string | null;
   /** When true, the assignee dropdown is hidden — tasks auto-assign to self. */
   selfAssignOnly?: boolean;
+  /** Watchers ("Also notify") — IDs of users who will receive the same task emails. */
+  watchers: string[];
   onTitleChange: (v: string) => void;
   onDescriptionChange: (v: string) => void;
   onAgencyChange: (v: string) => void;
   onPriorityChange: (v: string) => void;
   onDueDateChange: (v: string) => void;
   onAssigneeChange: (v: string) => void;
+  onWatchersChange: (ids: string[]) => void;
   onClose: () => void;
   onSubmit: () => void;
   onLoadTemplates: () => void;
@@ -58,12 +61,14 @@ export function NewTaskModal({
   creating,
   lockedAgency,
   selfAssignOnly,
+  watchers,
   onTitleChange,
   onDescriptionChange,
   onAgencyChange,
   onPriorityChange,
   onDueDateChange,
   onAssigneeChange,
+  onWatchersChange,
   onClose,
   onSubmit,
   onLoadTemplates,
@@ -224,6 +229,13 @@ export function NewTaskModal({
           </select>
         )}
       </div>
+
+      <WatcherPicker
+        watchers={watchers}
+        onWatchersChange={onWatchersChange}
+        users={users}
+        isMobile={isMobile}
+      />
     </div>
   );
 
@@ -281,6 +293,124 @@ export function NewTaskModal({
           Create
         </button>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// "Also notify" multi-select. Searchable, chip-removable. Watchers receive the
+// same task emails as the primary assignee (modulo their own preferences).
+// Server-side dedups against the assignee at send time, so we don't filter the
+// assignee out here.
+// ---------------------------------------------------------------------------
+function WatcherPicker({
+  watchers,
+  onWatchersChange,
+  users,
+  isMobile,
+}: {
+  watchers: string[];
+  onWatchersChange: (ids: string[]) => void;
+  users: UserOption[];
+  isMobile: boolean;
+}) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+
+  const userById = useMemo(() => {
+    const m = new Map<string, UserOption>();
+    for (const u of users) m.set(u.id, u);
+    return m;
+  }, [users]);
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const selected = new Set(watchers);
+    return users
+      .filter((u) => !selected.has(u.id))
+      .filter((u) => {
+        if (!q) return true;
+        const hay = `${u.name ?? ''} ${u.agency ?? ''}`.toLowerCase();
+        return hay.includes(q);
+      })
+      .slice(0, 25);
+  }, [query, users, watchers]);
+
+  function add(id: string) {
+    if (watchers.includes(id)) return;
+    onWatchersChange([...watchers, id]);
+    setQuery('');
+  }
+  function remove(id: string) {
+    onWatchersChange(watchers.filter((w) => w !== id));
+  }
+
+  return (
+    <div>
+      <label className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-navy-600 mb-1.5">
+        <UserPlus className="h-3 w-3" /> Also notify
+      </label>
+      <div className="flex flex-wrap gap-1.5 p-2 rounded-lg bg-navy-950 border border-navy-800 focus-within:border-gold-500/60">
+        {watchers.map((id) => {
+          const u = userById.get(id);
+          return (
+            <span
+              key={id}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded bg-navy-800 text-xs text-white"
+            >
+              {u?.name ?? id.slice(0, 8)}
+              <button
+                type="button"
+                onClick={() => remove(id)}
+                aria-label={`Remove ${u?.name ?? 'watcher'}`}
+                className="text-navy-600 hover:text-red-400"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          );
+        })}
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 120)}
+          onKeyDown={(e) => {
+            if (
+              e.key === 'Backspace' &&
+              query.length === 0 &&
+              watchers.length > 0
+            ) {
+              remove(watchers[watchers.length - 1]);
+            }
+          }}
+          placeholder={watchers.length === 0 ? 'Add another user…' : ''}
+          className="flex-1 min-w-[160px] bg-transparent border-none outline-none text-sm text-white placeholder-navy-600"
+          style={{ minHeight: isMobile ? 32 : undefined, fontSize: isMobile ? 16 : undefined }}
+        />
+      </div>
+      {open && matches.length > 0 ? (
+        <div className="mt-1 max-h-48 overflow-y-auto rounded-lg bg-navy-950 border border-navy-800">
+          {matches.map((u) => (
+            <button
+              key={u.id}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => add(u.id)}
+              className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm text-white hover:bg-navy-900"
+            >
+              <span className="truncate">{u.name}</span>
+              {u.agency ? (
+                <span className="text-[11px] text-navy-600 shrink-0">{u.agency}</span>
+              ) : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

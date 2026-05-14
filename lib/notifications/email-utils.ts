@@ -31,6 +31,8 @@ export function entityUrl(notif: {
 }): string {
   const base = getAppBaseUrl();
   if (notif.reference_url && notif.reference_url !== '/') return `${base}${notif.reference_url}`;
+  // Deep-link a task email straight to the task on the board.
+  if (notif.entity_type === 'task' && notif.entity_id) return `${base}/tasks?taskId=${notif.entity_id}`;
   if (notif.entity_type === 'task') return `${base}/tasks`;
   if (notif.entity_type === 'project' && notif.entity_id) return `${base}/projects/${notif.entity_id}`;
   return base;

@@ -41,7 +41,7 @@ function mapRow(row: Record<string, unknown>): PendingApplication {
 // GET — return latest saved analysis
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer']);
     if (authResult instanceof NextResponse) return authResult;
 
     const agency = request.nextUrl.searchParams.get('agency')?.toUpperCase();
@@ -84,7 +84,7 @@ const deepAnalysisSchema = z.object({
 });
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
 
   const { data, error } = await parseBody(request, deepAnalysisSchema);
@@ -95,10 +95,14 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     return NextResponse.json({ error: 'agency field required (GPL or GWI)' }, { status: 400 });
   }
 
+  // Read from the view (migration 111) so days_waiting feeding the AI
+  // prompt reflects live Guyana-local waiting time. .range(0, 49999) lifts
+  // the Supabase 1000-row default cap so GPL aggregates are not truncated.
   const { data: rows, error: fetchError } = await supabaseAdmin
-    .from('pending_applications')
+    .from('pending_applications_with_wait')
     .select(PENDING_APP_COLUMNS)
-    .eq('agency', agency);
+    .eq('agency', agency)
+    .range(0, 49999);
 
   if (fetchError) {
     return NextResponse.json({ error: 'Failed to fetch pending applications' }, { status: 500 });

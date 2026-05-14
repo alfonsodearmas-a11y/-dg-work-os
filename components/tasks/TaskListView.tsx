@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { Calendar, ChevronUp, ChevronDown } from 'lucide-react';
-import { Task } from '@/lib/task-types';
+import { Task, TaskStatus } from '@/lib/task-types';
 import { format, isToday, isPast, parseISO } from 'date-fns';
 
 interface TaskListViewProps {
@@ -20,7 +20,7 @@ interface TaskListViewProps {
   onPageChange: (page: number) => void;
 }
 
-export type SortField = 'due_date' | 'priority' | 'created_at' | 'owner_name' | 'agency' | 'title';
+export type SortField = 'due_date' | 'priority' | 'created_at' | 'owner_name' | 'agency' | 'title' | 'status';
 export type SortDir = 'asc' | 'desc';
 
 const PRIORITY_ORDER: Record<string, number> = {
@@ -28,6 +28,16 @@ const PRIORITY_ORDER: Record<string, number> = {
   high: 1,
   medium: 2,
   low: 3,
+};
+
+// Lifecycle order, not alphabetical. Drives the new "status" sort option (D2).
+const STATUS_ORDER: Record<TaskStatus, number> = {
+  new: 0,
+  active: 1,
+  blocked: 2,
+  awaiting_verification: 3,
+  done: 4,
+  superseded: 5,
 };
 
 import { PRIORITY_DOT as PRIORITY_COLORS, STATUS_PILL as STATUS_PILLS } from '@/lib/constants/task-styles';
@@ -72,6 +82,12 @@ export function sortTasks(tasks: Task[], field: SortField, dir: SortDir): Task[]
       case 'title':
         cmp = a.title.localeCompare(b.title);
         break;
+      case 'status': {
+        const aS = STATUS_ORDER[a.status] ?? 99;
+        const bS = STATUS_ORDER[b.status] ?? 99;
+        cmp = aS - bS;
+        break;
+      }
     }
     return dir === 'asc' ? cmp : -cmp;
   });

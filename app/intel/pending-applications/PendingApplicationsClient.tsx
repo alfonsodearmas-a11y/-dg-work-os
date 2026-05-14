@@ -11,7 +11,6 @@ import {
   Zap,
   Droplets,
   Upload,
-  ShieldAlert,
 } from 'lucide-react';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import { OverviewTab } from '@/components/intel/pending-applications/OverviewTab';
@@ -51,32 +50,31 @@ export default function PendingApplicationsClient(_props: Props) {
   const isDG = MINISTRY_ROLES.includes(effectiveUser.role);
   const userAgency = effectiveUser.agency;
 
-  // GPL-only users see restricted tabs
+  // Tab visibility:
+  //  Ministry roles see everything.
+  //  GPL agency users see the GPL deep-dive and the Upload form locked to GPL.
+  //  GWI agency users see the GWI deep-dive and the Upload form locked to GWI.
+  //  Any other authorized user that reached this page (officer or
+  //  agency_admin from another agency) gets a read-only Overview.
   const allowedTabs = isDG
     ? ALL_TABS
-    : userAgency === 'gpl'
+    : userAgency === 'GPL'
       ? ALL_TABS.filter(t => t.key === 'gpl' || t.key === 'upload')
-      : [];
+      : userAgency === 'GWI'
+        ? ALL_TABS.filter(t => t.key === 'gwi' || t.key === 'upload')
+        : ALL_TABS.filter(t => t.key === 'overview');
 
-  const [activeTab, setActiveTab] = useState<Tab>(isDG ? 'overview' : 'gpl');
+  const defaultTab: Tab = isDG ? 'overview'
+    : userAgency === 'GPL' ? 'gpl'
+      : userAgency === 'GWI' ? 'gwi'
+        : 'overview';
+
+  const [activeTab, setActiveTab] = useState<Tab>(defaultTab);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handleUploadSuccess = () => {
     setRefreshKey(k => k + 1);
   };
-
-  // Non-GPL JWT users who somehow reach this page
-  if (!isDG && userAgency !== 'gpl') {
-    return (
-      <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
-        <ShieldAlert className="h-12 w-12 text-red-400" />
-        <h2 className="text-xl font-semibold text-white">Access Denied</h2>
-        <p className="text-navy-600 max-w-md">
-          Your account does not have permission to view this page.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -105,7 +103,7 @@ export default function PendingApplicationsClient(_props: Props) {
       </div>
 
       {/* Trend Charts (shown on overview tab when data exists) */}
-      {activeTab === 'overview' && isDG && <TrendCharts refreshKey={refreshKey} />}
+      {activeTab === 'overview' && <TrendCharts refreshKey={refreshKey} />}
 
       {/* Tab Bar */}
       <div className="flex items-center gap-1 p-1 rounded-xl bg-navy-900 border border-navy-800 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
@@ -130,13 +128,17 @@ export default function PendingApplicationsClient(_props: Props) {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'overview' && isDG && <OverviewTab refreshKey={refreshKey} />}
+      {activeTab === 'overview' && <OverviewTab refreshKey={refreshKey} />}
       {activeTab === 'gpl' && <GPLModule />}
-      {activeTab === 'gwi' && isDG && <GWIAnalysisPanel />}
+      {activeTab === 'gwi' && <GWIAnalysisPanel />}
       {activeTab === 'upload' && (
         <UploadPanel
           onSuccess={handleUploadSuccess}
-          lockedAgency={!isDG && userAgency === 'gpl' ? 'GPL' : undefined}
+          lockedAgency={
+            !isDG && (userAgency === 'GPL' || userAgency === 'GWI')
+              ? (userAgency as 'GPL' | 'GWI')
+              : undefined
+          }
         />
       )}
     </div>

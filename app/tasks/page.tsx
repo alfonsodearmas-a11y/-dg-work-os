@@ -1,11 +1,10 @@
-'use client';
-
 import Link from 'next/link';
 import { ArrowLeft, CheckSquare } from 'lucide-react';
 import { KanbanBoard } from '@/components/tasks/KanbanBoard';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { VerificationSurface } from '@/components/action-items/VerificationSurface';
 
-export default function TasksPage() {
+export default async function TasksPage() {
   return (
     <div className="space-y-4 md:space-y-6">
       {/* Page Header */}
@@ -27,6 +26,9 @@ export default function TasksPage() {
           </div>
         </div>
       </div>
+
+      {/* DG-only verification surface; renders null for other roles */}
+      <VerificationSurface />
 
       {/* Content */}
       <ErrorBoundary fallbackTitle="Failed to load task board">

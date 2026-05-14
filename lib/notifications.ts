@@ -64,6 +64,8 @@ export type EventPreferencesMap = {
   task_status_change: EventPrefEntry;
   task_completed: EventPrefEntry;
   subtask_completed: EventPrefEntry;
+  task_watcher_notification: EventPrefEntry;
+  task_daily_reminder: EventPrefEntry;
 };
 
 export type DigestFrequency = 'daily' | 'weekly' | 'off';
@@ -622,6 +624,12 @@ export const DEFAULT_EVENT_PREFERENCES: EventPreferencesMap = {
   task_status_change: { in_app: true, email: 'digest' },
   task_completed: { in_app: true, email: 'digest' },
   subtask_completed: { in_app: true, email: 'off' },
+  // Watchers should hear about events as they happen — same default as
+  // task_assigned. Recipients can lower this in /admin notification prefs.
+  task_watcher_notification: { in_app: true, email: 'instant' },
+  // The daily digest synthesizes one row per (user, task) per day; the row
+  // itself is digest-only. 'instant' would defeat the purpose.
+  task_daily_reminder: { in_app: true, email: 'digest' },
 };
 
 export async function getPreferences(userId: string): Promise<NotificationPrefs> {

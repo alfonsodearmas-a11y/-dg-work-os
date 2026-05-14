@@ -10,7 +10,10 @@ export type NotificationEventType =
   | 'task_due_soon'
   | 'comment_reply'
   | 'task_completed'
-  | 'subtask_completed';
+  | 'subtask_completed'
+  | 'task_watcher_notification'
+  | 'task_daily_reminder'
+  | 'task_agency_head_notice';
 
 export interface TierContext {
   taskPriority?: string;   // 'low' | 'medium' | 'high' | 'critical'
@@ -78,5 +81,26 @@ export function classifyNotificationTier(
     case 'task_status_change':
     case 'subtask_completed':
       return 'informational';
+
+    // ── Watcher fan-out: mirror task_assigned tier shape ─────────────
+    case 'task_watcher_notification':
+      if (
+        (taskPriority && HIGH_PRIORITIES.has(taskPriority)) ||
+        effectivelyOverdue
+      )
+        return 'critical';
+      return 'important';
+
+    // ── Daily digest synthesis: tier reflects urgency, set by caller
+    //     via the SQL CASE on due_date. Anything missing falls back
+    //     to informational so the digest still groups it cleanly.
+    case 'task_daily_reminder':
+      if (effectivelyOverdue) return 'critical';
+      if (hoursUntilDue !== undefined && hoursUntilDue <= 24) return 'important';
+      return 'informational';
+
+    // ── Agency-head-of-agency notice: always important ───────────────
+    case 'task_agency_head_notice':
+      return 'important';
   }
 }

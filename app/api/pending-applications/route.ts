@@ -7,7 +7,7 @@ import { sanitizeSearchInput, parsePaginationParams } from '@/lib/parse-utils';
 const COLUMNS = 'id,agency,customer_reference,first_name,last_name,telephone,region,district,village_ward,street,lot,event_code,event_description,application_date,days_waiting,data_as_of,pipeline_stage,account_type,service_order_type,service_order_number,account_status,cycle,division_code';
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
 
   try {
@@ -32,8 +32,10 @@ export async function GET(request: NextRequest) {
     const sortCol = sortColumn[sortBy] || 'days_waiting';
     const ascending = order === 'asc';
 
+    // Read from the view (migration 111) so days_waiting and the
+    // .gte/.lte filters below operate on the live computed value.
     let query = supabaseAdmin
-      .from('pending_applications')
+      .from('pending_applications_with_wait')
       .select(COLUMNS, { count: 'exact' });
 
     if (agency !== 'all') {

@@ -73,31 +73,53 @@ export function detectAgency(buffer: Buffer): 'GPL' | 'GWI' | null {
 
 // ── GWI Parser ───────────────────────────────────────────────────────────────
 
+function findGwiHeaderIdx(rows: unknown[][]): number {
+  for (let i = 0; i < Math.min(rows.length, 10); i++) {
+    const row = rows[i];
+    if (!row) continue;
+    const hasRegion = row.some(c => String(c).toUpperCase() === 'REGION');
+    const hasRef = row.some(c => String(c).toUpperCase() === 'CUSTOMER_REFERENCE');
+    if (hasRegion && hasRef) return i;
+  }
+  return -1;
+}
+
 export function parseGWIBuffer(buffer: Buffer): ParseResult {
   const warnings: string[] = [];
   try {
     const wb = XLSX.read(buffer, { type: 'buffer' });
-    const sheetName = wb.SheetNames.find(n => n.toLowerCase().includes('detail')) || wb.SheetNames[1] || wb.SheetNames[0];
-    const data: unknown[][] = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1 });
 
-    // Find header row
-    let headerIdx = -1;
-    for (let i = 0; i < Math.min(data.length, 10); i++) {
-      const row = data[i];
-      if (row && row.some(c => String(c).toUpperCase() === 'REGION') &&
-          row.some(c => String(c).toUpperCase() === 'CUSTOMER_REFERENCE')) {
-        headerIdx = i;
-        break;
-      }
+    // Strict sheet selection: every sheet whose first 10 rows contain both
+    // REGION and CUSTOMER_REFERENCE headers is a candidate. Zero or
+    // multiple candidates is a hard error; we will not silently guess.
+    const qualifying: { name: string; rows: unknown[][]; headerIdx: number }[] = [];
+    for (const name of wb.SheetNames) {
+      const rows: unknown[][] = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1 });
+      const headerIdx = findGwiHeaderIdx(rows);
+      if (headerIdx >= 0) qualifying.push({ name, rows, headerIdx });
     }
-    if (headerIdx === -1) {
-      return { success: false, records: [], agency: 'GWI', dataAsOf: '', sheetName: '', warnings: ['Could not find header row with REGION + CUSTOMER_REFERENCE columns'] };
+    if (qualifying.length === 0) {
+      return {
+        success: false, records: [], agency: 'GWI', dataAsOf: '', sheetName: '',
+        warnings: ['No sheet contains REGION and CUSTOMER_REFERENCE headers in its first 10 rows.'],
+      };
     }
+    if (qualifying.length > 1) {
+      return {
+        success: false, records: [], agency: 'GWI', dataAsOf: '', sheetName: '',
+        warnings: [
+          `Multiple sheets qualify as GWI data sheets: ${qualifying.map(q => q.name).join(', ')}. Refusing to guess.`,
+        ],
+      };
+    }
+    const { name: sheetName, rows: data, headerIdx } = qualifying[0];
 
     const headers = (data[headerIdx] as string[]).map(h => String(h).trim().toUpperCase());
     const col = (name: string) => headers.indexOf(name);
 
-    // Extract data_as_of from title row
+    // data_as_of falls back to parse time when the title row regex misses.
+    // The view in migration 111 recomputes days_waiting live, so this stamp
+    // is only used by the upload confirmation toast and per-row drawers.
     let dataAsOf = formatDate(new Date());
     const titleRow = data[0];
     if (titleRow && titleRow[0]) {
@@ -111,7 +133,7 @@ export function parseGWIBuffer(buffer: Buffer): ParseResult {
       }
     }
 
-    const records: PendingRecord[] = [];
+    const rawRecords: PendingRecord[] = [];
 
     for (let i = headerIdx + 1; i < data.length; i++) {
       const row = data[i];
@@ -125,7 +147,7 @@ export function parseGWIBuffer(buffer: Buffer): ParseResult {
       const rawObj: Record<string, unknown> = {};
       headers.forEach((h, idx) => { rawObj[h] = row[idx]; });
 
-      records.push({
+      rawRecords.push({
         agency: 'GWI',
         customer_reference: row[col('CUSTOMER_REFERENCE')] ? String(row[col('CUSTOMER_REFERENCE')]) : null,
         first_name: row[col('FIRST_NAME')] ? String(row[col('FIRST_NAME')]) : null,
@@ -145,7 +167,37 @@ export function parseGWIBuffer(buffer: Buffer): ParseResult {
       });
     }
 
-    return { success: true, records, agency: 'GWI', dataAsOf, sheetName, warnings };
+    // Filter to OP16 (Awaiting Connection). Anything else is a status code
+    // we do not consider pending. Warn with the dropped count.
+    const op16 = rawRecords.filter(r => (r.event_code || '').toUpperCase() === 'OP16');
+    const droppedNonOp16 = rawRecords.length - op16.length;
+    if (droppedNonOp16 > 0) {
+      warnings.push(`Dropped ${droppedNonOp16} row(s) with EVENT_CODE other than OP16.`);
+    }
+
+    // Dedupe by CUSTOMER_REFERENCE, keep the first occurrence. Warn with the
+    // duplicate count so a noisy upstream extract is visible to the uploader.
+    const seenRefs = new Set<string>();
+    const deduped: PendingRecord[] = [];
+    let dupeCount = 0;
+    for (const r of op16) {
+      const ref = r.customer_reference;
+      if (!ref) {
+        deduped.push(r);
+        continue;
+      }
+      if (seenRefs.has(ref)) {
+        dupeCount++;
+        continue;
+      }
+      seenRefs.add(ref);
+      deduped.push(r);
+    }
+    if (dupeCount > 0) {
+      warnings.push(`Dropped ${dupeCount} duplicate row(s) by CUSTOMER_REFERENCE.`);
+    }
+
+    return { success: true, records: deduped, agency: 'GWI', dataAsOf, sheetName, warnings };
   } catch (err) {
     return { success: false, records: [], agency: 'GWI', dataAsOf: '', sheetName: '', warnings: [`Parse error: ${err instanceof Error ? err.message : String(err)}`] };
   }

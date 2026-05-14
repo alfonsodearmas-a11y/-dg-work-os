@@ -190,7 +190,7 @@ export function PreviewStep({ preview, submitting, onSubmit, onCancel }: Preview
         <div>
           <div className="text-sm font-medium text-purple-300">AI Analysis</div>
           <div className="text-xs text-slate-400">
-            Upon confirmation, an AI-powered executive briefing will be generated automatically.
+            Upon confirmation, anomaly analysis will run automatically.
           </div>
         </div>
       </div>

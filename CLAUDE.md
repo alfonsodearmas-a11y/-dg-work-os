@@ -55,7 +55,8 @@ Patterns:
 ```
 / .......................... Daily Briefing (home)
 /intel ..................... Agency Intel Overview (summary cards + alerts)
-/intel/gpl ................. GPL Deep Dive (tabbed: overview, stations, KPIs, forecast)
+/intel/gpl ................. GPL Deep Dive (bento: 4 common cards + 5 GPL-specific)
+/intel/gpl/methodology ..... GPL bento methodology / formulas / live denominators
 /intel/cjia ................ CJIA Passenger Analytics
 /intel/gwi ................. GWI Metrics
 /intel/gcaa ................ GCAA Compliance

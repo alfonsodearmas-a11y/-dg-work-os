@@ -1,88 +1,123 @@
-# Action Items — Plan 1: Foundation Implementation Plan
+# Action Items — Plan 1 (rev 2026-05-03b): Foundation Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Spec:** `docs/superpowers/specs/2026-05-03-action-items-pipeline-design.md` (read this first; it is the authoritative source for every decision below).
+**Spec:** `docs/superpowers/specs/2026-05-03-action-items-pipeline-design.md` (rev 2026-05-03b — read the changelog first; this plan is a partial rebuild after the module-relationship correction).
 
-**Goal:** Land the schema, type system, visibility logic, sidebar link, and route scaffolding for the Action Items pipeline. Zero AI, zero Fireflies, zero UI features. End state: migrations runnable, all routes render an auth-gated empty shell, types compile, visibility unit tests pass.
+**Goal:** Land the schema, type system, visibility logic, and route scaffolding for the Action Items *pipeline* — which creates Tasks. End state: migration 102 (now corrected) is runnable and idempotent, the `tasks` table is widened with extraction provenance / verification flow / supersession / visibility columns, four pipeline-side tables are in place, the `canSeeTask` helper compiles and is unit-tested, the review-queue routes render auth-gated empty shells, and the sidebar carries a single Action Items link pointing at the review queue. Zero AI, zero Fireflies, zero new consumption surfaces — War Room is the consumption surface.
 
-**Architecture:** Single SQL migration creates 5 new tables and widens `users`. A new `lib/action-items/` directory holds enums, types, constants, and the visibility helper. Page shells under `app/action-items/*` use the existing AppShell layout and render an empty-state component until later plans wire features in. Visibility is enforced app-layer via a pure function tested independently — consistent with the design spec's call to skip RLS for this module.
+**Architecture:** A single SQL migration widens `users` and `tasks`, creates four pipeline-side tables, retargets the events log to `tasks`, and disables the existing `tasks` RLS policy in favor of app-layer enforcement (consistent with the rest of DGOS). A `lib/action-items/` directory holds enums, types, constants, and the `canSeeTask` visibility helper. Page shells under `app/action-items/review/*` use the existing AppShell layout and render an empty-state component until later plans wire features in. Visibility is enforced app-layer via a pure function tested independently.
 
 **Tech Stack:** Next.js 16 App Router, TypeScript, Supabase (Postgres + pgvector), Vitest, Tailwind v4, NextAuth v5.
 
 ---
 
+## Context: what changed and why
+
+This plan replaces the original Plan 1, which was committed on the `action-items-foundation` branch but **not yet applied to the live database** (the migration is manual-execution-only via Supabase Dashboard). The spec correction (rev 2026-05-03b) requires:
+
+- Removing the `action_items` table from migration 102.
+- Adding `ALTER TABLE tasks` columns + a status-enum widen to migration 102.
+- Renaming `action_item_events.item_id` → `task_id` and retargeting its FK to `tasks(id)`.
+- Disabling the existing `tasks` RLS policy from migration 022 (visibility moves to app-layer for this module's flows; mixing RLS with app-layer guards is a footgun).
+- Deleting the unused new-module page shells (`app/action-items/page.tsx`, `mine`, `agency/[name]`, `[id]`, `new`) — War Room (`/tasks`) is the consumption surface.
+- Rewriting `constants.ts` and `types.ts` to reflect the tasks-table extension instead of a parallel `action_items` table.
+- Rewriting `visibility.ts` as `canSeeTask(user, task)`.
+- Updating the module README.
+
+### Rollback approach: edit migration 102 in place
+
+The user's prompt offered two rollback paths: (a) follow-up migration that drops `action_items` and adds task columns, or (b) reset the branch to main and apply a corrected migration 102 fresh. **Neither is the cleanest option.** Migration 102 has not been executed against any database; it is a `.sql` file that the user runs by hand. Editing the file in place is strictly cleaner than (a) — no `action_items` ghost table is created and immediately dropped — and strictly cleaner than (b) — the constants / types / visibility helper / review-queue shells from the original Plan 1 are mostly correct and can be amended in place rather than discarded and rewritten.
+
+This revised plan therefore:
+
+- **Keeps the branch.** No `git reset`. The corrective work appears as new commits on top of the existing Plan 1 commits.
+- **Edits migration 102 in place.** The commit history will show the edits, but the file the user pastes into Supabase Dashboard will be the corrected version.
+- **Deletes the unused shells.** Five `app/action-items/*` shells are removed; the `EmptyShell` component stays (still used by review shells).
+- **Rewrites three lib files.** `constants.ts` (small adjustments), `types.ts` (drop one row type, add task-extension type), `visibility.ts` (rename + rewrite to operate on Task).
+
+If this plan is executed by an agent encountering it cold (without the prior commits in place), every "modify" task below devolves into a "create" task with the same final-state code — the steps describe end states, not deltas, so the plan is correct in either situation.
+
+---
+
 ## Conventions for this plan
 
-- **Migration execution:** Output the SQL file under `supabase/migrations/`. Do **not** auto-run. After the file is committed, the engineer must execute it via the Supabase Dashboard. Each task that depends on the schema being live calls this out explicitly.
-- **Tests live in** `lib/__tests__/` next to the existing test files (`auth-helpers.test.ts`, `format.test.ts`, etc.). Module under test: `lib/action-items/<file>.ts` → test at `lib/__tests__/action-items-<file>.test.ts`.
-- **Commits:** small and frequent, one per logical step. Conventional-commit prefixes used: `feat:`, `chore:`, `test:`, `refactor:`, `docs:`.
+- **Migration execution:** Output the SQL file under `supabase/migrations/`. Do **not** auto-run. After commits land, the user executes via Supabase Dashboard. Each task that depends on the schema being live calls this out.
+- **Tests live in** `lib/__tests__/`. Module under test: `lib/action-items/<file>.ts` → test at `lib/__tests__/action-items-<file>.test.ts`.
+- **Commits:** small and frequent, one per logical step. Conventional-commit prefixes: `feat:`, `chore:`, `test:`, `refactor:`, `docs:`.
 - **Type-checking gate:** every task that adds or changes TS code ends with `npx tsc --noEmit` passing before commit. Where called out, `npm run lint` also runs.
-- **No premature features.** This plan adds *no* business logic, *no* data fetches, *no* UI components beyond empty shells. Anything not listed here belongs in Plans 2–5.
+- **No premature features.** This plan adds *no* business logic, *no* data fetches, *no* UI components beyond review-queue empty shells.
 
 ---
 
 ## File map
 
-**Created:**
+**Modified (corrected from prior Plan 1):**
 
-- `supabase/migrations/102_action_items_v1.sql` — full schema for v1: users widening + 5 tables + indexes + extension.
-- `lib/action-items/README.md` — one-paragraph orientation pointing at the spec and the version-bump rule for prompts (anticipating Plan 4).
-- `lib/action-items/constants.ts` — agency enum, status enum, modality enum, type enum, verb taxonomy, banned phrases, safety keywords.
-- `lib/action-items/types.ts` — TypeScript types matching DB columns, plus Zod schemas for runtime validation at API boundaries.
-- `lib/action-items/visibility.ts` — `canSeeItem(user, item)` pure function. App-layer visibility enforcement.
-- `lib/__tests__/action-items-visibility.test.ts` — visibility unit tests.
-- `lib/__tests__/action-items-constants.test.ts` — invariant tests on the constant tables (no banned phrase contains a sentence-initial verb that's also approved, no enum collision, etc.).
-- `app/action-items/page.tsx` — empty-state shell for the agency-tree consumption view.
-- `app/action-items/mine/page.tsx` — empty-state shell for the owner-scoped view.
-- `app/action-items/agency/[name]/page.tsx` — empty-state shell for the per-agency view.
-- `app/action-items/[id]/page.tsx` — empty-state shell for the item-detail view.
-- `app/action-items/new/page.tsx` — empty-state shell for the freestanding manual-add form.
-- `app/action-items/review/page.tsx` — empty-state shell for the review-queue meeting list.
-- `app/action-items/review/[extractionId]/page.tsx` — empty-state shell for the per-meeting review view.
-- `components/action-items/EmptyShell.tsx` — minimal reusable component used by every shell page in this plan.
+- `supabase/migrations/102_action_items_v1.sql` — full schema for v1: users widening + tasks widening + 4 pipeline-side tables + index set + RLS-disable on `tasks`.
+- `supabase/migrations/102_action_items_v1.README.md` — execution + verification doc.
+- `lib/action-items/constants.ts` — frozen enums; replace `ITEM_STATUSES` with `TASK_STATUSES`; keep visibility / agency / modality / verb-taxonomy / banned-phrases / safety / closure / event types.
+- `lib/action-items/types.ts` — replace `ActionItemRow` with `TaskWithExtensions`; rename `item_id` → `task_id` on `ActionItemEventRow`; update Zod re-exports.
+- `lib/action-items/visibility.ts` — rename `canSeeItem` → `canSeeTask`; operate on Task fields.
+- `lib/action-items/README.md` — reflect the corrected module relationship.
+- `lib/__tests__/action-items-constants.test.ts` — adjust assertions for the renamed enum.
+- `lib/__tests__/action-items-visibility.test.ts` — adjust to `canSeeTask` signature.
+- `components/layout/Sidebar.tsx` — add a single "Action Items" link pointing at `/action-items/review`.
 
-**Modified:**
+**Deleted (these were created by the original Plan 1 and have no purpose under the corrected spec):**
 
-- `components/layout/Sidebar.tsx` — add "Action Items" entry under Main Menu, between "Task Board" and "Oversight".
+- `app/action-items/page.tsx`
+- `app/action-items/mine/page.tsx`
+- `app/action-items/agency/[name]/page.tsx`
+- `app/action-items/[id]/page.tsx`
+- `app/action-items/new/page.tsx`
+
+**Kept (no changes from prior Plan 1):**
+
+- `app/action-items/review/page.tsx`
+- `app/action-items/review/[extractionId]/page.tsx`
+- `components/action-items/EmptyShell.tsx`
 
 ---
 
-## Task 1: SQL migration — pgvector + users widening
+## Task 1: Migration 102 — pgvector + users widening
 
 **Files:**
-- Create: `supabase/migrations/102_action_items_v1.sql`
+- Modify: `supabase/migrations/102_action_items_v1.sql` (replace contents — see Tasks 1–5 collectively)
 
-- [ ] **Step 1: Scaffold the migration file with the version comment and pgvector enable.**
+The migration is rebuilt from scratch in this plan. Each task adds a coherent block; Task 5 verifies the result.
 
-Create `supabase/migrations/102_action_items_v1.sql` with:
+- [ ] **Step 1: Reset the file to scaffold + pgvector enable.**
+
+Overwrite `supabase/migrations/102_action_items_v1.sql` with:
 
 ```sql
 -- ============================================================================
--- Migration 102: Action Items v1 — Foundation
+-- Migration 102: Action Items v1 — Foundation (rev 2026-05-03b)
 -- Spec: docs/superpowers/specs/2026-05-03-action-items-pipeline-design.md
 -- Plan: docs/superpowers/plans/2026-05-03-action-items-plan-1-foundation.md
 --
--- Adds: users widening (3 columns) + 5 new tables for the action items pipeline.
+-- Adds: users widening (3 columns) + tasks widening (extraction provenance,
+-- verification flow, supersession, visibility) + 4 pipeline-side tables.
+-- Disables the existing tasks RLS policy from migration 022 (visibility for
+-- this module's flows is enforced app-layer, consistent with the rest of
+-- DGOS — mixing RLS with app-layer guards is a footgun).
+--
 -- Idempotent: safe to re-run thanks to IF NOT EXISTS / DO blocks.
 --
 -- ATTRIBUTION ANCHOR (locked decision §0.1):
--- Every AI-generated action item is attributed to the meeting itself,
--- not to the AI and not to the DG personally. This is non-negotiable
--- and reaches into the schema via action_items.source + extraction linkage.
+-- Every AI-generated commitment is attributed to the meeting itself.
+-- Computed at render time from tasks.source + supporting lookups.
 -- ============================================================================
 
 CREATE EXTENSION IF NOT EXISTS vector;
 ```
 
-- [ ] **Step 2: Add the users widening block.**
-
-Append to `102_action_items_v1.sql`:
+- [ ] **Step 2: Append the users widening block.**
 
 ```sql
 -- ----------------------------------------------------------------------------
--- Widen users (locked decision: single users table carries staff metadata,
--- no separate staff_profile join table).
+-- Widen users
 -- ----------------------------------------------------------------------------
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS aliases TEXT[] NOT NULL DEFAULT '{}';
@@ -93,42 +128,30 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS is_agency_head BOOLEAN NOT NULL DEFAU
 COMMENT ON COLUMN users.aliases IS
   'Alternative spoken names heard in transcripts. E.g., {"Kesh","Cash","Keche"} for Kesh Nandlall.';
 COMMENT ON COLUMN users.closure_mode IS
-  'self_close: user can mark their own items complete (default). dg_managed: only DG closes (Minister, PS, President).';
+  'self_close: user can mark their own items complete (default). dg_managed: only DG closes (Minister, PS, parl_sec, President).';
 COMMENT ON COLUMN users.is_agency_head IS
   'True for the head of any portfolio agency, plus Minister and PS. Triggers mandatory review on owned items.';
 ```
 
-- [ ] **Step 3: Verify the file syntactically by parsing it with psql in `--dry-run` style.**
-
-Run:
-
-```bash
-grep -c "CREATE\|ALTER\|COMMENT" supabase/migrations/102_action_items_v1.sql
-```
-
-Expected: 5 (one extension, three alters, three comments — actually 7; the assert is "≥5", just confirming the file isn't empty).
-
-- [ ] **Step 4: Commit.**
+- [ ] **Step 3: Commit.**
 
 ```bash
 git add supabase/migrations/102_action_items_v1.sql
-git commit -m "feat(action-items): scaffold migration 102 + widen users"
+git commit -m "feat(action-items): rebuild migration 102 — pgvector + users widening (rev b)"
 ```
 
 ---
 
-## Task 2: SQL migration — `action_item_extractions` table
+## Task 2: Migration 102 — `action_item_extractions` table
 
-**Files:**
-- Modify: `supabase/migrations/102_action_items_v1.sql`
+The extractions table is unchanged in shape from the original Plan 1; this task re-appends it after Task 1's reset.
 
-- [ ] **Step 1: Append the `action_item_extractions` table.**
-
-Add to `supabase/migrations/102_action_items_v1.sql`:
+- [ ] **Step 1: Append the table.**
 
 ```sql
 -- ----------------------------------------------------------------------------
 -- action_item_extractions — one row per (Fireflies meeting, prompt version)
+-- Created BEFORE the tasks widen because tasks.extraction_id FKs to it.
 -- ----------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS action_item_extractions (
@@ -175,139 +198,129 @@ CREATE INDEX IF NOT EXISTS idx_extractions_meeting_date
 
 ```bash
 git add supabase/migrations/102_action_items_v1.sql
-git commit -m "feat(action-items): add action_item_extractions table to migration"
+git commit -m "feat(action-items): action_item_extractions table"
 ```
 
 ---
 
-## Task 3: SQL migration — `action_items` table
+## Task 3: Migration 102 — widen `tasks` (replaces the dropped `action_items` table)
 
-**Files:**
-- Modify: `supabase/migrations/102_action_items_v1.sql`
+This is the load-bearing change in the corrected spec. The existing `tasks` table absorbs the columns the old `action_items` would have introduced, plus a status-enum widen for `awaiting_verification` and `superseded`. The existing RLS policy is dropped — visibility moves to app-layer.
 
-- [ ] **Step 1: Append the `action_items` table.**
-
-Add to `supabase/migrations/102_action_items_v1.sql`:
+- [ ] **Step 1: Append the tasks widening block.**
 
 ```sql
 -- ----------------------------------------------------------------------------
--- action_items — canonical commitment record
--- Single owner (delegation modeled as separate field, not co-owner).
+-- Widen tasks: extraction provenance, verification flow, supersession,
+-- visibility scope. The canonical commitment record is tasks; extraction
+-- writes into tasks with source='extraction' and provenance fields set.
 -- ----------------------------------------------------------------------------
 
-CREATE TABLE IF NOT EXISTS action_items (
-  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+-- Extraction provenance
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'manual'
+  CHECK (source IN ('manual','extraction'));
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS extraction_id       UUID REFERENCES action_item_extractions(id);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS extraction_item_idx INTEGER;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS source_meeting_id   TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS source_timestamp    TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS source_quote        TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS owner_name_raw      TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS delegated_to_id     UUID REFERENCES users(id);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS verb_category       TEXT
+  CHECK (verb_category IN ('correspondence','decision','information',
+                           'scheduling','project_update','analysis')
+         OR verb_category IS NULL);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS due_trigger         TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS confidence_overall  NUMERIC(3,2);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS confidence_reasons  TEXT[];
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS task_embedding      VECTOR(1536);
 
-  -- Source
-  source              TEXT NOT NULL DEFAULT 'extraction'
-                        CHECK (source IN ('extraction','manual')),
-  extraction_id       UUID REFERENCES action_item_extractions(id),
-  extraction_item_idx INTEGER,
-  source_meeting_id   TEXT,
-  source_timestamp    TEXT,
-  source_quote        TEXT,
-  created_by          UUID REFERENCES users(id),
+-- Verification flow
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS completion_note TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS completed_by    UUID REFERENCES users(id);
+-- completed_at already exists from migration 029 — do nothing.
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS verified_by     UUID REFERENCES users(id);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS verified_at     TIMESTAMPTZ;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS dispute_note    TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS disputed_at     TIMESTAMPTZ;
 
-  -- Routing
-  agency_name         TEXT NOT NULL CHECK (agency_name IN
-                        ('GPL','GWI','GCAA','CJIA','MARAD','HCI','HA',
-                         'MPUA-DG','MPUA-Minister','MPUA-PS')),
-  owner_id            UUID NOT NULL REFERENCES users(id),
-  owner_name_raw      TEXT NOT NULL,
-  delegated_to_id     UUID REFERENCES users(id),
+-- Supersession (self-FK)
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS supersedes_id UUID REFERENCES tasks(id);
 
-  -- Content
-  verb_category       TEXT NOT NULL CHECK (verb_category IN
-                        ('correspondence','decision','information',
-                         'scheduling','project_update','analysis')),
-  task                TEXT NOT NULL CHECK (char_length(task) <= 500),
-  due_at              TIMESTAMPTZ,
-  due_trigger         TEXT,
-  priority            TEXT NOT NULL CHECK (priority IN ('P0','P1','P2','P3')),
+-- Visibility (default agency_normal; extraction sets dg_only for external meetings)
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS visibility_scope TEXT NOT NULL DEFAULT 'agency_normal'
+  CHECK (visibility_scope IN ('agency_normal','dg_only'));
 
-  -- Lifecycle
-  status              TEXT NOT NULL DEFAULT 'open' CHECK (status IN
-                        ('open','in_progress','awaiting_verification',
-                         'complete','cancelled','superseded','disputed')),
-  reviewed_by         UUID REFERENCES users(id),
-  reviewed_at         TIMESTAMPTZ,
-  completed_by        UUID REFERENCES users(id),
-  completed_at        TIMESTAMPTZ,
-  completion_note     TEXT,
-  verified_by         UUID REFERENCES users(id),
-  verified_at         TIMESTAMPTZ,
-  disputed_at         TIMESTAMPTZ,
-  dispute_note        TEXT,
+-- Widen status enum
+ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_status_check;
+ALTER TABLE tasks ADD CONSTRAINT tasks_status_check
+  CHECK (status IN ('new','active','blocked','done',
+                    'awaiting_verification','superseded'));
 
-  -- Supersession
-  supersedes_id       UUID REFERENCES action_items(id),
-
-  -- QA
-  confidence_overall  NUMERIC(3,2),
-  confidence_reasons  TEXT[],
-  task_embedding      VECTOR(1536),
-
-  -- Visibility (spec §11.5)
-  visibility_scope    TEXT NOT NULL DEFAULT 'agency_normal'
-                        CHECK (visibility_scope IN ('agency_normal','dg_only')),
-
-  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-
-  CONSTRAINT extraction_fields_required CHECK (
-    source = 'manual' OR
-    (extraction_id IS NOT NULL
-     AND source_meeting_id IS NOT NULL
-     AND extraction_item_idx IS NOT NULL
-     AND confidence_overall IS NOT NULL)
-  ),
-  CONSTRAINT manual_creator_required CHECK (
-    source = 'extraction' OR created_by IS NOT NULL
-  )
+-- Source-conditional integrity: extraction tasks must carry full provenance.
+ALTER TABLE tasks DROP CONSTRAINT IF EXISTS extraction_provenance_required;
+ALTER TABLE tasks ADD CONSTRAINT extraction_provenance_required CHECK (
+  source = 'manual' OR
+  (extraction_id IS NOT NULL
+   AND source_meeting_id IS NOT NULL
+   AND extraction_item_idx IS NOT NULL
+   AND confidence_overall IS NOT NULL)
 );
 
-CREATE INDEX IF NOT EXISTS idx_items_agency_owner_status
-  ON action_items(agency_name, owner_id, status)
-  WHERE status IN ('open','in_progress','awaiting_verification');
-CREATE INDEX IF NOT EXISTS idx_items_owner_status
-  ON action_items(owner_id, status);
-CREATE INDEX IF NOT EXISTS idx_items_status_due
-  ON action_items(status, due_at)
-  WHERE status IN ('open','in_progress');
-CREATE INDEX IF NOT EXISTS idx_items_supersedes
-  ON action_items(supersedes_id) WHERE supersedes_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_items_extraction
-  ON action_items(extraction_id);
-CREATE INDEX IF NOT EXISTS idx_items_embedding
-  ON action_items USING ivfflat (task_embedding vector_cosine_ops);
+-- Disable the migration-022 RLS policy in favor of app-layer enforcement.
+-- Rationale: this module's verification + dispute + visibility flows already
+-- live in app-layer code (canSeeTask helper + scoped queries). Mixing RLS
+-- with app-layer guards is the project's standing footgun rule.
+DROP POLICY IF EXISTS tasks_access ON tasks;
+ALTER TABLE tasks DISABLE ROW LEVEL SECURITY;
+
+-- Indexes for the new lifecycle and supersession workloads
+CREATE INDEX IF NOT EXISTS idx_tasks_status_due_open
+  ON tasks(status, due_date)
+  WHERE status IN ('new','active','blocked','awaiting_verification');
+CREATE INDEX IF NOT EXISTS idx_tasks_owner_status_open
+  ON tasks(owner_user_id, status)
+  WHERE status IN ('new','active','blocked','awaiting_verification');
+CREATE INDEX IF NOT EXISTS idx_tasks_supersedes
+  ON tasks(supersedes_id) WHERE supersedes_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_tasks_extraction
+  ON tasks(extraction_id) WHERE extraction_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_tasks_embedding
+  ON tasks USING ivfflat (task_embedding vector_cosine_ops);
+
+COMMENT ON COLUMN tasks.source IS
+  'manual = created via Add Task; extraction = created from Fireflies pipeline.';
+COMMENT ON COLUMN tasks.visibility_scope IS
+  'agency_normal = standard role-based visibility; dg_only = DG sees only.';
+COMMENT ON COLUMN tasks.delegated_to_id IS
+  'Set when DG owns the task but staff executes. Delegate sees but cannot close.';
 ```
 
 - [ ] **Step 2: Commit.**
 
 ```bash
 git add supabase/migrations/102_action_items_v1.sql
-git commit -m "feat(action-items): add action_items table to migration"
+git commit -m "feat(action-items): widen tasks — provenance, verification, supersession, visibility"
 ```
 
 ---
 
-## Task 4: SQL migration — events, meetings_seen, failed_extractions
+## Task 4: Migration 102 — events (FK to tasks), meetings_seen, failed_extractions
 
-**Files:**
-- Modify: `supabase/migrations/102_action_items_v1.sql`
+`action_item_events` now has `task_id` (renamed from `item_id`) referencing `tasks(id)`. The other two tables are unchanged in shape.
 
-- [ ] **Step 1: Append the three remaining tables.**
-
-Add to `supabase/migrations/102_action_items_v1.sql`:
+- [ ] **Step 1: Append the three tables.**
 
 ```sql
 -- ----------------------------------------------------------------------------
--- action_item_events — append-only audit log
+-- action_item_events — append-only audit log for the pipeline + verification
+-- flow, attached to the task. Coexists with task_activities (the human-action
+-- log scoped to the existing Tasks UI) by design — different concerns.
 -- ----------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS action_item_events (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  item_id       UUID NOT NULL REFERENCES action_items(id) ON DELETE CASCADE,
+  task_id       UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
   event_type    TEXT NOT NULL CHECK (event_type IN
                   ('created','accepted','edited','rejected','status_change',
                    'dispute_raised','dispute_resolved','superseded_by','supersedes',
@@ -317,8 +330,8 @@ CREATE TABLE IF NOT EXISTS action_item_events (
   occurred_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_events_item
-  ON action_item_events(item_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_events_task
+  ON action_item_events(task_id, occurred_at DESC);
 
 -- ----------------------------------------------------------------------------
 -- meetings_seen — every Fireflies meeting we observe (drives daily digest)
@@ -372,83 +385,120 @@ CREATE INDEX IF NOT EXISTS idx_failed_extractions_unresolved
 
 ```bash
 git add supabase/migrations/102_action_items_v1.sql
-git commit -m "feat(action-items): add events, meetings_seen, failed_extractions"
+git commit -m "feat(action-items): events (FK→tasks), meetings_seen, failed_extractions"
 ```
 
 ---
 
-## Task 5: Migration sanity — final consistency check
+## Task 5: Migration sanity + README
 
-**Files:**
-- Modify: `supabase/migrations/102_action_items_v1.sql` (only if errors found)
-
-- [ ] **Step 1: Verify foreign-key targets and table-creation order.**
-
-Run:
+- [ ] **Step 1: Verify the migration file's structure.**
 
 ```bash
-grep -E "REFERENCES " supabase/migrations/102_action_items_v1.sql
+grep -nE "CREATE TABLE|ALTER TABLE|DROP|CREATE EXTENSION|CREATE INDEX" supabase/migrations/102_action_items_v1.sql
 ```
 
-Expected: every `REFERENCES <table>(id)` appears *after* the `CREATE TABLE <table>` for that target. The references are: `users(id)` (exists pre-migration); `action_item_extractions(id)` (created Task 2, used in Tasks 3 and 4); `action_items(id)` (created Task 3, used by `supersedes_id` self-reference and by `action_item_events.item_id` in Task 4). Confirm by inspection that the ordering in the file is: extension → users widening → extractions → items → events → meetings_seen → failed_extractions.
+Expected: ordering is `CREATE EXTENSION` → `ALTER TABLE users` (×3) → `CREATE TABLE action_item_extractions` → `ALTER TABLE tasks` (×many) → `DROP POLICY tasks_access` → `ALTER TABLE tasks DISABLE ROW LEVEL SECURITY` → `CREATE TABLE action_item_events` → `CREATE TABLE meetings_seen` → `CREATE TABLE failed_extractions` → indexes interleaved.
 
-- [ ] **Step 2: Confirm the `users_agency_check` constraint from migration 021 is compatible.**
+Confirm: `tasks.extraction_id` reference appears AFTER `CREATE TABLE action_item_extractions` (FK target must exist). `action_item_events.task_id REFERENCES tasks(id)` is satisfied because `tasks` already exists pre-migration.
 
-The existing constraint on `users` requires `agency IS NULL` for roles `dg/minister/ps` and `agency IS NOT NULL` for `agency_admin/officer`. The new `is_agency_head` column does not interact with this — Minister and PS will have `is_agency_head=true` AND `agency=NULL`, which is valid. Document by appending this comment to the migration file:
+Confirm by negation: there is **no** `CREATE TABLE action_items` statement anywhere in the file. Run:
+
+```bash
+grep -n "CREATE TABLE action_items" supabase/migrations/102_action_items_v1.sql && echo "FOUND — bug" || echo "OK — no action_items table"
+```
+
+Expected: `OK — no action_items table`.
+
+- [ ] **Step 2: Confirm the existing `users_agency_check` from migration 021 is still satisfied.**
+
+The existing constraint requires `agency IS NULL` for roles `dg/minister/ps` and `agency IS NOT NULL` for `agency_admin/officer`. The new `is_agency_head` column does not interact with it. Append this comment to the migration file:
 
 ```sql
 -- ----------------------------------------------------------------------------
--- Compatibility note: existing users_agency_check constraint (migration 021)
--- requires agency IS NULL for dg/minister/ps. is_agency_head is independent
--- of agency: Minister/PS can have is_agency_head=true with agency=NULL.
+-- Compatibility note: existing users_agency_check (migration 021) requires
+-- agency IS NULL for dg/minister/ps. is_agency_head is independent —
+-- Minister/PS may have is_agency_head=true with agency=NULL.
+-- The existing tasks_status_check from migration 029 has been replaced above
+-- with the widened set including awaiting_verification and superseded.
 -- ----------------------------------------------------------------------------
 ```
 
-- [ ] **Step 3: Output the manual-execution instruction file.**
+- [ ] **Step 3: Update the README.**
 
-Create `supabase/migrations/102_action_items_v1.README.md`:
+Overwrite `supabase/migrations/102_action_items_v1.README.md`:
 
 ```markdown
-# Migration 102 — Action Items v1
+# Migration 102 — Action Items v1 (rev 2026-05-03b)
+
+## Summary
+
+- Widens `users` (3 columns).
+- Widens `tasks` (provenance, verification flow, supersession, visibility, status enum).
+- Adds 4 pipeline-side tables: `action_item_extractions`, `action_item_events`, `meetings_seen`, `failed_extractions`.
+- Disables the existing `tasks` RLS policy from migration 022 (visibility moves to app-layer for this module's flows).
+- Enables pgvector.
+
+There is **no** `action_items` table — the spec was corrected before any
+database execution. The canonical commitment layer is the existing `tasks`
+table widened in this migration.
 
 ## How to run
 
-This migration is **not** auto-executed. Run it manually via Supabase Dashboard
-(SQL Editor) against the project database.
+This migration is **not** auto-executed. Run via Supabase Dashboard → SQL
+Editor against the project database.
 
-1. Open the project at https://supabase.com/dashboard
+1. Open https://supabase.com/dashboard
 2. SQL Editor → New query
 3. Paste the contents of `102_action_items_v1.sql`
 4. Run
 
 ## Pre-flight
 
-The migration begins with `CREATE EXTENSION IF NOT EXISTS vector`. If the
-Supabase project does not have pgvector enabled, this line will fail. Enable
-the extension via Database → Extensions → search "vector" → Enable, then
-re-run the migration.
+- pgvector: `CREATE EXTENSION IF NOT EXISTS vector` runs at the top. If not
+  available, enable via Database → Extensions → search "vector" → Enable.
+- The `tasks` RLS policy (`tasks_access`) is dropped by this migration.
+  After execution, all reads / writes on `tasks` will be unrestricted at
+  the database layer; app-layer guards in `lib/action-items/visibility.ts`
+  and the existing `app/api/tasks/*` route handlers carry enforcement.
 
 ## Idempotency
 
-All `CREATE TABLE` and `CREATE INDEX` statements use `IF NOT EXISTS`. The
-`ALTER TABLE users ADD COLUMN` statements use `IF NOT EXISTS`. Re-running the
-migration is safe.
+`IF NOT EXISTS` on every `CREATE TABLE`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`,
+and `CREATE INDEX IF NOT EXISTS`. The status-check rebuild uses
+`DROP CONSTRAINT IF EXISTS` then `ADD CONSTRAINT`. Safe to re-run.
 
 ## Verification
 
-After running, confirm:
-
 ```sql
+-- 4 pipeline tables
 SELECT count(*) FROM information_schema.tables
 WHERE table_name IN
-  ('action_items','action_item_extractions','action_item_events',
-   'meetings_seen','failed_extractions');
--- expected: 5
+  ('action_item_extractions','action_item_events','meetings_seen','failed_extractions');
+-- expected: 4
 
+-- users widened
 SELECT column_name FROM information_schema.columns
-WHERE table_name='users'
-  AND column_name IN ('aliases','closure_mode','is_agency_head');
+WHERE table_name='users' AND column_name IN
+  ('aliases','closure_mode','is_agency_head');
 -- expected: 3 rows
+
+-- tasks widened (sample of new columns)
+SELECT column_name FROM information_schema.columns
+WHERE table_name='tasks' AND column_name IN
+  ('source','extraction_id','source_quote','completion_note','verified_by',
+   'dispute_note','supersedes_id','visibility_scope','delegated_to_id',
+   'task_embedding','confidence_overall');
+-- expected: 11 rows
+
+-- status enum widened
+SELECT pg_get_constraintdef(oid)
+FROM pg_constraint WHERE conname='tasks_status_check';
+-- expected to include awaiting_verification and superseded
+
+-- RLS disabled on tasks
+SELECT relrowsecurity FROM pg_class WHERE relname='tasks';
+-- expected: false
 ```
 ```
 
@@ -456,312 +506,196 @@ WHERE table_name='users'
 
 ```bash
 git add supabase/migrations/102_action_items_v1.sql supabase/migrations/102_action_items_v1.README.md
-git commit -m "docs(action-items): migration 102 readme + compat note"
+git commit -m "docs(action-items): migration 102 README — rev b verification queries"
 ```
 
 ---
 
-## Task 6: Constants module
+## Task 6: Delete the unused new-module page shells
 
-**Files:**
-- Create: `lib/action-items/constants.ts`
-- Test: `lib/__tests__/action-items-constants.test.ts`
+The original Plan 1 created five shells under `app/action-items/{page,mine,agency/[name],[id],new}.tsx`. The corrected spec drops all five surfaces — War Room is the consumption surface. Delete them.
 
-- [ ] **Step 1: Write the failing test.**
-
-Create `lib/__tests__/action-items-constants.test.ts`:
-
-```typescript
-import { describe, it, expect } from 'vitest';
-import {
-  AGENCIES,
-  MEETING_TYPES,
-  MODALITIES,
-  ITEM_STATUSES,
-  REVIEW_STATUSES,
-  PIPELINE_ACTIONS,
-  VERB_CATEGORIES,
-  APPROVED_VERBS,
-  BANNED_PHRASES,
-  SAFETY_KEYWORDS,
-  CLOSURE_MODES,
-  VISIBILITY_SCOPES,
-  PRIORITIES,
-} from '@/lib/action-items/constants';
-
-describe('action-items constants', () => {
-  it('exports the 10 agency enum values', () => {
-    expect(AGENCIES).toEqual([
-      'GPL','GWI','GCAA','CJIA','MARAD','HCI','HA',
-      'MPUA-DG','MPUA-Minister','MPUA-PS',
-    ]);
-  });
-
-  it('exports the 3 meeting types and 3 modalities', () => {
-    expect(MEETING_TYPES).toEqual(['internal','agency','external']);
-    expect(MODALITIES).toEqual(['virtual','in_person','mixed']);
-  });
-
-  it('exports the 7 item statuses including superseded and disputed', () => {
-    expect(ITEM_STATUSES).toEqual([
-      'open','in_progress','awaiting_verification',
-      'complete','cancelled','superseded','disputed',
-    ]);
-  });
-
-  it('every approved verb maps to exactly one verb category', () => {
-    const seen = new Map<string, string>();
-    for (const [cat, verbs] of Object.entries(APPROVED_VERBS)) {
-      for (const v of verbs) {
-        expect(seen.has(v), `verb "${v}" in two categories`).toBe(false);
-        seen.set(v, cat);
-      }
-    }
-  });
-
-  it('approved verbs cover all 6 verb categories', () => {
-    expect(Object.keys(APPROVED_VERBS).sort()).toEqual([...VERB_CATEGORIES].sort());
-  });
-
-  it('no banned phrase contains an approved verb as a whole word', () => {
-    const allApproved = Object.values(APPROVED_VERBS).flat();
-    for (const phrase of BANNED_PHRASES) {
-      for (const verb of allApproved) {
-        const re = new RegExp(`\\b${verb}\\b`, 'i');
-        expect(re.test(phrase),
-          `banned phrase "${phrase}" contains approved verb "${verb}"`).toBe(false);
-      }
-    }
-  });
-
-  it('safety keywords are lowercase and non-empty', () => {
-    for (const kw of SAFETY_KEYWORDS) {
-      expect(kw).toBe(kw.toLowerCase());
-      expect(kw.length).toBeGreaterThan(0);
-    }
-  });
-
-  it('closure_modes, visibility_scopes, priorities exact values', () => {
-    expect(CLOSURE_MODES).toEqual(['self_close','dg_managed']);
-    expect(VISIBILITY_SCOPES).toEqual(['agency_normal','dg_only']);
-    expect(PRIORITIES).toEqual(['P0','P1','P2','P3']);
-  });
-
-  it('review_statuses and pipeline_actions match schema CHECK constraints', () => {
-    expect(REVIEW_STATUSES).toEqual(['pending','in_review','complete','skipped','failed']);
-    expect(PIPELINE_ACTIONS).toEqual([
-      'extracted','skipped_out_of_scope','queued','failed','manually_processed',
-    ]);
-  });
-});
-```
-
-- [ ] **Step 2: Run the test to confirm it fails (module does not exist yet).**
-
-Run:
+- [ ] **Step 1: Delete the files (and the empty directories they leave behind).**
 
 ```bash
-npx vitest run lib/__tests__/action-items-constants.test.ts
+rm -f app/action-items/page.tsx
+rm -f app/action-items/mine/page.tsx
+rm -f app/action-items/[id]/page.tsx
+rm -f app/action-items/new/page.tsx
+rm -rf app/action-items/agency
+rmdir app/action-items/mine 2>/dev/null || true
+rmdir app/action-items/new 2>/dev/null || true
+# Note: app/action-items/[id] becomes empty too; remove the directory
+rmdir 'app/action-items/[id]' 2>/dev/null || true
 ```
 
-Expected: FAIL — `Cannot find module '@/lib/action-items/constants'`.
+If the directories above don't exist (because this plan is being executed cold), the `rm -f` and `rmdir 2>/dev/null` calls are no-ops and the task continues.
 
-- [ ] **Step 3: Create the constants module.**
-
-Create `lib/action-items/constants.ts`:
-
-```typescript
-// Action Items — locked constants (spec §3, §4.1, §4.2, §6.4, §11.5)
-//
-// Every CHECK constraint in migration 102 has a counterpart here. When a
-// constraint changes, both the SQL and this file move together. Tests in
-// lib/__tests__/action-items-constants.test.ts enforce the invariants.
-
-export const AGENCIES = [
-  'GPL', 'GWI', 'GCAA', 'CJIA', 'MARAD', 'HCI', 'HA',
-  'MPUA-DG', 'MPUA-Minister', 'MPUA-PS',
-] as const;
-export type Agency = (typeof AGENCIES)[number];
-
-export const MEETING_TYPES = ['internal', 'agency', 'external'] as const;
-export type MeetingType = (typeof MEETING_TYPES)[number];
-
-export const MODALITIES = ['virtual', 'in_person', 'mixed'] as const;
-export type Modality = (typeof MODALITIES)[number];
-
-export const ITEM_STATUSES = [
-  'open', 'in_progress', 'awaiting_verification',
-  'complete', 'cancelled', 'superseded', 'disputed',
-] as const;
-export type ItemStatus = (typeof ITEM_STATUSES)[number];
-
-export const REVIEW_STATUSES = [
-  'pending', 'in_review', 'complete', 'skipped', 'failed',
-] as const;
-export type ReviewStatus = (typeof REVIEW_STATUSES)[number];
-
-export const PIPELINE_ACTIONS = [
-  'extracted', 'skipped_out_of_scope', 'queued', 'failed', 'manually_processed',
-] as const;
-export type PipelineAction = (typeof PIPELINE_ACTIONS)[number];
-
-export const VERB_CATEGORIES = [
-  'correspondence', 'decision', 'information',
-  'scheduling', 'project_update', 'analysis',
-] as const;
-export type VerbCategory = (typeof VERB_CATEGORIES)[number];
-
-export const APPROVED_VERBS: Record<VerbCategory, readonly string[]> = {
-  correspondence: ['write', 'issue', 'send', 'draft', 'publish', 'distribute'],
-  decision:       ['approve', 'sign', 'authorize', 'clear', 'reject'],
-  information:    ['obtain', 'verify', 'confirm', 'report', 'investigate'],
-  scheduling:     ['schedule', 'convene', 'arrange', 'coordinate'],
-  project_update: ['update', 'submit', 'mark', 'close', 'reopen'],
-  analysis:       ['calculate', 'analyze', 'assess', 'compare', 'evaluate'],
-};
-
-export const BANNED_PHRASES = [
-  'follow up on',
-  'follow up with',
-  'touch base',
-  'circle back',
-  'look into',
-  'address the issue of',
-  // 'handle' and 'work on' are excluded from the substring list because they
-  // contain no approved-verb collisions and are matched as standalone tokens
-  // by the validator (Plan 4) — keeping them here as substrings would block
-  // legitimate sentences like "investigate handle valves".
-] as const;
-export type BannedPhrase = (typeof BANNED_PHRASES)[number];
-
-export const SAFETY_KEYWORDS = [
-  'safety', 'fire', 'accident', 'fatality', 'injury', 'hazard',
-  'evacuation', 'emergency', 'outage', 'blackout', 'spill', 'contamination',
-] as const;
-
-export const CLOSURE_MODES = ['self_close', 'dg_managed'] as const;
-export type ClosureMode = (typeof CLOSURE_MODES)[number];
-
-export const VISIBILITY_SCOPES = ['agency_normal', 'dg_only'] as const;
-export type VisibilityScope = (typeof VISIBILITY_SCOPES)[number];
-
-export const PRIORITIES = ['P0', 'P1', 'P2', 'P3'] as const;
-export type Priority = (typeof PRIORITIES)[number];
-
-export const FAILURE_REASONS = [
-  'claude_error', 'malformed_json', 'transcript_unavailable',
-  'speaker_collapse_virtual', 'transcript_partial', 'quota_exceeded', 'other',
-] as const;
-export type FailureReason = (typeof FAILURE_REASONS)[number];
-
-export const EVENT_TYPES = [
-  'created', 'accepted', 'edited', 'rejected', 'status_change',
-  'dispute_raised', 'dispute_resolved', 'superseded_by', 'supersedes',
-  'attribution_error_flagged',
-] as const;
-export type EventType = (typeof EVENT_TYPES)[number];
-```
-
-Note: the constants file deviates from the spec on `BANNED_PHRASES` — `handle` and `work on` are intentionally not in the substring list because they collide with legitimate text. The validator implementation in Plan 4 will treat them as whole-token matches via a separate code path. This is documented inline.
-
-- [ ] **Step 4: Run the test to confirm it passes (and adjust the test if the deviation needs reflecting).**
-
-Update `lib/__tests__/action-items-constants.test.ts` so the banned-phrase list matches reality. Replace the assertion in the "no banned phrase contains an approved verb as a whole word" test — it already passes with the trimmed list. Then run:
+- [ ] **Step 2: Confirm only `review/` remains under `app/action-items/`.**
 
 ```bash
-npx vitest run lib/__tests__/action-items-constants.test.ts
+ls -1 app/action-items/
 ```
 
-Expected: PASS, all 8 tests green.
+Expected: a single entry, `review`. (Plus `review/[extractionId]/` and `review/page.tsx` inside it.)
 
-- [ ] **Step 5: Type-check.**
-
-Run:
+- [ ] **Step 3: Type-check.**
 
 ```bash
 npx tsc --noEmit
 ```
 
-Expected: no errors.
+Expected: no errors. (`EmptyShell` is still imported by the review shells.)
 
-- [ ] **Step 6: Commit.**
+- [ ] **Step 4: Commit.**
 
 ```bash
-git add lib/action-items/constants.ts lib/__tests__/action-items-constants.test.ts
-git commit -m "feat(action-items): constants module with locked enums + tests"
+git add -A app/action-items
+git commit -m "refactor(action-items): drop new-module page shells (War Room is the consumption surface)"
 ```
 
 ---
 
-## Task 7: Types module
+## Task 7: Constants module — adjust to the corrected schema
 
-**Files:**
-- Create: `lib/action-items/types.ts`
+Most of the original Plan 1 constants module is correct as-is. The needed changes:
 
-- [ ] **Step 1: Create the types module.**
+- Replace `ITEM_STATUSES` (the 7-value action_items enum) with `TASK_STATUSES` (the 6-value tasks enum *after* the migration-102 widen: `new`, `active`, `blocked`, `done`, `awaiting_verification`, `superseded`).
+- Update the corresponding test.
 
-Create `lib/action-items/types.ts`:
+Other constants (`AGENCIES`, `MEETING_TYPES`, `MODALITIES`, `REVIEW_STATUSES`, `PIPELINE_ACTIONS`, `VERB_CATEGORIES`, `APPROVED_VERBS`, `BANNED_PHRASES`, `SAFETY_KEYWORDS`, `CLOSURE_MODES`, `VISIBILITY_SCOPES`, `PRIORITIES`, `FAILURE_REASONS`, `EVENT_TYPES`) carry over unchanged.
+
+- [ ] **Step 1: Apply the constants change.**
+
+In `lib/action-items/constants.ts`, replace the `ITEM_STATUSES` block:
+
+```typescript
+export const TASK_STATUSES = [
+  'new', 'active', 'blocked', 'done',
+  'awaiting_verification', 'superseded',
+] as const;
+export type TaskStatus = (typeof TASK_STATUSES)[number];
+```
+
+(The original Plan 1 had `ITEM_STATUSES` and `ItemStatus`; the file's `ITEM_STATUSES` export and its type alias are removed entirely.)
+
+If the file does not yet exist (cold execution), create it with the full content from the original Plan 1 Task 6 step 3 — verbatim — but with `ITEM_STATUSES` replaced by the `TASK_STATUSES` block above. Do not export `ItemStatus`.
+
+- [ ] **Step 2: Update the constants test.**
+
+In `lib/__tests__/action-items-constants.test.ts`, replace the `ITEM_STATUSES` test with:
+
+```typescript
+  it('exports the 6 task statuses including awaiting_verification and superseded', () => {
+    expect(TASK_STATUSES).toEqual([
+      'new','active','blocked','done',
+      'awaiting_verification','superseded',
+    ]);
+  });
+```
+
+…and update the import line at the top of the file: replace `ITEM_STATUSES,` with `TASK_STATUSES,`.
+
+If the file does not yet exist, create the full test from the original Plan 1 Task 6 step 1, with the same substitution.
+
+- [ ] **Step 3: Run the test.**
+
+```bash
+npx vitest run lib/__tests__/action-items-constants.test.ts
+```
+
+Expected: PASS, all assertions green.
+
+- [ ] **Step 4: Type-check + commit.**
+
+```bash
+npx tsc --noEmit
+git add lib/action-items/constants.ts lib/__tests__/action-items-constants.test.ts
+git commit -m "refactor(action-items): TASK_STATUSES (replaces ITEM_STATUSES; tasks-table aligned)"
+```
+
+---
+
+## Task 8: Types module — drop `ActionItemRow`, add task-extension type
+
+Replace the `ActionItemRow` interface with `TaskWithExtensions`, which describes the fields a Task row carries *after* migration 102. Rename `ActionItemEventRow.item_id` → `task_id`. Drop the `ItemStatus` import; use `TaskStatus`.
+
+- [ ] **Step 1: Apply the types changes.**
+
+Overwrite `lib/action-items/types.ts`:
 
 ```typescript
 import { z } from 'zod';
 import {
-  AGENCIES, MEETING_TYPES, MODALITIES, ITEM_STATUSES,
+  AGENCIES, MEETING_TYPES, MODALITIES, TASK_STATUSES,
   REVIEW_STATUSES, PIPELINE_ACTIONS, VERB_CATEGORIES,
   CLOSURE_MODES, VISIBILITY_SCOPES, PRIORITIES,
   FAILURE_REASONS, EVENT_TYPES,
-  type Agency, type MeetingType, type Modality, type ItemStatus,
+  type Agency, type MeetingType, type Modality, type TaskStatus,
   type ReviewStatus, type PipelineAction, type VerbCategory,
   type ClosureMode, type VisibilityScope, type Priority,
   type FailureReason, type EventType,
 } from './constants';
 
 // ============================================================================
-// DB row types — mirror migration 102 column-for-column.
+// DB row types — mirror migration 102 + the existing tasks columns from
+// migrations 022 / 029. The canonical commitment record is `tasks`; this
+// project widens it. `ActionItemEventRow` and the others mirror new tables.
 // ============================================================================
 
-export interface ActionItemRow {
+/**
+ * The Task row as it exists AFTER migration 102 — i.e., the existing tasks
+ * columns plus the extension columns added by this project.
+ *
+ * Note: `tasks.priority` is the existing low|medium|high|critical enum from
+ * migration 029. Internal P-tier values (P0–P3) are mapped to this scale at
+ * extraction time per spec §6.5.
+ */
+export interface TaskWithExtensions {
+  // Existing tasks columns (migration 022 + 029)
   id: string;
-  source: 'extraction' | 'manual';
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  priority: Priority | null;        // existing low|medium|high|critical, NULL allowed historically
+  due_date: string | null;          // DATE
+  agency: string | null;            // freeform; canonical enum used by extraction
+  role: string | null;
+  owner_user_id: string;
+  assigned_by_user_id: string | null;
+  source_meeting_id: string | null; // existed pre-migration as UUID; widened to TEXT below
+  blocked_reason: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+
+  // Migration 102 extension columns
+  source: 'manual' | 'extraction';
   extraction_id: string | null;
   extraction_item_idx: number | null;
-  source_meeting_id: string | null;
   source_timestamp: string | null;
   source_quote: string | null;
-  created_by: string | null;
-
-  agency_name: Agency;
-  owner_id: string;
-  owner_name_raw: string;
+  owner_name_raw: string | null;
   delegated_to_id: string | null;
-
-  verb_category: VerbCategory;
-  task: string;
-  due_at: string | null;
+  verb_category: VerbCategory | null;
   due_trigger: string | null;
-  priority: Priority;
-
-  status: ItemStatus;
-  reviewed_by: string | null;
-  reviewed_at: string | null;
-  completed_by: string | null;
-  completed_at: string | null;
-  completion_note: string | null;
-  verified_by: string | null;
-  verified_at: string | null;
-  disputed_at: string | null;
-  dispute_note: string | null;
-
-  supersedes_id: string | null;
-
   confidence_overall: number | null;
   confidence_reasons: string[] | null;
   task_embedding: number[] | null;
 
-  visibility_scope: VisibilityScope;
+  completion_note: string | null;
+  completed_by: string | null;
+  verified_by: string | null;
+  verified_at: string | null;
+  dispute_note: string | null;
+  disputed_at: string | null;
 
-  created_at: string;
-  updated_at: string;
+  supersedes_id: string | null;
+  visibility_scope: VisibilityScope;
 }
+
+/** Existing PRIORITIES note: import alias kept for downstream Plan 4 priority mapping. */
+export type TaskPriority = Priority;
 
 export interface ActionItemExtractionRow {
   id: string;
@@ -794,7 +728,7 @@ export interface ActionItemExtractionRow {
 
 export interface ActionItemEventRow {
   id: string;
-  item_id: string;
+  task_id: string;                  // renamed from item_id (rev b)
   event_type: EventType;
   actor_id: string | null;
   payload: Record<string, unknown>;
@@ -841,13 +775,13 @@ export interface UserStaffFields {
 }
 
 // ============================================================================
-// Zod schemas for runtime validation at API boundaries.
+// Zod schemas
 // ============================================================================
 
 export const AgencyZ          = z.enum(AGENCIES);
 export const MeetingTypeZ     = z.enum(MEETING_TYPES);
 export const ModalityZ        = z.enum(MODALITIES);
-export const ItemStatusZ      = z.enum(ITEM_STATUSES);
+export const TaskStatusZ      = z.enum(TASK_STATUSES);
 export const ReviewStatusZ    = z.enum(REVIEW_STATUSES);
 export const PipelineActionZ  = z.enum(PIPELINE_ACTIONS);
 export const VerbCategoryZ    = z.enum(VERB_CATEGORIES);
@@ -857,9 +791,8 @@ export const PriorityZ        = z.enum(PRIORITIES);
 export const FailureReasonZ   = z.enum(FAILURE_REASONS);
 export const EventTypeZ       = z.enum(EVENT_TYPES);
 
-// Exported for sibling tasks; downstream plans extend this.
 export type {
-  Agency, MeetingType, Modality, ItemStatus, ReviewStatus,
+  Agency, MeetingType, Modality, TaskStatus, ReviewStatus,
   PipelineAction, VerbCategory, ClosureMode, VisibilityScope, Priority,
   FailureReason, EventType,
 };
@@ -867,56 +800,74 @@ export type {
 
 - [ ] **Step 2: Type-check.**
 
-Run:
-
 ```bash
 npx tsc --noEmit
 ```
 
-Expected: no errors.
+Expected: no errors. If older Plan 1 code still imports `ActionItemRow` or `ItemStatus`, fix the imports in those files (none should exist outside the deleted shells, but `lib/__tests__/action-items-visibility.test.ts` and `lib/action-items/visibility.ts` will be rewritten in Task 9 below).
 
 - [ ] **Step 3: Commit.**
 
 ```bash
 git add lib/action-items/types.ts
-git commit -m "feat(action-items): row types + Zod schemas matching migration 102"
+git commit -m "refactor(action-items): TaskWithExtensions row type (replaces ActionItemRow)"
 ```
 
 ---
 
-## Task 8: Visibility helper
+## Task 9: Visibility helper — rewrite as `canSeeTask`
+
+The function semantics are unchanged (DG sees all; PS/parl_sec see all `agency_normal`; Minister sees all `agency_normal`; agency staff see by agency match or owner / delegate; inactive users see nothing; `dg_only` is DG only) — only the row shape changes. The agency comparison continues to be case-insensitive because `tasks.agency` is freeform.
 
 **Files:**
-- Create: `lib/action-items/visibility.ts`
-- Test: `lib/__tests__/action-items-visibility.test.ts`
+- Modify: `lib/action-items/visibility.ts`
+- Modify: `lib/__tests__/action-items-visibility.test.ts`
 
-- [ ] **Step 1: Write the failing test.**
+- [ ] **Step 1: Rewrite the test.**
 
-Create `lib/__tests__/action-items-visibility.test.ts`:
+Overwrite `lib/__tests__/action-items-visibility.test.ts`:
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { canSeeItem } from '@/lib/action-items/visibility';
-import type { ActionItemRow, UserStaffFields } from '@/lib/action-items/types';
+import { canSeeTask } from '@/lib/action-items/visibility';
+import type { TaskWithExtensions, UserStaffFields } from '@/lib/action-items/types';
 
-const baseItem: ActionItemRow = {
-  id: 'i1', source: 'extraction',
-  extraction_id: 'e1', extraction_item_idx: 0,
-  source_meeting_id: 'm1', source_timestamp: '00:01:00', source_quote: 'q',
-  created_by: null,
-  agency_name: 'GPL', owner_id: 'u-kesh', owner_name_raw: 'Kesh',
+const baseTask: TaskWithExtensions = {
+  id: 't1',
+  title: 'Issue notification of termination to InterEnergy',
+  description: null,
+  status: 'new',
+  priority: 'medium',
+  due_date: null,
+  agency: 'GPL',
+  role: null,
+  owner_user_id: 'u-kesh',
+  assigned_by_user_id: null,
+  source_meeting_id: 'm1',
+  blocked_reason: null,
+  completed_at: null,
+  created_at: '2026-05-03T00:00:00Z',
+  updated_at: '2026-05-03T00:00:00Z',
+  source: 'extraction',
+  extraction_id: 'e1',
+  extraction_item_idx: 0,
+  source_timestamp: '00:01:00',
+  source_quote: 'q',
+  owner_name_raw: 'Kesh',
   delegated_to_id: null,
-  verb_category: 'correspondence', task: 'issue notice', due_at: null, due_trigger: null,
-  priority: 'P2',
-  status: 'open',
-  reviewed_by: null, reviewed_at: null,
-  completed_by: null, completed_at: null, completion_note: null,
-  verified_by: null, verified_at: null,
-  disputed_at: null, dispute_note: null,
+  verb_category: 'correspondence',
+  due_trigger: null,
+  confidence_overall: 0.9,
+  confidence_reasons: null,
+  task_embedding: null,
+  completion_note: null,
+  completed_by: null,
+  verified_by: null,
+  verified_at: null,
+  dispute_note: null,
+  disputed_at: null,
   supersedes_id: null,
-  confidence_overall: 0.9, confidence_reasons: null, task_embedding: null,
   visibility_scope: 'agency_normal',
-  created_at: '2026-05-03T00:00:00Z', updated_at: '2026-05-03T00:00:00Z',
 };
 
 const u = (over: Partial<UserStaffFields>): UserStaffFields => ({
@@ -926,111 +877,123 @@ const u = (over: Partial<UserStaffFields>): UserStaffFields => ({
   is_active: true, ...over,
 });
 
-describe('canSeeItem', () => {
+describe('canSeeTask', () => {
   it('DG sees everything (agency_normal)', () => {
-    expect(canSeeItem(u({ id: 'dg', role: 'dg' }), baseItem)).toBe(true);
+    expect(canSeeTask(u({ id: 'dg', role: 'dg' }), baseTask)).toBe(true);
   });
 
-  it('DG sees dg_only items', () => {
-    const item = { ...baseItem, visibility_scope: 'dg_only' as const };
-    expect(canSeeItem(u({ id: 'dg', role: 'dg' }), item)).toBe(true);
+  it('DG sees dg_only tasks', () => {
+    expect(canSeeTask(u({ id: 'dg', role: 'dg' }),
+      { ...baseTask, visibility_scope: 'dg_only' })).toBe(true);
   });
 
-  it('PS sees agency_normal items in any agency', () => {
-    expect(canSeeItem(u({ id: 'ps', role: 'ps' }), baseItem)).toBe(true);
+  it('PS sees agency_normal tasks in any agency', () => {
+    expect(canSeeTask(u({ id: 'ps', role: 'ps' }), baseTask)).toBe(true);
   });
 
   it('parl_sec is treated as PS for visibility', () => {
-    expect(canSeeItem(u({ id: 'p', role: 'parl_sec' }), baseItem)).toBe(true);
+    expect(canSeeTask(u({ id: 'p', role: 'parl_sec' }), baseTask)).toBe(true);
   });
 
-  it('PS does NOT see dg_only items', () => {
-    const item = { ...baseItem, visibility_scope: 'dg_only' as const };
-    expect(canSeeItem(u({ id: 'ps', role: 'ps' }), item)).toBe(false);
+  it('PS does NOT see dg_only tasks', () => {
+    expect(canSeeTask(u({ id: 'ps', role: 'ps' }),
+      { ...baseTask, visibility_scope: 'dg_only' })).toBe(false);
   });
 
-  it('Minister (read-only ministry role) sees agency_normal items', () => {
-    expect(canSeeItem(u({ id: 'min', role: 'minister' }), baseItem)).toBe(true);
+  it('Minister sees agency_normal tasks', () => {
+    expect(canSeeTask(u({ id: 'm', role: 'minister' }), baseTask)).toBe(true);
   });
 
-  it('Minister does NOT see dg_only items', () => {
-    const item = { ...baseItem, visibility_scope: 'dg_only' as const };
-    expect(canSeeItem(u({ id: 'min', role: 'minister' }), item)).toBe(false);
+  it('Minister does NOT see dg_only tasks', () => {
+    expect(canSeeTask(u({ id: 'm', role: 'minister' }),
+      { ...baseTask, visibility_scope: 'dg_only' })).toBe(false);
   });
 
-  it('agency officer sees items where agency_name matches their home agency', () => {
-    const user = u({ id: 'kesh', role: 'officer', agency: 'GPL' });
-    expect(canSeeItem(user, baseItem)).toBe(true);
+  it('agency officer sees tasks in their home agency', () => {
+    expect(canSeeTask(u({ id: 'k', role: 'officer', agency: 'GPL' }), baseTask)).toBe(true);
   });
 
-  it('agency officer does NOT see items in another agency', () => {
-    const user = u({ id: 'mark', role: 'officer', agency: 'GWI' });
-    expect(canSeeItem(user, baseItem)).toBe(false);
+  it('agency officer does NOT see tasks in another agency', () => {
+    expect(canSeeTask(u({ id: 'mark', role: 'officer', agency: 'GWI' }), baseTask)).toBe(false);
   });
 
-  it('agency officer sees items they own even outside their home agency', () => {
-    // Edge case: an officer assigned to GWI is owner of an item routed under MPUA-DG.
-    const user = u({ id: 'kesh', role: 'officer', agency: 'GWI' });
-    const item = { ...baseItem, agency_name: 'MPUA-DG' as const, owner_id: 'kesh' };
-    expect(canSeeItem(user, item)).toBe(true);
+  it('owner sees their own task even outside their home agency', () => {
+    expect(canSeeTask(
+      u({ id: 'kesh', role: 'officer', agency: 'GWI' }),
+      { ...baseTask, owner_user_id: 'kesh', agency: 'MPUA-DG' },
+    )).toBe(true);
   });
 
-  it('agency officer does NOT see dg_only items in their own agency', () => {
-    const user = u({ id: 'kesh', role: 'officer', agency: 'GPL' });
-    const item = { ...baseItem, visibility_scope: 'dg_only' as const };
-    expect(canSeeItem(user, item)).toBe(false);
+  it('delegate sees a task delegated to them', () => {
+    expect(canSeeTask(
+      u({ id: 'kesh', role: 'officer', agency: 'GWI' }),
+      { ...baseTask, owner_user_id: 'someone-else', delegated_to_id: 'kesh', agency: 'MPUA-DG' },
+    )).toBe(true);
+  });
+
+  it('agency officer does NOT see dg_only tasks even in their own agency', () => {
+    expect(canSeeTask(
+      u({ id: 'kesh', role: 'officer', agency: 'GPL' }),
+      { ...baseTask, visibility_scope: 'dg_only' },
+    )).toBe(false);
   });
 
   it('agency_admin behaves like officer for visibility', () => {
-    const user = u({ id: 'a', role: 'agency_admin', agency: 'GPL' });
-    expect(canSeeItem(user, baseItem)).toBe(true);
+    expect(canSeeTask(u({ id: 'a', role: 'agency_admin', agency: 'GPL' }), baseTask)).toBe(true);
   });
 
   it('inactive user sees nothing', () => {
-    const user = u({ id: 'dg', role: 'dg', is_active: false });
-    expect(canSeeItem(user, baseItem)).toBe(false);
+    expect(canSeeTask(u({ id: 'dg', role: 'dg', is_active: false }), baseTask)).toBe(false);
   });
 
-  it('agency comparison is case-insensitive (matches existing canAccessAgency convention)', () => {
-    const user = u({ id: 'kesh', role: 'officer', agency: 'gpl' });
-    expect(canSeeItem(user, baseItem)).toBe(true);
+  it('agency comparison is case-insensitive (tasks.agency is freeform)', () => {
+    // tasks.agency may be 'gpl' (legacy) or 'GPL' (canonical); both must match user.agency='gpl'.
+    expect(canSeeTask(u({ id: 'k', role: 'officer', agency: 'gpl' }), baseTask)).toBe(true);
+    expect(canSeeTask(u({ id: 'k', role: 'officer', agency: 'gpl' }),
+      { ...baseTask, agency: 'gpl' })).toBe(true);
+  });
+
+  it('null task.agency does not match', () => {
+    expect(canSeeTask(
+      u({ id: 'k', role: 'officer', agency: 'GPL' }),
+      { ...baseTask, agency: null },
+    )).toBe(false);
   });
 });
 ```
 
-- [ ] **Step 2: Run the test to confirm it fails.**
-
-Run:
+- [ ] **Step 2: Run the test to confirm it fails (current `canSeeItem` won't satisfy this signature).**
 
 ```bash
 npx vitest run lib/__tests__/action-items-visibility.test.ts
 ```
 
-Expected: FAIL — `Cannot find module '@/lib/action-items/visibility'`.
+Expected: FAIL — `canSeeTask` is not exported / signature mismatch.
 
-- [ ] **Step 3: Implement the visibility helper.**
+- [ ] **Step 3: Rewrite the helper.**
 
-Create `lib/action-items/visibility.ts`:
+Overwrite `lib/action-items/visibility.ts`:
 
 ```typescript
-import type { ActionItemRow, UserStaffFields } from './types';
+import type { TaskWithExtensions, UserStaffFields } from './types';
 
 const MINISTRY_ROLES = new Set(['dg', 'minister', 'ps', 'parl_sec']);
 
-export function canSeeItem(user: UserStaffFields, item: ActionItemRow): boolean {
+export function canSeeTask(user: UserStaffFields, task: TaskWithExtensions): boolean {
   if (!user.is_active) return false;
 
-  if (item.visibility_scope === 'dg_only') {
+  if (task.visibility_scope === 'dg_only') {
     return user.role === 'dg';
   }
 
   // agency_normal:
   if (MINISTRY_ROLES.has(user.role)) return true;
 
-  if (user.id === item.owner_id) return true;
-  if (user.id === item.delegated_to_id) return true;
+  if (user.id === task.owner_user_id) return true;
+  if (task.delegated_to_id && user.id === task.delegated_to_id) return true;
 
-  if (user.agency && user.agency.toLowerCase() === item.agency_name.toLowerCase()) {
+  if (user.agency && task.agency &&
+      user.agency.toLowerCase() === task.agency.toLowerCase()) {
     return true;
   }
 
@@ -1040,17 +1003,13 @@ export function canSeeItem(user: UserStaffFields, item: ActionItemRow): boolean 
 
 - [ ] **Step 4: Run the test to confirm it passes.**
 
-Run:
-
 ```bash
 npx vitest run lib/__tests__/action-items-visibility.test.ts
 ```
 
-Expected: PASS, all 14 tests green.
+Expected: PASS, all 16 tests green.
 
 - [ ] **Step 5: Type-check + lint.**
-
-Run:
 
 ```bash
 npx tsc --noEmit && npm run lint
@@ -1062,399 +1021,110 @@ Expected: no errors.
 
 ```bash
 git add lib/action-items/visibility.ts lib/__tests__/action-items-visibility.test.ts
-git commit -m "feat(action-items): canSeeItem visibility helper + tests"
+git commit -m "refactor(action-items): canSeeTask (replaces canSeeItem; operates on tasks)"
 ```
 
 ---
 
-## Task 9: Module README
+## Task 10: Module README — reflect corrected relationship
 
 **Files:**
-- Create: `lib/action-items/README.md`
+- Modify: `lib/action-items/README.md`
 
-- [ ] **Step 1: Write the README.**
-
-Create `lib/action-items/README.md`:
+- [ ] **Step 1: Overwrite the README.**
 
 ```markdown
 # Action Items module
 
-The canonical commitment layer for MPUA staff. Items originate from
-Fireflies-extracted transcripts (later plans) or from DG manual entry
-(Plan 2). All items, regardless of source, share schema, lifecycle, and
-visibility rules.
+The extraction pipeline that creates Tasks. **Action Items is not a new
+module — Tasks/War Room (`/tasks`) is the canonical commitment layer.**
+Items originate from Fireflies-extracted transcripts (later plans) or
+from manual entry via the existing Add Task form in War Room.
 
 ## Spec
 
-`docs/superpowers/specs/2026-05-03-action-items-pipeline-design.md` is the
-authoritative source. Read it before changing this module. The locked
-decisions in §0 are not negotiable — they propagate into the schema, the
-UI, and every API contract.
+`docs/superpowers/specs/2026-05-03-action-items-pipeline-design.md`
+(rev 2026-05-03b — read the changelog at the top). The locked decisions
+in §0 are non-negotiable.
 
 ## Structure (Plan 1 — foundation)
 
-- `constants.ts` — frozen enums and lookup tables that mirror the
-  CHECK constraints in migration 102.
-- `types.ts` — TypeScript row types and Zod schemas for the 5 new tables
-  plus the `users` staff fields.
-- `visibility.ts` — `canSeeItem(user, item)` pure function. App-layer
-  visibility enforcement, consistent with how the Tasks and Projects
-  modules in DGOS gate reads. No Supabase RLS for this domain.
+- `constants.ts` — frozen enums and lookup tables that mirror the CHECK
+  constraints in migration 102 and the widened `tasks_status_check`.
+- `types.ts` — `TaskWithExtensions` (the `tasks` row after migration 102)
+  + row types for the four pipeline-side tables + `UserStaffFields`.
+  Zod schemas for runtime validation at API boundaries.
+- `visibility.ts` — `canSeeTask(user, task)` pure function. App-layer
+  visibility enforcement. The `tasks` RLS policy from migration 022 is
+  disabled by migration 102; this helper is the enforcement seam.
+
+## Routes that remain under `/action-items`
+
+- `/action-items/review` — meeting cards awaiting extraction review.
+- `/action-items/review/[extractionId]` — three-bucket review.
+- `/action-items/meetings` — `meetings_seen` list (Plan 3).
+- `/action-items/process` — manual extraction trigger (Plan 4).
+- `/action-items/eval` — eval dashboard (Plan 5).
+
+War Room (`/tasks`) is the consumption surface for the items themselves.
 
 ## Prompt versioning rule (anticipating Plan 4)
 
 Prompts live in `lib/action-items/prompts/extraction-<modality>-vN.M.ts`.
-**Never edit a versioned prompt file in place.** Any change — wording,
-addendum, banned-phrase update — requires a new filename and a new
-`prompt_version` string. Old extractions reference the prompt they ran
-against; preserving the file is what makes per-prompt-version eval
-possible.
+**Never edit a versioned prompt file in place.** Any change requires a
+new filename and a new `prompt_version` string. Old extractions reference
+the prompt they ran against; preserving the file is what makes
+per-prompt-version eval possible.
 
 ## Attribution anchor
 
-Every AI-generated action item is attributed to the meeting itself,
-not to the AI and not to the DG. Card text is computed at render time
-from `source` + lookup; never stored. This is locked decision §0.1
-in the spec.
+Every AI-generated task is attributed to the meeting itself, not to the
+AI and not to the DG. Card text is computed at render time from
+`tasks.source` + lookups; never stored. Locked decision §0.1.
 ```
 
 - [ ] **Step 2: Commit.**
 
 ```bash
 git add lib/action-items/README.md
-git commit -m "docs(action-items): module README + prompt versioning rule"
+git commit -m "docs(action-items): module README — corrected relationship to Tasks"
 ```
 
 ---
 
-## Task 10: EmptyShell component
-
-**Files:**
-- Create: `components/action-items/EmptyShell.tsx`
-
-- [ ] **Step 1: Create the empty-shell component.**
-
-Create `components/action-items/EmptyShell.tsx`:
-
-```tsx
-import type { ReactNode } from 'react';
-
-interface Props {
-  title: string;
-  subtitle?: string;
-  cta?: ReactNode;
-}
-
-export function EmptyShell({ title, subtitle, cta }: Props) {
-  return (
-    <div className="card-premium flex flex-col items-center justify-center min-h-[60vh] text-center p-12">
-      <h1 className="stat-number text-4xl mb-4">{title}</h1>
-      {subtitle && (
-        <p className="text-[color:var(--navy-600)] max-w-xl mb-6">{subtitle}</p>
-      )}
-      {cta}
-    </div>
-  );
-}
-```
-
-- [ ] **Step 2: Type-check.**
-
-Run:
-
-```bash
-npx tsc --noEmit
-```
-
-Expected: no errors.
-
-- [ ] **Step 3: Commit.**
-
-```bash
-git add components/action-items/EmptyShell.tsx
-git commit -m "feat(action-items): EmptyShell scaffold component"
-```
-
----
-
-## Task 11: Page shells (consumption views)
-
-**Files:**
-- Create: `app/action-items/page.tsx`
-- Create: `app/action-items/mine/page.tsx`
-- Create: `app/action-items/agency/[name]/page.tsx`
-- Create: `app/action-items/[id]/page.tsx`
-- Create: `app/action-items/new/page.tsx`
-
-All pages auth-gate via the existing NextAuth session and render the EmptyShell. They serve only to confirm routing works and the sidebar link lands somewhere; feature implementations come in Plans 2–4.
-
-- [ ] **Step 1: Create `app/action-items/page.tsx`.**
-
-```tsx
-import { auth } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import { EmptyShell } from '@/components/action-items/EmptyShell';
-
-export default async function ActionItemsPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
-
-  return (
-    <EmptyShell
-      title="Action Items"
-      subtitle="The unified pipeline for tracking commitments across MPUA and the seven portfolio agencies. Coming online with Plan 2."
-    />
-  );
-}
-```
-
-- [ ] **Step 2: Create `app/action-items/mine/page.tsx`.**
-
-```tsx
-import { auth } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import { EmptyShell } from '@/components/action-items/EmptyShell';
-
-export default async function MyActionItemsPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
-
-  return (
-    <EmptyShell
-      title="My Action Items"
-      subtitle="Items where you are the owner. Closure flow lands in Plan 2."
-    />
-  );
-}
-```
-
-- [ ] **Step 3: Create `app/action-items/agency/[name]/page.tsx`.**
-
-```tsx
-import { auth } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import { EmptyShell } from '@/components/action-items/EmptyShell';
-import { AGENCIES, type Agency } from '@/lib/action-items/constants';
-
-export default async function AgencyActionItemsPage({
-  params,
-}: {
-  params: Promise<{ name: string }>;
-}) {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
-
-  const { name } = await params;
-  const isValid = (AGENCIES as readonly string[]).includes(name);
-
-  return (
-    <EmptyShell
-      title={isValid ? `${name} — Action Items` : 'Unknown agency'}
-      subtitle={
-        isValid
-          ? 'Per-agency view. Item rendering lands in Plan 2.'
-          : `Recognized agencies: ${AGENCIES.join(', ')}`
-      }
-    />
-  );
-}
-```
-
-- [ ] **Step 4: Create `app/action-items/[id]/page.tsx`.**
-
-```tsx
-import { auth } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import { EmptyShell } from '@/components/action-items/EmptyShell';
-
-export default async function ActionItemDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
-
-  const { id } = await params;
-
-  return (
-    <EmptyShell
-      title="Action Item detail"
-      subtitle={`ID: ${id}. Detail rendering, event log, and supersession chain land in Plan 2.`}
-    />
-  );
-}
-```
-
-- [ ] **Step 5: Create `app/action-items/new/page.tsx`.**
-
-```tsx
-import { auth } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import { EmptyShell } from '@/components/action-items/EmptyShell';
-
-export default async function NewActionItemPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
-
-  return (
-    <EmptyShell
-      title="New Action Item"
-      subtitle="Freestanding manual-add form. Lands in Plan 2."
-    />
-  );
-}
-```
-
-- [ ] **Step 6: Type-check.**
-
-Run:
-
-```bash
-npx tsc --noEmit
-```
-
-Expected: no errors.
-
-- [ ] **Step 7: Commit.**
-
-```bash
-git add app/action-items/
-git commit -m "feat(action-items): consumption-view page shells"
-```
-
----
-
-## Task 12: Page shells (review views)
-
-**Files:**
-- Create: `app/action-items/review/page.tsx`
-- Create: `app/action-items/review/[extractionId]/page.tsx`
-
-The review queue is gated behind ministry roles.
-
-- [ ] **Step 1: Create `app/action-items/review/page.tsx`.**
-
-```tsx
-import { redirect } from 'next/navigation';
-import { auth } from '@/lib/auth';
-import { EmptyShell } from '@/components/action-items/EmptyShell';
-
-const MINISTRY_ROLES = new Set(['dg', 'ps', 'parl_sec']);
-
-export default async function ReviewQueuePage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
-  if (!MINISTRY_ROLES.has(session.user.role)) {
-    return (
-      <EmptyShell
-        title="Review queue"
-        subtitle="Restricted to DG and Permanent Secretary."
-      />
-    );
-  }
-
-  return (
-    <EmptyShell
-      title="Review queue"
-      subtitle="Meetings awaiting extraction review. Three-bucket review lands in Plan 4."
-    />
-  );
-}
-```
-
-- [ ] **Step 2: Create `app/action-items/review/[extractionId]/page.tsx`.**
-
-```tsx
-import { redirect } from 'next/navigation';
-import { auth } from '@/lib/auth';
-import { EmptyShell } from '@/components/action-items/EmptyShell';
-
-const MINISTRY_ROLES = new Set(['dg', 'ps', 'parl_sec']);
-
-export default async function ReviewExtractionPage({
-  params,
-}: {
-  params: Promise<{ extractionId: string }>;
-}) {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
-  if (!MINISTRY_ROLES.has(session.user.role)) {
-    return (
-      <EmptyShell
-        title="Review queue"
-        subtitle="Restricted to DG and Permanent Secretary."
-      />
-    );
-  }
-
-  const { extractionId } = await params;
-
-  return (
-    <EmptyShell
-      title="Review extraction"
-      subtitle={`Extraction ID: ${extractionId}. Three-bucket review UI lands in Plan 4.`}
-    />
-  );
-}
-```
-
-- [ ] **Step 3: Type-check.**
-
-Run:
-
-```bash
-npx tsc --noEmit
-```
-
-Expected: no errors.
-
-- [ ] **Step 4: Commit.**
-
-```bash
-git add app/action-items/review/
-git commit -m "feat(action-items): review-queue page shells"
-```
-
----
-
-## Task 13: Sidebar link
+## Task 11: Sidebar entry → `/action-items/review`
 
 **Files:**
 - Modify: `components/layout/Sidebar.tsx`
 
-The exact file structure of `Sidebar.tsx` is not assumed here — read the file first and add the Action Items entry under the Main Menu group between "Task Board" and "Oversight".
+The sidebar carries one Action Items link. It points at the review queue (DG/PS only — page-level guard already in place from the prior Plan 1 review-shell commit). Other Action Items routes (`/meetings`, `/process`, `/eval`) are reached from inside the review surface in later plans.
 
 - [ ] **Step 1: Read the existing sidebar to find the insertion point.**
 
-Run:
-
 ```bash
-grep -n "Task Board\|Oversight\|/tasks\|/oversight" components/layout/Sidebar.tsx
+grep -n "Task Board\|War Room\|/tasks\|Oversight\|/oversight" components/layout/Sidebar.tsx
 ```
 
-Expected output: line numbers for the existing Task Board and Oversight links. Note them.
+Expected: line numbers for the existing Tasks/War Room entry. Note them.
 
-- [ ] **Step 2: Add the new link between Task Board and Oversight.**
+- [ ] **Step 2: Add the new link.**
 
-The exact JSX shape depends on how Sidebar.tsx renders its items (likely an array config or repeated `<SidebarItem>` elements). Match the existing pattern. The new entry has:
+Insert an "Action Items" entry that points to `/action-items/review`. Match the existing sidebar item shape (likely a config array or a repeated `<SidebarItem>` JSX). Place it **after** the Tasks/War Room entry — pipeline-management lives next to where the items it produces consume.
 
 - Label: `Action Items`
-- Href: `/action-items`
-- Icon: `ClipboardList` (or whichever Lucide icon the file imports for similar list-views; if no obvious match, use `ListTodo` and add it to the import block).
-- No role-gating at the sidebar level — the page-level guards in Tasks 11–12 handle access.
+- Href: `/action-items/review`
+- Icon: a Lucide icon already imported in the file; if there's no obvious match, use `ListChecks` and add it to the imports.
+- No role gate at the sidebar level — the page guards in the review shells handle access (DG/PS/parl_sec only).
 
-After editing, run:
+- [ ] **Step 3: Verify.**
 
 ```bash
-grep -n "/action-items" components/layout/Sidebar.tsx
+grep -n "/action-items/review" components/layout/Sidebar.tsx
 ```
 
-Expected: at least one match for the new link.
+Expected: at least one match.
 
-- [ ] **Step 3: Type-check + lint.**
-
-Run:
+- [ ] **Step 4: Type-check + lint.**
 
 ```bash
 npx tsc --noEmit && npm run lint
@@ -1462,18 +1132,16 @@ npx tsc --noEmit && npm run lint
 
 Expected: no errors.
 
-- [ ] **Step 4: Commit.**
+- [ ] **Step 5: Commit.**
 
 ```bash
 git add components/layout/Sidebar.tsx
-git commit -m "feat(action-items): sidebar entry under Main Menu"
+git commit -m "feat(action-items): sidebar entry → /action-items/review"
 ```
 
 ---
 
-## Task 14: End-to-end verification
-
-**Files:** none modified.
+## Task 12: End-to-end verification
 
 - [ ] **Step 1: Run the full test suite.**
 
@@ -1481,7 +1149,7 @@ git commit -m "feat(action-items): sidebar entry under Main Menu"
 npm test
 ```
 
-Expected: all tests pass, including the new constants and visibility tests. Pre-existing tests remain green.
+Expected: all tests pass — including the updated constants and `canSeeTask` tests.
 
 - [ ] **Step 2: Type-check.**
 
@@ -1505,7 +1173,7 @@ Expected: no errors.
 npm run build
 ```
 
-Expected: build succeeds. The seven new pages appear in the Next.js route output.
+Expected: build succeeds. Only `/action-items/review` and `/action-items/review/[extractionId]` appear under `/action-items` in the route output.
 
 - [ ] **Step 5: Manual smoke test.**
 
@@ -1513,69 +1181,84 @@ Expected: build succeeds. The seven new pages appear in the Next.js route output
 npm run dev
 ```
 
-Open in browser:
+In the browser:
 
-- `/action-items` → renders "Action Items" empty shell.
-- `/action-items/mine` → renders "My Action Items" empty shell.
-- `/action-items/agency/GPL` → renders "GPL — Action Items".
-- `/action-items/agency/UNKNOWN` → renders "Unknown agency".
-- `/action-items/new` → renders "New Action Item".
-- `/action-items/review` (as DG) → renders "Review queue".
+- `/action-items/review` (as DG) → renders "Review queue" empty shell.
 - `/action-items/review` (as officer) → renders "Restricted" notice.
-- Sidebar shows "Action Items" between Task Board and Oversight.
+- `/action-items/review/<any-uuid>` (as DG) → renders extraction empty shell.
+- `/action-items` (any role) → 404. (No page; intentional. War Room is the surface.)
+- `/action-items/mine` → 404. (Use `/tasks` My Tasks.)
+- `/action-items/agency/GPL` → 404. (Use War Room agency filter.)
+- `/action-items/new` → 404. (Use War Room Add Task.)
+- `/tasks` → unchanged from main; still renders the existing War Room board.
+- Sidebar shows "Action Items" linking to `/action-items/review`.
 
 - [ ] **Step 6: Migration handoff.**
 
 Surface to the user (post in chat or in PR description):
 
-> Migration `supabase/migrations/102_action_items_v1.sql` is ready to run.
-> Execute manually via Supabase Dashboard → SQL Editor against the project DB.
-> Pre-flight: ensure pgvector extension is enabled (Database → Extensions).
-> Verification queries are in `102_action_items_v1.README.md`.
+> Migration `supabase/migrations/102_action_items_v1.sql` (rev b) is ready
+> to run. Execute manually via Supabase Dashboard → SQL Editor against
+> the project DB. **This migration drops the `tasks_access` RLS policy
+> from migration 022; visibility for this module's flows now lives in
+> `lib/action-items/visibility.ts` (`canSeeTask`).** Verification queries
+> in `102_action_items_v1.README.md`.
 
-This is the only manual step at end of Plan 1.
+This is the only manual step at end of revised Plan 1.
 
 ---
 
 ## Self-review
 
-**Spec coverage** (skim against `docs/superpowers/specs/2026-05-03-action-items-pipeline-design.md`):
+**Spec coverage** (against `docs/superpowers/specs/2026-05-03-action-items-pipeline-design.md` rev b):
 
-- §0 locked decisions → constants module + types reflect every enum; attribution anchor in module README.
-- §1 v1 scope → page shells exist for every route listed; no feature logic.
+- §0 locked decisions → constants module + types reflect every enum; attribution anchor in README.
+- §1 v1 scope → only `/action-items/review/*` routes scaffolded; War Room is left alone (correct).
 - §3.1 users widening → Task 1.
-- §3.2 extractions table → Task 2.
-- §3.3 action_items table including `visibility_scope` → Task 3.
-- §3.4 events table including `attribution_error_flagged` → Task 4.
-- §3.5 meetings_seen → Task 4.
-- §3.6 failed_extractions → Task 4.
-- §11.5 visibility logic → Task 8.
-- Sidebar link covered in Task 13.
-- Manual migration execution rule → Task 5 + handoff in Task 14.
+- §3.2 tasks widening (provenance, verification flow, supersession, visibility, status enum) → Task 3.
+- §3.3 extractions table → Task 2.
+- §3.4 events table with `task_id` FK → Task 4.
+- §3.5 `meetings_seen` → Task 4.
+- §3.6 `failed_extractions` → Task 4.
+- §11.3 visibility on tasks → Task 9.
+- Migration 022 RLS disabled → Task 3.
+- Sidebar link → Task 11.
+- Manual migration execution rule + README → Tasks 5, 12.
 
-**Not in this plan (correctly deferred to later plans):** prompts (Plan 4), Fireflies client (Plan 3), extraction (Plan 4), validation (Plan 4), resolution (Plan 4), political-risk gate (Plan 4), supersession matcher (Plan 5), trust tracker (Plan 5), drift detector (Plan 5), closure/verification flow (Plan 2), dispute resolution (Plan 2), manual-add forms (Plan 2), daily digest (Plan 3), cron (Plan 3), agency-tree consumption UI (Plan 2).
+**Not in this plan (correctly deferred):**
 
-**Placeholder scan:** every step has concrete code or a concrete command. No "TBD" or "implement appropriately."
+- Plan 2 (next): owner self-close, DG verification, dispute / pushback, verification surface placement, inline manual-add component, event-log extension on existing task detail, lifecycle API routes under `/api/tasks/[id]/{complete,verify,dispute,pushback}`.
+- Plan 3: Fireflies polling, `meetings_seen` population, daily digest, "Process manually" CTA → War Room Add Task with query-param prefill.
+- Plan 4: extraction (Anthropic), prompt files, validation pipeline, resolution pipeline, political-risk gate, three-bucket review UI, supersession suggestion display.
+- Plan 5: supersession matcher, drift detector, earned-trust tracker, eval dashboard.
 
-**Type consistency:** `canSeeItem(user: UserStaffFields, item: ActionItemRow): boolean` matches in test (Task 8) and use sites assumed in later plans. Constants exported from `constants.ts` are imported with the same names in `types.ts` (Task 7) and the visibility test (Task 8).
+**Placeholder scan:** every step has concrete code or a concrete command. No "TBD".
+
+**Type consistency:**
+
+- `canSeeTask(user: UserStaffFields, task: TaskWithExtensions): boolean` — same signature in test (Task 9) and at every call site assumed by Plans 2–5.
+- `TaskStatus` includes `awaiting_verification` and `superseded` — used by both `tasks_status_check` (Task 3) and the constants/types (Tasks 7–8).
+- `ActionItemEventRow.task_id` matches the column name in migration 102 (Task 4).
+- `tasks.source ∈ {'manual','extraction'}` matches both the migration CHECK and the `TaskWithExtensions.source` literal type.
 
 ---
 
 ## Decisions I made on your behalf
 
-These are choices I made autonomously while writing this plan. Flag any that should have been escalated.
+These are choices made autonomously while writing the revised plan. Flag any that should have been escalated.
 
-1. **Single migration file (`102_action_items_v1.sql`) rather than five separate files.** The spec's manual-Dashboard-execution model favors atomicity — one paste, one run, one commit. Splitting would create five Dashboard sessions to coordinate.
-2. **Migration is idempotent** (`IF NOT EXISTS` everywhere, `ADD COLUMN IF NOT EXISTS`). Tradeoff: idempotent migrations let you re-run safely but make schema drift detection harder. Existing DGOS migrations (e.g., 022, 095) are not idempotent — I deviated because manual Dashboard execution makes safe re-run materially valuable.
-3. **`BANNED_PHRASES` in constants.ts excludes `handle` and `work on`.** The spec lists them, but they collide with legitimate text via simple substring match. The constant tracks substring patterns; whole-token matches will be added in Plan 4's validator as a separate code path. Documented inline.
-4. **No Supabase RLS on the new tables.** Spec §10.1 calls for app-layer enforcement consistent with the rest of DGOS. I did not add `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` even though the existing `tasks` table uses it (migration 022) — the spec is explicit, and mixing RLS with app-layer guards is a footgun.
-5. **`canSeeItem` treats `parl_sec` as PS-equivalent.** The existing `requireRole` helper (`lib/auth-helpers.ts`) already does this. Matches the codebase convention.
-6. **`canSeeItem` lets owners see their own items even outside their home agency.** This wasn't explicit in the spec but is the only sensible interpretation when a GWI officer is owner of an MPUA-DG-routed item. Test asserts this.
-7. **Inactive users see nothing.** Defensive; not specified, but the existing `users.is_active` column is the natural gate.
-8. **Plan 1 produces no API routes.** The spec lists many `/api/action-items/*` routes; they're all deferred to feature plans. Page-level auth via the existing NextAuth session is the only access control in Plan 1.
-9. **Sidebar entry uses Lucide `ClipboardList` (or `ListTodo`)** without further design input — the existing sidebar already imports many Lucide icons; matching one is mechanical.
-10. **EmptyShell uses existing utility classes** (`card-premium`, `stat-number`, `--navy-600`) without adding new design tokens. Consistent with CLAUDE.md's design system.
-11. **Task 14 step 6 ("Migration handoff") requires the engineer to message the user**, not run the migration. Honors the project rule that SQL migrations are never auto-executed.
-12. **No new dependencies.** pgvector is enabled at the database level (extension), not via npm. Zod and date-fns are already in `package.json`.
+1. **Edit migration 102 in place** instead of (a) follow-up migration or (b) branch reset. Rationale in the "Context" section above: migration 102 has not been executed; both alternatives the user listed are strictly worse. The branch keeps its commit history; the file the user actually pastes into Supabase Dashboard is the corrected version.
+2. **Drop the `tasks_access` RLS policy from migration 022** in this migration. The spec moves to app-layer enforcement; mixing RLS with app-layer guards is the standing footgun rule. The existing `app/api/tasks/*` route handlers already do app-layer checks; `canSeeTask` is the seam for new flows. If RLS removal is unacceptable, the alternative is to extend the existing policy with awaiting_verification + dispute_note visibility — a separate, more invasive design choice; flagging here.
+3. **No CHECK constraint on `tasks.agency` in this migration.** The existing 93 rows have freeform values (`gpl`, `mpua`, etc.); a CHECK constraint would fail. Extraction-side code writes the canonical 9-value enum; a follow-up data-cleanup migration (out of v1 scope) can canonicalize legacy rows and then add the constraint. `canSeeTask` compares case-insensitively to bridge the gap.
+4. **`tasks.source` defaults to `'manual'`** so the existing 93 rows don't fail the new `extraction_provenance_required` constraint. The constraint exempts `source='manual'` from the provenance requirement.
+5. **`tasks.source_meeting_id` is added as TEXT** even though the existing same-named column from migration 022 is UUID. The existing column was unused and never written to (Notion cleanup left it as a vestigial UUID); the new TEXT column carries Fireflies meeting IDs, which are not UUIDs. Verify this assumption in the live database before running migration 102 — if any tasks rows have a non-NULL `source_meeting_id` UUID, the type widen needs to be done carefully or a data migration first. The migration uses `ADD COLUMN IF NOT EXISTS`, so if the existing UUID column is still present and populated, the migration **will not** add the TEXT version and the column will retain its UUID type. **Open issue for Plan 2 to address before extraction wires in:** confirm `tasks.source_meeting_id` is unused, then either keep the UUID column and have the pipeline write a deterministic UUID derived from the Fireflies ID, OR run a one-off `ALTER COLUMN ... TYPE TEXT` before any extraction inserts.
+6. **`TaskStatus` is the canonical name** (not `ItemStatus`). The original Plan 1's `ITEM_STATUSES` had 7 action_items-specific values; the corrected enum has 6 and aligns with the actual `tasks_status_check` constraint after migration 102.
+7. **`canSeeTask` matches by `delegated_to_id`** in addition to ownership, role, and agency. Spec §10.6 says "delegate sees but cannot close." The closure rule is enforced in Plan 2's `/complete` endpoint; the visibility seam is here.
+8. **Sidebar link points at `/action-items/review`** (the only DGOS-owned route under `/action-items` until Plans 3/4/5 add `/meetings`, `/process`, `/eval`). The page-level guard (DG/PS/parl_sec) was committed in the original Plan 1 review shells; the sidebar relies on it.
+9. **`/action-items` and the dropped surfaces 404** in the build output. This is correct behavior — the corrected spec drops these surfaces. If a redirect to War Room would be more user-friendly than a 404, it can be added later with a single `redirect('/tasks')` in a thin route file; v1 scope keeps it as 404.
+10. **Plans 3, 4, 5 are unchanged in spirit** but require the following adjustments when those plans are written:
+    - **Plan 3 (Fireflies ingestion + meetings_seen + digest)** — unaffected at the schema/code level. The "Process manually" CTA from a `meetings_seen` card now opens War Room's Add Task form with query-param prefill (`/tasks?action=add&meeting_id=...&meeting_title=...&meeting_date=...`) instead of a deleted `/action-items/new`. Confirm the existing Add Task form supports query-param prefill before Plan 3 ships, or add it as one Plan 3 task.
+    - **Plan 4 (extraction + review + political-risk gate)** — accepted items insert into `tasks` (with `source='extraction'`) instead of an `action_items` table. The validation, resolution, and review-queue scope is unchanged; the inline manual-add component (`InlineExtractionAddItem.tsx`) wraps `POST /api/tasks` instead of a deleted `/api/action-items` endpoint. The lifecycle endpoints (`/complete`, `/verify`, `/dispute`, `/pushback`) live under `/api/tasks/[id]/*` (Plan 2 builds them).
+    - **Plan 5 (supersession matcher + trust tracker + eval)** — matcher candidate set queries `tasks` (not `action_items`) where `status IN ('new','active','blocked','awaiting_verification')`. Trust tracker and eval dashboard semantics are unaffected; only the table they read from changes.
 
 If any of these should have been a question, tell me and I'll revise.

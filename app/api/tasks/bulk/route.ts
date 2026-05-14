@@ -10,7 +10,7 @@ const bulkPatchSchema = z.object({
     due_date: z.string().nullable().optional(),
     assignee_id: z.string().nullable().optional(),
     agency: z.string().nullable().optional(),
-    status: z.enum(['new', 'active', 'blocked', 'done']).optional(),
+    status: z.enum(['new', 'active', 'blocked', 'done', 'awaiting_verification', 'superseded']).optional(),
     blocked_reason: z.string().nullable().optional(),
   }),
 });
@@ -18,9 +18,35 @@ const bulkPatchSchema = z.object({
 export const PATCH = withErrorHandler(async (request: NextRequest) => {
   const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
   if (result instanceof NextResponse) return result;
+  const { session } = result;
 
   const { data, error: validationError } = await parseBody(request, bulkPatchSchema);
   if (validationError) return validationError;
+
+  // D6 — verification-bypass guard. A bulk write to status='done' must not
+  // include any task currently in 'awaiting_verification' (the verify flow is
+  // the only way to flip those). Server-side authority — clients also disable
+  // the Done button for the same selection, but we never trust the client.
+  if (data.updates.status === 'done') {
+    const { data: affected, error: lookupErr } = await supabaseAdmin
+      .from('tasks')
+      .select('id, status')
+      .in('id', data.taskIds);
+    if (lookupErr) return apiError('DB_ERROR', lookupErr.message, 500);
+    const blockedIds = (affected ?? [])
+      .filter((t) => t.status === 'awaiting_verification')
+      .map((t) => t.id);
+    if (blockedIds.length > 0) {
+      return NextResponse.json(
+        {
+          error: 'verification_required',
+          message: `${blockedIds.length} task${blockedIds.length === 1 ? '' : 's'} require DG verification. Use the verify flow instead.`,
+          blockedIds,
+        },
+        { status: 409 }
+      );
+    }
+  }
 
   const updatePayload: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
@@ -33,6 +59,8 @@ export const PATCH = withErrorHandler(async (request: NextRequest) => {
     updatePayload.status = data.updates.status;
     if (data.updates.status === 'done') {
       updatePayload.completed_at = new Date().toISOString();
+      updatePayload.verified_by = session.user.id;
+      updatePayload.verified_at = new Date().toISOString();
     } else {
       updatePayload.completed_at = null;
     }
@@ -51,6 +79,16 @@ export const PATCH = withErrorHandler(async (request: NextRequest) => {
 
   if (error) {
     return apiError('DB_ERROR', error.message, 500);
+  }
+
+  if (data.updates.status !== undefined) {
+    const { logEvent } = await import('@/lib/action-items/events');
+    for (const id of data.taskIds) {
+      await logEvent({
+        taskId: id, eventType: 'status_change', actorId: session.user.id,
+        payload: { to: data.updates.status, via: 'bulk' },
+      });
+    }
   }
 
   return NextResponse.json({ success: true });

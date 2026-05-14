@@ -33,7 +33,8 @@ export interface PendingApplicationStats {
   byRegion: { region: string; count: number; avgDays: number; maxDays: number; over30Count: number }[]
   waitBrackets: { label: string; min: number; max: number | null; count: number }[]
   byStage?: { stage: string; count: number; avgDays: number; slaCompliant: number }[]
-  dataAsOf: string
+  reportThrough: string
+  uploadedAt: string
 }
 
 // ── Analysis Types ─────────────────────────────────────────────────────────
