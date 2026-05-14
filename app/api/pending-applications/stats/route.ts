@@ -134,7 +134,7 @@ function buildStats(rows: Record<string, unknown>[]): PendingApplicationStats {
 
 export async function GET() {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer']);
     if (authResult instanceof NextResponse) return authResult;
 
     const { data: allRows, error } = await supabaseAdmin

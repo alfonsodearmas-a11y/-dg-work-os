@@ -41,7 +41,7 @@ function mapRow(row: Record<string, unknown>): PendingApplication {
 // GET — return latest saved analysis
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    const authResult = await requireRole(['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer']);
     if (authResult instanceof NextResponse) return authResult;
 
     const agency = request.nextUrl.searchParams.get('agency')?.toUpperCase();
@@ -84,7 +84,7 @@ const deepAnalysisSchema = z.object({
 });
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer']);
   if (authResult instanceof NextResponse) return authResult;
 
   const { data, error } = await parseBody(request, deepAnalysisSchema);
