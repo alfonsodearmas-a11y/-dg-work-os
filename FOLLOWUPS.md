@@ -16,9 +16,11 @@ Action: rewrite as a single Postgres transaction via a Supabase RPC, or stage to
 
 ## 3. Snapshot values for GWI files without DAYS_DIFFERENCE
 
-`lib/pending-applications-snapshots.ts` computes `avgDaysWaiting`, `maxDaysWaiting`, and `over30Count` for `pending_application_snapshots` from `records.days_waiting` at parse time. For GWI files that have no DAYS_DIFFERENCE column (the current shape of the extract), every record has `days_waiting = 0`, so today's snapshot for GWI on 2026-05-14 is `total_count: 110, avgDaysWaiting: 0, maxDaysWaiting: 0, over30Count: 0`. The Trend Charts on the Overview tab feed off this table.
+`lib/pending-applications-snapshots.ts` computes `avgDaysWaiting`, `maxDaysWaiting`, and `over30Count` for `pending_application_snapshots` from `records.days_waiting` at parse time. For GWI files that have no DAYS_DIFFERENCE column (the current shape of the extract), every record has `days_waiting = 0`, so when this was filed the 2026-05-14 GWI snapshot read `total_count: 110, avgDaysWaiting: 0, maxDaysWaiting: 0, over30Count: 0`. The Trend Charts on the Overview tab feed off this table.
 
-Action: in `createSnapshot()`, compute days as `(snapshotDate - record.application_date)` when the parsed value is 0 or absent. Or recompute the entire snapshot table by reading from `pending_applications_with_wait` once on a schedule.
+**Partial resolution:** migration 112 UPDATEd that one stuck row in place using the live view aggregates. The underlying bug in `createSnapshot()` is unchanged, so every future GWI upload whose extract lacks DAYS_DIFFERENCE will write another zeroed snapshot row.
+
+Action: in `createSnapshot()`, compute days as `(snapshotDate - record.application_date)` when the parsed value is 0 or absent. Or, better, drop the JS aggregation entirely and SELECT from `pending_applications_with_wait` after the upsert.
 
 ## 4. migrations/042_pending_applications.sql header comment
 
@@ -43,3 +45,17 @@ Action: replace the per-record "Data As Of" line in the GWI and GPL drawers with
 `parseGWIBuffer` extracts `dataAsOf` from the title cell with a regex requiring the literal word "to" plus a spelled-out month, day, and 4-digit year. The May 8 extract evidently does not match this pattern because the stored `dataAsOf` came back as today (2026-05-14). The view in migration 111 makes this stamp non-load-bearing for the dashboard, but it still drives the upload confirmation toast and the per-record drawer.
 
 Action: widen the regex, or get the actual title-row text from GWI ops and add the literal pattern. Low priority since `reportThrough` is now derived from MAX(application_date), which is honest.
+
+## 8. Storage-path bug recurs anywhere file.name is interpolated
+
+`app/api/pending-applications/upload/route.ts` no longer puts `file.name` in the storage path, which fixes the supabase-js download lookup failure for filenames with parens. The same antipattern (interpolating raw `file.name` into a storage key) still exists in other upload paths in the repo and will silently break for filenames with parens or other URL-special characters. PSIP uploads under bucket `psip-uploads` are the obvious next candidate; the Storage logs show recent PSIP keys with literal spaces and dashes that have not yet hit the parens case.
+
+Action: grep for `.storage.from(...).upload(` and audit each callsite. Apply the same fix: drop the original filename, use `{fileId}.{ext}`. Track the original filename in the response payload or in a separate metadata table if it's needed downstream.
+
+## 9. process route error message conflates two failure modes
+
+`app/api/pending-applications/process/route.ts:181` returns "File not found or expired. Please upload again." whenever `supabaseAdmin.storage.from(BUCKET).download(storagePath)` returns an error. That branch fires for two very different conditions:
+  - the storage object genuinely does not exist or was deleted
+  - the supabase-js client could not even issue the GET request (the parens bug fixed in commit `fd18e6b` looked exactly like this, and the misleading message made it look like a TTL / cleanup race for hours)
+
+Action: include `dlError.message` (or a sanitized version of it) in the response body so the UI can show "Could not read uploaded file: <reason>". Cuts the next debugging session of this class from hours to minutes.
