@@ -96,11 +96,13 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   }
 
   // Read from the view (migration 111) so days_waiting feeding the AI
-  // prompt reflects live Guyana-local waiting time.
+  // prompt reflects live Guyana-local waiting time. .range(0, 49999) lifts
+  // the Supabase 1000-row default cap so GPL aggregates are not truncated.
   const { data: rows, error: fetchError } = await supabaseAdmin
     .from('pending_applications_with_wait')
     .select(PENDING_APP_COLUMNS)
-    .eq('agency', agency);
+    .eq('agency', agency)
+    .range(0, 49999);
 
   if (fetchError) {
     return NextResponse.json({ error: 'Failed to fetch pending applications' }, { status: 500 });

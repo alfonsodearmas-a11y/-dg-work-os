@@ -47,10 +47,13 @@ export async function GET(request: NextRequest) {
 
     // Read from the view (migration 111) so daysWaiting flowing into
     // computeGPLAnalysis / computeGWIAnalysis is the live Guyana-local value.
+    // .range(0, 49999) overrides the Supabase 1000-row default cap; GPL alone
+    // is well past that and the cap silently dropped the rest.
     const { data, error } = await supabaseAdmin
       .from('pending_applications_with_wait')
       .select(PENDING_APP_COLUMNS)
-      .eq('agency', agency);
+      .eq('agency', agency)
+      .range(0, 49999);
 
     if (error) {
       return NextResponse.json({ error: 'Failed to fetch pending applications' }, { status: 500 });

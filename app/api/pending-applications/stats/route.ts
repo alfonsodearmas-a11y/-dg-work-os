@@ -137,9 +137,14 @@ export async function GET() {
     const authResult = await requireRole(['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer']);
     if (authResult instanceof NextResponse) return authResult;
 
+    // Override the Supabase PostgREST default 1000-row cap. GPL alone has
+    // ~14.5K outstanding applications and the cap was silently truncating
+    // every aggregate. 50K is well above any realistic ceiling and still
+    // fits comfortably in a Function response.
     const { data: allRows, error } = await supabaseAdmin
       .from('pending_applications_with_wait')
-      .select(COLUMNS);
+      .select(COLUMNS)
+      .range(0, 49999);
 
     if (error) {
       return NextResponse.json({ error: 'Failed to fetch pending applications' }, { status: 500 });
