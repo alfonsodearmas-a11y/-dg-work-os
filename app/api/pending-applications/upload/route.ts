@@ -103,10 +103,15 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     agency = detected;
   }
 
-  // Store file in Supabase Storage for processing in a separate request
+  // Store file in Supabase Storage for processing in a separate request.
+  // The storage path intentionally does NOT include file.name; supabase-js
+  // download lookups break when filenames contain characters like
+  // parentheses (a normal macOS duplicate-copy suffix). The original
+  // filename is returned to the client in fileName for display.
   await ensureBucket();
   const fileId = `${Date.now()}-${randomBytes(4).toString('hex')}`;
-  const storagePath = `${fileId}/${file.name}`;
+  const ext = name.endsWith('.xls') ? '.xls' : '.xlsx';
+  const storagePath = `${fileId}${ext}`;
 
   const { error: uploadError } = await supabaseAdmin.storage
     .from(BUCKET)
