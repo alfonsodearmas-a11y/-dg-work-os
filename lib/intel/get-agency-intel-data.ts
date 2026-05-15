@@ -116,6 +116,15 @@ export interface HasAirstripOps {
   overdue: AirstripOpsRow[];
 }
 
+export interface PendingApplicationsMeta {
+  total: number;
+  over_30_days: number;
+  avg_days_waiting: number;
+  max_days_waiting: number;
+  // application_date the data was reported through (YYYY-MM-DD); null when no rows.
+  data_as_of: string | null;
+}
+
 export interface ApplicationThroughput {
   // Closed in the last 30 days (approved | rejected).
   closed_30d: number;
@@ -158,6 +167,14 @@ export interface AgencyIntelData {
   // HAS-only extras. Undefined for other agencies.
   has?: {
     airstrip_ops: HasAirstripOps;
+  };
+
+  // GWI-only extras. Undefined for other agencies. GPL has its own
+  // outstanding_applications under data.gpl (older customer_applications
+  // table); GWI reads from the canonical pending_applications view used by
+  // /intel/pending-applications.
+  gwi?: {
+    pending_applications: PendingApplicationsMeta;
   };
 }
 
@@ -279,6 +296,46 @@ async function getOutstandingApplications(): Promise<AgencyOutstandingApplicatio
     by_age_bucket: buckets,
     oldest_days: oldest > 0 ? oldest : null,
   };
+}
+
+// Pending applications for GPL/GWI. Reads from the
+// `pending_applications_with_wait` view so days_waiting is computed live.
+// Range cap of 50k matches /api/pending-applications/stats so the Supabase
+// PostgREST default of 1000 doesn't silently truncate GPL aggregates.
+async function getPendingApplicationsForAgency(
+  agency: 'GPL' | 'GWI',
+): Promise<PendingApplicationsMeta | null> {
+  const { data, error } = await supabaseAdmin
+    .from('pending_applications_with_wait')
+    .select('days_waiting, application_date')
+    .eq('agency', agency)
+    .range(0, 49999);
+
+  if (error) {
+    logger.error(
+      { err: error, agency },
+      'getPendingApplicationsForAgency: query failed',
+    );
+    return null;
+  }
+  const rows = data ?? [];
+  if (rows.length === 0) return null;
+
+  const days = rows.map((r) => Number(r.days_waiting) || 0);
+  const total = days.length;
+  const over_30_days = days.filter((d) => d > 30).length;
+  const max_days_waiting = Math.max(...days);
+  const avg_days_waiting = Math.round(
+    days.reduce((acc, d) => acc + d, 0) / total,
+  );
+
+  let data_as_of: string | null = null;
+  for (const r of rows) {
+    const ad = r.application_date ? String(r.application_date) : '';
+    if (ad && (!data_as_of || ad > data_as_of)) data_as_of = ad;
+  }
+
+  return { total, over_30_days, avg_days_waiting, max_days_waiting, data_as_of };
 }
 
 async function getStationHealth(): Promise<StationHealthRow[]> {
@@ -669,6 +726,7 @@ export async function getAgencyIntelData(agencyParam: string): Promise<AgencyInt
   const agency = agencyParam.toUpperCase();
   const isGPL = agency === 'GPL';
   const isHAS = agency === 'HAS';
+  const isGWI = agency === 'GWI';
 
   // Fan all queries (base + agency extras) out in one shot — none depend on
   // each other and the GPL block was the longest sub-step on the GPL page.
@@ -680,6 +738,7 @@ export async function getAgencyIntelData(agencyParam: string): Promise<AgencyInt
     agencyHead,
     gplExtras,
     hasExtras,
+    gwiPendingApps,
   ] = await Promise.all([
     getOpenTasksForAgency(agency),
     getProjects(
@@ -699,6 +758,7 @@ export async function getAgencyIntelData(agencyParam: string): Promise<AgencyInt
         ])
       : Promise.resolve(null),
     isHAS ? getHasAirstripOps() : Promise.resolve(null),
+    isGWI ? getPendingApplicationsForAgency('GWI') : Promise.resolve(null),
   ]);
 
   // Critical takes precedence: a tender flagged as critical (missing decision,
@@ -731,6 +791,10 @@ export async function getAgencyIntelData(agencyParam: string): Promise<AgencyInt
 
   if (hasExtras) {
     data.has = { airstrip_ops: hasExtras };
+  }
+
+  if (gwiPendingApps) {
+    data.gwi = { pending_applications: gwiPendingApps };
   }
 
   return data;

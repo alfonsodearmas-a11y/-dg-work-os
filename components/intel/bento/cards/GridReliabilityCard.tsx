@@ -8,6 +8,7 @@ interface GridReliabilityCardProps {
   data: GridReliability;
   methodologyHref?: string;
   className?: string;
+  accent?: string;
 }
 
 const STALE_THRESHOLD_DAYS = 14;
@@ -29,10 +30,10 @@ function buildFooterText(data: GridReliability): string {
   return text;
 }
 
-export function GridReliabilityCard({ data, methodologyHref, className }: GridReliabilityCardProps) {
+export function GridReliabilityCard({ data, methodologyHref, className, accent }: GridReliabilityCardProps) {
   if (data.mtd.outage_count === 0 && data.prior_month.outage_count === 0) {
     return (
-      <BentoCard className={className} ariaLabel="Grid reliability">
+      <BentoCard className={className} ariaLabel="Grid reliability" accent={accent}>
         <CardHead icon={<Plug size={14} />} title="Grid Reliability" />
         <p className="text-xs text-navy-600 italic">No outage data this month.</p>
         <p className="text-[11px] text-navy-600">{buildFooterText(data)}</p>
@@ -78,7 +79,7 @@ export function GridReliabilityCard({ data, methodologyHref, className }: GridRe
   ];
 
   return (
-    <BentoCard className={className} ariaLabel="Grid reliability">
+    <BentoCard className={className} ariaLabel="Grid reliability" accent={accent}>
       <CardHead
         icon={<Plug size={14} />}
         title="Grid Reliability"
