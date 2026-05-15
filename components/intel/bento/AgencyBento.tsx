@@ -86,6 +86,7 @@ export function AgencyBento({ slug, data }: AgencyBentoProps) {
           <>
             <GridReliabilityCard
               data={data.gpl.grid_reliability}
+              aggregates={data.gpl.outage_aggregates}
               methodologyHref={hrefs.methodology}
               className="xl:col-span-8 xl:row-span-2"
               accent={accent}
@@ -103,9 +104,11 @@ export function AgencyBento({ slug, data }: AgencyBentoProps) {
               className="xl:col-span-3"
             />
             <ApplicationEfficiencyCard
-              data={data.gpl.application_throughput}
+              throughput={data.gpl.application_throughput}
+              pipeline={data.gpl.application_pipeline}
               href={hrefs.applicationEfficiency ?? '/intel/pending-applications'}
               methodologyHref={hrefs.methodology}
+              accent={accent}
               className="xl:col-span-3"
             />
             <StationAvailabilityCard
