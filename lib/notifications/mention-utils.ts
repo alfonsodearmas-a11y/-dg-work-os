@@ -5,7 +5,7 @@ const MENTION_REGEX = /@\[([0-9a-f-]{36})\]/g;
 /**
  * Extract @[uuid] mentions from a comment body and return:
  * - mentionedUserIds: unique UUIDs found
- * - cleanBody: body with @[uuid] replaced by @Username, truncated to 120 chars
+ * - cleanBody: body with @[uuid] replaced by @Username, truncated to 140 chars
  */
 export async function cleanMentionBody(
   body: string,
@@ -37,5 +37,5 @@ export async function cleanMentionBody(
     );
   }
 
-  return { mentionedUserIds, cleanBody: cleanBody.substring(0, 120) };
+  return { mentionedUserIds, cleanBody: cleanBody.substring(0, 140) };
 }

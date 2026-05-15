@@ -20,6 +20,7 @@ interface Comment {
 interface TaskCommentsProps {
   taskId: string;
   users: MentionUser[];
+  focusCommentId?: string;
 }
 
 // Map of userId -> display name built from users prop + fetched comments
@@ -60,7 +61,7 @@ function renderCommentBody(body: string, userMap: UserMap) {
   );
 }
 
-export function TaskComments({ taskId, users }: TaskCommentsProps) {
+export function TaskComments({ taskId, users, focusCommentId }: TaskCommentsProps) {
   const { data: session } = useSession();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +74,10 @@ export function TaskComments({ taskId, users }: TaskCommentsProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Track whether we already focused the deep-linked comment so the highlight
+  // animation does not replay on re-renders.
+  const focusedRef = useRef<string | null>(null);
 
   // Build user map for rendering mention tokens
   const userMap: UserMap = new Map();
@@ -110,8 +115,10 @@ export function TaskComments({ taskId, users }: TaskCommentsProps) {
     fetchComments();
   }, [taskId, fetchComments]);
 
-  // Auto-scroll when new comments arrive
+  // Auto-scroll when new comments arrive. Skip when a deep-link focus is in
+  // play so the deep-link scroll wins.
   useEffect(() => {
+    if (focusCommentId) return;
     if (commentsEndRef.current && scrollContainerRef.current) {
       const container = scrollContainerRef.current;
       const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
@@ -119,7 +126,21 @@ export function TaskComments({ taskId, users }: TaskCommentsProps) {
         commentsEndRef.current.scrollIntoView({ behavior: 'smooth' });
       }
     }
-  }, [comments.length]);
+  }, [comments.length, focusCommentId]);
+
+  // Scroll the deep-linked comment into view and apply a one-shot highlight.
+  // The keyframe animation owns the fade-out, so no setTimeout is needed.
+  useEffect(() => {
+    if (!focusCommentId) return;
+    if (focusedRef.current === focusCommentId) return;
+    if (loading) return;
+    if (!comments.some((c) => c.id === focusCommentId)) return;
+    const el = document.getElementById(`comment-${focusCommentId}`);
+    if (!el) return;
+    el.scrollIntoView({ block: 'center' });
+    el.classList.add('comment-highlight');
+    focusedRef.current = focusCommentId;
+  }, [focusCommentId, comments, loading]);
 
   // Convert draft text (with @DisplayName) to raw text (with @[userId])
   const draftToRaw = useCallback(
@@ -155,7 +176,6 @@ export function TaskComments({ taskId, users }: TaskCommentsProps) {
         setComments((prev) => [...prev, json.data]);
         setDraft('');
         setMentions(new Map());
-        // Mention notifications are sent server-side by the comments route
       } else {
         console.error('[TaskComments] Failed to post comment:', json.error || json.message || res.status);
       }
@@ -231,7 +251,11 @@ export function TaskComments({ taskId, users }: TaskCommentsProps) {
           comments.map((comment) => {
             const isOwn = comment.user_id === currentUserId;
             return (
-              <div key={comment.id} className="flex items-start gap-2.5">
+              <div
+                key={comment.id}
+                id={`comment-${comment.id}`}
+                className="flex items-start gap-2.5 rounded-md px-1 -mx-1"
+              >
                 {/* Avatar */}
                 <div
                   className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-semibold ${

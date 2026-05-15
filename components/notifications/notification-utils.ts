@@ -1,10 +1,18 @@
 import type { Notification } from '@/lib/notifications';
+import { commentDeepLinkPath } from '@/lib/notifications/deep-link';
 
 /**
  * Resolve the URL a notification should navigate to when clicked.
- * Tries reference_url first, then builds from reference_type/id, then falls back to category.
+ * Comment rows derive from the parent entity. Otherwise: reference_url first,
+ * then build from reference_type/id, then fall back to category.
  */
 export function resolveNotificationUrl(n: Notification): string | null {
+  if (n.entity_type === 'comment') {
+    const path = commentDeepLinkPath(n.parent_entity_type, n.parent_entity_id, n.entity_id);
+    if (path) return path;
+    // Fall through if the parent type is not yet wired in deep-link.ts.
+  }
+
   // Use reference_url if it's a meaningful deep link (not just '/')
   if (n.reference_url && n.reference_url !== '/') return n.reference_url;
 

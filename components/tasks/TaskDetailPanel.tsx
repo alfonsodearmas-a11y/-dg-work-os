@@ -28,9 +28,10 @@ interface TaskDetailPanelProps {
   onUpdate: (taskId: string, updates: TaskUpdate) => Promise<void>;
   onDelete: (taskId: string) => Promise<void>;
   users: UserOption[];
+  focusCommentId?: string;
 }
 
-export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onDelete, users }: TaskDetailPanelProps) {
+export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onDelete, users, focusCommentId }: TaskDetailPanelProps) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState('');
   const [descValue, setDescValue] = useState('');
@@ -358,7 +359,7 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
 
         {/* COMMENTS section */}
         <div className="border-b border-navy-800">
-          <TaskComments taskId={task.id} users={users} />
+          <TaskComments taskId={task.id} users={users} focusCommentId={focusCommentId} />
         </div>
 
         {/* ACTIVITY section */}

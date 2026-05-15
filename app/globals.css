@@ -2221,3 +2221,22 @@ button, a, [role="button"], .clickable, input, select, textarea {
   overflow: hidden;
   overflow-wrap: anywhere;
 }
+
+/* Deep-linked comment highlight. Applied once when the comment scrolls into
+   view. animation-fill-mode: forwards keeps the resting state transparent so
+   the row returns to baseline after the fade. */
+@keyframes commentHighlightPulse {
+  0% {
+    background-color: rgba(212, 175, 55, 0.22);
+    box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.55);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: inset 0 0 0 1px transparent;
+  }
+}
+
+.comment-highlight {
+  animation: commentHighlightPulse 2.4s ease-out 1;
+  animation-fill-mode: forwards;
+}

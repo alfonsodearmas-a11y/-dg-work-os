@@ -102,13 +102,14 @@ export const POST = withErrorHandler(async (
   // Create notifications for @mentions and replies (fire-and-forget)
   Promise.resolve((async () => {
     try {
-      // Fetch task status for tier context
+      // Fetch task status (for tier context) and title (for email body) in one query
       const { data: taskRow } = await supabaseAdmin
         .from('tasks')
-        .select('status')
+        .select('status, title')
         .eq('id', id)
         .single();
       const taskStatus = taskRow?.status || undefined;
+      const taskTitle = taskRow?.title || undefined;
 
       // Extract mentions and build clean body text
       const { mentionedUserIds, cleanBody } = await cleanMentionBody(data.body);
@@ -123,10 +124,10 @@ export const POST = withErrorHandler(async (
           entityId: comment.id,
           parentEntityType: 'task',
           parentEntityId: id,
+          parentEntityTitle: taskTitle,
           title: `${session.user.name || 'Someone'} mentioned you`,
           body: cleanBody,
-          referenceUrl: '/tasks',
-          metadata: { taskId: id },
+          metadata: { taskId: id, commentId: comment.id },
           tierContext: { taskStatus },
         }).catch((err: unknown) => {
           if (err instanceof NotificationDeliveryError) {
@@ -154,10 +155,10 @@ export const POST = withErrorHandler(async (
             entityId: comment.id,
             parentEntityType: 'task',
             parentEntityId: id,
+            parentEntityTitle: taskTitle,
             title: `${session.user.name || 'Someone'} replied to your comment`,
             body: cleanBody,
-            referenceUrl: '/tasks',
-            metadata: { taskId: id },
+            metadata: { taskId: id, commentId: comment.id },
             tierContext: { taskStatus },
           }).catch((err: unknown) => {
             if (err instanceof NotificationDeliveryError) {

@@ -12,7 +12,28 @@ export interface EmailNotification {
   actor_name?: string;
   entity_type: string;
   entity_url?: string;
+  parent_entity_type?: string;
+  parent_entity_title?: string;
   created_at: string;
+}
+
+function parentEntityLabel(type: string | undefined): string {
+  switch (type) {
+    case 'task':
+      return 'Task';
+    case 'project':
+      return 'Project';
+    case 'procurement':
+      return 'Tender';
+    case 'application':
+      return 'Application';
+    case 'document':
+      return 'Document';
+    case 'meeting':
+      return 'Meeting';
+    default:
+      return 'Item';
+  }
 }
 
 interface RenderedEmail {
@@ -92,7 +113,10 @@ function relativeTime(iso: string): string {
 function subjectForEvent(n: EmailNotification): string {
   switch (n.event_type) {
     case 'comment_mention':
-      return `[DG Work OS] ${n.actor_name || 'Someone'} mentioned you in ${n.title}`;
+      if (n.parent_entity_title) {
+        return `[DG Work OS] ${n.actor_name || 'Someone'} mentioned you on ${parentEntityLabel(n.parent_entity_type)}: ${n.parent_entity_title}`;
+      }
+      return `[DG Work OS] ${n.actor_name || 'Someone'} mentioned you`;
     case 'task_assigned':
       return `[DG Work OS] New task assigned: ${n.title}`;
     case 'task_blocked':
@@ -176,9 +200,14 @@ export function renderInstantEmail(notification: EmailNotification): RenderedEma
     ? `<p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 16px;">${escapeHtml(notification.actor_name)} &middot; ${escapeHtml(notification.entity_type)}</p>`
     : '';
 
+  const contextLine = notification.parent_entity_title
+    ? `<p style="color: #cbd5e1; font-size: 13px; line-height: 1.5; margin: 0 0 12px;"><span style="color: #64748b;">${escapeHtml(parentEntityLabel(notification.parent_entity_type))}:</span> ${escapeHtml(notification.parent_entity_title)}</p>`
+    : '';
+
   const bodyInner = `
         ${actorLine}
-        ${notificationRowHtml(notification)}
+        ${contextLine}
+        ${notificationRowHtml(notification, { showTimestamp: true })}
         <div style="text-align: center; margin: 24px 0 24px;">
           <a href="${url}" style="display: inline-block; padding: 12px 32px; background: #d4af37; color: #0a1628; font-weight: 600; font-size: 14px; text-decoration: none; border-radius: 8px;">
             View in DG Work OS
@@ -195,10 +224,14 @@ export function renderInstantEmail(notification: EmailNotification): RenderedEma
   if (notification.actor_name) {
     textLines.push(`From: ${notification.actor_name}`);
   }
+  if (notification.parent_entity_title) {
+    textLines.push(`${parentEntityLabel(notification.parent_entity_type)}: ${notification.parent_entity_title}`);
+  }
   textLines.push(notification.title);
   if (notification.body) {
     textLines.push(notification.body);
   }
+  textLines.push(`Time: ${relativeTime(notification.created_at)}`);
   textLines.push('', `View: ${url}`);
 
   return { subject, html, text: textLines.join('\n') };

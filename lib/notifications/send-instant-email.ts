@@ -20,7 +20,10 @@ export async function sendInstantEmailForNotification(notif: {
   importance_tier?: string | null;
   entity_type?: string | null;
   entity_id?: string | null;
+  parent_entity_type?: string | null;
+  parent_entity_id?: string | null;
   reference_url?: string | null;
+  metadata?: Record<string, unknown> | null;
   created_at: string;
 }): Promise<boolean> {
   try {
@@ -56,6 +59,11 @@ export async function sendInstantEmailForNotification(notif: {
       ? notif.importance_tier
       : 'informational') as ImportanceTier;
 
+    const parentEntityTitle =
+      typeof notif.metadata?.parentEntityTitle === 'string'
+        ? notif.metadata.parentEntityTitle || undefined
+        : undefined;
+
     const emailNotif: EmailNotification = {
       title: notif.title,
       body: notif.body || undefined,
@@ -64,6 +72,8 @@ export async function sendInstantEmailForNotification(notif: {
       actor_name: actor?.name || undefined,
       entity_type: notif.entity_type || 'system',
       entity_url: entityUrl(notif),
+      parent_entity_type: notif.parent_entity_type || undefined,
+      parent_entity_title: parentEntityTitle,
       created_at: notif.created_at,
     };
 
