@@ -5,7 +5,6 @@ import type {
   OutageAggregates,
 } from '@/lib/intel/get-agency-intel-data';
 import { BentoCard, CardHead, formatCompactNumber } from '@/components/intel/common';
-import { formatSaidi, formatSaifi } from '@/lib/intel/agency-bento-data';
 
 interface GridReliabilityCardProps {
   data: GridReliability;
@@ -66,7 +65,8 @@ export function GridReliabilityCard({
       <div className="grid grid-cols-3 gap-x-6 gap-y-2 pt-1">
         <BigStat
           label="SAIDI"
-          value={formatSaidi(data.mtd.saidi_minutes)}
+          value={data.mtd.saidi_minutes != null ? data.mtd.saidi_minutes.toFixed(1) : '—'}
+          unit={data.mtd.saidi_minutes != null ? 'min' : undefined}
           deltaPct={data.delta.saidi_pct}
           invert
           tone={
@@ -77,7 +77,8 @@ export function GridReliabilityCard({
         />
         <BigStat
           label="SAIFI"
-          value={formatSaifi(data.mtd.saifi)}
+          value={data.mtd.saifi != null ? data.mtd.saifi.toFixed(2) : '—'}
+          unit={data.mtd.saifi != null ? 'events' : undefined}
           deltaPct={data.delta.saifi_pct}
           invert
         />
@@ -122,12 +123,16 @@ export function GridReliabilityCard({
 function BigStat({
   label,
   value,
+  unit,
   deltaPct,
   invert,
   tone,
 }: {
   label: string;
   value: string;
+  // Short unit suffix rendered baseline-aligned with the big number ("hrs",
+  // "min", "events", "k"). Kept terse — the bento column is narrow.
+  unit?: string;
   deltaPct: number | null;
   // If true, a positive delta (more outages, longer SAIDI) is bad. The arrow
   // color flips so "up" reads red.
@@ -141,11 +146,16 @@ function BigStat({
       <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-navy-600">
         {label}
       </span>
-      <span
-        className={`text-[42px] leading-none font-semibold tracking-[-0.035em] tabular-nums ${valueClass}`}
-      >
-        {value}
-      </span>
+      <div className="flex items-baseline gap-1.5 min-w-0">
+        <span
+          className={`text-[40px] leading-none font-semibold tracking-[-0.035em] tabular-nums ${valueClass}`}
+        >
+          {value}
+        </span>
+        {unit ? (
+          <span className="text-[13px] font-medium text-navy-600 truncate">{unit}</span>
+        ) : null}
+      </div>
       <DeltaSub deltaPct={deltaPct} invert={invert ?? false} />
     </div>
   );

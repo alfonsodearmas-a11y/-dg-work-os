@@ -8,7 +8,6 @@ import { ProjectsCard } from './cards/ProjectsCard';
 import { ProcurementCard } from './cards/ProcurementCard';
 import { GridReliabilityCard } from './cards/GridReliabilityCard';
 import { OutagesCard } from './cards/OutagesCard';
-import { PendingApplicationsCard } from './cards/PendingApplicationsCard';
 import { ApplicationEfficiencyCard } from './cards/ApplicationEfficiencyCard';
 import { StationAvailabilityCard } from './cards/StationAvailabilityCard';
 import { AirstripOperationsCard } from './cards/AirstripOperationsCard';
@@ -22,10 +21,10 @@ interface AgencyBentoProps {
 // 12-col grid. Below xl, cells flow in document order in a 2- or 1-col stack.
 //
 // xl layout (12 cols × 4 rows):
-//   Row 1:  Tasks (4) | Projects (4) | Tenders (4)
+//   Row 1:  Tasks (4) | Projects (4) | Procurement (4)
 //   Row 2:  GridReliability (8, 2 rows) | Outages (4, 2 rows)
 //   Row 3:  (GR cont)                   | (Outages cont)
-//   Row 4:  PendingApps (3) | AppEfficiency (3) | StationAvailability (6)
+//   Row 4:  AppEfficiency (6) | StationAvailability (6)
 //
 // HAS variant replaces the entire GPL row-2/3 with the AirstripOps card and
 // uses only the three common cells in row 1.
@@ -97,19 +96,13 @@ export function AgencyBento({ slug, data }: AgencyBentoProps) {
               href={hrefs.outages ?? '/pulse/gpl/grid-health'}
               className="xl:col-span-4 xl:row-span-2"
             />
-            <PendingApplicationsCard
-              data={data.gpl.outstanding_applications}
-              href={hrefs.pendingApplications ?? '/intel/pending-applications'}
-              methodologyHref={hrefs.methodology}
-              className="xl:col-span-3"
-            />
             <ApplicationEfficiencyCard
               throughput={data.gpl.application_throughput}
               pipeline={data.gpl.application_pipeline}
               href={hrefs.applicationEfficiency ?? '/intel/pending-applications'}
               methodologyHref={hrefs.methodology}
               accent={accent}
-              className="xl:col-span-3"
+              className="xl:col-span-6"
             />
             <StationAvailabilityCard
               stations={data.gpl.station_health}
