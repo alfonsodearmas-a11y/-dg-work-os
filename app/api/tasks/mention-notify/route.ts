@@ -19,12 +19,13 @@ export async function POST(request: NextRequest) {
 
     const session = authResult.session;
 
-    // Fetch task status + comment body in parallel (independent queries)
+    // Fetch task (status + title) and comment body in parallel
     const [{ data: taskRow }, { data: commentRow }] = await Promise.all([
-      supabaseAdmin.from('tasks').select('status').eq('id', taskId).single(),
+      supabaseAdmin.from('tasks').select('status, title').eq('id', taskId).single(),
       supabaseAdmin.from('task_comments').select('body').eq('id', commentId).single(),
     ]);
     const taskStatus = taskRow?.status || undefined;
+    const taskTitle = taskRow?.title || undefined;
 
     // Build clean body text
     const { cleanBody } = await cleanMentionBody(commentRow?.body || '');
@@ -39,10 +40,10 @@ export async function POST(request: NextRequest) {
         entityId: commentId,
         parentEntityType: 'task',
         parentEntityId: taskId,
+        parentEntityTitle: taskTitle,
         title: `${session.user.name || 'Someone'} mentioned you`,
         body: cleanBody,
-        referenceUrl: '/tasks',
-        metadata: { taskId },
+        metadata: { taskId, commentId },
         tierContext: { taskStatus },
       }).catch((err: unknown) => {
         if (err instanceof NotificationDeliveryError) {

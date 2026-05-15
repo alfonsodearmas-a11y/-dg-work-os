@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { logger } from '@/lib/logger';
+import { commentDeepLinkPath, parentDeepLinkPath } from './deep-link';
 
 /**
  * Shared utilities for notification email routes (send-email + digest).
@@ -18,7 +19,7 @@ export function getAppBaseUrl(): string {
 
   if (!url && !_baseUrlWarned) {
     _baseUrlWarned = true;
-    logger.warn('email-utils: getAppBaseUrl(): no NEXTAUTH_URL or VERCEL_URL set — email links will be relative paths');
+    logger.warn('email-utils: getAppBaseUrl(): no NEXTAUTH_URL or VERCEL_URL set, email links will be relative paths');
   }
 
   return url;
@@ -28,12 +29,17 @@ export function entityUrl(notif: {
   reference_url?: string | null;
   entity_type?: string | null;
   entity_id?: string | null;
+  parent_entity_type?: string | null;
+  parent_entity_id?: string | null;
 }): string {
   const base = getAppBaseUrl();
+
+  if (notif.entity_type === 'comment') {
+    return `${base}${commentDeepLinkPath(notif.parent_entity_type, notif.parent_entity_id, notif.entity_id) ?? ''}`;
+  }
+
   if (notif.reference_url && notif.reference_url !== '/') return `${base}${notif.reference_url}`;
-  // Deep-link a task email straight to the task on the board.
-  if (notif.entity_type === 'task' && notif.entity_id) return `${base}/tasks?taskId=${notif.entity_id}`;
-  if (notif.entity_type === 'task') return `${base}/tasks`;
+  if (notif.entity_type === 'task') return `${base}${parentDeepLinkPath('task', notif.entity_id ?? null) ?? '/tasks'}`;
   if (notif.entity_type === 'project' && notif.entity_id) return `${base}/projects/${notif.entity_id}`;
   return base;
 }

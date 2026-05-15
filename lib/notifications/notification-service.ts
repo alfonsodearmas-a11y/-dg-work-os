@@ -36,6 +36,7 @@ export interface CreateNotificationParams {
   entityId: string;
   parentEntityType?: string;
   parentEntityId?: string;
+  parentEntityTitle?: string;
   title: string;
   body?: string;
   referenceUrl?: string;     // URL path like '/tasks'
@@ -184,6 +185,7 @@ export async function createNotification(
     entityId,
     parentEntityType,
     parentEntityId,
+    parentEntityTitle,
     title,
     body,
     referenceUrl,
@@ -195,6 +197,11 @@ export async function createNotification(
   if (actorId && actorId === recipientId) {
     return null;
   }
+
+  const mergedMetadata: Record<string, unknown> = {
+    ...(metadata ?? {}),
+    ...(parentEntityTitle ? { parentEntityTitle } : {}),
+  };
 
   try {
     // 2. Classify tier
@@ -232,7 +239,7 @@ export async function createNotification(
         .update({
           title,
           body: body ?? '',
-          metadata: metadata ?? {},
+          metadata: mergedMetadata,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id)
@@ -279,7 +286,7 @@ export async function createNotification(
       source_module: 'notifications-v2',
       priority,
       icon,
-      metadata: metadata ?? {},
+      metadata: mergedMetadata,
     };
 
     // 6. Email handling

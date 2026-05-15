@@ -128,6 +128,28 @@ function KanbanBoardInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Open the task detail panel when ?taskId=... is present (notification deep link).
+  // Fires once per deepLinkTaskId per session. Query params stay in the URL so
+  // refresh and link-sharing keep working, and the ref guard prevents the
+  // polling fetch from re-opening the panel after the user closes it.
+  const deepLinkTaskId = searchParams.get('taskId');
+  const handledDeepLinkRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!deepLinkTaskId) return;
+    if (handledDeepLinkRef.current === deepLinkTaskId) return;
+    let found: Task | null = null;
+    for (const status of COLUMNS) {
+      const hit = state.tasks[status].find((t) => t.id === deepLinkTaskId);
+      if (hit) {
+        found = hit;
+        break;
+      }
+    }
+    if (!found) return;
+    dispatch({ type: 'OPEN_PANEL', task: found });
+    handledDeepLinkRef.current = deepLinkTaskId;
+  }, [deepLinkTaskId, state.tasks, dispatch]);
+
   // ---------------------------------------------------------------------------
   // Data fetching
   // ---------------------------------------------------------------------------
@@ -942,6 +964,11 @@ function KanbanBoardInner() {
         onUpdate={updateTask}
         onDelete={deleteTask}
         users={state.users}
+        focusCommentId={
+          state.panelTask?.id === deepLinkTaskId
+            ? (searchParams.get('commentId') ?? undefined)
+            : undefined
+        }
       />
 
       {/* Calendar Event Modal */}
