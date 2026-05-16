@@ -1,11 +1,14 @@
 'use client';
 
-import Link from 'next/link';
+import { useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
+import { fmtGuyanaDate } from '@/lib/format';
 import type { TodaySignal } from '@/lib/today/types';
 import type { SlaSummary } from '@/lib/today/sla-summary';
 import { SlaDonut } from './SlaDonut';
 import { agencyColor } from './agency-colors';
+import { EscalateModal } from './EscalateModal';
+import type { ReferralSourceType } from '@/lib/referrals/types';
 
 interface UrgentHeroProps {
   topSignal: TodaySignal | null;
@@ -13,7 +16,14 @@ interface UrgentHeroProps {
   agencyBreaches: Map<string, number>;
 }
 
+function sourceTypeForSignal(kind: TodaySignal['kind']): ReferralSourceType {
+  if (kind === 'tender_sla' || kind === 'stagnant_tender') return 'tender';
+  if (kind === 'delayed_project') return 'project';
+  return 'other';
+}
+
 export function UrgentHero({ topSignal, sla, agencyBreaches }: UrgentHeroProps) {
+  const [escalateOpen, setEscalateOpen] = useState(false);
   if (!topSignal) {
     return (
       <article
@@ -87,18 +97,36 @@ export function UrgentHero({ topSignal, sla, agencyBreaches }: UrgentHeroProps) 
       <div className="mt-auto pt-4 border-t border-navy-800/40 space-y-4">
         <DonutAndStats sla={sla} />
 
-        <div className="flex flex-wrap gap-3 pt-1">
-          <Link href={topSignal.href} className="btn-gold text-sm">
-            Open tender
-          </Link>
-          <Link
-            href={`/tasks?source=tender&tender=${topSignal.sourceId}`}
-            className="btn-navy text-sm"
+        <div className="pt-1 space-y-2">
+          <p className="text-xs text-navy-500">
+            Top urgency for {days} {days === 1 ? 'day' : 'days'}. Last escalation:{' '}
+            {topSignal.lastEscalation
+              ? (
+                  <>
+                    Referred to Minister, {fmtGuyanaDate(topSignal.lastEscalation.submitted_at)},{' '}
+                    <span className="font-mono">{topSignal.lastEscalation.reference_number}</span>.
+                  </>
+                )
+              : 'none.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => setEscalateOpen(true)}
+            className="btn-gold text-sm"
           >
-            Assign DDG
-          </Link>
+            Escalate
+          </button>
         </div>
       </div>
+
+      <EscalateModal
+        isOpen={escalateOpen}
+        onClose={() => setEscalateOpen(false)}
+        sourceType={sourceTypeForSignal(topSignal.kind)}
+        sourceId={topSignal.sourceId}
+        preFillTitle={topSignal.title}
+        preFillAgency={topSignal.agency}
+      />
     </article>
   );
 }

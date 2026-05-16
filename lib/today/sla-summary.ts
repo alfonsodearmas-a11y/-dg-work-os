@@ -36,7 +36,7 @@ export async function getSlaSummary(
   agency: string | null,
   now: Date = new Date(),
 ): Promise<SlaSummary> {
-  const tenders = await listTenders({ agency: scopedAgency(role, agency) });
+  const tenders = await listTenders({ agency: scopedAgency(role, agency), skipReferrals: true });
   const qStart = quarterStartUTC(now).toISOString();
 
   let tendersThisQuarter = 0;

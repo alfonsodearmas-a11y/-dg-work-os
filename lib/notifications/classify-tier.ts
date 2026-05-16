@@ -13,7 +13,8 @@ export type NotificationEventType =
   | 'subtask_completed'
   | 'task_watcher_notification'
   | 'task_daily_reminder'
-  | 'task_agency_head_notice';
+  | 'task_agency_head_notice'
+  | 'referral_direction_given';
 
 export interface TierContext {
   taskPriority?: string;   // 'low' | 'medium' | 'high' | 'critical'
@@ -101,6 +102,10 @@ export function classifyNotificationTier(
 
     // ── Agency-head-of-agency notice: always important ───────────────
     case 'task_agency_head_notice':
+      return 'important';
+
+    // ── Minister direction logged on a referral: always important ────
+    case 'referral_direction_given':
       return 'important';
   }
 }

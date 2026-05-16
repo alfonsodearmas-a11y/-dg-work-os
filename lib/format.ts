@@ -71,3 +71,40 @@ export function fmtFileSize(bytes: number | null | undefined): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+/** Format a date or ISO timestamp in Guyana local time. */
+export function fmtGuyanaDate(
+  iso: string | null | undefined,
+  format: 'long' | 'short' = 'short',
+): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Guyana',
+    day: 'numeric',
+    month: format === 'long' ? 'long' : 'short',
+    year: 'numeric',
+  }).format(d);
+}
+
+/** Format a timestamp with date + HH:MM in Guyana local time. */
+export function fmtGuyanaDateTime(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Guyana',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d);
+}
+
+/** Truncate with single-char ellipsis. Trailing punctuation/whitespace is stripped first. */
+export function truncate(s: string, max: number): string {
+  if (s.length <= max) return s;
+  return s.slice(0, max).replace(/[\s.,;:!?]+$/, '') + '…';
+}

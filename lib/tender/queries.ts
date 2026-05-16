@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
+import { getActiveReferralsForSources } from '@/lib/referrals/source-lookup';
 import {
   AGENCY_LABEL,
   TENDER_STAGES,
@@ -154,7 +155,13 @@ function enrichTender(row: Record<string, unknown>): Tender {
 // ── Queries ───────────────────────────────────────────────────────────────────
 
 export async function listTenders(
-  opts: { agency?: string; includeMissing?: boolean; includeRollovers?: boolean; includeArchived?: boolean } = {},
+  opts: {
+    agency?: string;
+    includeMissing?: boolean;
+    includeRollovers?: boolean;
+    includeArchived?: boolean;
+    skipReferrals?: boolean;
+  } = {},
 ): Promise<Tender[]> {
   // Status is the Phase 2 authoritative filter. Default surface is
   // status='active'. Callers opt into other states explicitly.
@@ -183,7 +190,29 @@ export async function listTenders(
   if (error) throw error;
 
   const rows = (data || []) as unknown as Record<string, unknown>[];
-  return rows.map((r) => enrichTender(r));
+  const tenders = rows.map((r) => enrichTender(r));
+  if (!opts.skipReferrals) await attachActiveReferrals(tenders);
+  return tenders;
+}
+
+async function attachActiveReferrals(tenders: Tender[]): Promise<void> {
+  if (tenders.length === 0) return;
+  try {
+    const ids = tenders.map((t) => t.id);
+    const map = await getActiveReferralsForSources('tender', ids);
+    for (const t of tenders) {
+      const found = map.get(t.id);
+      t.activeReferral = found
+        ? {
+            reference_number: found.reference_number,
+            status: found.status as 'submitted' | 'with_minister' | 'direction_given',
+            submitted_at: found.submitted_at,
+          }
+        : null;
+    }
+  } catch {
+    // Optional enrichment; the table may not yet exist in test/CI.
+  }
 }
 
 export async function getTenderById(id: string): Promise<
@@ -246,7 +275,9 @@ export async function getTenderById(id: string): Promise<
     created_at: n.created_at as string,
   }));
 
-  return { ...tender, field_changes, documents, notes };
+  const enriched = { ...tender, field_changes, documents, notes };
+  await attachActiveReferrals([enriched]);
+  return enriched;
 }
 
 export async function createManualTender(input: {

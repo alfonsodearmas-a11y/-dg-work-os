@@ -19,6 +19,7 @@ import { getProjects } from '@/lib/delayed-projects/queries';
 import { enrichProject } from '@/lib/delayed-projects/types';
 import type { DelayedProject, DelayedProjectWithComputed } from '@/lib/delayed-projects/types';
 import { listTenders } from '@/lib/tender/queries';
+import { getActiveReferralsForSources } from '@/lib/referrals/source-lookup';
 import { STAGE_CONFIG } from '@/lib/tender/types';
 import type { Tender } from '@/lib/tender/types';
 import {
@@ -175,7 +176,8 @@ export async function fetchTenderSlaSignals(
   agency: string | null,
   now: Date = new Date(),
 ): Promise<TodaySignal[]> {
-  const tenders = await listTenders({ agency: scopedAgency(role, agency) });
+  // attachLastEscalations below covers the referral enrichment for these signals.
+  const tenders = await listTenders({ agency: scopedAgency(role, agency), skipReferrals: true });
 
   const signals: TodaySignal[] = [];
   for (const t of tenders) {
@@ -539,6 +541,9 @@ export async function getTodaySignals(
 
   const signals = all.slice(0, FETCH_LIMIT);
 
+  // Enrich tender + project signals with their last referral, if any.
+  await attachLastEscalations(signals);
+
   const counts = { critical: 0, high: 0, medium: 0, total: signals.length };
   for (const s of signals) counts[s.severity]++;
 
@@ -548,6 +553,35 @@ export async function getTodaySignals(
     sources,
     generatedAt: now.toISOString(),
   };
+}
+
+async function attachLastEscalations(signals: TodaySignal[]): Promise<void> {
+  const tenderIds = signals
+    .filter((s) => s.kind === 'tender_sla' || s.kind === 'stagnant_tender')
+    .map((s) => s.sourceId);
+  const projectIds = signals.filter((s) => s.kind === 'delayed_project').map((s) => s.sourceId);
+  if (tenderIds.length === 0 && projectIds.length === 0) return;
+
+  try {
+    const [tenderMap, projectMap] = await Promise.all([
+      tenderIds.length ? getActiveReferralsForSources('tender', tenderIds) : Promise.resolve(new Map()),
+      projectIds.length ? getActiveReferralsForSources('project', projectIds) : Promise.resolve(new Map()),
+    ]);
+
+    for (const s of signals) {
+      const map =
+        s.kind === 'tender_sla' || s.kind === 'stagnant_tender'
+          ? tenderMap
+          : s.kind === 'delayed_project'
+            ? projectMap
+            : null;
+      if (!map) continue;
+      const found = map.get(s.sourceId);
+      s.lastEscalation = found ?? null;
+    }
+  } catch {
+    // Optional enrichment; the table may not yet exist in test/CI.
+  }
 }
 
 function healthFrom<T>(r: PromiseSettledResult<T>): { ok: boolean; error?: string } {

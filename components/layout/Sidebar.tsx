@@ -29,6 +29,8 @@ import {
   CalendarDays,
   ChevronsLeft,
   Gauge,
+  FileSignature,
+  Inbox,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useState, useRef, useCallback, useEffect, Fragment } from 'react';
@@ -90,6 +92,8 @@ const mainNavItems = [
   { href: '/meetings', label: 'Meetings', icon: Mic, moduleSlug: 'meetings' },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays, moduleSlug: 'calendar' },
   { href: '/documents', label: 'Documents', icon: FileText, moduleSlug: 'documents' },
+  { href: '/referrals', label: 'Ministerial Referrals', icon: FileSignature, moduleSlug: 'ministerial-referrals' },
+  { href: '/minister/referrals', label: 'Referrals to Minister', icon: Inbox, moduleSlug: 'minister-referrals' },
 ];
 
 type AgencyItem = {
