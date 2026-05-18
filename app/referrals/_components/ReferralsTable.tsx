@@ -101,8 +101,18 @@ export function ReferralsTable({ initial, canEdit }: ReferralsTableProps) {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-navy-500">
-                  No referrals match the current filters.
+                <td colSpan={7} className="px-4 py-16 text-center">
+                  {initial.length === 0 ? (
+                    <div className="flex flex-col items-center gap-2 text-navy-500">
+                      <p className="text-base text-white">No referrals yet</p>
+                      <p className="text-sm">
+                        Open the Most Urgent card on the dashboard, click Escalate, and refer the
+                        first item to the Minister.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-navy-500">No referrals match the current filters.</p>
+                  )}
                 </td>
               </tr>
             ) : (

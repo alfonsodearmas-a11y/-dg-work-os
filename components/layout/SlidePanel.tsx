@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { X, ArrowLeft } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -16,6 +17,9 @@ interface SlidePanelProps {
 
 export function SlidePanel({ isOpen, onClose, title, subtitle, icon: Icon, accentColor, children }: SlidePanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  // mounted gate so SSR renders nothing and createPortal only runs in the browser.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -40,7 +44,12 @@ export function SlidePanel({ isOpen, onClose, title, subtitle, icon: Icon, accen
     };
   }, [isOpen]);
 
-  return (
+  if (!mounted) return null;
+
+  // Portal to body so the panel escapes any ancestor with a containing-block
+  // trigger (transform / filter / backdrop-filter — e.g. .card-premium uses
+  // backdrop-filter, which would otherwise trap a fixed-positioned panel).
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
@@ -97,6 +106,7 @@ export function SlidePanel({ isOpen, onClose, title, subtitle, icon: Icon, accen
           {children}
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
