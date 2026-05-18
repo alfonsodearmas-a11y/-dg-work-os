@@ -2,6 +2,10 @@ import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import { getActiveReferralsForSources } from '@/lib/referrals/source-lookup';
 import {
+  getActiveQueueRowsForTenders,
+  getLatestReportsForTenders,
+} from '@/lib/nptab/source-lookup';
+import {
   AGENCY_LABEL,
   TENDER_STAGES,
   type ArchiveReasonCode,
@@ -197,21 +201,26 @@ export async function listTenders(
 
 async function attachActiveReferrals(tenders: Tender[]): Promise<void> {
   if (tenders.length === 0) return;
-  try {
-    const ids = tenders.map((t) => t.id);
-    const map = await getActiveReferralsForSources('tender', ids);
-    for (const t of tenders) {
-      const found = map.get(t.id);
-      t.activeReferral = found
-        ? {
-            reference_number: found.reference_number,
-            status: found.status as 'submitted' | 'with_minister' | 'direction_given',
-            submitted_at: found.submitted_at,
-          }
-        : null;
-    }
-  } catch {
-    // Optional enrichment; the table may not yet exist in test/CI.
+  const ids = tenders.map((t) => t.id);
+  // Optional enrichments; any source table may be unavailable in test/CI, so
+  // catch per-promise and fall back to an empty map.
+  const empty = <K, V>(): Map<K, V> => new Map<K, V>();
+  const [referralMap, queueMap, reportMap] = await Promise.all([
+    getActiveReferralsForSources('tender', ids).catch(() => empty<string, Awaited<ReturnType<typeof getActiveReferralsForSources>> extends Map<string, infer V> ? V : never>()),
+    getActiveQueueRowsForTenders(ids).catch(() => empty<string, Awaited<ReturnType<typeof getActiveQueueRowsForTenders>> extends Map<string, infer V> ? V : never>()),
+    getLatestReportsForTenders(ids).catch(() => empty<string, Awaited<ReturnType<typeof getLatestReportsForTenders>> extends Map<string, infer V> ? V : never>()),
+  ]);
+  for (const t of tenders) {
+    const r = referralMap.get(t.id);
+    t.activeReferral = r
+      ? {
+          reference_number: r.reference_number,
+          status: r.status as 'submitted' | 'with_minister' | 'direction_given',
+          submitted_at: r.submitted_at,
+        }
+      : null;
+    t.activeNptabQueue = queueMap.get(t.id) ?? null;
+    t.latestNptabReport = reportMap.get(t.id) ?? null;
   }
 }
 

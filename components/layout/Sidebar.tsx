@@ -31,6 +31,7 @@ import {
   Gauge,
   FileSignature,
   Inbox,
+  FileBarChart,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useState, useRef, useCallback, useEffect, Fragment } from 'react';
@@ -40,6 +41,7 @@ import { useSidebar } from './SidebarContext';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import { ViewAsSelector } from './ViewAsSelector';
+import type { Role } from '@/lib/auth';
 
 import { ROLE_LABELS, MINISTRY_ROLES } from '@/lib/people-types';
 
@@ -81,7 +83,18 @@ function useTooltip() {
   return { tooltip, onEnter, onLeave };
 }
 
-const mainNavItems = [
+// Restrict visibility beyond module access when set. Used for role-exclusive
+// items where the ministry-bypass in module access (lib/modules/access.ts)
+// would otherwise leak the item across roles.
+interface NavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  moduleSlug: string;
+  requireRole?: Role[];
+}
+
+const mainNavItems: NavItem[] = [
   { href: '/', label: 'Mission Control', icon: LayoutDashboard, moduleSlug: 'briefing' },
   { href: '/intel', label: 'Agency Intel', icon: Activity, moduleSlug: 'agency-intel' },
   { href: '/tasks', label: 'Tasks', icon: CheckSquare, moduleSlug: 'tasks' },
@@ -92,8 +105,9 @@ const mainNavItems = [
   { href: '/meetings', label: 'Meetings', icon: Mic, moduleSlug: 'meetings' },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays, moduleSlug: 'calendar' },
   { href: '/documents', label: 'Documents', icon: FileText, moduleSlug: 'documents' },
-  { href: '/referrals', label: 'Ministerial Referrals', icon: FileSignature, moduleSlug: 'ministerial-referrals' },
-  { href: '/minister/referrals', label: 'Referrals to Minister', icon: Inbox, moduleSlug: 'minister-referrals' },
+  { href: '/referrals', label: 'Ministerial Referrals', icon: FileSignature, moduleSlug: 'ministerial-referrals', requireRole: ['dg', 'ps'] },
+  { href: '/nptab-reports', label: 'NPTAB Reports', icon: FileBarChart, moduleSlug: 'nptab-reports', requireRole: ['dg', 'ps'] },
+  { href: '/minister/referrals', label: 'Referrals to Minister', icon: Inbox, moduleSlug: 'minister-referrals', requireRole: ['minister'] },
 ];
 
 type AgencyItem = {
@@ -168,7 +182,11 @@ export function Sidebar() {
     : agencies.filter(a => a.code === userAgency?.toLowerCase());
 
   // Filter by module access
-  const filteredMainNav = mainNavItems.filter(item => canAccess(item.moduleSlug));
+  const filteredMainNav = mainNavItems.filter(
+    (item) =>
+      canAccess(item.moduleSlug) &&
+      (!item.requireRole || item.requireRole.includes(userRole as Role)),
+  );
   const filteredAgencies = visibleAgencies.filter(a => canAccess(a.moduleSlug));
   const filteredAdminItems = adminItems.filter(item => canAccess(item.moduleSlug));
 

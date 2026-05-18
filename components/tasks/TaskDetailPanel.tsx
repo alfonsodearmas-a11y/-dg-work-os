@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Trash2, Loader2, Plus, X, Square, CheckSquare } from 'lucide-react';
+import { Trash2, Loader2, Plus, X, Square, CheckSquare, FileSignature } from 'lucide-react';
+import { EscalateModal } from '@/components/today/EscalateModal';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Task, TaskUpdate, Subtask, TaskActivity } from '@/lib/task-types';
@@ -41,6 +42,7 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [completeOpen, setCompleteOpen] = useState(false);
+  const [escalateOpen, setEscalateOpen] = useState(false);
 
   const { data: session } = useSession();
   const router = useRouter();
@@ -232,6 +234,17 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
 
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto">
+        {/* Refer to Minister */}
+        <div className="px-3 md:px-6 pt-3 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setEscalateOpen(true)}
+            className="btn-navy text-xs flex items-center gap-2"
+          >
+            <FileSignature size={12} aria-hidden="true" /> Refer to Minister
+          </button>
+        </div>
+
         {/* DETAILS section */}
         <TaskMetadata
           task={task}
@@ -421,6 +434,16 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
           taskId={task.id}
           onClose={() => setCompleteOpen(false)}
           onDone={() => { setCompleteOpen(false); router.refresh(); }}
+        />
+      )}
+      {task && (
+        <EscalateModal
+          isOpen={escalateOpen}
+          onClose={() => setEscalateOpen(false)}
+          sourceType="task"
+          sourceId={task.id}
+          preFillTitle={task.title}
+          preFillAgency={task.agency ? task.agency.toUpperCase() : null}
         />
       )}
     </div>
