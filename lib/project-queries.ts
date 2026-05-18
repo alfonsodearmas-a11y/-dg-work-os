@@ -481,12 +481,19 @@ export async function getProjectById(projectId: string): Promise<Project | null>
   return data ? enrichProject(data) : null;
 }
 
-export async function getDelayedProjects(): Promise<Project[]> {
-  const { data } = await supabaseAdmin
+export async function getDelayedProjects(agency?: string): Promise<Project[]> {
+  let query = supabaseAdmin
     .from('projects')
     .select(PROJECT_ALL_COLUMNS)
     .gt('completion_pct', 0)
     .lt('completion_pct', 100);
+
+  // Scope to a single executing agency when provided. Callers must pass the
+  // canonical UPPERCASE code (per migration 106) — same convention used by
+  // the rest of the project queries (see filters.agency around line 370).
+  if (agency) query = query.eq('sub_agency', agency);
+
+  const { data } = await query;
 
   return (data || [])
     .map(enrichProject)
