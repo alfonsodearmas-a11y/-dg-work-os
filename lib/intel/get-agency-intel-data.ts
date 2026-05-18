@@ -116,6 +116,49 @@ export interface HasAirstripOps {
   overdue: AirstripOpsRow[];
 }
 
+// Outage aggregates over the trailing 30 days, computed once in JS so the
+// new Grid Reliability surfaces (daily-outage timeline + top feeders by
+// customer-hours) don't each need their own query.
+export interface OutageAggregates {
+  // Length-30 series ordered oldest → newest. Each entry is { date,
+  // outage_count, customer_hours }. Zero-count days are included so the
+  // visualization can paint an even bar strip.
+  daily_30d: Array<{
+    date: string; // YYYY-MM-DD
+    outage_count: number;
+    customer_hours: number;
+  }>;
+  // Top feeders by customer-hours lost over the same 30-day window. Capped at
+  // 5; rows with null feeder_code are bucketed as 'UNKNOWN'.
+  top_feeders: Array<{
+    feeder_code: string;
+    customer_hours: number;
+    outage_count: number;
+  }>;
+  // Window endpoints, useful for axis labels on the timeline.
+  window_start: string; // YYYY-MM-DD inclusive
+  window_end: string; // YYYY-MM-DD inclusive
+}
+
+export interface PendingApplicationsMeta {
+  total: number;
+  over_30_days: number;
+  avg_days_waiting: number;
+  max_days_waiting: number;
+  // application_date the data was reported through (YYYY-MM-DD); null when no rows.
+  data_as_of: string | null;
+}
+
+// One row per pipeline stage of GPL applications. Returned in the canonical
+// progression order so the funnel renders Survey → Estimation → Designs →
+// Approval → Metering → Execution → Other with bars narrowing as the funnel
+// thins out.
+export interface ApplicationPipelineStage {
+  stage: string;
+  count: number;
+  avg_days_waiting: number;
+}
+
 export interface ApplicationThroughput {
   // Closed in the last 30 days (approved | rejected).
   closed_30d: number;
@@ -153,11 +196,21 @@ export interface AgencyIntelData {
     outage_count_mtd: number;
     grid_reliability: GridReliability;
     application_throughput: ApplicationThroughput;
+    outage_aggregates: OutageAggregates;
+    application_pipeline: ApplicationPipelineStage[];
   };
 
   // HAS-only extras. Undefined for other agencies.
   has?: {
     airstrip_ops: HasAirstripOps;
+  };
+
+  // GWI-only extras. Undefined for other agencies. GPL has its own
+  // outstanding_applications under data.gpl (older customer_applications
+  // table); GWI reads from the canonical pending_applications view used by
+  // /intel/pending-applications.
+  gwi?: {
+    pending_applications: PendingApplicationsMeta;
   };
 }
 
@@ -281,6 +334,118 @@ async function getOutstandingApplications(): Promise<AgencyOutstandingApplicatio
   };
 }
 
+// Pending applications for GPL/GWI. Reads from the
+// `pending_applications_with_wait` view so days_waiting is computed live.
+// Range cap of 50k matches /api/pending-applications/stats so the Supabase
+// PostgREST default of 1000 doesn't silently truncate GPL aggregates.
+async function getPendingApplicationsForAgency(
+  agency: 'GPL' | 'GWI',
+): Promise<PendingApplicationsMeta | null> {
+  const { data, error } = await supabaseAdmin
+    .from('pending_applications_with_wait')
+    .select('days_waiting, application_date')
+    .eq('agency', agency)
+    .range(0, 49999);
+
+  if (error) {
+    logger.error(
+      { err: error, agency },
+      'getPendingApplicationsForAgency: query failed',
+    );
+    return null;
+  }
+  const rows = data ?? [];
+  if (rows.length === 0) return null;
+
+  const days = rows.map((r) => Number(r.days_waiting) || 0);
+  const total = days.length;
+  const over_30_days = days.filter((d) => d > 30).length;
+  const max_days_waiting = Math.max(...days);
+  const avg_days_waiting = Math.round(
+    days.reduce((acc, d) => acc + d, 0) / total,
+  );
+
+  let data_as_of: string | null = null;
+  for (const r of rows) {
+    const ad = r.application_date ? String(r.application_date) : '';
+    if (ad && (!data_as_of || ad > data_as_of)) data_as_of = ad;
+  }
+
+  return { total, over_30_days, avg_days_waiting, max_days_waiting, data_as_of };
+}
+
+// Open GPL applications bucketed by their detected pipeline_stage. Order
+// follows the typical progression in the parser's STAGE_MAP — funnel renders
+// reflect actual application flow, with bars narrowing as work moves down
+// the pipeline.
+const APPLICATION_PIPELINE_ORDER = [
+  'Survey',
+  'Estimation',
+  'Designs',
+  'Approval',
+  'Metering',
+  'Execution',
+  'Other',
+] as const;
+
+async function getApplicationPipelineForGPL(): Promise<ApplicationPipelineStage[]> {
+  const { data, error } = await supabaseAdmin
+    .from('pending_applications_with_wait')
+    .select('pipeline_stage, days_waiting')
+    .eq('agency', 'GPL')
+    .range(0, 49999);
+
+  if (error) {
+    logger.error(
+      { err: error },
+      'getApplicationPipelineForGPL: query failed',
+    );
+    return [];
+  }
+  const rows = data ?? [];
+  if (rows.length === 0) return [];
+
+  const acc = new Map<string, { count: number; totalDays: number }>();
+  for (const r of rows) {
+    const stage = r.pipeline_stage ? String(r.pipeline_stage) : 'Other';
+    const days = Number(r.days_waiting) || 0;
+    const entry = acc.get(stage) ?? { count: 0, totalDays: 0 };
+    entry.count++;
+    entry.totalDays += days;
+    acc.set(stage, entry);
+  }
+
+  // Emit known stages in canonical progression order, then any extra stages
+  // alphabetically. Stage groups with zero rows are dropped from the list so
+  // the funnel doesn't render dead bars.
+  const out: ApplicationPipelineStage[] = [];
+  const seen = new Set<string>();
+  for (const stage of APPLICATION_PIPELINE_ORDER) {
+    const entry = acc.get(stage);
+    if (entry && entry.count > 0) {
+      out.push({
+        stage,
+        count: entry.count,
+        avg_days_waiting: Math.round(entry.totalDays / entry.count),
+      });
+      seen.add(stage);
+    }
+  }
+  const extras = Array.from(acc.entries())
+    .filter(([s]) => !seen.has(s))
+    .sort(([a], [b]) => a.localeCompare(b));
+  for (const [stage, entry] of extras) {
+    if (entry.count === 0) continue;
+    out.push({
+      stage,
+      count: entry.count,
+      avg_days_waiting: Math.round(entry.totalDays / entry.count),
+    });
+  }
+
+  return out;
+}
+
 async function getStationHealth(): Promise<StationHealthRow[]> {
   // Reduce N most-recent rows to one row per station in JS — the schema
   // enforces unique (report_date, station) but has no view we can target.
@@ -360,6 +525,92 @@ async function getRecentOutages(): Promise<{ rows: RecentOutageRow[]; count_mtd:
   }));
 
   return { rows, count_mtd: count ?? rows.length };
+}
+
+// One query for both the 30-day daily-outage timeline and the top-feeders
+// breakdown. Aggregation happens in JS — the result set is small (a few
+// hundred rows / month at most) and Supabase can't both group-by and return
+// raw per-row data in one round trip without a SQL view.
+async function getOutageAggregates(now: Date): Promise<OutageAggregates> {
+  // 30-day window ending today (inclusive). Match end of day so today's
+  // outages are included; start strips to midnight UTC.
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const start = new Date(end);
+  start.setUTCDate(start.getUTCDate() - 29);
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const window_start = fmt(start);
+  const window_end = fmt(end);
+
+  const { data, error } = await supabaseAdmin
+    .from('gpl_outage_cache')
+    .select('date, feeder_code, customers_affected, duration_minutes')
+    .gte('date', window_start)
+    .lte('date', window_end)
+    .range(0, 49999);
+
+  if (error) {
+    logger.error({ err: error }, 'getOutageAggregates: query failed');
+    return {
+      daily_30d: buildEmptyDailySeries(start, end),
+      top_feeders: [],
+      window_start,
+      window_end,
+    };
+  }
+
+  const rows = data ?? [];
+  const dailyMap = new Map<string, { outage_count: number; customer_hours: number }>();
+  const feederMap = new Map<string, { customer_hours: number; outage_count: number }>();
+
+  for (const r of rows) {
+    const date = r.date ? String(r.date) : null;
+    if (!date) continue;
+    const customers = Number(r.customers_affected) || 0;
+    const minutes = Number(r.duration_minutes) || 0;
+    const hours = (customers * minutes) / 60;
+
+    const dEntry = dailyMap.get(date) ?? { outage_count: 0, customer_hours: 0 };
+    dEntry.outage_count++;
+    dEntry.customer_hours += hours;
+    dailyMap.set(date, dEntry);
+
+    const feeder = r.feeder_code ? String(r.feeder_code) : 'UNKNOWN';
+    const fEntry = feederMap.get(feeder) ?? { customer_hours: 0, outage_count: 0 };
+    fEntry.customer_hours += hours;
+    fEntry.outage_count++;
+    feederMap.set(feeder, fEntry);
+  }
+
+  // Backfill missing days as zero-count entries so the timeline strip has
+  // exactly 30 bars in chronological order regardless of data density.
+  const daily_30d = buildEmptyDailySeries(start, end).map((d) => {
+    const hit = dailyMap.get(d.date);
+    return hit ? { ...d, ...hit } : d;
+  });
+
+  const top_feeders = Array.from(feederMap.entries())
+    .map(([feeder_code, agg]) => ({ feeder_code, ...agg }))
+    .sort((a, b) => b.customer_hours - a.customer_hours)
+    .slice(0, 5);
+
+  return { daily_30d, top_feeders, window_start, window_end };
+}
+
+function buildEmptyDailySeries(
+  start: Date,
+  end: Date,
+): OutageAggregates['daily_30d'] {
+  const out: OutageAggregates['daily_30d'] = [];
+  const cursor = new Date(start);
+  while (cursor.getTime() <= end.getTime()) {
+    out.push({
+      date: cursor.toISOString().slice(0, 10),
+      outage_count: 0,
+      customer_hours: 0,
+    });
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return out;
 }
 
 function pctChange(current: number, prior: number): number | null {
@@ -669,6 +920,7 @@ export async function getAgencyIntelData(agencyParam: string): Promise<AgencyInt
   const agency = agencyParam.toUpperCase();
   const isGPL = agency === 'GPL';
   const isHAS = agency === 'HAS';
+  const isGWI = agency === 'GWI';
 
   // Fan all queries (base + agency extras) out in one shot — none depend on
   // each other and the GPL block was the longest sub-step on the GPL page.
@@ -680,6 +932,7 @@ export async function getAgencyIntelData(agencyParam: string): Promise<AgencyInt
     agencyHead,
     gplExtras,
     hasExtras,
+    gwiPendingApps,
   ] = await Promise.all([
     getOpenTasksForAgency(agency),
     getProjects(
@@ -696,9 +949,12 @@ export async function getAgencyIntelData(agencyParam: string): Promise<AgencyInt
           getRecentOutages(),
           getGridReliability(),
           getApplicationThroughput(),
+          getOutageAggregates(new Date()),
+          getApplicationPipelineForGPL(),
         ])
       : Promise.resolve(null),
     isHAS ? getHasAirstripOps() : Promise.resolve(null),
+    isGWI ? getPendingApplicationsForAgency('GWI') : Promise.resolve(null),
   ]);
 
   // Critical takes precedence: a tender flagged as critical (missing decision,
@@ -718,7 +974,15 @@ export async function getAgencyIntelData(agencyParam: string): Promise<AgencyInt
   };
 
   if (gplExtras) {
-    const [outstandingApps, stationHealth, outages, gridReliability, appThroughput] = gplExtras;
+    const [
+      outstandingApps,
+      stationHealth,
+      outages,
+      gridReliability,
+      appThroughput,
+      outageAggregates,
+      applicationPipeline,
+    ] = gplExtras;
     data.gpl = {
       outstanding_applications: outstandingApps,
       station_health: stationHealth,
@@ -726,11 +990,17 @@ export async function getAgencyIntelData(agencyParam: string): Promise<AgencyInt
       outage_count_mtd: outages.count_mtd,
       grid_reliability: gridReliability,
       application_throughput: appThroughput,
+      outage_aggregates: outageAggregates,
+      application_pipeline: applicationPipeline,
     };
   }
 
   if (hasExtras) {
     data.has = { airstrip_ops: hasExtras };
+  }
+
+  if (gwiPendingApps) {
+    data.gwi = { pending_applications: gwiPendingApps };
   }
 
   return data;
