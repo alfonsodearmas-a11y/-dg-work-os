@@ -358,10 +358,10 @@ describe('fetchTenderSlaSignals', () => {
     listTendersMock.mockResolvedValue([]);
 
     await fetchTenderSlaSignals('dg', 'GPL', NOW);
-    expect(listTendersMock).toHaveBeenLastCalledWith({ agency: undefined });
+    expect(listTendersMock).toHaveBeenLastCalledWith(expect.objectContaining({ agency: undefined }));
 
     await fetchTenderSlaSignals('officer', 'GWI', NOW);
-    expect(listTendersMock).toHaveBeenLastCalledWith({ agency: 'GWI' });
+    expect(listTendersMock).toHaveBeenLastCalledWith(expect.objectContaining({ agency: 'GWI' }));
   });
 });
 
@@ -834,9 +834,10 @@ describe('getTodaySignals', () => {
     const out = await getTodaySignals('user-1', 'agency_admin', 'GPL', NOW);
 
     expect(getProjectsMock).toHaveBeenCalledWith(expect.any(Object), 'GPL');
-    expect(listTendersMock).toHaveBeenCalledWith({ agency: 'GPL' });
+    expect(listTendersMock).toHaveBeenCalledWith(expect.objectContaining({ agency: 'GPL' }));
     expect(out.signals.filter((s) => s.kind === 'meeting_action')).toEqual([]);
-    // 3 fromMock calls: stalled + stagnant + incomplete_psip. Meetings path never ran (non-ministry).
-    expect(fromMock).toHaveBeenCalledTimes(3);
+    // 5 fromMock calls: stalled + stagnant + incomplete_psip + 2 referral lookups
+    // (tender + project) from attachLastEscalations. Meetings path never ran (non-ministry).
+    expect(fromMock).toHaveBeenCalledTimes(5);
   });
 });

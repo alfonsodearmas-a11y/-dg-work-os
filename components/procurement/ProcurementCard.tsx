@@ -4,6 +4,7 @@ import { ExternalLink, Repeat, AlertTriangle, HelpCircle, Award, UserPlus } from
 import { METHOD_CONFIG, type Tender } from '@/lib/tender/types';
 import { AgencyBadge } from './AgencyBadge';
 import { DaysAtStageIndicator } from './DaysAtStageIndicator';
+import { ReferralSourceBanner } from '@/components/referrals/ReferralSourceBanner';
 
 interface ProcurementCardProps {
   tender: Tender;
@@ -50,6 +51,9 @@ export function ProcurementCard({ tender, onClick, isDragging, canDrag = true, o
       <h4 className={`text-sm font-medium text-white leading-snug ${isMobile ? 'line-clamp-1 mb-1.5' : 'line-clamp-2 mb-1.5'}`}>
         {tender.description}
       </h4>
+
+      <ReferralSourceBanner referral={tender.activeReferral} compact />
+
 
       {/* Programme activity (categorization context) */}
       {tender.programme_activity && tender.programme_activity !== tender.description && (

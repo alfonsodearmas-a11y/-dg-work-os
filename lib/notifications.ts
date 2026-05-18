@@ -66,6 +66,7 @@ export type EventPreferencesMap = {
   subtask_completed: EventPrefEntry;
   task_watcher_notification: EventPrefEntry;
   task_daily_reminder: EventPrefEntry;
+  referral_direction_given: EventPrefEntry;
 };
 
 export type DigestFrequency = 'daily' | 'weekly' | 'off';
@@ -630,6 +631,8 @@ export const DEFAULT_EVENT_PREFERENCES: EventPreferencesMap = {
   // The daily digest synthesizes one row per (user, task) per day; the row
   // itself is digest-only. 'instant' would defeat the purpose.
   task_daily_reminder: { in_app: true, email: 'digest' },
+  // Minister direction on a referral is high-signal for the referring DG.
+  referral_direction_given: { in_app: true, email: 'instant' },
 };
 
 export async function getPreferences(userId: string): Promise<NotificationPrefs> {

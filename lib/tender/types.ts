@@ -139,6 +139,16 @@ export interface Tender {
   days_at_current_stage: number | null;
   // Optional source-specific enrichment
   trello_url?: string | null;
+  // Optional referral enrichment — set when an active ministerial referral
+  // exists for this tender; absent when none. Populated by the consumer
+  // (kanban / detail panel) using getActiveReferralsForSources.
+  activeReferral?: ActiveReferralBrief | null;
+}
+
+export interface ActiveReferralBrief {
+  reference_number: string;
+  status: 'submitted' | 'with_minister' | 'direction_given';
+  submitted_at: string;
 }
 
 export interface TenderFieldChange {
