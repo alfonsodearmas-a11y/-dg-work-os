@@ -7,7 +7,7 @@ import { NotificationDeliveryError } from './notifications/errors';
 // --- Types ---
 
 export type NotificationCategory = 'meetings' | 'tasks' | 'projects' | 'kpi' | 'oversight' | 'system';
-export type NotificationReferenceType = 'meeting' | 'task' | 'project' | 'kpi' | 'oversight' | 'document' | 'system' | null;
+export type NotificationReferenceType = 'meeting' | 'task' | 'project' | 'kpi' | 'oversight' | 'document' | 'system' | 'comment' | null;
 
 export interface Notification {
   id: string;
