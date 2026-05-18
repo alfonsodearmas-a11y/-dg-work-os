@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { requireRole } from '@/lib/auth-helpers';
 import { fmtGuyanaDate } from '@/lib/format';
 import { getReferralById } from '@/lib/referrals/queries';
 import { REQUESTED_ACTION_LABELS } from '@/lib/referrals/types';
 import { ReferralStatusBadge } from '@/components/referrals/ReferralStatusBadge';
+import { Forbidden } from '@/components/layout/Forbidden';
 import { MinisterReferralActions } from '../_components/MinisterReferralActions';
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +17,12 @@ interface PageProps {
 export default async function MinisterReferralDetailPage({ params }: PageProps) {
   const { id } = await params;
   const result = await requireRole(['minister']);
-  if (result instanceof NextResponse) notFound();
+  if (result instanceof NextResponse) {
+    if (result.status === 403) {
+      return <Forbidden detail="This view is reserved for the Minister." />;
+    }
+    redirect('/login');
+  }
 
   const referral = await getReferralById(id);
   if (!referral) notFound();

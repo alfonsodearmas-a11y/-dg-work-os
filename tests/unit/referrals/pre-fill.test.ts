@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { composeTenderPreFill, composeProjectPreFill } from '@/lib/referrals/pre-fill';
+import { composeTenderPreFill, composeProjectPreFill, composeTaskPreFill } from '@/lib/referrals/pre-fill';
 
 describe('composeTenderPreFill', () => {
   it('strips em-dashes from generated text', () => {
@@ -82,5 +82,48 @@ describe('composeProjectPreFill', () => {
     expect(out.contract_value).toBeNull();
     expect(out.days_overdue).toBeNull();
     expect(out.current_status).toContain('Completion not reported');
+  });
+});
+
+describe('composeTaskPreFill', () => {
+  it('uppercases agency, embeds status and assignee, strips em-dashes', () => {
+    const t = {
+      id: 't-1',
+      title: 'Sign procurement memo — Q2',
+      description: null,
+      status: 'in_progress',
+      priority: 'high',
+      due_date: '2026-04-01',
+      agency: 'gpl',
+      created_at: '2026-03-15T00:00:00Z',
+      assignee_name: 'Keisha Crighton',
+    };
+    const out = composeTaskPreFill(t, new Date('2026-05-17'));
+    expect(out.agency).toBe('GPL');
+    expect(out.title).toBe('Sign procurement memo, Q2');
+    expect(out.background).not.toContain('—');
+    expect(out.current_status).toContain('in progress');
+    expect(out.current_status).toContain('Keisha Crighton');
+    expect(out.days_overdue).toBeGreaterThan(0);
+  });
+
+  it('falls back to title when description missing; handles unassigned + no due_date', () => {
+    const t = {
+      id: 't-2',
+      title: 'Review Cabinet brief',
+      description: '',
+      status: 'not_started',
+      priority: null,
+      due_date: null,
+      agency: null,
+      created_at: '2026-05-10T00:00:00Z',
+      assignee_name: null,
+    };
+    const out = composeTaskPreFill(t, new Date('2026-05-17'));
+    expect(out.background).toBe('Review Cabinet brief');
+    expect(out.current_status).toContain('not started');
+    expect(out.current_status).toContain('unassigned');
+    expect(out.days_overdue).toBeNull();
+    expect(out.agency).toBe('');
   });
 });

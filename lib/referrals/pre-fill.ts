@@ -102,6 +102,44 @@ export function composeProjectPreFill(p: ProjectShape, now: Date): ReferralPreFi
   };
 }
 
+export interface TaskShape {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string | null;
+  due_date: string | null;
+  agency: string | null;
+  created_at: string;
+  assignee_name: string | null;
+}
+
+const TASK_STATUS_LABEL: Record<string, string> = {
+  not_started: 'not started',
+  in_progress: 'in progress',
+  completed: 'completed',
+  blocked: 'blocked',
+};
+
+export function composeTaskPreFill(t: TaskShape, now: Date): ReferralPreFill {
+  const statusLabel = TASK_STATUS_LABEL[t.status] ?? t.status;
+  const createdDate = fmtGuyanaDate(t.created_at);
+  const assignee = t.assignee_name ?? 'unassigned';
+  const description = (t.description && t.description.trim().length > 0) ? t.description : t.title;
+  const background = stripEmDash(description);
+  const currentStatus = stripEmDash(
+    `Task assigned ${createdDate}. Status: ${statusLabel}. Assignee: ${assignee}.`,
+  );
+  return {
+    agency: (t.agency ?? '').toUpperCase(),
+    title: stripEmDash(t.title),
+    days_overdue: t.due_date ? daysSinceISO(t.due_date, now) : null,
+    contract_value: null,
+    background,
+    current_status: currentStatus,
+  };
+}
+
 export async function resolvePreFill(
   sourceType: ReferralSourceType,
   sourceId: string | null,
@@ -127,6 +165,41 @@ export async function resolvePreFill(
       .single();
     if (!data) return null;
     return composeProjectPreFill(data as ProjectShape, now);
+  }
+
+  if (sourceType === 'task') {
+    const { data: raw } = await supabaseAdmin
+      .from('tasks')
+      .select('id, title, description, status, priority, due_date, agency, created_at, owner:owner_user_id ( name )')
+      .eq('id', sourceId)
+      .single();
+    if (!raw) return null;
+    const data = raw as unknown as {
+      id: string;
+      title: string;
+      description: string | null;
+      status: string;
+      priority: string | null;
+      due_date: string | null;
+      agency: string | null;
+      created_at: string;
+      owner: { name: string | null } | { name: string | null }[] | null;
+    };
+    const owner = Array.isArray(data.owner) ? data.owner[0] : data.owner;
+    return composeTaskPreFill(
+      {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        status: data.status,
+        priority: data.priority,
+        due_date: data.due_date,
+        agency: data.agency,
+        created_at: data.created_at,
+        assignee_name: owner?.name ?? null,
+      },
+      now,
+    );
   }
 
   return null;

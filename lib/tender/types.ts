@@ -143,6 +143,9 @@ export interface Tender {
   // exists for this tender; absent when none. Populated by the consumer
   // (kanban / detail panel) using getActiveReferralsForSources.
   activeReferral?: ActiveReferralBrief | null;
+  // NPTAB enrichment, populated similarly via lib/nptab/source-lookup.
+  activeNptabQueue?: NptabBriefs.ActiveNptabQueueBrief | null;
+  latestNptabReport?: NptabBriefs.NptabReportBrief | null;
 }
 
 export interface ActiveReferralBrief {
@@ -150,6 +153,10 @@ export interface ActiveReferralBrief {
   status: 'submitted' | 'with_minister' | 'direction_given';
   submitted_at: string;
 }
+
+import type * as NptabBriefs from '@/lib/nptab/source-lookup';
+export type ActiveNptabQueueBrief = NptabBriefs.ActiveNptabQueueBrief;
+export type NptabReportBrief = NptabBriefs.NptabReportBrief;
 
 export interface TenderFieldChange {
   id: string;

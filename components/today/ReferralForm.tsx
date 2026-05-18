@@ -5,6 +5,7 @@ import { FileSignature, AlertCircle, Loader2 } from 'lucide-react';
 import { containsEmDash } from '@/lib/referrals/em-dash-guard';
 import {
   REQUESTED_ACTION_LABELS,
+  SOURCE_TYPE_LABELS,
   type ReferralRequestedAction,
   type ReferralSourceType,
 } from '@/lib/referrals/types';
@@ -36,6 +37,8 @@ export function ReferralForm({
   onCancel,
 }: ReferralFormProps) {
   const [loadingPreFill, setLoadingPreFill] = useState(Boolean(sourceId));
+  const isSourcelessMode = sourceId === null;
+  const [selectedType, setSelectedType] = useState<ReferralSourceType>(sourceType);
   const [agency, setAgency] = useState(preFillAgency ?? '');
   const [title, setTitle] = useState(preFillTitle ?? '');
   const [background, setBackground] = useState('');
@@ -90,7 +93,7 @@ export function ReferralForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action,
-          source_type: sourceType,
+          source_type: selectedType,
           source_id: sourceId,
           agency,
           title,
@@ -129,6 +132,20 @@ export function ReferralForm({
         <p className="text-xs text-navy-500 flex items-center gap-2">
           <Loader2 size={12} className="animate-spin" /> Loading source data
         </p>
+      )}
+
+      {isSourcelessMode && (
+        <Field label="Source Type" required>
+          <select
+            value={selectedType}
+            onChange={(e) => setSelectedType(e.target.value as ReferralSourceType)}
+            className={inputCls(false)}
+          >
+            {(Object.entries(SOURCE_TYPE_LABELS) as [ReferralSourceType, string][]).map(([v, l]) => (
+              <option key={v} value={v}>{l}</option>
+            ))}
+          </select>
+        </Field>
       )}
 
       <Field label="Agency" required>

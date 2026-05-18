@@ -5,6 +5,7 @@ import { METHOD_CONFIG, type Tender } from '@/lib/tender/types';
 import { AgencyBadge } from './AgencyBadge';
 import { DaysAtStageIndicator } from './DaysAtStageIndicator';
 import { ReferralSourceBanner } from '@/components/referrals/ReferralSourceBanner';
+import { NptabSourceBanner } from '@/components/nptab/NptabSourceBanner';
 
 interface ProcurementCardProps {
   tender: Tender;
@@ -53,6 +54,7 @@ export function ProcurementCard({ tender, onClick, isDragging, canDrag = true, o
       </h4>
 
       <ReferralSourceBanner referral={tender.activeReferral} compact />
+      <NptabSourceBanner queued={tender.activeNptabQueue} reported={tender.latestNptabReport} compact />
 
 
       {/* Programme activity (categorization context) */}

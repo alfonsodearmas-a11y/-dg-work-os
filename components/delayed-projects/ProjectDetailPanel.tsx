@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { SlidePanel } from '@/components/layout/SlidePanel';
-import { Eye } from 'lucide-react';
+import { Eye, FileSignature } from 'lucide-react';
+import { EscalateModal } from '@/components/today/EscalateModal';
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { CHART_TOOLTIP_STYLE } from '@/lib/chart-styles';
 import type { ProjectDetail } from '@/lib/delayed-projects/types';
@@ -22,6 +23,7 @@ interface ProjectDetailPanelProps {
 export function ProjectDetailPanel({ projectId, onClose }: ProjectDetailPanelProps) {
   const [detail, setDetail] = useState<ProjectDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [escalateOpen, setEscalateOpen] = useState(false);
 
   useEffect(() => {
     if (!projectId) {
@@ -53,6 +55,17 @@ export function ProjectDetailPanel({ projectId, onClose }: ProjectDetailPanelPro
         <div className="text-center py-12 text-navy-600 text-sm">Project not found</div>
       ) : (
         <div className="space-y-5">
+          {/* Refer to Minister action */}
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setEscalateOpen(true)}
+              className="btn-navy text-sm flex items-center gap-2"
+            >
+              <FileSignature size={14} aria-hidden="true" /> Refer to Minister
+            </button>
+          </div>
+
           {/* Risk & Status */}
           <div className="flex items-center gap-2 flex-wrap">
             <RiskTierBadge tier={detail.risk_tier} />
@@ -147,6 +160,16 @@ export function ProjectDetailPanel({ projectId, onClose }: ProjectDetailPanelPro
             )}
           </div>
         </div>
+      )}
+      {detail && (
+        <EscalateModal
+          isOpen={escalateOpen}
+          onClose={() => setEscalateOpen(false)}
+          sourceType="project"
+          sourceId={detail.project_reference}
+          preFillTitle={detail.project_name}
+          preFillAgency={detail.sub_agency ? detail.sub_agency.toUpperCase() : null}
+        />
       )}
     </SlidePanel>
   );

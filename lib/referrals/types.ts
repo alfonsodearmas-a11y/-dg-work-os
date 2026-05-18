@@ -1,4 +1,4 @@
-export const REFERRAL_SOURCE_TYPES = ['tender', 'project', 'agency_issue', 'other'] as const;
+export const REFERRAL_SOURCE_TYPES = ['tender', 'project', 'agency_issue', 'task', 'other'] as const;
 export const REFERRAL_REQUESTED_ACTIONS = ['review', 'decision', 'intervention', 'information'] as const;
 export const REFERRAL_STATUSES = ['drafted', 'submitted', 'with_minister', 'direction_given', 'closed'] as const;
 export const REFERRAL_DELIVERY_METHODS = ['email', 'hand_delivered', 'in_meeting', 'other'] as const;
@@ -90,5 +90,6 @@ export const SOURCE_TYPE_LABELS: Record<ReferralSourceType, string> = {
   tender: 'Tender',
   project: 'Project',
   agency_issue: 'Agency Issue',
+  task: 'Task',
   other: 'Other',
 };

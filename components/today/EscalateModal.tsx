@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { AlertOctagon, FileSignature, ScrollText } from 'lucide-react';
 import { SlidePanel } from '@/components/layout/SlidePanel';
 import { ReferralForm } from './ReferralForm';
+import { NptabQueueButton } from '@/components/nptab/NptabQueueButton';
+import { nextQuarterEnd, periodLabel } from '@/lib/nptab/period';
 import type { ReferralSourceType } from '@/lib/referrals/types';
 
 interface EscalateModalProps {
@@ -14,6 +16,8 @@ interface EscalateModalProps {
   sourceId: string | null;
   preFillTitle?: string | null;
   preFillAgency?: string | null;
+  /** Optional — used by the NPTAB queue panel for SLA context. */
+  daysBreach?: number | null;
 }
 
 type View = 'menu' | 'refer' | 'nptab';
@@ -22,6 +26,10 @@ export function EscalateModal(props: EscalateModalProps) {
   const router = useRouter();
   const [view, setView] = useState<View>('menu');
   const [toast, setToast] = useState<string | null>(null);
+  const upcomingPeriod = nextQuarterEnd(new Date());
+  const upcomingPeriodLabel = periodLabel(upcomingPeriod.start, upcomingPeriod.end);
+  // NPTAB reports cover procurement tenders only.
+  const nptabApplies = props.sourceType === 'tender';
 
   function close() {
     setView('menu');
@@ -62,20 +70,23 @@ export function EscalateModal(props: EscalateModalProps) {
 
           <button
             type="button"
-            disabled
-            className="text-left p-4 rounded-xl bg-navy-900/60 border border-navy-800 opacity-60 cursor-not-allowed flex items-start gap-3"
-            aria-label="Queue for NPTAB Report (coming soon)"
+            onClick={() => nptabApplies && setView('nptab')}
+            disabled={!nptabApplies}
+            className={[
+              'text-left p-4 rounded-xl bg-navy-900 border border-navy-800 flex items-start gap-3 transition-colors',
+              nptabApplies
+                ? 'hover:border-gold-500/60'
+                : 'opacity-60 cursor-not-allowed',
+            ].join(' ')}
+            aria-label="Queue for NPTAB Report"
           >
-            <ScrollText className="text-navy-500 mt-0.5 flex-shrink-0" size={20} />
+            <ScrollText className={`mt-0.5 flex-shrink-0 ${nptabApplies ? 'text-gold-500' : 'text-navy-500'}`} size={20} />
             <span>
-              <span className="block font-semibold text-white">
-                Queue for NPTAB Report
-                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase bg-navy-800 text-navy-400">
-                  Coming soon
-                </span>
-              </span>
+              <span className="block font-semibold text-white">Queue for NPTAB Report</span>
               <span className="block text-sm text-navy-500 mt-1">
-                Stage this item for inclusion in the next NPTAB reporting cycle.
+                {nptabApplies
+                  ? `Add this tender to the upcoming ${upcomingPeriodLabel} Procurement Performance Report to NPTAB.`
+                  : 'NPTAB reports cover procurement tenders only.'}
               </span>
             </span>
           </button>
@@ -98,6 +109,23 @@ export function EscalateModal(props: EscalateModalProps) {
             // Auto-close after a short pause so the user sees the confirmation.
             setTimeout(() => close(), 1400);
             void referralId;
+          }}
+          onCancel={() => setView('menu')}
+        />
+      )}
+
+      {view === 'nptab' && nptabApplies && props.sourceId && (
+        <NptabQueueButton
+          tenderId={props.sourceId}
+          tenderTitle={props.preFillTitle ?? props.sourceId}
+          tenderAgency={props.preFillAgency ?? ''}
+          daysBreach={props.daysBreach ?? null}
+          upcomingPeriodLabel={upcomingPeriodLabel}
+          onCompleted={(message) => {
+            setToast(message);
+            setView('menu');
+            router.refresh();
+            setTimeout(() => close(), 1400);
           }}
           onCancel={() => setView('menu')}
         />

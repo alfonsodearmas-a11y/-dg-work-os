@@ -45,3 +45,4 @@ next-env.d.ts
 # Remotion video projects
 /video/
 /s3-video/
+.playwright-mcp/
