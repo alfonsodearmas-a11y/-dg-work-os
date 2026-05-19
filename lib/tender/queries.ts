@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
-import { getActiveReferralsForSources } from '@/lib/referrals/source-lookup';
+import { getActiveFlaggedTasksForSources } from '@/lib/minister-attention/queries';
 import {
   getActiveQueueRowsForTenders,
   getLatestReportsForTenders,
@@ -206,19 +206,13 @@ async function attachActiveReferrals(tenders: Tender[]): Promise<void> {
   // catch per-promise and fall back to an empty map.
   const empty = <K, V>(): Map<K, V> => new Map<K, V>();
   const [referralMap, queueMap, reportMap] = await Promise.all([
-    getActiveReferralsForSources('tender', ids).catch(() => empty<string, Awaited<ReturnType<typeof getActiveReferralsForSources>> extends Map<string, infer V> ? V : never>()),
+    getActiveFlaggedTasksForSources('tender', ids).catch(() => empty<string, Awaited<ReturnType<typeof getActiveFlaggedTasksForSources>> extends Map<string, infer V> ? V : never>()),
     getActiveQueueRowsForTenders(ids).catch(() => empty<string, Awaited<ReturnType<typeof getActiveQueueRowsForTenders>> extends Map<string, infer V> ? V : never>()),
     getLatestReportsForTenders(ids).catch(() => empty<string, Awaited<ReturnType<typeof getLatestReportsForTenders>> extends Map<string, infer V> ? V : never>()),
   ]);
   for (const t of tenders) {
     const r = referralMap.get(t.id);
-    t.activeReferral = r
-      ? {
-          reference_number: r.reference_number,
-          status: r.status as 'submitted' | 'with_minister' | 'direction_given',
-          submitted_at: r.submitted_at,
-        }
-      : null;
+    t.activeMinisterReferral = r ? { taskId: r.taskId, flaggedAt: r.flaggedAt } : null;
     t.activeNptabQueue = queueMap.get(t.id) ?? null;
     t.latestNptabReport = reportMap.get(t.id) ?? null;
   }

@@ -19,7 +19,7 @@ import { getProjects } from '@/lib/delayed-projects/queries';
 import { enrichProject } from '@/lib/delayed-projects/types';
 import type { DelayedProject, DelayedProjectWithComputed } from '@/lib/delayed-projects/types';
 import { listTenders } from '@/lib/tender/queries';
-import { getActiveReferralsForSources } from '@/lib/referrals/source-lookup';
+import { getActiveFlaggedTasksForSources } from '@/lib/minister-attention/queries';
 import { STAGE_CONFIG } from '@/lib/tender/types';
 import type { Tender } from '@/lib/tender/types';
 import {
@@ -564,8 +564,8 @@ async function attachLastEscalations(signals: TodaySignal[]): Promise<void> {
 
   try {
     const [tenderMap, projectMap] = await Promise.all([
-      tenderIds.length ? getActiveReferralsForSources('tender', tenderIds) : Promise.resolve(new Map()),
-      projectIds.length ? getActiveReferralsForSources('project', projectIds) : Promise.resolve(new Map()),
+      tenderIds.length ? getActiveFlaggedTasksForSources('tender', tenderIds) : Promise.resolve(new Map()),
+      projectIds.length ? getActiveFlaggedTasksForSources('project', projectIds) : Promise.resolve(new Map()),
     ]);
 
     for (const s of signals) {
@@ -580,7 +580,8 @@ async function attachLastEscalations(signals: TodaySignal[]): Promise<void> {
       s.lastEscalation = found ?? null;
     }
   } catch {
-    // Optional enrichment; the table may not yet exist in test/CI.
+    // Optional enrichment; the migration that adds linked_source_* on tasks
+    // may not have been applied in test/CI environments.
   }
 }
 

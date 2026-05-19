@@ -7,8 +7,9 @@ import type { TodaySignal } from '@/lib/today/types';
 import type { SlaSummary } from '@/lib/today/sla-summary';
 import { SlaDonut } from './SlaDonut';
 import { agencyColor } from './agency-colors';
+import Link from 'next/link';
 import { EscalateModal } from './EscalateModal';
-import type { ReferralSourceType } from '@/lib/referrals/types';
+import type { EscalateSourceType } from './escalate-types';
 
 interface UrgentHeroProps {
   topSignal: TodaySignal | null;
@@ -16,7 +17,7 @@ interface UrgentHeroProps {
   agencyBreaches: Map<string, number>;
 }
 
-function sourceTypeForSignal(kind: TodaySignal['kind']): ReferralSourceType {
+function sourceTypeForSignal(kind: TodaySignal['kind']): EscalateSourceType {
   if (kind === 'tender_sla' || kind === 'stagnant_tender') return 'tender';
   if (kind === 'delayed_project') return 'project';
   return 'other';
@@ -100,14 +101,16 @@ export function UrgentHero({ topSignal, sla, agencyBreaches }: UrgentHeroProps) 
         <div className="pt-1 space-y-2">
           <p className="text-xs text-navy-500">
             Top urgency for {days} {days === 1 ? 'day' : 'days'}. Last escalation:{' '}
-            {topSignal.lastEscalation
-              ? (
-                  <>
-                    Referred to Minister, {fmtGuyanaDate(topSignal.lastEscalation.submitted_at)},{' '}
-                    <span className="font-mono">{topSignal.lastEscalation.reference_number}</span>.
-                  </>
-                )
-              : 'none.'}
+            {topSignal.lastEscalation ? (
+              <Link
+                href={`/tasks?taskId=${topSignal.lastEscalation.taskId}`}
+                className="text-gold-400 hover:text-gold-300"
+              >
+                Flagged for Minister, {fmtGuyanaDate(topSignal.lastEscalation.flaggedAt)}.
+              </Link>
+            ) : (
+              'none.'
+            )}
           </p>
           <button
             type="button"

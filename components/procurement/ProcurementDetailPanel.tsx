@@ -15,7 +15,7 @@ import { AgencyBadge } from './AgencyBadge';
 import { ProcurementStageIndicator } from './ProcurementStageIndicator';
 import { ProcurementStageBadge } from './ProcurementStageBadge';
 import { DaysAtStageIndicator } from './DaysAtStageIndicator';
-import { ReferralSourceBanner } from '@/components/referrals/ReferralSourceBanner';
+import { ReferredToMinisterBanner } from '@/components/minister/ReferredToMinisterBanner';
 import { NptabSourceBanner } from '@/components/nptab/NptabSourceBanner';
 import {
   TENDER_STAGES,
@@ -261,7 +261,7 @@ export function ProcurementDetailPanel({ tenderId, isOpen, onClose, onDeleted }:
 
           {tab === 'overview' ? (
             <>
-              <ReferralSourceBanner referral={tender.activeReferral} />
+              <ReferredToMinisterBanner referral={tender.activeMinisterReferral} />
               <NptabSourceBanner queued={tender.activeNptabQueue} reported={tender.latestNptabReport} />
               <div className="space-y-3">
                 <div className="flex items-center flex-wrap gap-2">

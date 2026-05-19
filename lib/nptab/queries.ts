@@ -1,7 +1,7 @@
 import { supabaseAdmin } from '@/lib/db';
 import { transaction } from '@/lib/db-pg';
 import { logger } from '@/lib/logger';
-import { rejectEmDash } from '@/lib/referrals/em-dash-guard';
+import { rejectEmDash } from '@/lib/text/punctuation-guard';
 import { allocateNptabReferenceNumber } from './reference-number';
 import { writeNptabAuditEntriesTx, type NptabAuditEntryInput } from './audit';
 import { nextQuarterEnd, periodLabel, periodToDates, quarterOf } from './period';
