@@ -155,9 +155,18 @@ function KanbanBoardInner() {
   // ---------------------------------------------------------------------------
 
   const showCompleted = state.showCompleted;
+  // useBoardUrlSync seeds state.agencyFilter from `?agency=` on mount (bento
+  // "View all" deep-links land here with the agency pre-selected). Forward
+  // the same filter to the API so the server returns a scoped payload
+  // instead of the user's full portfolio.
+  const agencyFilterKey = state.agencyFilter.join(',');
   const fetchTasks = useCallback(async () => {
     try {
-      const url = withViewAs(showCompleted ? '/api/tasks?show_completed=true' : '/api/tasks');
+      const params = new URLSearchParams();
+      if (showCompleted) params.set('show_completed', 'true');
+      if (agencyFilterKey) params.set('agency', agencyFilterKey);
+      const qs = params.toString();
+      const url = withViewAs(qs ? `/api/tasks?${qs}` : '/api/tasks');
       const res = await fetch(url);
       const data = await res.json();
       if (data.tasks) {
@@ -172,7 +181,7 @@ function KanbanBoardInner() {
       console.error('Failed to fetch tasks:', error);
       dispatch({ type: 'FETCH_ERROR', error: error instanceof Error ? error.message : 'Failed to load tasks' });
     }
-  }, [dispatch, withViewAs, showCompleted]);
+  }, [dispatch, withViewAs, showCompleted, agencyFilterKey]);
 
   const fetchUsers = useCallback(async () => {
     try {

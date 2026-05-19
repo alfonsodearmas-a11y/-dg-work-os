@@ -2,20 +2,30 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, AlertTriangle, TrendingUp, ChevronRight } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { ArrowLeft, AlertTriangle, TrendingUp, ChevronRight, X } from 'lucide-react';
 import { fmtCurrency, fmtDate } from '@/lib/format';
 import { Spinner } from '@/components/ui/Spinner';
+import { AGENCY_NAMES_SHORT } from '@/lib/constants/agencies';
 
 export default function DelayedProjectsPage() {
+  const searchParams = useSearchParams();
+  // Bento "View all" deep-link from /intel/[agency] arrives as
+  // `?agency=GPL` (canonical UPPERCASE per migration 106). Forward to the
+  // API so the scoping happens server-side instead of in-memory.
+  const agency = searchParams.get('agency');
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/projects/delayed')
+    const url = agency ? `/api/projects/delayed?agency=${encodeURIComponent(agency)}` : '/api/projects/delayed';
+    fetch(url)
       .then(r => r.json())
       .then(d => setProjects(d || []))
       .finally(() => setLoading(false));
-  }, []);
+  }, [agency]);
+
+  const agencyDisplay = agency ? (AGENCY_NAMES_SHORT[agency] ?? agency) : null;
 
   return (
     <div className="space-y-8">
@@ -23,12 +33,24 @@ export default function DelayedProjectsPage() {
         <Link href="/projects" className="p-2 rounded-lg bg-navy-900 border border-navy-800 hover:border-gold-500 transition-colors mt-1" aria-label="Back">
           <ArrowLeft className="h-5 w-5 text-slate-400" />
         </Link>
-        <div>
+        <div className="flex-1 min-w-0">
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
             <AlertTriangle className="h-8 w-8 text-red-400" />
             Delayed Projects
           </h1>
-          <p className="text-navy-600 mt-1">{projects.length} projects past their deadline</p>
+          <p className="text-navy-600 mt-1">
+            {projects.length} projects past their deadline
+            {agencyDisplay ? <span> · scoped to <span className="text-white">{agencyDisplay}</span></span> : null}
+          </p>
+          {agencyDisplay ? (
+            <Link
+              href="/projects/delayed"
+              className="inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full text-xs font-medium bg-gold-500/15 text-gold-500 border border-gold-500/30 hover:bg-gold-500/25 transition-colors"
+              aria-label="Clear agency filter"
+            >
+              {agencyDisplay} <X className="h-3 w-3" />
+            </Link>
+          ) : null}
         </div>
       </div>
 

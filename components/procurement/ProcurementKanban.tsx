@@ -84,7 +84,12 @@ export function ProcurementKanban({
   const [awardedSince, setAwardedSince] = useState<AwardedSincePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [agencyFilter, setAgencyFilter] = useState('');
+  // Seed from `?agency=` so bento "View all" deep-links from /intel/[agency]
+  // land on a pre-filtered board. Values are canonical uppercase per
+  // migration 106. One-way: hydrate-on-mount; subsequent chip toggles update
+  // local state only (URL stays static, matching how this component already
+  // owns its own non-tender query state).
+  const [agencyFilter, setAgencyFilter] = useState(() => searchParams.get('agency') ?? '');
   // URL is the source of truth — the detail drawer opens iff ?tender=<id> is present.
   const selectedTenderId = searchParams.get('tender');
   const setTenderParam = useCallback(

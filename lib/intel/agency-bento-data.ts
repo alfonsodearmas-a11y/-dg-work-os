@@ -1,9 +1,9 @@
 // Agency bento card hrefs — derived per agency. Kept here (server-importable)
 // rather than inside each card component so future href changes happen in one
-// place. Agency-aware query params are not appended because the destination
-// pages (/procurement, /projects/delayed) do not currently honor an `?agency=`
-// query string. Users land on the full list and filter manually. Wire up the
-// query-param sync as a separate enhancement if executive feedback asks.
+// place. Row-1 destinations (/tasks, /projects/delayed, /procurement) now
+// honor `?agency=<UPPERCASE>` so executives land on a pre-scoped list instead
+// of the ministry-wide view. See fix/intel-viewall-agency-filter for the
+// three-layer wiring (lib query, API route, client component) per surface.
 //
 // Data source notes for future contributors:
 //
@@ -39,11 +39,16 @@ export interface BentoHrefs {
 }
 
 export function getBentoHrefs(slug: IntelAgency): BentoHrefs {
+  // Canonical agency codes are UPPERCASE per migration 106. The intel route
+  // slug is lowercase, so we upper-case for the deep-link to match how each
+  // destination's data layer (tasks.agency, projects.sub_agency, tender.agency)
+  // stores the value. Same convention used by pendingApplications below.
+  const agency = slug.toUpperCase();
   const base: BentoHrefs = {
-    tasks: '/tasks',
-    projects: '/projects/delayed',
-    procurement: '/procurement',
-    tendersInEval: '/procurement',
+    tasks: `/tasks?agency=${agency}`,
+    projects: `/projects/delayed?agency=${agency}`,
+    procurement: `/procurement?agency=${agency}`,
+    tendersInEval: `/procurement?agency=${agency}`,
   };
   if (slug === 'gpl') {
     base.gridHealth = '/pulse/gpl/grid-health';

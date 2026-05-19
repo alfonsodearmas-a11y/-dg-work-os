@@ -54,7 +54,11 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get('status');
-  const agency = searchParams.get('agency');
+  // Comma-separated list to match the URL convention used by the Kanban URL
+  // sync (hooks/useBoardUrlSync.ts) and the bento "View all" deep-links from
+  // /intel/[agency]. Values are canonical uppercase per migration 106.
+  const agencyParam = searchParams.get('agency');
+  const agencyList = agencyParam ? agencyParam.split(',').filter(Boolean) : [];
   const overdue = searchParams.get('overdue');
   const showCompleted = searchParams.get('show_completed') === 'true';
   const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
@@ -88,7 +92,11 @@ export async function GET(request: NextRequest) {
   }
 
   if (status) query = query.eq('status', status);
-  if (agency) query = query.eq('agency', agency);
+  if (agencyList.length === 1) {
+    query = query.eq('agency', agencyList[0]);
+  } else if (agencyList.length > 1) {
+    query = query.in('agency', agencyList);
+  }
   if (overdue === 'true') {
     const today = new Date().toISOString().split('T')[0];
     query = query.lt('due_date', today).neq('status', 'done');
@@ -148,7 +156,11 @@ export async function GET(request: NextRequest) {
     } else if (effectiveRole === 'agency_admin' && effectiveAgency) {
       countQuery = countQuery.ilike('agency', effectiveAgency);
     }
-    if (agency) countQuery = countQuery.eq('agency', agency);
+    if (agencyList.length === 1) {
+      countQuery = countQuery.eq('agency', agencyList[0]);
+    } else if (agencyList.length > 1) {
+      countQuery = countQuery.in('agency', agencyList);
+    }
     const { count: olderCount } = await countQuery;
     olderCompletedCount = olderCount || 0;
   }
