@@ -29,7 +29,6 @@ import {
   CalendarDays,
   ChevronsLeft,
   Gauge,
-  FileSignature,
   Inbox,
   FileBarChart,
 } from 'lucide-react';
@@ -105,9 +104,8 @@ const mainNavItems: NavItem[] = [
   { href: '/meetings', label: 'Meetings', icon: Mic, moduleSlug: 'meetings' },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays, moduleSlug: 'calendar' },
   { href: '/documents', label: 'Documents', icon: FileText, moduleSlug: 'documents' },
-  { href: '/referrals', label: 'Ministerial Referrals', icon: FileSignature, moduleSlug: 'ministerial-referrals', requireRole: ['dg', 'ps'] },
   { href: '/nptab-reports', label: 'NPTAB Reports', icon: FileBarChart, moduleSlug: 'nptab-reports', requireRole: ['dg', 'ps'] },
-  { href: '/minister/referrals', label: 'Referrals to Minister', icon: Inbox, moduleSlug: 'minister-referrals', requireRole: ['minister'] },
+  { href: '/minister/attention', label: 'Minister Attention', icon: Inbox, moduleSlug: 'minister-attention', requireRole: ['minister'] },
 ];
 
 type AgencyItem = {

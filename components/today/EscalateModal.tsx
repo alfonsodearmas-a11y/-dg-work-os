@@ -4,15 +4,15 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertOctagon, FileSignature, ScrollText } from 'lucide-react';
 import { SlidePanel } from '@/components/layout/SlidePanel';
-import { ReferralForm } from './ReferralForm';
+import { ReferToMinisterDialog } from './ReferToMinisterDialog';
 import { NptabQueueButton } from '@/components/nptab/NptabQueueButton';
 import { nextQuarterEnd, periodLabel } from '@/lib/nptab/period';
-import type { ReferralSourceType } from '@/lib/referrals/types';
+import type { EscalateSourceType } from './escalate-types';
 
 interface EscalateModalProps {
   isOpen: boolean;
   onClose: () => void;
-  sourceType: ReferralSourceType;
+  sourceType: EscalateSourceType;
   sourceId: string | null;
   preFillTitle?: string | null;
   preFillAgency?: string | null;
@@ -94,21 +94,17 @@ export function EscalateModal(props: EscalateModalProps) {
       )}
 
       {view === 'refer' && (
-        <ReferralForm
+        <ReferToMinisterDialog
           sourceType={props.sourceType}
           sourceId={props.sourceId}
           preFillAgency={props.preFillAgency}
           preFillTitle={props.preFillTitle}
-          onSubmitted={({ referralId, referenceNumber }) => {
-            const msg = referenceNumber
-              ? `Submitted as ${referenceNumber}.`
-              : 'Saved as draft.';
-            setToast(msg);
+          onSubmitted={({ taskId }) => {
+            setToast(`Referred to Minister.`);
             setView('menu');
             router.refresh();
-            // Auto-close after a short pause so the user sees the confirmation.
             setTimeout(() => close(), 1400);
-            void referralId;
+            void taskId;
           }}
           onCancel={() => setView('menu')}
         />

@@ -234,16 +234,13 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
 
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto">
-        {/* Refer to Minister */}
-        <div className="px-3 md:px-6 pt-3 flex justify-end">
-          <button
-            type="button"
-            onClick={() => setEscalateOpen(true)}
-            className="btn-navy text-xs flex items-center gap-2"
-          >
-            <FileSignature size={12} aria-hidden="true" /> Refer to Minister
-          </button>
-        </div>
+        {/* Minister attention strip — badge + role-aware actions */}
+        <MinisterAttentionStrip
+          task={task}
+          userRole={session?.user?.role ?? ''}
+          onRefer={() => setEscalateOpen(true)}
+          onChanged={() => router.refresh()}
+        />
 
         {/* DETAILS section */}
         <TaskMetadata
@@ -469,5 +466,95 @@ export function TaskDetailPanel({ task, isOpen, isMobile, onClose, onUpdate, onD
         {panelContent}
       </div>
     </>
+  );
+}
+
+interface MinisterAttentionStripProps {
+  task: Task;
+  userRole: string;
+  onRefer: () => void;
+  onChanged: () => void;
+}
+
+function MinisterAttentionStrip({ task, userRole, onRefer, onChanged }: MinisterAttentionStripProps) {
+  const [busy, setBusy] = useState(false);
+  const isDG = userRole === 'dg';
+  const isMinister = userRole === 'minister';
+  const isFlagged = task.requires_minister_attention && !task.minister_closed_at;
+  const isSeen = !!task.minister_seen_at;
+
+  async function call(url: string, method: 'POST' | 'PATCH', body?: unknown) {
+    setBusy(true);
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: body ? { 'Content-Type': 'application/json' } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        alert(j.error ?? 'Action failed');
+        return;
+      }
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="px-3 md:px-6 pt-3 flex flex-wrap items-center justify-end gap-2">
+      {isFlagged && (
+        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-gold-500/15 text-gold-300 border border-gold-500/40">
+          <FileSignature size={10} aria-hidden="true" />
+          Referred to Minister
+          {isSeen && <span className="text-emerald-300/80">· Seen</span>}
+        </span>
+      )}
+
+      {isDG && !isFlagged && (
+        <button
+          type="button"
+          onClick={onRefer}
+          className="btn-navy text-xs flex items-center gap-2"
+          disabled={busy}
+        >
+          <FileSignature size={12} aria-hidden="true" /> Refer to Minister
+        </button>
+      )}
+
+      {isDG && isFlagged && (
+        <button
+          type="button"
+          onClick={() => call(`/api/tasks/${task.id}`, 'PATCH', { requires_minister_attention: false })}
+          className="text-xs text-navy-400 hover:text-white px-3 py-1.5 border border-navy-800 rounded-lg"
+          disabled={busy}
+        >
+          Unflag
+        </button>
+      )}
+
+      {isMinister && isFlagged && !isSeen && (
+        <button
+          type="button"
+          onClick={() => call(`/api/tasks/${task.id}/minister/acknowledge`, 'POST')}
+          className="btn-gold text-xs"
+          disabled={busy}
+        >
+          Acknowledge
+        </button>
+      )}
+
+      {isMinister && isFlagged && (
+        <button
+          type="button"
+          onClick={() => call(`/api/tasks/${task.id}/minister/close`, 'POST')}
+          className="text-xs text-navy-400 hover:text-white px-3 py-1.5 border border-navy-800 rounded-lg"
+          disabled={busy}
+        >
+          Close for Minister
+        </button>
+      )}
+    </div>
   );
 }

@@ -67,6 +67,7 @@ export type EventPreferencesMap = {
   task_watcher_notification: EventPrefEntry;
   task_daily_reminder: EventPrefEntry;
   referral_direction_given: EventPrefEntry;
+  task_referred_to_minister: EventPrefEntry;
 };
 
 export type DigestFrequency = 'daily' | 'weekly' | 'off';
@@ -633,6 +634,8 @@ export const DEFAULT_EVENT_PREFERENCES: EventPreferencesMap = {
   task_daily_reminder: { in_app: true, email: 'digest' },
   // Minister direction on a referral is high-signal for the referring DG.
   referral_direction_given: { in_app: true, email: 'instant' },
+  // DG flagged a task for the Minister: high-signal for the Minister.
+  task_referred_to_minister: { in_app: true, email: 'instant' },
 };
 
 export async function getPreferences(userId: string): Promise<NotificationPrefs> {
