@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { containsEmDash, rejectEmDash, stripEmDash, EmDashError } from '@/lib/referrals/em-dash-guard';
+import { containsEmDash, rejectEmDash, stripEmDash, EmDashError } from '@/lib/text/punctuation-guard';
 
 describe('em-dash guard', () => {
   it('detects U+2014 em dash', () => {

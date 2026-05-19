@@ -7,7 +7,7 @@ import {
   listActiveQueue,
   queueTender,
 } from '@/lib/nptab/queries';
-import { EmDashError } from '@/lib/referrals/em-dash-guard';
+import { EmDashError } from '@/lib/text/punctuation-guard';
 
 export const runtime = 'nodejs';
 
