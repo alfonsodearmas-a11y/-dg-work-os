@@ -1,7 +1,13 @@
+// NOTE: This route uses sequential supabaseAdmin writes instead of pg transaction()
+// because lib/db-pg.ts has a TLS config issue in production (self-signed cert in chain).
+// Atomicity tradeoff: a failure between step 1 (task) and step 2 (comment) can leave
+// an orphan task. Worst case is visible in UI as a referred task with no opening
+// comment. See the rollback logic in step 2 below.
+// TODO: revert to transaction() once lib/db-pg.ts TLS issue is resolved.
+
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
-import { transaction } from '@/lib/db-pg';
 import { supabaseAdmin } from '@/lib/db';
 import { createNotification } from '@/lib/notifications/notification-service';
 
@@ -16,10 +22,10 @@ interface ReferBody {
 }
 
 /**
- * Create a new task and flag it for the Minister's attention in a single
- * Postgres transaction. Used by the EscalateModal when the source is a
- * tender / project / agency_issue, and by the "New Minister Referral"
- * button on /minister/attention for sourceless referrals.
+ * Create a new task and flag it for the Minister's attention. Used by the
+ * EscalateModal when the source is a tender / project / agency_issue, and
+ * by the "New Minister Referral" button on /minister/attention for
+ * sourceless referrals.
  *
  * Flagging an EXISTING task uses POST /api/tasks/[id]/refer instead.
  */
@@ -67,44 +73,82 @@ export async function POST(request: NextRequest) {
   const comment = body.openingComment.trim();
   const nowIso = new Date().toISOString();
 
-  let createdTaskId: string;
-  try {
-    createdTaskId = await transaction(async (client) => {
-      const { rows: taskRows } = await client.query(
-        `INSERT INTO tasks (
-           title, status, priority, agency, owner_user_id, assigned_by_user_id, source,
-           visibility_scope,
-           requires_minister_attention, referred_to_minister_at, referred_to_minister_by,
-           linked_source_type, linked_source_id
-         ) VALUES (
-           $1, 'new', 'high', $2, $3, $3, 'manual', 'agency_normal',
-           TRUE, $4, $3,
-           $5, $6
-         )
-         RETURNING id`,
-        [title, agency, session.user.id, nowIso, linkedSourceType, linkedSourceId],
-      );
-      const taskId = taskRows[0].id as string;
-      await client.query(
-        `INSERT INTO task_comments (task_id, user_id, body) VALUES ($1, $2, $3)`,
-        [taskId, session.user.id, comment],
-      );
-      await client.query(
-        `INSERT INTO task_activity (task_id, user_id, action, new_value)
-         VALUES ($1, $2, 'created', NULL),
-                ($1, $2, 'referred_to_minister', $3)`,
-        [taskId, session.user.id, comment.slice(0, 200)],
-      );
-      return taskId;
-    });
-  } catch (err) {
-    logger.error({ err }, 'POST /api/tasks/refer failed');
-    const msg = err instanceof Error ? err.message : 'Unknown error';
+  // Step 1: insert the task with all the minister-attention columns set.
+  const { data: insertedTask, error: insertErr } = await supabaseAdmin
+    .from('tasks')
+    .insert({
+      title,
+      status: 'new',
+      priority: 'high',
+      agency,
+      owner_user_id: session.user.id,
+      assigned_by_user_id: session.user.id,
+      source: 'manual',
+      visibility_scope: 'agency_normal',
+      requires_minister_attention: true,
+      referred_to_minister_at: nowIso,
+      referred_to_minister_by: session.user.id,
+      linked_source_type: linkedSourceType,
+      linked_source_id: linkedSourceId,
+    })
+    .select('id')
+    .single();
+  if (insertErr || !insertedTask) {
+    logger.error({ err: insertErr }, 'POST /api/tasks/refer step 1 (task insert) failed');
+    const msg = insertErr?.message ?? 'Failed to create task';
     return NextResponse.json({ error: msg }, { status: 500 });
   }
+  const createdTaskId = insertedTask.id as string;
 
-  // Post-commit notification fan-out. Failures are logged but never roll
-  // back the referral.
+  // Step 2: insert the opening comment. If this fails, attempt to clean up
+  // the orphan task we just created.
+  const { error: commentErr } = await supabaseAdmin
+    .from('task_comments')
+    .insert({ task_id: createdTaskId, user_id: session.user.id, body: comment });
+  if (commentErr) {
+    logger.error(
+      { err: commentErr, taskId: createdTaskId },
+      'POST /api/tasks/refer step 2 (comment insert) failed; attempting task rollback',
+    );
+    const { error: rollbackErr } = await supabaseAdmin
+      .from('tasks')
+      .delete()
+      .eq('id', createdTaskId);
+    if (rollbackErr) {
+      logger.error(
+        { err: rollbackErr, taskId: createdTaskId },
+        'POST /api/tasks/refer rollback DELETE failed; orphan task left in tasks. Manual cleanup needed.',
+      );
+    }
+    return NextResponse.json(
+      { error: commentErr.message ?? 'Failed to write opening comment' },
+      { status: 500 },
+    );
+  }
+
+  // Activity log entries (best-effort, non-blocking).
+  void supabaseAdmin
+    .from('task_activity')
+    .insert([
+      { task_id: createdTaskId, user_id: session.user.id, action: 'created', new_value: null },
+      {
+        task_id: createdTaskId,
+        user_id: session.user.id,
+        action: 'referred_to_minister',
+        new_value: comment.slice(0, 200),
+      },
+    ])
+    .then(({ error }) => {
+      if (error) {
+        logger.warn(
+          { err: error, taskId: createdTaskId },
+          'task_activity insert failed (non-fatal)',
+        );
+      }
+    });
+
+  // Step 3: notification fan-out. Non-fatal; the task already exists and the
+  // Minister can still see the inbox entry without the notification.
   void (async () => {
     try {
       const { data: ministers } = await supabaseAdmin
@@ -130,9 +174,9 @@ export async function POST(request: NextRequest) {
         });
       }
     } catch (err) {
-      logger.error(
+      logger.warn(
         { err, taskId: createdTaskId },
-        'task_referred_to_minister notification block failed',
+        'task_referred_to_minister notification block failed (non-fatal)',
       );
     }
   })();
