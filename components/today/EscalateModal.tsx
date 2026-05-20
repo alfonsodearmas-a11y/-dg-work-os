@@ -63,7 +63,7 @@ export function EscalateModal(props: EscalateModalProps) {
             <span>
               <span className="block font-semibold text-white">Refer to Minister</span>
               <span className="block text-sm text-navy-500 mt-1">
-                Prepare a formal written referral to the Honourable Minister with background, current status, and a recommendation.
+                Flag this for the Minister's attention. Adds it to his inbox with your note as the opening comment.
               </span>
             </span>
           </button>
