@@ -1,6 +1,6 @@
 // Shared task types for the native tasks system
 
-export const TASK_COLUMNS = 'id, title, description, status, priority, due_date, agency, role, owner_user_id, assigned_by_user_id, source_meeting_id, blocked_reason, completed_at, created_at, updated_at, source, extraction_id, source_quote, source_timestamp, owner_name_raw, delegated_to_id, verb_category, completion_note, completed_by, verified_by, verified_at, dispute_note, disputed_at, supersedes_id, visibility_scope, confidence_overall';
+export const TASK_COLUMNS = 'id, title, description, status, priority, due_date, agency, role, owner_user_id, assigned_by_user_id, source_meeting_id, blocked_reason, completed_at, created_at, updated_at, source, extraction_id, source_quote, source_timestamp, owner_name_raw, delegated_to_id, verb_category, completion_note, completed_by, verified_by, verified_at, dispute_note, disputed_at, supersedes_id, visibility_scope, confidence_overall, requires_minister_attention, referred_to_minister_at, referred_to_minister_by, minister_seen_at, minister_closed_at, linked_source_type, linked_source_id';
 
 /** Flatten the Supabase owner join (may be array or object) into owner_name. */
 export function flattenTaskOwner<T extends Record<string, unknown>>(row: T): T & { owner_name: string | null } {
@@ -45,6 +45,16 @@ export interface Task {
   supersedes_id: string | null;
   visibility_scope: 'agency_normal' | 'dg_only';
   confidence_overall: number | null;
+  // Minister-attention fields. requires_minister_attention is the canonical
+  // flag; the timestamps and the linked_source pair are populated when the
+  // task is created or flagged via /api/tasks/refer or /api/tasks/[id]/refer.
+  requires_minister_attention: boolean;
+  referred_to_minister_at: string | null;
+  referred_to_minister_by: string | null;
+  minister_seen_at: string | null;
+  minister_closed_at: string | null;
+  linked_source_type: 'tender' | 'project' | null;
+  linked_source_id: string | null;
 }
 
 export interface TaskUpdate {

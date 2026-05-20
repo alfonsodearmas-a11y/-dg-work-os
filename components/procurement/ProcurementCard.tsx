@@ -4,7 +4,7 @@ import { ExternalLink, Repeat, AlertTriangle, HelpCircle, Award, UserPlus } from
 import { METHOD_CONFIG, type Tender } from '@/lib/tender/types';
 import { AgencyBadge } from './AgencyBadge';
 import { DaysAtStageIndicator } from './DaysAtStageIndicator';
-import { ReferralSourceBanner } from '@/components/referrals/ReferralSourceBanner';
+import { ReferredToMinisterBanner } from '@/components/minister/ReferredToMinisterBanner';
 import { NptabSourceBanner } from '@/components/nptab/NptabSourceBanner';
 
 interface ProcurementCardProps {
@@ -53,7 +53,7 @@ export function ProcurementCard({ tender, onClick, isDragging, canDrag = true, o
         {tender.description}
       </h4>
 
-      <ReferralSourceBanner referral={tender.activeReferral} compact />
+      <ReferredToMinisterBanner referral={tender.activeMinisterReferral} compact />
       <NptabSourceBanner queued={tender.activeNptabQueue} reported={tender.latestNptabReport} compact />
 
 

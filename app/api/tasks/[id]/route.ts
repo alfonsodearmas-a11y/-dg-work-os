@@ -24,6 +24,10 @@ const patchTaskSchema = z.object({
   // run before adds so a user can be re-added after self-removal in one round trip.
   addWatchers: z.array(z.string().uuid()).optional(),
   removeWatchers: z.array(z.string().uuid()).optional(),
+  // Unflag the task as needing Minister attention. PATCH only supports the
+  // false direction; the canonical way to flag is POST /api/tasks/[id]/refer
+  // because that path requires an opening comment and emits a notification.
+  requires_minister_attention: z.literal(false).optional(),
 });
 
 export const PATCH = withErrorHandler(async (
@@ -40,7 +44,7 @@ export const PATCH = withErrorHandler(async (
 
   const { data: task } = await supabaseAdmin
     .from('tasks')
-    .select('owner_user_id, assigned_by_user_id, status, title, due_date')
+    .select('owner_user_id, assigned_by_user_id, status, title, due_date, requires_minister_attention')
     .eq('id', id)
     .single();
 
@@ -80,6 +84,17 @@ export const PATCH = withErrorHandler(async (
   if (data.owner_user_id !== undefined) {
     updates.owner_user_id = data.owner_user_id;
     updates.assigned_by_user_id = session.user.id;
+  }
+  if (data.requires_minister_attention === false) {
+    // Unflag: only the DG can do this. Clearing the timestamp + author
+    // happens in the same UPDATE so the row's minister-attention state
+    // is internally consistent.
+    if (session.user.role !== 'dg') {
+      return apiError('FORBIDDEN', 'Only the DG can unflag a task from Minister attention', 403);
+    }
+    updates.requires_minister_attention = false;
+    updates.referred_to_minister_at = null;
+    updates.referred_to_minister_by = null;
   }
 
   if (data.status === 'done' && task.status !== 'done') {
@@ -133,6 +148,15 @@ export const PATCH = withErrorHandler(async (
       action: 'assignee_changed',
       old_value: task.owner_user_id,
       new_value: flatTask.owner_name || data.owner_user_id,
+    });
+  }
+  if (data.requires_minister_attention === false && task.requires_minister_attention === true) {
+    activityEntries.push({
+      task_id: id,
+      user_id: session.user.id,
+      action: 'unflagged_from_minister',
+      old_value: null,
+      new_value: null,
     });
   }
 

@@ -3,12 +3,12 @@
 // Shape definitions only. All tunable numbers live in lib/today/thresholds.ts.
 
 import { TODAY_THRESHOLDS } from './thresholds';
-import type { ReferralStatus } from '@/lib/referrals/types';
 
 export interface TodaySignalLastEscalation {
-  reference_number: string;
-  status: ReferralStatus;
-  submitted_at: string; // ISO timestamp
+  // Task that was flagged for the Minister against this signal's source.
+  taskId: string;
+  // ISO timestamp the DG set requires_minister_attention=true.
+  flaggedAt: string;
 }
 
 export type TodaySignalKind =

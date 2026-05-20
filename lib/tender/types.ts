@@ -139,19 +139,19 @@ export interface Tender {
   days_at_current_stage: number | null;
   // Optional source-specific enrichment
   trello_url?: string | null;
-  // Optional referral enrichment — set when an active ministerial referral
-  // exists for this tender; absent when none. Populated by the consumer
-  // (kanban / detail panel) using getActiveReferralsForSources.
-  activeReferral?: ActiveReferralBrief | null;
+  // Optional Minister-attention enrichment: set when this tender has been
+  // referred to the Minister via a flagged task. Populated by listTenders
+  // using getActiveFlaggedTasksForSources(). The taskId links to the row
+  // in tasks that holds the opening comment + lifecycle.
+  activeMinisterReferral?: ActiveMinisterReferralBrief | null;
   // NPTAB enrichment, populated similarly via lib/nptab/source-lookup.
   activeNptabQueue?: NptabBriefs.ActiveNptabQueueBrief | null;
   latestNptabReport?: NptabBriefs.NptabReportBrief | null;
 }
 
-export interface ActiveReferralBrief {
-  reference_number: string;
-  status: 'submitted' | 'with_minister' | 'direction_given';
-  submitted_at: string;
+export interface ActiveMinisterReferralBrief {
+  taskId: string;
+  flaggedAt: string;
 }
 
 import type * as NptabBriefs from '@/lib/nptab/source-lookup';

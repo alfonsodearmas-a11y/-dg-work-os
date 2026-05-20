@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, Download } from 'lucide-react';
 import { fmtBudgetAmount, fmtGuyanaDate, fmtGuyanaDateTime } from '@/lib/format';
-import { containsEmDash } from '@/lib/referrals/em-dash-guard';
+import { containsEmDash } from '@/lib/text/punctuation-guard';
 import { periodLabel } from '@/lib/nptab/period';
 import { buildAggregates } from '@/lib/nptab/aggregate';
 import {

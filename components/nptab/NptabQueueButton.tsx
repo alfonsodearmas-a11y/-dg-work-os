@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AlertCircle, Loader2 } from 'lucide-react';
-import { containsEmDash } from '@/lib/referrals/em-dash-guard';
+import { containsEmDash } from '@/lib/text/punctuation-guard';
 import { fmtGuyanaDate } from '@/lib/format';
 
 interface Props {
