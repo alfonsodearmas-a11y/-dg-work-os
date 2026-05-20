@@ -8,6 +8,7 @@ import { StatSummaryCard } from './StatSummaryCard';
 import { IssuesByAgencyCard } from './IssuesByAgencyCard';
 import { TodaysScheduleCard } from './TodaysScheduleCard';
 import { TasksCard } from './TasksCard';
+import { GreetingHeading } from './GreetingHeading';
 
 interface TodayViewProps {
   payload: TodayPayload;
@@ -76,9 +77,7 @@ export function TodayView({ payload, sla, schedule, tasks, userName }: TodayView
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-navy-600">
           {dateLine} · DG Briefing
         </p>
-        <h1 className="mt-2 text-3xl lg:text-4xl font-bold text-white tracking-tight">
-          Good morning, <span className="text-gold-500">{firstName(userName)}</span>
-        </h1>
+        <GreetingHeading userName={firstName(userName)} />
       </header>
 
       {unhealthy.length > 0 && (
