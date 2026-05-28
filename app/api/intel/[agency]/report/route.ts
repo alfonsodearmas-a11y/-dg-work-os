@@ -15,8 +15,8 @@ import { prepareReport, type ReportTemplate } from '@/lib/intel/prepare-report';
  * recipients. Plain template is the default. The editorial Intel Brief
  * stays reachable via `?template=editorial` for one release.
  *
- * Rate limit: 10 sends per user per rolling 60 minutes — counted against
- * manual sends only, so scheduled sends from the cron handler do not
+ * Rate limit: 10 sends per user per rolling 60 minutes, counted against
+ * manual sends only. Scheduled sends from the cron handler do not
  * consume a user's hourly budget.
  */
 
