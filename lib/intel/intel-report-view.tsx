@@ -2,7 +2,7 @@
 // lib/pdf/intel-report-render.tsx, consuming the same plain tokens. The
 // design lives once; the PDF mirrors this view.
 //
-// Item lists uncapped by design, matching the PDF.
+// Item lists uncapped by design — matches the PDF.
 
 import * as React from 'react';
 

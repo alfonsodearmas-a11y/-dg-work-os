@@ -29,7 +29,7 @@ import {
  * for a recurring report; a double-send is not. The schedule self-heals
  * on its next occurrence.
  *
- * Do not "fix" this back into a retry. Skipping is the deliberate choice.
+ * Do not "fix" this back into a retry — the deliberate choice is to skip.
  */
 
 export const runtime = 'nodejs';

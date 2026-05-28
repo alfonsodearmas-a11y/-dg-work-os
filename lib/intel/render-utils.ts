@@ -86,8 +86,8 @@ export function computeLedeStats(data: AgencyIntelData): LedeStats {
 
   const procurementTotal = tenders.length;
   // Count tenders whose owner is an explicit placeholder (TBD, pending,
-  // unassigned, etc.). Do NOT count tenders whose owner is null. Null
-  // is absent data, not an unnamed assignment.
+  // unassigned, etc.). Do NOT count tenders whose owner is null — null is
+  // absent data, not an unnamed assignment.
   const procurementUnnamed = tenders.filter((t) =>
     isExplicitPlaceholderOwner(t.next_action_owner),
   ).length;

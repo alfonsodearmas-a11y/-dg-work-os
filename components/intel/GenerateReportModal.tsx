@@ -31,7 +31,7 @@ interface ModalProps extends Props {
 const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 /**
- * "Generate Report" button + modal. Appears in each /intel/[agency] page
+ * "Generate Report" button + modal — appears in each /intel/[agency] page
  * header. Two modes: send once (POST /api/intel/[agency]/report) and
  * schedule (POST /api/intel/[agency]/schedules). The schedule list on
  * /intel/[agency]/report opens the modal in edit mode by passing a
