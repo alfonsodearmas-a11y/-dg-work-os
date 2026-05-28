@@ -18,17 +18,19 @@ export const COLORS = {
   overdue: '#b91c1c',
 } as const;
 
+// Inter weights registered in the PDF renderer: 300, 400, 700. Use only
+// these values. The HTML view maps 700 to font-semibold/bold equivalents.
 export const TYPE = {
   title:        { size: 24, weight: 700, lineHeight: 1.2,  letterSpacing: -0.3 },
   subtitle:     { size: 11, weight: 400, lineHeight: 1.4,  letterSpacing: 0.4 },
-  sectionLabel: { size: 13, weight: 600, lineHeight: 1.2,  letterSpacing: 0.6 },
-  itemTitle:    { size: 12, weight: 600, lineHeight: 1.35, letterSpacing: 0 },
+  sectionLabel: { size: 13, weight: 700, lineHeight: 1.2,  letterSpacing: 0.6 },
+  itemTitle:    { size: 12, weight: 700, lineHeight: 1.35, letterSpacing: 0 },
   body:         { size: 11, weight: 400, lineHeight: 1.5,  letterSpacing: 0 },
   meta:         { size: 10, weight: 400, lineHeight: 1.4,  letterSpacing: 0 },
-  metaEmphasis: { size: 10, weight: 600, lineHeight: 1.4,  letterSpacing: 0 },
-  statNumber:   { size: 22, weight: 600, lineHeight: 1.1,  letterSpacing: 0 },
+  metaEmphasis: { size: 10, weight: 700, lineHeight: 1.4,  letterSpacing: 0 },
+  statNumber:   { size: 22, weight: 700, lineHeight: 1.1,  letterSpacing: 0 },
   statLabel:    { size: 10, weight: 400, lineHeight: 1.4,  letterSpacing: 0.4 },
-  cellNumber:   { size: 14, weight: 600, lineHeight: 1.1,  letterSpacing: 0 },
+  cellNumber:   { size: 14, weight: 700, lineHeight: 1.1,  letterSpacing: 0 },
   cellLabel:    { size: 9,  weight: 400, lineHeight: 1.4,  letterSpacing: 0.4 },
   footer:       { size: 9,  weight: 400, lineHeight: 1.4,  letterSpacing: 0 },
 } as const;
