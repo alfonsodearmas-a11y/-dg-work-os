@@ -93,16 +93,44 @@ export async function PATCH(
     if (String(current.agency).toUpperCase() !== lower.toUpperCase()) {
       return NextResponse.json({ error: 'Schedule does not belong to this agency' }, { status: 404 });
     }
+
+    const effectiveFrequency: Frequency =
+      (update.frequency as Frequency) ?? (current.frequency as Frequency);
+    const effectiveDow =
+      'day_of_week' in update
+        ? (update.day_of_week as number | null)
+        : (current.day_of_week as number | null);
+    const effectiveDom =
+      'day_of_month' in update
+        ? (update.day_of_month as number | null)
+        : (current.day_of_month as number | null);
+
+    // Enforce frequency / day-field consistency before calling
+    // computeNextRunAt so a missing field returns a 400 instead of bubbling
+    // a 500 from the math function. Also null out the unused day field so
+    // the row stays clean.
+    if ((effectiveFrequency === 'weekly' || effectiveFrequency === 'fortnightly') && effectiveDow == null) {
+      return NextResponse.json(
+        { error: 'day_of_week required for weekly or fortnightly' },
+        { status: 400 },
+      );
+    }
+    if (effectiveFrequency === 'monthly' && effectiveDom == null) {
+      return NextResponse.json(
+        { error: 'day_of_month required for monthly' },
+        { status: 400 },
+      );
+    }
+    if (effectiveFrequency === 'weekly' || effectiveFrequency === 'fortnightly') {
+      update.day_of_month = null;
+    } else {
+      update.day_of_week = null;
+    }
+
     const next = computeNextRunAt({
-      frequency: (update.frequency as Frequency) ?? (current.frequency as Frequency),
-      day_of_week:
-        'day_of_week' in update
-          ? (update.day_of_week as number | null)
-          : (current.day_of_week as number | null),
-      day_of_month:
-        'day_of_month' in update
-          ? (update.day_of_month as number | null)
-          : (current.day_of_month as number | null),
+      frequency: effectiveFrequency,
+      day_of_week: effectiveDow,
+      day_of_month: effectiveDom,
       send_hour: (update.send_hour as number | undefined) ?? (current.send_hour as number),
       timezone: current.timezone as string,
     });

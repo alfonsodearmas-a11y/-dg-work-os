@@ -46,10 +46,7 @@ function displayName(agencyUpper: string): string {
 }
 
 function isoDate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return d.toISOString().slice(0, 10);
 }
 
 function buildEmailBodies(args: {
@@ -112,6 +109,11 @@ export async function prepareReport(args: {
   coverMessage?: string | null;
   senderName: string;
   senderEmail: string | null;
+  // When true, skip rendering the PDF buffer and the email body strings.
+  // The on-screen report page reads only htmlElement and agencyDisplayName,
+  // so paying for a PDF render + email-body build per page view is waste.
+  skipPdf?: boolean;
+  skipEmailBody?: boolean;
 }): Promise<PreparedReport> {
   const template: ReportTemplate = args.template ?? 'plain';
   const agencyLower = args.agency.toLowerCase();
@@ -126,7 +128,9 @@ export async function prepareReport(args: {
   const generatedAt = new Date();
 
   let pdfBuffer: Buffer;
-  if (template === 'editorial') {
+  if (args.skipPdf) {
+    pdfBuffer = Buffer.alloc(0);
+  } else if (template === 'editorial') {
     pdfBuffer = await renderIntelBriefPDF({
       data,
       generatedBy: args.senderName,
@@ -151,15 +155,22 @@ export async function prepareReport(args: {
   const dateStamp = isoDate(generatedAt);
   const subject = `[DG Work OS] ${agencyUpper} Intel Report: ${dateStamp}`;
   const filename = `${agencyLower}-intel-${dateStamp}.pdf`;
-  const { emailHtml, emailText } = buildEmailBodies({
-    agencyDisplayName,
-    agencyCode: agencyUpper,
-    recipientName: dg.name,
-    generatedAt,
-    coverMessage: args.coverMessage ?? null,
-    senderName: args.senderName,
-    senderEmail: args.senderEmail,
-  });
+
+  let emailHtml = '';
+  let emailText = '';
+  if (!args.skipEmailBody) {
+    const bodies = buildEmailBodies({
+      agencyDisplayName,
+      agencyCode: agencyUpper,
+      recipientName: dg.name,
+      generatedAt,
+      coverMessage: args.coverMessage ?? null,
+      senderName: args.senderName,
+      senderEmail: args.senderEmail,
+    });
+    emailHtml = bodies.emailHtml;
+    emailText = bodies.emailText;
+  }
 
   return {
     data,

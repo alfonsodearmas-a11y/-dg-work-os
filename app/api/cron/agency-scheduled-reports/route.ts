@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
     // Resolve audit attribution. If the creator was deactivated, attribute
     // the send to the active DG so institutional schedules outlive their
     // creators rather than nulling out.
-    let attributedUserId = row.created_by_user_id;
+    let attributedUserId: string | null = row.created_by_user_id;
     if (!attributedUserId) {
       const dg = await resolveActiveDG();
       attributedUserId = dg.userId;
@@ -160,24 +160,31 @@ export async function GET(request: NextRequest) {
         throw new Error(sendResult.error ?? 'sendEmail returned failure');
       }
 
-      // Audit log entry. attributedUserId may still be null if no active
-      // DG exists; we let the column accept it rather than blocking the
-      // send. The audit row makes the scheduled send traceable either
-      // way via source='scheduled'.
-      const { error: insertErr } = await supabaseAdmin
-        .from('agency_intel_reports')
-        .insert({
-          sent_by_user_id: attributedUserId,
-          agency: prepared.data.agency,
-          recipients: row.recipients,
-          message: row.cover_message,
-          source: 'scheduled',
-          template: row.template,
-        });
-      if (insertErr) {
+      // Audit log entry. agency_intel_reports.sent_by_user_id is NOT NULL,
+      // so if neither the schedule creator nor an active DG resolves, we
+      // skip the insert and log loudly. The email still went out; the
+      // operator just loses one audit row.
+      if (attributedUserId) {
+        const { error: insertErr } = await supabaseAdmin
+          .from('agency_intel_reports')
+          .insert({
+            sent_by_user_id: attributedUserId,
+            agency: prepared.data.agency,
+            recipients: row.recipients,
+            message: row.cover_message,
+            source: 'scheduled',
+            template: row.template,
+          });
+        if (insertErr) {
+          logger.error(
+            { err: insertErr, id: row.id },
+            'scheduled-reports cron: audit insert failed (email sent successfully)',
+          );
+        }
+      } else {
         logger.error(
-          { err: insertErr, id: row.id },
-          'scheduled-reports cron: audit insert failed (email sent successfully)',
+          { id: row.id, agency: row.agency },
+          'scheduled-reports cron: no attributable user (creator deactivated and no active DG); email sent but audit row skipped',
         );
       }
 

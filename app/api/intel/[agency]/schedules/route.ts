@@ -101,10 +101,17 @@ export async function POST(
 
   const sendHour = v.send_hour ?? 8;
   const timezone = 'America/Guyana';
+  // Mutual exclusivity: only the day field matching the chosen frequency
+  // stores a value. The other stays null so the CHECK constraint and
+  // future readers see a coherent row.
+  const isWeekish = v.frequency === 'weekly' || v.frequency === 'fortnightly';
+  const dow = isWeekish ? (v.day_of_week ?? null) : null;
+  const dom = v.frequency === 'monthly' ? (v.day_of_month ?? null) : null;
+
   const nextRunAt = computeNextRunAt({
     frequency: v.frequency as Frequency,
-    day_of_week: v.day_of_week ?? null,
-    day_of_month: v.day_of_month ?? null,
+    day_of_week: dow,
+    day_of_month: dom,
     send_hour: sendHour,
     timezone,
   });
@@ -117,8 +124,8 @@ export async function POST(
       recipients: valid,
       cover_message: v.cover_message ?? null,
       frequency: v.frequency,
-      day_of_week: v.day_of_week ?? null,
-      day_of_month: v.day_of_month ?? null,
+      day_of_week: dow,
+      day_of_month: dom,
       send_hour: sendHour,
       timezone,
       template: v.template ?? 'plain',

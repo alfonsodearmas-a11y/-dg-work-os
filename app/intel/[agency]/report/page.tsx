@@ -32,6 +32,10 @@ export default async function ReportPage({
     coverMessage: null,
     senderName: session.user.name || session.user.email,
     senderEmail: session.user.email ?? null,
+    // Page view only needs htmlElement and agencyDisplayName. Skip the
+    // PDF render and email-body build to keep this route fast.
+    skipPdf: true,
+    skipEmailBody: true,
   });
 
   return (

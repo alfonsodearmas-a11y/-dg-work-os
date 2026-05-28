@@ -59,12 +59,21 @@ CREATE TABLE IF NOT EXISTS agency_scheduled_reports (
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-  -- Frequency-specific day fields. weekly and fortnightly require
-  -- day_of_week; monthly requires day_of_month. The CHECK below enforces
-  -- the matching field is non-null per frequency.
+  -- Frequency-specific day fields. weekly/fortnightly use day_of_week
+  -- (day_of_month MUST be null); monthly uses day_of_month (day_of_week
+  -- MUST be null). Mutual exclusivity keeps the row coherent so readers
+  -- and future migrations cannot drift on stale data.
   CONSTRAINT agency_scheduled_reports_freq_fields_chk CHECK (
-    (frequency IN ('weekly', 'fortnightly') AND day_of_week IS NOT NULL)
-    OR (frequency = 'monthly' AND day_of_month IS NOT NULL)
+    (
+      frequency IN ('weekly', 'fortnightly')
+      AND day_of_week IS NOT NULL
+      AND day_of_month IS NULL
+    )
+    OR (
+      frequency = 'monthly'
+      AND day_of_month IS NOT NULL
+      AND day_of_week IS NULL
+    )
   )
 );
 
