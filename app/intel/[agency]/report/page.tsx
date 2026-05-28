@@ -49,7 +49,7 @@ export default async function ReportPage({
       </div>
       {prepared.htmlElement}
       <div className="max-w-5xl mx-auto px-4 mt-10">
-        <ScheduleList agency={lower} />
+        <ScheduleList agency={lower} agencyDisplay={INTEL_AGENCY_META[lower as IntelAgency]?.display ?? lower.toUpperCase()} />
       </div>
     </div>
   );
