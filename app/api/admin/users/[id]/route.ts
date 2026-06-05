@@ -39,6 +39,29 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
   const { data, error } = await parseBody(request, patchUserSchema);
   if (error) return error;
 
+  // D4 (role-simplification plan): owner-only authority.
+  //  - Only the system owner can promote anyone to a senior (future superadmin) role.
+  //  - A non-owner can never modify the owner account.
+  const { data: actor } = await supabaseAdmin
+    .from('users')
+    .select('is_owner')
+    .eq('id', session.user.id)
+    .single();
+
+  if (!actor?.is_owner) {
+    const { data: target } = await supabaseAdmin
+      .from('users')
+      .select('is_owner')
+      .eq('id', id)
+      .single();
+    if (target?.is_owner) {
+      return NextResponse.json({ error: 'Only the system owner can modify this account' }, { status: 403 });
+    }
+    if (data!.role && MINISTRY_ROLES.includes(data!.role)) {
+      return NextResponse.json({ error: 'Only the system owner can assign senior roles' }, { status: 403 });
+    }
+  }
+
   if (data!.action === 'suspend') {
     const { data: user } = await supabaseAdmin.from('users').select('email, status').eq('id', id).single();
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -199,6 +222,17 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
   if (session.user.id === id) {
     return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 });
+  }
+
+  // D4: a non-owner can never delete the owner account. (Combined with the
+  // self-delete block above, the owner row is effectively undeletable.)
+  const { data: deleteTarget } = await supabaseAdmin
+    .from('users')
+    .select('is_owner')
+    .eq('id', id)
+    .single();
+  if (deleteTarget?.is_owner) {
+    return NextResponse.json({ error: 'The system owner account cannot be deleted' }, { status: 403 });
   }
 
   const body = await request.json().catch(() => ({}));

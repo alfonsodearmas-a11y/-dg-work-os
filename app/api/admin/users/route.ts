@@ -53,17 +53,26 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   }
 
   const { email, name, role, agency } = parsed.data;
+  const normalizedEmail = email.toLowerCase().trim();
   const moduleGrants: string[] = Array.isArray(body.moduleGrants) ? body.moduleGrants : [];
 
-  // Only DG (super admin) can invite senior roles (minister, ps, dg)
-  if (MINISTRY_ROLES.includes(role) && session.user.role !== 'dg') {
-    return NextResponse.json({ error: 'Only the Director General can invite senior roles' }, { status: 403 });
+  // D4 (role-simplification plan): only the system OWNER can create senior-role
+  // (future superadmin) accounts — not every DG-role user.
+  if (MINISTRY_ROLES.includes(role)) {
+    const { data: actor } = await supabaseAdmin
+      .from('users')
+      .select('is_owner')
+      .eq('id', session.user.id)
+      .single();
+    if (!actor?.is_owner) {
+      return NextResponse.json({ error: 'Only the system owner can create senior-role accounts' }, { status: 403 });
+    }
   }
 
   const { data: existing } = await supabaseAdmin
     .from('users')
     .select('id, email')
-    .eq('email', email.toLowerCase().trim())
+    .eq('email', normalizedEmail)
     .single();
 
   if (existing) {
@@ -77,10 +86,28 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   const inviteToken = crypto.randomBytes(32).toString('hex');
   const tokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
+  // Supabase Auth owns identity: create the auth.users record FIRST and reuse
+  // its id for the profile row — users_id_authusers_fkey requires it, and
+  // set-password/login resolve credentials against auth.users (post-cutover).
+  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    email: normalizedEmail,
+    email_confirm: true,
+  });
+
+  if (authError || !authData?.user) {
+    logger.error({ err: authError }, '[admin-users] auth.admin.createUser failed');
+    const isConflict = authError?.code === 'email_exists';
+    return NextResponse.json(
+      { error: isConflict ? 'An auth account with this email already exists' : 'Failed to create auth account' },
+      { status: isConflict ? 409 : 500 },
+    );
+  }
+
   const { data: newUser, error: dbError } = await supabaseAdmin
     .from('users')
     .insert({
-      email: email.toLowerCase().trim(),
+      id: authData.user.id,
+      email: normalizedEmail,
       name: name.trim(),
       role,
       formal_title: formalTitle,
@@ -96,6 +123,11 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     .single();
 
   if (dbError) {
+    // Roll back the auth user so a failed invite doesn't orphan an
+    // auth.users record (which would 409 every retry of this email).
+    await supabaseAdmin.auth.admin.deleteUser(authData.user.id).catch((err) => {
+      logger.error({ err }, '[admin-users] failed to roll back orphaned auth user');
+    });
     return NextResponse.json({ error: dbError.message }, { status: 500 });
   }
 
