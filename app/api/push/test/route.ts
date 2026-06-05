@@ -4,7 +4,7 @@ import { requireRole } from '@/lib/auth-helpers';
 import { withErrorHandler } from '@/lib/api-utils';
 
 export const POST = withErrorHandler(async () => {
-  const authResult = await requireRole(['dg', 'minister', 'ps']);
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 

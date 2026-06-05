@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
 
@@ -30,14 +29,14 @@ const PER_SOURCE_LIMIT = 200;
 const COMBINED_LIMIT = 200;
 
 export async function GET(request: Request) {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
   const url = new URL(request.url);
   const limit = Math.min(parseInt(url.searchParams.get('limit') || String(COMBINED_LIMIT), 10), 500);
 
-  const isMinistry = MINISTRY_ROLES.includes(session.user.role);
+  const isMinistry = (session.user.role) === 'superadmin';
   const agencyFilter = isMinistry ? null : session.user.agency?.toUpperCase() ?? null;
 
   try {

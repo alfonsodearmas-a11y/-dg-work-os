@@ -39,7 +39,7 @@ const OUTAGE_COLUMNS = 'outage_id,feeder_id,date,time_out,time_in,duration_minut
 const FEEDER_COLUMNS = 'feeder_id,code,name,substation_code,area_served,customer_count';
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 

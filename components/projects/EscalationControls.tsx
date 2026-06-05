@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import { ShieldAlert, Flag, Loader2 } from 'lucide-react';
 
 interface EscalationControlsProps {
@@ -27,7 +26,7 @@ export function EscalationControls({
 }: EscalationControlsProps) {
   const [showModal, setShowModal] = useState(false);
   const [deescalating, setDeescalating] = useState(false);
-  const canDeescalate = MINISTRY_ROLES.includes(userRole);
+  const canDeescalate = (userRole) === 'superadmin';
 
   async function handleDeescalate() {
     setDeescalating(true);

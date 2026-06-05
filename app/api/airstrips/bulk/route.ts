@@ -29,7 +29,7 @@ const bodySchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+    const authResult = await requireRole(['superadmin', 'agency_manager']);
     if (authResult instanceof NextResponse) return authResult;
     const { session } = authResult;
 
@@ -127,7 +127,7 @@ const bulkUpdateSchema = z.object({
 
 export async function PATCH(request: NextRequest) {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+    const authResult = await requireRole(['superadmin', 'agency_manager']);
     if (authResult instanceof NextResponse) return authResult;
     const { session } = authResult;
 

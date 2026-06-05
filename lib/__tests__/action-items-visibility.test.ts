@@ -65,18 +65,18 @@ describe('canSeeTask', () => {
     expect(canSeeTask(u({ id: 'p', role: 'parl_sec' }), baseTask)).toBe(true);
   });
 
-  it('PS does NOT see dg_only tasks', () => {
+  it('PS (superadmin under the two-level model) DOES see dg_only tasks — D1', () => {
     expect(canSeeTask(u({ id: 'ps', role: 'ps' }),
-      { ...baseTask, visibility_scope: 'dg_only' })).toBe(false);
+      { ...baseTask, visibility_scope: 'dg_only' })).toBe(true);
   });
 
   it('Minister sees agency_normal tasks', () => {
     expect(canSeeTask(u({ id: 'm', role: 'minister' }), baseTask)).toBe(true);
   });
 
-  it('Minister does NOT see dg_only tasks', () => {
+  it('Minister (superadmin under the two-level model) DOES see dg_only tasks — D1', () => {
     expect(canSeeTask(u({ id: 'm', role: 'minister' }),
-      { ...baseTask, visibility_scope: 'dg_only' })).toBe(false);
+      { ...baseTask, visibility_scope: 'dg_only' })).toBe(true);
   });
 
   it('agency officer sees tasks in their home agency', () => {

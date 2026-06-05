@@ -10,7 +10,7 @@ import { NewMinisterReferralButton } from './_components/NewMinisterReferralButt
 export const dynamic = 'force-dynamic';
 
 export default async function MinisterAttentionPage() {
-  const result = await requireRole(['minister', 'dg']);
+  const result = await requireRole(['superadmin']);
   if (result instanceof NextResponse) {
     if (result.status === 403) {
       return <Forbidden detail="This view is reserved for the Minister and DG." />;
@@ -18,7 +18,7 @@ export default async function MinisterAttentionPage() {
     redirect('/login');
   }
   const { session } = result;
-  const isDG = session.user.role === 'dg';
+  const isDG = session.user.role === 'superadmin';
   const tasks = await listOpenFlaggedTasks();
 
   return (

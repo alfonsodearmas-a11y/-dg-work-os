@@ -45,7 +45,7 @@ describe('GET /api/projects/[id]/notes', () => {
 
   it('returns notes in descending order', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-1', role: 'dg', agency: null },
+      user: { id: 'user-1', role: 'superadmin', agency: null },
     });
 
     const mockNotes = [
@@ -83,7 +83,7 @@ describe('POST /api/projects/[id]/notes', () => {
 
   it('creates note with valid body', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-1', role: 'dg', agency: null },
+      user: { id: 'user-1', role: 'superadmin', agency: null },
     });
 
     const createdNote = {
@@ -112,7 +112,7 @@ describe('POST /api/projects/[id]/notes', () => {
 
   it('creates note with specified note_type', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-1', role: 'dg', agency: null },
+      user: { id: 'user-1', role: 'superadmin', agency: null },
     });
 
     const createdNote = {
@@ -137,7 +137,7 @@ describe('POST /api/projects/[id]/notes', () => {
 
   it('rejects empty note_text with 400', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-1', role: 'dg', agency: null },
+      user: { id: 'user-1', role: 'superadmin', agency: null },
     });
 
     const req = makeRequest('http://localhost:3000/api/projects/proj-1/notes', {
@@ -155,7 +155,7 @@ describe('POST /api/projects/[id]/notes', () => {
 
   it('rejects missing note_text with 400', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-1', role: 'dg', agency: null },
+      user: { id: 'user-1', role: 'superadmin', agency: null },
     });
 
     const req = makeRequest('http://localhost:3000/api/projects/proj-1/notes', {

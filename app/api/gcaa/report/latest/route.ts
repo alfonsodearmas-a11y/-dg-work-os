@@ -6,7 +6,7 @@ import { logger } from '@/lib/logger';
 const REPORT_COLUMNS = 'id, report_month, compliance_data, inspection_data, registration_data, incident_data, ai_insights, created_at, updated_at';
 
 export async function GET() {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   try {

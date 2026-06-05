@@ -54,15 +54,10 @@ async function fetchTasks(userId: string, role: Role, agency?: string | null): P
     .neq('status', 'done')
     .order('due_date', { ascending: true });
 
-  // Scope by role
-  if (role === 'officer') {
-    // Officers see only their own tasks
-    query = query.eq('owner_user_id', userId);
-  } else if (role === 'agency_admin' && agency) {
-    // Agency admins see all tasks tagged with their agency
+  // Scope by role (two-level: agency managers see their agency, superadmins see all)
+  if (role === 'agency_manager' && agency) {
     query = query.ilike('agency', agency);
   }
-  // Ministry roles (dg, minister, ps) see all tasks
 
   const { data, error } = await query;
   if (error) throw error;

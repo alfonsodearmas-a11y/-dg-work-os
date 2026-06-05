@@ -14,7 +14,7 @@ async function handler(request: NextRequest) {
   let isAuthed = isCron;
   if (!isAuthed) {
     const session = await auth();
-    isAuthed = !!session?.user?.id && ['dg', 'ps', 'parl_sec'].includes(session.user.role);
+    isAuthed = !!session?.user?.id && session.user.role === 'superadmin';
   }
   if (!isAuthed) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 

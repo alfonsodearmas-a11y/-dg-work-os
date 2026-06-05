@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const auth = await requireRole(['dg']);
+  const auth = await requireRole(['superadmin']);
   if (auth instanceof NextResponse) return auth;
   const { session } = auth;
   let body: { tender_id?: unknown };
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
 
 export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const auth = await requireRole(['dg']);
+  const auth = await requireRole(['superadmin']);
   if (auth instanceof NextResponse) return auth;
   const { session } = auth;
   const tenderId = request.nextUrl.searchParams.get('tender_id');

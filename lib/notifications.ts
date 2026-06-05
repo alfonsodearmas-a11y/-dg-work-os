@@ -1,7 +1,7 @@
 import { supabaseAdmin } from './db';
 import { fetchWeekEvents } from './google-calendar';
-import { MINISTRY_ROLES } from './people-types';
 import { logger } from '@/lib/logger';
+import { normalizeRole } from './auth-session';
 import { NotificationDeliveryError } from './notifications/errors';
 
 // --- Types ---
@@ -408,7 +408,10 @@ export async function generateTaskNotifications(userId: string, ctx?: GenerateCo
   const created: Notification[] = [];
 
   try {
-    const role = ctx?.role ?? (await supabaseAdmin.from('users').select('role').eq('id', userId).single()).data?.role;
+    // users.role is a raw DB value (legacy names until Phase 3) — normalize.
+    const role = ctx?.role ?? normalizeRole(
+      (await supabaseAdmin.from('users').select('role').eq('id', userId).single()).data?.role,
+    );
 
     // Fetch tasks from native tasks table
     let taskQuery = supabaseAdmin
@@ -417,7 +420,7 @@ export async function generateTaskNotifications(userId: string, ctx?: GenerateCo
       .neq('status', 'done');
 
     // Non-executive users only see tasks they own or assigned
-    const isExecutive = role && MINISTRY_ROLES.includes(role);
+    const isExecutive = role && (role) === 'superadmin';
     if (!isExecutive) {
       taskQuery = taskQuery.or(`owner_user_id.eq.${userId},assigned_by_user_id.eq.${userId}`);
     }
@@ -567,7 +570,8 @@ export async function generateAll(userId: string): Promise<{
 
   const ctx: GenerateContext = {
     userId,
-    role: userRow?.role ?? 'officer',
+    // Raw DB value (legacy names until Phase 3) — normalize to the two-level model.
+    role: normalizeRole(userRow?.role) ?? 'agency_manager',
     prefs,
   };
 

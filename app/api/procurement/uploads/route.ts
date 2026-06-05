@@ -11,7 +11,7 @@ const MAX_BYTES = 25 * 1024 * 1024;
  * GET /api/procurement/uploads — list recent uploads
  */
 export async function GET() {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
 
   try {
@@ -34,7 +34,7 @@ export async function GET() {
  * application/json when applying: { upload_id, action: 'apply' | 'cancel' }
  */
 export async function POST(request: NextRequest) {
-  const result = await requireRole(['dg', 'minister', 'ps']);
+  const result = await requireRole(['superadmin']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 

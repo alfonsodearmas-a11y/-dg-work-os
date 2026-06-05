@@ -7,14 +7,14 @@ import type { RegistryFilters } from '@/lib/delayed-projects/types';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 
   const userRole = session.user.role;
   const userAgency = session.user.agency;
   let agencyFilter: string | undefined;
-  if (userRole === 'agency_admin' || userRole === 'officer') {
+  if (userRole === 'agency_manager') {
     agencyFilter = userAgency || undefined;
   }
 

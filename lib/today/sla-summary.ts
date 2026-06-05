@@ -1,6 +1,5 @@
 import { listTenders } from '@/lib/tender/queries';
 import { TODAY_THRESHOLDS } from './thresholds';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import type { Role } from '@/lib/auth-helpers';
 
 export interface SlaSummary {
@@ -28,7 +27,7 @@ const END_TO_END_SLA_DAYS =
   (STAGE_SLA.advertised ?? 0) + (STAGE_SLA.evaluation ?? 0) + (STAGE_SLA.awaiting_award ?? 0);
 
 function scopedAgency(role: Role, agency: string | null): string | undefined {
-  return MINISTRY_ROLES.includes(role) ? undefined : agency ?? undefined;
+  return (role) === 'superadmin' ? undefined : agency ?? undefined;
 }
 
 export async function getSlaSummary(

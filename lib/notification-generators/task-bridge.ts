@@ -2,7 +2,6 @@ import { insertNotification } from '../notifications';
 import type { Notification, GenerateResult, GenerateContext } from '../notifications';
 import { NotificationDeliveryError } from '../notifications/errors';
 import { query } from '../db-pg';
-import { MINISTRY_ROLES } from '../people-types';
 import { logger } from '@/lib/logger';
 
 const BRIDGE_TYPES: Record<string, { notifType: string; priority: 'low' | 'medium' | 'high' | 'urgent'; actionRequired: boolean }> = {
@@ -12,7 +11,7 @@ const BRIDGE_TYPES: Record<string, { notifType: string; priority: 'low' | 'mediu
 };
 
 export async function generateTaskBridgeNotifications(ctx: GenerateContext): Promise<GenerateResult> {
-  if (!MINISTRY_ROLES.includes(ctx.role)) {
+  if ((ctx.role) !== 'superadmin') {
     return { count: 0, notifications: [] };
   }
 

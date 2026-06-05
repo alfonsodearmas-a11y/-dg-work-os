@@ -8,7 +8,7 @@ const BUCKET = 'tender-documents';
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string; docId: string }> }) {
   const { id, docId } = await params;
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
@@ -41,7 +41,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string; docId: string }> }) {
   const { id, docId } = await params;
-  const result = await requireRole(['dg', 'agency_admin']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 

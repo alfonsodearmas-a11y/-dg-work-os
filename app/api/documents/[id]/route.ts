@@ -20,7 +20,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   const { id } = await params;
@@ -65,7 +65,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   const { id } = await params;
@@ -144,7 +144,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authResult = await requireRole(['dg', 'minister', 'ps']);
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
 
   const { id } = await params;

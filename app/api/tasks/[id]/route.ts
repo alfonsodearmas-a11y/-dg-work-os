@@ -5,7 +5,6 @@ import { supabaseAdmin } from '@/lib/db';
 import { createNotification } from '@/lib/notifications/notification-service';
 import { NotificationDeliveryError } from '@/lib/notifications/errors';
 import { notifyTaskWatchers } from '@/lib/notifications/notify-task-watchers';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import { parseBody, apiError, withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { TASK_COLUMNS, flattenTaskOwner } from '@/lib/task-types';
@@ -34,7 +33,7 @@ export const PATCH = withErrorHandler(async (
   request: NextRequest,
   ctx?: unknown,
 ) => {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
@@ -66,7 +65,7 @@ export const PATCH = withErrorHandler(async (
 
   const isOwner = task.owner_user_id === session.user.id;
   const isAssigner = task.assigned_by_user_id === session.user.id;
-  const isMinistryRole = MINISTRY_ROLES.includes(session.user.role);
+  const isMinistryRole = (session.user.role) === 'superadmin';
 
   if (!isOwner && !isAssigner && !isMinistryRole) {
     return apiError('FORBIDDEN', 'Not authorized to update this task', 403);
@@ -89,7 +88,7 @@ export const PATCH = withErrorHandler(async (
     // Unflag: only the DG can do this. Clearing the timestamp + author
     // happens in the same UPDATE so the row's minister-attention state
     // is internally consistent.
-    if (session.user.role !== 'dg') {
+    if (session.user.role !== 'superadmin') {
       return apiError('FORBIDDEN', 'Only the DG can unflag a task from Minister attention', 403);
     }
     updates.requires_minister_attention = false;
@@ -348,7 +347,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
@@ -366,7 +365,7 @@ export async function DELETE(
   }
 
   // Only DG can delete anything; owner can delete if new
-  const isDG = session.user.role === 'dg';
+  const isDG = session.user.role === 'superadmin';
   const isOwnerNew = task.owner_user_id === session.user.id && task.status === 'new';
 
   if (!isDG && !isOwnerNew) {

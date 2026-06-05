@@ -37,7 +37,7 @@ export async function POST(
     return NextResponse.json({ error: 'Application not found' }, { status: 404 });
   }
 
-  if (session.user.role !== 'dg' && app.agency !== session.user.agency) {
+  if (session.user.role !== 'superadmin' && app.agency !== session.user.agency) {
     return NextResponse.json({ error: 'Access denied' }, { status: 403 });
   }
 

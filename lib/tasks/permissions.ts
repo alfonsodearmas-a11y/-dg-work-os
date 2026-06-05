@@ -20,7 +20,7 @@ export function canManageWatchers(
 ): boolean {
   const userId = session?.user?.id;
   if (!userId) return false;
-  if (session.user?.role === 'dg') return true;
+  if (session.user?.role === 'superadmin') return true;
   if (task.owner_user_id === userId) return true;
   if (task.assigned_by_user_id === userId) return true;
   return false;

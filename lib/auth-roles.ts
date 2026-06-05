@@ -1,11 +1,13 @@
 // Client-SAFE pure role/permission helpers. NO server imports — no auth(), no db,
 // no `server-only` — so client components (e.g. KanbanBoard) can import these
 // without dragging the server-only Supabase auth path into the client bundle.
-// `lib/auth-helpers.ts` re-exports everything here for the ~49 server call-sites.
 //
-// The only import is `MINISTRY_ROLES` (a pure const) and a type-only `Role`
-// (erased at compile), so this module stays free of runtime server dependencies.
-import { MINISTRY_ROLES } from './people-types';
+// PHASE 2 (role simplification): two permission levels.
+//   superadmin      — sees and does everything, all agencies (D3: includes
+//                     upload/NPTAB breadth the old minister/ps roles lacked).
+//   agency_manager  — sees and does everything for THEIR OWN agency (D2:
+//                     absorbs the old officer role — full agency powers).
+// Title (formal_title) is display-only and never consulted here.
 import type { Role } from './auth';
 
 export type { Role };
@@ -19,7 +21,7 @@ export function canAccessAgency(
   userAgency: string | null,
   targetAgency: string
 ): boolean {
-  if (MINISTRY_ROLES.includes(userRole)) return true;
+  if (userRole === 'superadmin') return true;
   return userAgency === targetAgency.toUpperCase();
 }
 
@@ -28,22 +30,20 @@ export function canUploadData(
   userAgency: string | null,
   targetAgency: string
 ): boolean {
-  if (userRole === 'dg') return true;
-  if (userRole === 'minister' || userRole === 'ps' || userRole === 'parl_sec') return false;
-  if (userRole === 'agency_admin' || userRole === 'officer') {
-    return userAgency === targetAgency.toUpperCase();
-  }
-  return false;
+  if (userRole === 'superadmin') return true;
+  return userAgency === targetAgency.toUpperCase();
 }
 
-export function canAssignTasks(userRole: Role): boolean {
-  return ['dg', 'minister', 'ps', 'parl_sec', 'agency_admin'].includes(userRole);
+export function canAssignTasks(_userRole: Role): boolean {
+  // Both levels can assign (D2: ex-officers gain this).
+  void _userRole;
+  return true;
 }
 
 /**
  * Whether the user can verify a completed task (drives the role-aware Pending
- * Verification column). Ministry roles can verify any task; an agency_admin can
- * verify only tasks scoped to their portfolio agency. `taskAgency` optional:
+ * Verification column). Superadmins can verify any task; an agency_manager can
+ * verify only tasks scoped to their own agency. `taskAgency` optional:
  * omitted = "could this user ever verify *some* task?" (used to decide whether to
  * render the column at all).
  */
@@ -52,16 +52,16 @@ export function canVerify(
   userAgency: string | null,
   taskAgency?: string | null
 ): boolean {
-  if (['dg', 'minister', 'ps', 'parl_sec'].includes(userRole)) return true;
-  if (userRole === 'agency_admin' && userAgency) {
+  if (userRole === 'superadmin') return true;
+  if (userAgency) {
     if (!taskAgency) return true;
     return userAgency === taskAgency.toUpperCase();
   }
   return false;
 }
 
-// PSIP upload is ministry-only (dg/minister/ps).
+// PSIP upload stays superadmin-only.
 export function canAccessPsipSync(userRole: Role, _userAgency: string | null | undefined): boolean {
   void _userAgency;
-  return MINISTRY_ROLES.includes(userRole);
+  return userRole === 'superadmin';
 }

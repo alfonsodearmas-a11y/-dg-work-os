@@ -1,5 +1,4 @@
 import type { Session } from '@/lib/auth-session';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 
 /**
  * Returns the agency scope for the current user session.
@@ -8,7 +7,7 @@ import { MINISTRY_ROLES } from '@/lib/people-types';
  */
 export function getAgencyScope(session: Session): string | null {
   const user = session.user as { role: string; agency: string | null };
-  if (MINISTRY_ROLES.includes(user.role)) return null;
+  if ((user.role) === 'superadmin') return null;
   return user.agency;
 }
 
@@ -16,7 +15,7 @@ export function getAgencyScope(session: Session): string | null {
  * Returns true if the user has ministry-level access (sees all agencies).
  */
 export function isMinistryRole(session: Session): boolean {
-  return MINISTRY_ROLES.includes((session.user as { role: string }).role);
+  return ((session.user as { role: string }).role) === 'superadmin';
 }
 
 /**
@@ -32,10 +31,10 @@ export function getViewAsAgencyScope(
 ): string | null {
   const realRole = (session.user as { role: string }).role;
 
-  // Only DG can use View As overrides
-  if (realRole === 'dg' && (viewAsRole || viewAsAgency)) {
+  // Only superadmins can use View As overrides
+  if (realRole === 'superadmin' && (viewAsRole || viewAsAgency)) {
     const effectiveRole = viewAsRole || realRole;
-    if (MINISTRY_ROLES.includes(effectiveRole)) return null;
+    if ((effectiveRole) === 'superadmin') return null;
     return viewAsAgency || null;
   }
 
@@ -51,6 +50,6 @@ export function getEffectiveRole(
   viewAsRole?: string | null,
 ): string {
   const realRole = (session.user as { role: string }).role;
-  if (realRole === 'dg' && viewAsRole) return viewAsRole;
+  if (realRole === 'superadmin' && viewAsRole) return viewAsRole;
   return realRole;
 }

@@ -72,7 +72,7 @@ export default function InboxPage() {
   const [archivePicker, setArchivePicker] = useState<string | null>(null);
   const [archiveReason, setArchiveReason] = useState<ArchiveReasonCode>('withdrawn');
 
-  const isDg = session?.user?.role === 'dg';
+  const isDg = session?.user?.role === 'superadmin';
 
   const load = useCallback(async () => {
     const res = await fetch('/api/procurement/inbox');

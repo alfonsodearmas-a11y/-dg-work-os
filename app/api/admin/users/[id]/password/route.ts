@@ -10,7 +10,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const authResult = await requireRole(['dg']);
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
 
   const { password } = await req.json();

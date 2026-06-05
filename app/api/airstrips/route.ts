@@ -12,7 +12,7 @@ import { parseBody } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    const authResult = await requireRole(['superadmin', 'agency_manager']);
     if (authResult instanceof NextResponse) return authResult;
 
     const p = request.nextUrl.searchParams;
@@ -126,7 +126,7 @@ const createSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+    const authResult = await requireRole(['superadmin', 'agency_manager']);
     if (authResult instanceof NextResponse) return authResult;
     const { session } = authResult;
 

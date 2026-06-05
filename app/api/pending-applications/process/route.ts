@@ -3,7 +3,6 @@ import { supabaseAdmin } from '@/lib/db';
 import { createHash } from 'crypto';
 import { parseGPLBuffer, parseGWIBuffer } from '@/lib/pending-applications-parser';
 import { createSnapshot } from '@/lib/pending-applications-snapshots';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import { processUploadDiff } from '@/lib/service-connection-diff';
 import type { PendingRecord } from '@/lib/pending-applications-types';
 import { classifyTrack } from '@/lib/service-connection-track';
@@ -22,7 +21,7 @@ async function validateAuth(request: NextRequest): Promise<string | null> {
   const session = await auth();
   if (session?.user?.id) {
     const role = session.user.role;
-    if (MINISTRY_ROLES.includes(role)) return null;
+    if ((role) === 'superadmin') return null;
     if (session.user.agency) return session.user.agency.toUpperCase();
     throw { status: 403, error: 'Your account does not have upload access' };
   }

@@ -5,7 +5,7 @@ import { withErrorHandler } from '@/lib/api-utils';
 
 // GET /api/admin/modules — list all modules (DG/minister/ps)
 export const GET = withErrorHandler(async (_req: NextRequest) => {
-  const result = await requireRole(['dg', 'minister', 'ps']);
+  const result = await requireRole(['superadmin']);
   if (result instanceof NextResponse) return result;
 
   const modules = await getAllModules();

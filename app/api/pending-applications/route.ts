@@ -7,7 +7,7 @@ import { sanitizeSearchInput, parsePaginationParams } from '@/lib/parse-utils';
 const COLUMNS = 'id,agency,customer_reference,first_name,last_name,telephone,region,district,village_ward,street,lot,event_code,event_description,application_date,days_waiting,data_as_of,pipeline_stage,account_type,service_order_type,service_order_number,account_status,cycle,division_code';
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   try {

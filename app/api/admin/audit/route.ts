@@ -4,7 +4,7 @@ import { auditService } from '@/lib/audit';
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireRole(['dg', 'minister']);
+    const authResult = await requireRole(['superadmin']);
     if (authResult instanceof NextResponse) return authResult;
 
     const { searchParams } = new URL(request.url);

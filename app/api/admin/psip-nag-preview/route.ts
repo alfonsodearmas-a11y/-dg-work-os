@@ -5,7 +5,7 @@ import { supabaseAdmin } from '@/lib/db';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  const result = await requireRole(['dg']);
+  const result = await requireRole(['superadmin']);
   if (result instanceof NextResponse) return result;
 
   const sp = request.nextUrl.searchParams;

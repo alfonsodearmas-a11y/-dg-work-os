@@ -4,7 +4,7 @@ import { markAllNotificationsRead } from '@/lib/task-notifications';
 import { apiError, withErrorHandler } from '@/lib/api-utils';
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   try {

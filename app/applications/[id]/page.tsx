@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import Link from 'next/link';
 import {
   ArrowLeft, FileText, Upload, Trash2, Clock, CheckCircle, XCircle,
@@ -98,7 +97,7 @@ export default function ApplicationDetailPage() {
 
   const userRole = effectiveUser.role;
   const userId = effectiveUser.id;
-  const isMinistryOrAdmin = MINISTRY_ROLES.includes(userRole) || userRole === 'agency_admin';
+  const isMinistryOrAdmin = userRole === 'superadmin' || userRole === 'agency_manager';
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -124,7 +123,7 @@ export default function ApplicationDetailPage() {
   const getAvailableStatuses = () => {
     if (!app) return [];
     const current = app.status;
-    if (MINISTRY_ROLES.includes(userRole) || userRole === 'agency_admin') {
+    if (userRole === 'superadmin' || userRole === 'agency_manager') {
       return ['pending', 'under_review', 'approved', 'rejected'].filter(s => s !== current);
     }
     // Officers: pending → under_review only
@@ -408,7 +407,7 @@ export default function ApplicationDetailPage() {
                         {formatFileSize(doc.file_size)} · {doc.uploader_name || 'Unknown'} · {formatDistanceToNow(parseISO(doc.uploaded_at), { addSuffix: true })}
                       </p>
                     </div>
-                    {(userId === doc.uploaded_by || userRole === 'dg') && (
+                    {(userId === doc.uploaded_by || userRole === 'superadmin') && (
                       <button
                         onClick={() => deleteDocument(doc.id)}
                         disabled={deleting === doc.id}

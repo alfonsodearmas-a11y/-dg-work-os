@@ -32,7 +32,7 @@ export async function DELETE(
   }
 
   // Only own uploads (or DG)
-  if (session.user.role !== 'dg' && doc.uploaded_by !== session.user.id) {
+  if (session.user.role !== 'superadmin' && doc.uploaded_by !== session.user.id) {
     return NextResponse.json({ error: 'You can only delete your own uploads' }, { status: 403 });
   }
 

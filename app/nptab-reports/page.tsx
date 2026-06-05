@@ -8,7 +8,7 @@ import { NptabReportsList } from './_components/NptabReportsList';
 export const dynamic = 'force-dynamic';
 
 export default async function NptabReportsPage() {
-  const result = await requireRole(['dg', 'ps']);
+  const result = await requireRole(['superadmin']);
   if (result instanceof NextResponse) notFound();
   const { session } = result;
   const [queue, reports] = await Promise.all([listActiveQueue(), listReports()]);
@@ -21,7 +21,7 @@ export default async function NptabReportsPage() {
           Procurement Performance Reports to the National Procurement and Tender Administration Board.
         </p>
       </header>
-      <QueueSection queue={queue} upcomingPeriodLabel={upcomingPeriodLabel} canEdit={session.user.role === 'dg'} />
+      <QueueSection queue={queue} upcomingPeriodLabel={upcomingPeriodLabel} canEdit={session.user.role === 'superadmin'} />
       <NptabReportsList reports={reports} />
     </div>
   );

@@ -6,7 +6,7 @@ import { sanitizeSearchInput, parsePaginationParams } from '@/lib/parse-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    const authResult = await requireRole(['superadmin', 'agency_manager']);
     if (authResult instanceof NextResponse) return authResult;
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');

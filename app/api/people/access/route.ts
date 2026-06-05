@@ -6,7 +6,7 @@ import type { AccessLevel } from '@/lib/people-types';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 
@@ -31,7 +31,7 @@ const accessSchema = z.object({
 });
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 
@@ -68,7 +68,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 });
 
 export async function DELETE(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 

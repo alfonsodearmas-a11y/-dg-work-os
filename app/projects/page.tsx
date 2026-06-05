@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import {
   Upload, AlertTriangle, Building2, DollarSign, CheckCircle,
   ChevronDown, RefreshCw, Loader2, Search,
@@ -357,7 +356,7 @@ function ProjectSlidePanel({
   const [loadingNotes, setLoadingNotes] = useState(true);
   const [newNote, setNewNote] = useState('');
   const [addingNote, setAddingNote] = useState(false);
-  const canDeescalate = MINISTRY_ROLES.includes(userRole);
+  const canDeescalate = (userRole) === 'superadmin';
   const projectSlidePanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1129,7 +1128,7 @@ export default function ProjectsPage() {
           <button onClick={handleRefresh} className="btn-navy flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2" aria-label="Refresh">
             <RefreshCw className="h-4 w-4" aria-hidden="true" /><span className="hidden md:inline">Refresh</span>
           </button>
-          {MINISTRY_ROLES.includes(userRole) && (
+          {(userRole) === 'superadmin' && (
             <button onClick={() => setShowUpload(true)} className="btn-gold flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2" aria-label="Upload Excel">
               <Upload className="h-4 w-4" aria-hidden="true" /><span className="hidden md:inline">Upload Excel</span>
             </button>

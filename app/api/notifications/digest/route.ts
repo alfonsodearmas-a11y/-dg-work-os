@@ -39,7 +39,7 @@ async function handleDigest(request: NextRequest) {
   try {
     // Auth: cron secret OR DG role
     if (!isCronAuthorized(request)) {
-      const authResult = await requireRole(['dg']);
+      const authResult = await requireRole(['superadmin']);
       if (authResult instanceof NextResponse) return authResult;
     }
 

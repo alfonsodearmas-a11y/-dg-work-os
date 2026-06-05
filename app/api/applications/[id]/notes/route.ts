@@ -3,7 +3,6 @@ import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/db';
 import { canAccessModule } from '@/lib/modules/access';
 
-import { MINISTRY_ROLES } from '@/lib/people-types';
 
 // GET /api/applications/[id]/notes — all notes for an application
 export async function GET(
@@ -31,7 +30,7 @@ export async function GET(
   if (!app) {
     return NextResponse.json({ error: 'Application not found' }, { status: 404 });
   }
-  if (session.user.role !== 'dg' && app.agency !== session.user.agency) {
+  if (session.user.role !== 'superadmin' && app.agency !== session.user.agency) {
     return NextResponse.json({ error: 'Access denied' }, { status: 403 });
   }
 
@@ -80,7 +79,7 @@ export async function POST(
   if (!app) {
     return NextResponse.json({ error: 'Application not found' }, { status: 404 });
   }
-  if (session.user.role !== 'dg' && app.agency !== session.user.agency) {
+  if (session.user.role !== 'superadmin' && app.agency !== session.user.agency) {
     return NextResponse.json({ error: 'Access denied' }, { status: 403 });
   }
 
@@ -95,8 +94,8 @@ export async function POST(
 
   // Enforce role-based status transition rules
   if (statusChanged) {
-    const isMinistry = MINISTRY_ROLES.includes(session.user.role);
-    const isAgencyAdmin = session.user.role === 'agency_admin';
+    const isMinistry = (session.user.role) === 'superadmin';
+    const isAgencyAdmin = session.user.role === 'agency_manager';
 
     if (!isMinistry && !isAgencyAdmin) {
       if (!(app.status === 'pending' && new_status === 'under_review')) {

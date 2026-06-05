@@ -20,6 +20,7 @@ vi.mock('@/lib/db', () => ({
 
 vi.mock('@/lib/notifications', () => ({
   insertNotification: vi.fn().mockResolvedValue(undefined),
+  DEFAULT_EVENT_PREFERENCES: {},
 }));
 
 import { GET, POST } from '@/app/api/tasks/route';
@@ -35,7 +36,7 @@ describe('GET /api/tasks', () => {
 
   it('returns tasks for authenticated user', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-1', role: 'dg', agency: null },
+      user: { id: 'user-1', role: 'superadmin', agency: null },
     });
 
     const mockData = [
@@ -93,7 +94,7 @@ describe('POST /api/tasks', () => {
 
   it('creates task with valid body', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-1', role: 'dg', agency: null },
+      user: { id: 'user-1', role: 'superadmin', agency: null },
     });
 
     const createdTask = {
@@ -145,7 +146,7 @@ describe('POST /api/tasks', () => {
 
   it('returns 400 with missing title', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-1', role: 'dg', agency: null },
+      user: { id: 'user-1', role: 'superadmin', agency: null },
     });
 
     const req = makeRequest('http://localhost:3000/api/tasks', {
@@ -163,7 +164,7 @@ describe('POST /api/tasks', () => {
 
   it('returns 400 with empty title', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-1', role: 'dg', agency: null },
+      user: { id: 'user-1', role: 'superadmin', agency: null },
     });
 
     const req = makeRequest('http://localhost:3000/api/tasks', {

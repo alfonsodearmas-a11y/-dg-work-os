@@ -11,7 +11,7 @@ let cachedAnalysis: { analysis: any; generatedAt: number; rowCount: number } | n
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export async function GET() {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
   if (!canAccessAgency(session.user.role, session.user.agency, 'gpl')) {
@@ -177,7 +177,7 @@ Respond in JSON format:
 }
 
 export const POST = withErrorHandler(async () => {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session: postSession } = authResult;
   if (!canAccessAgency(postSession.user.role, postSession.user.agency, 'gpl')) {

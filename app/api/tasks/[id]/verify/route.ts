@@ -6,7 +6,7 @@ import { logEvent } from '@/lib/action-items/events';
 export const dynamic = 'force-dynamic';
 
 export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const auth = await requireRole(['dg']);
+  const auth = await requireRole(['superadmin']);
   if (auth instanceof NextResponse) return auth;
   const { id } = await ctx.params;
 

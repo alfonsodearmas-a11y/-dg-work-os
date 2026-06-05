@@ -3,11 +3,16 @@ import { auth, type Role } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { NextResponse } from 'next/server';
 import type { ModuleRecord, ModuleOverride, ModuleOverrideDetailed, ModulePermission } from '@/lib/module-types';
-import { MINISTRY_ROLES } from '@/lib/people-types';
+import { normalizeRole } from '@/lib/auth-session';
 
 export type { ModuleRecord, ModuleOverride, ModuleOverrideDetailed, ModulePermission };
 
-const FULL_ACCESS_ROLES: readonly string[] = MINISTRY_ROLES;
+// PHASE 2: modules.default_roles arrays in the DB still hold LEGACY role names
+// until the Phase 3 migration — every comparison normalizes the stored names
+// first (matchesDefaultRoles). Superadmin bypasses module gating entirely.
+function matchesDefaultRoles(defaultRoles: string[], userRole: Role): boolean {
+  return defaultRoles.some((r) => normalizeRole(r) === userRole);
+}
 
 /**
  * Look up a module by slug and determine if it's a role default for the given user.
@@ -36,7 +41,8 @@ async function resolveModuleAndRole(userId: string, moduleSlug: string) {
   }
 
   const role = (user as { role: string } | null)?.role;
-  const isDefault = !!role && (mod.default_roles as string[]).includes(role);
+  const normalized = normalizeRole(role);
+  const isDefault = !!normalized && matchesDefaultRoles(mod.default_roles as string[], normalized);
 
   return { mod: mod as { id: string; default_roles: string[] }, isDefault };
 }
@@ -50,7 +56,7 @@ async function resolveModuleAndRole(userId: string, moduleSlug: string) {
  */
 export async function getUserModules(userId: string, userRole: Role): Promise<string[]> {
   // Ministry roles see everything active
-  if (FULL_ACCESS_ROLES.includes(userRole)) {
+  if (userRole === 'superadmin') {
     const { data } = await supabaseAdmin
       .from('modules')
       .select('slug')
@@ -84,7 +90,7 @@ export async function getUserModules(userId: string, userRole: Role): Promise<st
       const override = overrideMap.get(m.id);
       if (override === 'deny') return false;
       if (override === 'grant') return true;
-      return m.default_roles.includes(userRole);
+      return matchesDefaultRoles(m.default_roles, userRole);
     })
     .map((m: { slug: string }) => m.slug);
 }
@@ -93,7 +99,7 @@ export async function getUserModules(userId: string, userRole: Role): Promise<st
  * Check if a specific user can access a specific module.
  */
 export async function canAccessModule(userId: string, userRole: Role, moduleSlug: string): Promise<boolean> {
-  if (FULL_ACCESS_ROLES.includes(userRole)) {
+  if (userRole === 'superadmin') {
     const { data } = await supabaseAdmin
       .from('modules')
       .select('id')
@@ -123,7 +129,7 @@ export async function canAccessModule(userId: string, userRole: Role, moduleSlug
     return (override as { access_type: string }).access_type === 'grant';
   }
 
-  return (mod.default_roles as string[]).includes(userRole);
+  return matchesDefaultRoles(mod.default_roles as string[], userRole);
 }
 
 /**
@@ -410,7 +416,7 @@ export async function getUserModulePermissions(
   const result: Record<string, ModulePermission> = {};
 
   // Ministry roles see everything with full edit access
-  if (FULL_ACCESS_ROLES.includes(userRole)) {
+  if (userRole === 'superadmin') {
     const { data } = await supabaseAdmin
       .from('modules')
       .select('slug')
@@ -451,7 +457,7 @@ export async function getUserModulePermissions(
       }
       // Explicit grant
       result[m.slug] = { slug: m.slug, canView: true, canEdit: override.can_edit };
-    } else if (m.default_roles.includes(userRole)) {
+    } else if (matchesDefaultRoles(m.default_roles, userRole)) {
       // Role default — view only, no edit
       result[m.slug] = { slug: m.slug, canView: true, canEdit: false };
     }
@@ -471,7 +477,7 @@ export async function canEditModule(
   moduleSlug: string,
 ): Promise<boolean> {
   // Ministry roles always have edit access
-  if (FULL_ACCESS_ROLES.includes(userRole)) return true;
+  if (userRole === 'superadmin') return true;
 
   const { data: mod } = await supabaseAdmin
     .from('modules')

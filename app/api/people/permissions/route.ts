@@ -3,7 +3,7 @@ import { requireRole } from '@/lib/auth-helpers';
 import { getRolesWithPermissions, getAllPermissions, getPermissionsForRole } from '@/lib/people-permissions';
 
 export async function GET() {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 

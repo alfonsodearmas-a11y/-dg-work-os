@@ -7,7 +7,7 @@ import { logger } from '@/lib/logger';
 // Admin endpoint for AI usage statistics.
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps']);
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
 
   try {

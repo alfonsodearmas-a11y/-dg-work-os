@@ -81,7 +81,7 @@ describe('POST /api/projects/[id]/escalate', () => {
 
   it('succeeds with valid reason', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-1', role: 'dg', agency: null },
+      user: { id: 'user-1', role: 'superadmin', agency: null },
     });
 
     const req = makeRequest('http://localhost:3000/api/projects/proj-1/escalate', {
@@ -100,7 +100,7 @@ describe('POST /api/projects/[id]/escalate', () => {
 
   it('returns 400 with empty reason', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-1', role: 'dg', agency: null },
+      user: { id: 'user-1', role: 'superadmin', agency: null },
     });
 
     const req = makeRequest('http://localhost:3000/api/projects/proj-1/escalate', {
@@ -118,7 +118,7 @@ describe('POST /api/projects/[id]/escalate', () => {
 
   it('returns 400 with missing reason', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-1', role: 'dg', agency: null },
+      user: { id: 'user-1', role: 'superadmin', agency: null },
     });
 
     const req = makeRequest('http://localhost:3000/api/projects/proj-1/escalate', {
@@ -155,9 +155,9 @@ describe('DELETE /api/projects/[id]/escalate (de-escalate)', () => {
     mockDeescalateProject.mockResolvedValue(undefined);
   });
 
-  it('succeeds for dg role', async () => {
+  it('succeeds for superadmin role', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-1', role: 'dg', agency: null },
+      user: { id: 'user-1', role: 'superadmin', agency: null },
     });
 
     const req = makeRequest('http://localhost:3000/api/projects/proj-1/escalate', {
@@ -172,9 +172,9 @@ describe('DELETE /api/projects/[id]/escalate (de-escalate)', () => {
     expect(mockDeescalateProject).toHaveBeenCalledWith('proj-1');
   });
 
-  it('succeeds for minister role', async () => {
+  it('succeeds for a second superadmin session', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-2', role: 'minister', agency: null },
+      user: { id: 'user-2', role: 'superadmin', agency: null },
     });
 
     const req = makeRequest('http://localhost:3000/api/projects/proj-1/escalate', {
@@ -185,9 +185,9 @@ describe('DELETE /api/projects/[id]/escalate (de-escalate)', () => {
     expect(res.status).toBe(200);
   });
 
-  it('succeeds for ps role', async () => {
+  it('succeeds for a third superadmin session', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-3', role: 'ps', agency: null },
+      user: { id: 'user-3', role: 'superadmin', agency: null },
     });
 
     const req = makeRequest('http://localhost:3000/api/projects/proj-1/escalate', {
@@ -198,9 +198,9 @@ describe('DELETE /api/projects/[id]/escalate (de-escalate)', () => {
     expect(res.status).toBe(200);
   });
 
-  it('returns 403 for officer role', async () => {
+  it('returns 403 for agency_manager role', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-4', role: 'officer', agency: 'GPL' },
+      user: { id: 'user-4', role: 'agency_manager', agency: 'GPL' },
     });
 
     const req = makeRequest('http://localhost:3000/api/projects/proj-1/escalate', {
@@ -214,9 +214,9 @@ describe('DELETE /api/projects/[id]/escalate (de-escalate)', () => {
     expect(body.error).toBe('Insufficient permissions');
   });
 
-  it('returns 403 for agency_admin role', async () => {
+  it('returns 403 for agency_manager role (second fixture)', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-5', role: 'agency_admin', agency: 'GPL' },
+      user: { id: 'user-5', role: 'agency_manager', agency: 'GPL' },
     });
 
     const req = makeRequest('http://localhost:3000/api/projects/proj-1/escalate', {

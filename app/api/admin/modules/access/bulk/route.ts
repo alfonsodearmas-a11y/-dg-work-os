@@ -8,7 +8,7 @@ import {
 // POST /api/admin/modules/access/bulk — bulk upsert module permissions (DG only)
 // Body: { userId: string, permissions: Array<{ moduleSlug, accessType, canEdit, agency? }> }
 export async function POST(req: NextRequest) {
-  const result = await requireRole(['dg']);
+  const result = await requireRole(['superadmin']);
   if (result instanceof NextResponse) return result;
 
   const body = await req.json();

@@ -6,7 +6,7 @@ import { logger } from '@/lib/logger';
 // Problems = Delayed projects (past deadline)
 export async function GET() {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    const authResult = await requireRole(['superadmin', 'agency_manager']);
     if (authResult instanceof NextResponse) return authResult;
 
     const projects = await getDelayedProjects();

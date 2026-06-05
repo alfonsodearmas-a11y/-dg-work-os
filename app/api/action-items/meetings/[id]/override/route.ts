@@ -12,7 +12,7 @@ const BodyZ = z.object({
 });
 
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const a = await requireRole(['dg', 'ps']);
+  const a = await requireRole(['superadmin']);
   if (a instanceof NextResponse) return a;
   const { id } = await ctx.params;
   const parsed = BodyZ.safeParse(await req.json().catch(() => null));

@@ -42,7 +42,7 @@ import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import { ViewAsSelector } from './ViewAsSelector';
 import type { Role } from '@/lib/auth';
 
-import { ROLE_LABELS, MINISTRY_ROLES } from '@/lib/people-types';
+import { ROLE_LABELS } from '@/lib/people-types';
 
 // ---------------------------------------------------------------------------
 // Sidebar Tooltip — glassmorphism floating label for collapsed icon rail
@@ -104,8 +104,8 @@ const mainNavItems: NavItem[] = [
   { href: '/meetings', label: 'Meetings', icon: Mic, moduleSlug: 'meetings' },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays, moduleSlug: 'calendar' },
   { href: '/documents', label: 'Documents', icon: FileText, moduleSlug: 'documents' },
-  { href: '/nptab-reports', label: 'NPTAB Reports', icon: FileBarChart, moduleSlug: 'nptab-reports', requireRole: ['dg', 'ps'] },
-  { href: '/minister/attention', label: 'Minister Attention', icon: Inbox, moduleSlug: 'minister-attention', requireRole: ['minister'] },
+  { href: '/nptab-reports', label: 'NPTAB Reports', icon: FileBarChart, moduleSlug: 'nptab-reports', requireRole: ['superadmin'] },
+  { href: '/minister/attention', label: 'Minister Attention', icon: Inbox, moduleSlug: 'minister-attention', requireRole: ['superadmin'] },
 ];
 
 type AgencyItem = {
@@ -132,8 +132,7 @@ const adminItems = [
   { href: '/admin', label: 'Settings', icon: Settings, moduleSlug: 'settings' },
 ];
 
-// Roles that can see the admin section + full agency list
-const ADMIN_ROLES = MINISTRY_ROLES;
+// Superadmins see the admin section + full agency list.
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -166,13 +165,13 @@ export function Sidebar() {
   const userRole = effectiveUser.role;
   const userAgency = effectiveUser.agency;
   const userName = effectiveUser.name;
-  const roleLabel = ROLE_LABELS[userRole as keyof typeof ROLE_LABELS] || userRole;
+  const roleLabel = effectiveUser.title || ROLE_LABELS[userRole as keyof typeof ROLE_LABELS] || userRole;
 
-  // Admin section: show if real user is admin OR effective user is admin
-  // (DG always keeps admin access even when viewing as)
-  const showAdmin = ADMIN_ROLES.includes(realUser.role) || ADMIN_ROLES.includes(userRole);
-  const isMinistry = MINISTRY_ROLES.includes(userRole);
-  const canViewAs = realUser.role === 'dg';
+  // Admin section: show if real user is superadmin OR effective user is
+  // (a superadmin keeps admin access even when viewing as)
+  const showAdmin = realUser.role === 'superadmin' || userRole === 'superadmin';
+  const isMinistry = userRole === 'superadmin';
+  const canViewAs = realUser.role === 'superadmin';
 
   // Agency users only see their own agency in the sidebar
   const visibleAgencies = isMinistry

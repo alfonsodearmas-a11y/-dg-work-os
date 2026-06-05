@@ -6,7 +6,7 @@ import { createDraftFromQueue, listReports } from '@/lib/nptab/queries';
 export const runtime = 'nodejs';
 
 export async function GET(_req: NextRequest) {
-  const auth = await requireRole(['dg', 'ps']);
+  const auth = await requireRole(['superadmin']);
   if (auth instanceof NextResponse) return auth;
   try {
     const reports = await listReports();
@@ -18,7 +18,7 @@ export async function GET(_req: NextRequest) {
 }
 
 export async function POST(_req: NextRequest) {
-  const auth = await requireRole(['dg']);
+  const auth = await requireRole(['superadmin']);
   if (auth instanceof NextResponse) return auth;
   const { session } = auth;
   try {

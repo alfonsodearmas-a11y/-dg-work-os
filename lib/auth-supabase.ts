@@ -38,7 +38,7 @@ export async function auth(): Promise<Session | null> {
   // (matches the current jwt-callback behaviour — role changes take effect at once).
   const { data: profile } = await supabaseAdmin
     .from('users')
-    .select('email, name, avatar_url, role, agency, is_active, status')
+    .select('email, name, avatar_url, role, agency, is_active, status, formal_title')
     .eq('id', uid)
     .single();
 

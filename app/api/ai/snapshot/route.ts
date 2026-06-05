@@ -12,7 +12,7 @@ import { logger } from '@/lib/logger';
 
 export async function GET(_request: NextRequest) {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    const authResult = await requireRole(['superadmin', 'agency_manager']);
     if (authResult instanceof NextResponse) return authResult;
 
     const today = new Date().toISOString().slice(0, 10);

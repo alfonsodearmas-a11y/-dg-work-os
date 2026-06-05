@@ -23,7 +23,7 @@ export const PATCH = withErrorHandler(async (
   request: NextRequest,
   ctx?: unknown,
 ) => {
-  const result = await requireRole(['dg', 'minister', 'ps']);
+  const result = await requireRole(['superadmin']);
   if (result instanceof NextResponse) return result;
 
   const { id } = await (ctx as { params: Promise<{ id: string }> }).params;

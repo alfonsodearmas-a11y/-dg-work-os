@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from '@/components/providers/SupabaseSessionProvider';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 
 interface ModulePermissions {
   canView: boolean;
@@ -56,7 +55,7 @@ export function useModuleAccess(): ModuleAccessState {
   const canAccess = useCallback(
     (slug: string) => {
       // Ministry roles always have full access (client-side optimistic check)
-      if (MINISTRY_ROLES.includes(userRole)) return true;
+      if (userRole === 'superadmin') return true;
       // While loading, optimistically allow access (server will enforce)
       if (loading) return true;
       return modules.includes(slug);
@@ -67,7 +66,7 @@ export function useModuleAccess(): ModuleAccessState {
   const canEdit = useCallback(
     (slug: string) => {
       // Ministry roles always have full access
-      if (MINISTRY_ROLES.includes(userRole)) return true;
+      if (userRole === 'superadmin') return true;
       // While loading, optimistically deny edit access (safer default)
       if (loading) return false;
       return permissions[slug]?.canEdit === true;

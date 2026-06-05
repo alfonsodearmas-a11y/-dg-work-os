@@ -5,7 +5,7 @@ import { GWI_REPORT_COLUMNS, groupAndMerge } from '@/lib/gwi-report-merge';
 import { logger } from '@/lib/logger';
 
 export async function GET() {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   try {

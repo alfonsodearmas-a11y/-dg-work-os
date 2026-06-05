@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import { listTenders, createManualTender, getPipelineStats, getAwardedSinceLastUpload } from '@/lib/tender/queries';
 import {
   AGENCY_CODES,
@@ -18,12 +17,12 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 type FieldErrors = Record<string, string>;
 
 export async function GET() {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
   try {
-    const isMinistry = MINISTRY_ROLES.includes(session.user.role);
+    const isMinistry = (session.user.role) === 'superadmin';
     const agencyFilter = isMinistry ? undefined : session.user.agency ?? undefined;
 
     const [tenders, stats, awardedSince] = await Promise.all([
@@ -65,7 +64,7 @@ function validateDate(field: string, value: unknown, errors: FieldErrors): strin
 }
 
 export async function POST(request: NextRequest) {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
@@ -78,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     // Agency-scoped users can never create for another agency, regardless of
     // what the body says — overwrite with their session agency.
-    const isAgencyScoped = session.user.role === 'agency_admin' || session.user.role === 'officer';
+    const isAgencyScoped = session.user.role === 'agency_manager';
     const rawAgency = isAgencyScoped ? session.user.agency : trimOrUndef(body.agency);
     const agencyUpper = (rawAgency || '').toUpperCase() as TenderAgency;
     if (!AGENCY_CODES.includes(agencyUpper)) errors.agency = 'A valid agency is required';

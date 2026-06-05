@@ -1,5 +1,4 @@
 import { supabaseAdmin } from '@/lib/db';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import type { Role } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 
@@ -35,11 +34,8 @@ export async function getTopOpenTasks(
     .order('due_date', { ascending: true, nullsFirst: false })
     .limit(50);
 
-  if (role === 'officer') {
-    query = query.eq('owner_user_id', userId);
-  } else if (role === 'agency_admin' && agency) {
-    query = query.ilike('agency', agency);
-  } else if (!MINISTRY_ROLES.includes(role) && agency) {
+  // Two-level: agency managers see their agency's tasks, superadmins see all.
+  if (role === 'agency_manager' && agency) {
     query = query.ilike('agency', agency);
   }
 

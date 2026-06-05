@@ -84,7 +84,7 @@ export default function ProjectDetailPage() {
   const params = useParams();
   const projectId = params.id as string;
   const { data: session } = useSession();
-  const userRole = (session?.user as any)?.role || 'officer';
+  const userRole = (session?.user as any)?.role || 'agency_manager';
   const [project, setProject] = useState<any>(null);
   const [funding, setFunding] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/db';
 import { canAccessModule } from '@/lib/modules/access';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import { withErrorHandler } from '@/lib/api-utils';
 
 const APP_COLUMNS = 'id, agency, applicant_name, application_type, reference_number, priority, status, notes, created_by, updated_by, submitted_at, created_at, updated_at';
@@ -35,7 +34,7 @@ async function _GET(
   }
 
   // Agency scoping
-  if (session.user.role !== 'dg' && app.agency !== session.user.agency) {
+  if (session.user.role !== 'superadmin' && app.agency !== session.user.agency) {
     return NextResponse.json({ error: 'Access denied' }, { status: 403 });
   }
 
@@ -102,7 +101,7 @@ async function _PATCH(
   }
 
   // Agency scoping
-  if (session.user.role !== 'dg' && app.agency !== session.user.agency) {
+  if (session.user.role !== 'superadmin' && app.agency !== session.user.agency) {
     return NextResponse.json({ error: 'Access denied' }, { status: 403 });
   }
 
@@ -113,8 +112,8 @@ async function _PATCH(
 
   if (status && status !== app.status) {
     // Enforce status transition rules
-    const isMinistry = MINISTRY_ROLES.includes(session.user.role);
-    const isAgencyAdmin = session.user.role === 'agency_admin';
+    const isMinistry = (session.user.role) === 'superadmin';
+    const isAgencyAdmin = session.user.role === 'agency_manager';
 
     if (!isMinistry && !isAgencyAdmin) {
       // Officers can only move pending → under_review

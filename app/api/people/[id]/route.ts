@@ -11,7 +11,7 @@ async function _PUT(
 ) {
   const { params } = ctx as { params: Promise<{ id: string }> };
   const { id } = await params;
-  const authResult = await requireRole(['dg', 'minister', 'ps']);
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 
@@ -109,7 +109,7 @@ async function _DELETE(
 ) {
   const { params } = ctx as { params: Promise<{ id: string }> };
   const { id } = await params;
-  const authResult = await requireRole(['dg']);
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 

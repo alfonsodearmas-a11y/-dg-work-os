@@ -16,7 +16,7 @@ const bulkPatchSchema = z.object({
 });
 
 export const PATCH = withErrorHandler(async (request: NextRequest) => {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
@@ -95,7 +95,7 @@ export const PATCH = withErrorHandler(async (request: NextRequest) => {
 });
 
 export async function DELETE(request: NextRequest) {
-  const result = await requireRole(['dg']);
+  const result = await requireRole(['superadmin']);
   if (result instanceof NextResponse) return result;
 
   const body = await request.json();

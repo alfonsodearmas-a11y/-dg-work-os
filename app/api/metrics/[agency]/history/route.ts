@@ -12,7 +12,7 @@ const AGENCY_TABLES: Record<string, string> = {
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ agency: string }> }) {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    const authResult = await requireRole(['superadmin', 'agency_manager']);
     if (authResult instanceof NextResponse) return authResult;
 
     const { agency } = await params;

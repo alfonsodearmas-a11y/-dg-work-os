@@ -173,7 +173,7 @@ function buildFallbackBriefing(data: { actions: any; calendar: any; meetings: an
 // --- Route ---
 
 export async function GET() {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   const dateKey = new Date().toISOString().slice(0, 10);

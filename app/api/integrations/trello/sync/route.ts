@@ -9,7 +9,7 @@ import type { TenderStage } from '@/lib/trello';
 const DEFAULT_BOARD_ID = 'u9m0lBnP';
 
 export async function POST(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   let boardId = DEFAULT_BOARD_ID;

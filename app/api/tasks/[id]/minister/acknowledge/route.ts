@@ -12,7 +12,7 @@ export const runtime = 'nodejs';
  */
 export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const auth = await requireRole(['minister']);
+  const auth = await requireRole(['superadmin']);
   if (auth instanceof NextResponse) return auth;
   const { session } = auth;
 

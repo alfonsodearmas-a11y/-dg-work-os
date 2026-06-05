@@ -478,8 +478,8 @@ interface MinisterAttentionStripProps {
 
 function MinisterAttentionStrip({ task, userRole, onRefer, onChanged }: MinisterAttentionStripProps) {
   const [busy, setBusy] = useState(false);
-  const isDG = userRole === 'dg';
-  const isMinister = userRole === 'minister';
+  const isDG = userRole === 'superadmin';
+  const isMinister = userRole === 'superadmin'; // D1: minister-only actions are superadmin-wide
   const isFlagged = task.requires_minister_attention && !task.minister_closed_at;
   const isSeen = !!task.minister_seen_at;
 

@@ -26,12 +26,7 @@ export async function requireRole(allowedRoles: Role[]) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }
 
-  // Parliamentary Secretary has the same access privileges as Permanent Secretary
-  const effectiveRoles = allowedRoles.includes('ps') && !allowedRoles.includes('parl_sec')
-    ? [...allowedRoles, 'parl_sec' as Role]
-    : allowedRoles;
-
-  if (!effectiveRoles.includes(session.user.role)) {
+  if (!allowedRoles.includes(session.user.role)) {
     return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
 
@@ -39,12 +34,12 @@ export async function requireRole(allowedRoles: Role[]) {
 }
 
 export async function requirePsipSyncAccess() {
-  const result = await requireRole(['dg', 'minister', 'ps']);
+  const result = await requireRole(['superadmin']);
   if (result instanceof NextResponse) return { error: result };
   return { session: result.session };
 }
 
-const UPLOAD_ROLES: Role[] = ['dg', 'agency_admin', 'officer'];
+const UPLOAD_ROLES: Role[] = ['superadmin', 'agency_manager'];
 
 /**
  * Combined auth check for upload routes: verifies role + agency upload permission.

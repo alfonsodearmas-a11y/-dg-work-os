@@ -28,7 +28,7 @@ export function WarRoomPage() {
   const { effectiveUser } = useEffectiveUser();
   const isMobile = useIsMobile();
 
-  const canUpload = effectiveUser.role === 'dg' || effectiveUser.role === 'ps';
+  const canUpload = effectiveUser.role === 'superadmin';
 
   // ── State ──
   const [summary, setSummary] = useState<WarRoomSummary | null>(null);

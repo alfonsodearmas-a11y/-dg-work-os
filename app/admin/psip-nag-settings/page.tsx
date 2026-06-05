@@ -8,6 +8,6 @@ export const dynamic = 'force-dynamic';
 export default async function Page() {
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
-  if (session.user.role !== 'dg') redirect('/');
+  if (session.user.role !== 'superadmin') redirect('/');
   return <NagSettingsClient />;
 }

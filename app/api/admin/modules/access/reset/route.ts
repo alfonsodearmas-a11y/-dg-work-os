@@ -4,7 +4,7 @@ import { resetUserModuleOverrides } from '@/lib/modules/access';
 
 // POST /api/admin/modules/access/reset — reset user to role defaults (DG only)
 export async function POST(req: NextRequest) {
-  const result = await requireRole(['dg']);
+  const result = await requireRole(['superadmin']);
   if (result instanceof NextResponse) return result;
 
   const { userId } = await req.json();

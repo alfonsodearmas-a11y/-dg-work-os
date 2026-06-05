@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger';
 
 /** GET /api/procurement/review — pending review rows across all uploads */
 export async function GET() {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
 
   try {

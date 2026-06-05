@@ -7,7 +7,7 @@ import { logger } from '@/lib/logger';
 export const maxDuration = 120; // Allow up to 2 minutes for sync
 
 export async function POST() {
-  const authResult = await requireRole(['dg', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   // TODO: migrate to requireRole() — remove redundant auth() call; requireRole() above already authenticates
   const session = await auth();
@@ -35,7 +35,7 @@ export async function POST() {
 }
 
 export async function GET() {
-  const authResult = await requireRole(['dg', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   // TODO: migrate to requireRole() — remove redundant auth() call; requireRole() above already authenticates
   const session = await auth();

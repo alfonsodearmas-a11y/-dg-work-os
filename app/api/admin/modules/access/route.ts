@@ -13,7 +13,7 @@ function deriveOverrides(overridesDetailed: Array<{ slug: string; access_type: s
 
 // GET /api/admin/modules/access?userId=xxx — get a user's module overrides
 export async function GET(req: NextRequest) {
-  const result = await requireRole(['dg', 'minister', 'ps']);
+  const result = await requireRole(['superadmin']);
   if (result instanceof NextResponse) return result;
 
   const userId = req.nextUrl.searchParams.get('userId');
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/admin/modules/access — grant module access (DG only)
 export async function POST(req: NextRequest) {
-  const result = await requireRole(['dg']);
+  const result = await requireRole(['superadmin']);
   if (result instanceof NextResponse) return result;
 
   const { userId, moduleSlug, canEdit, agency } = await req.json();
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
 // DELETE /api/admin/modules/access — revoke module access (DG only)
 export async function DELETE(req: NextRequest) {
-  const result = await requireRole(['dg']);
+  const result = await requireRole(['superadmin']);
   if (result instanceof NextResponse) return result;
 
   const { userId, moduleSlug } = await req.json();

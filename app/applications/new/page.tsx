@@ -47,7 +47,7 @@ export default function NewApplicationPage() {
 
   const userRole = effectiveUser.role;
   const userAgency = effectiveUser.agency;
-  const isDG = userRole === 'dg';
+  const isDG = userRole === 'superadmin';
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });

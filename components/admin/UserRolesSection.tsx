@@ -2,7 +2,8 @@
 
 import { Spinner } from '@/components/ui/Spinner';
 import { RotateCcw } from 'lucide-react';
-import { ROLE_LABELS, ROLE_COLORS, ROLE_OPTIONS, MINISTRY_ROLES } from '@/lib/people-types';
+import { ROLE_LABELS, ROLE_COLORS, ROLE_OPTIONS, TITLE_PRESETS } from '@/lib/people-types';
+import { normalizeRole } from '@/lib/auth-session';
 import type { ModuleRecord, ModuleOverride, ModuleOverrideDetailed } from '@/lib/module-types';
 
 export type ModuleInfo = Pick<ModuleRecord, 'id' | 'slug' | 'name' | 'icon' | 'default_roles' | 'is_active'>;
@@ -30,6 +31,7 @@ interface UserRolesSectionProps {
   isDG: boolean;
   isSelf: boolean;
   editRole: string;
+  editTitle: string;
   editAgency: string | null;
   onFieldChange: (field: string, value: string | null) => void;
 }
@@ -39,6 +41,7 @@ export function UserRolesSection({
   isDG,
   isSelf,
   editRole,
+  editTitle,
   editAgency,
   onFieldChange,
 }: UserRolesSectionProps) {
@@ -57,13 +60,33 @@ export function UserRolesSection({
             ))}
           </select>
         ) : (
-          <span className={`text-xs px-2.5 py-1 rounded ${ROLE_COLORS[user.role] || ROLE_COLORS.officer}`}>
+          <span className={`text-xs px-2.5 py-1 rounded ${ROLE_COLORS[user.role] || ROLE_COLORS.agency_manager}`}>
             {user.formal_title || ROLE_LABELS[user.role as keyof typeof ROLE_LABELS] || user.role}
           </span>
         )}
       </Field>
+      <Field label="Title (display only)">
+        {isDG ? (
+          <>
+            <input
+              type="text"
+              list="user-title-presets"
+              value={editTitle}
+              onChange={e => onFieldChange('formal_title', e.target.value)}
+              aria-label="User title"
+              placeholder="e.g. Director General"
+              className="w-full px-3 py-1.5 bg-navy-950 border border-navy-800 rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
+            />
+            <datalist id="user-title-presets">
+              {TITLE_PRESETS.map(t => <option key={t} value={t} />)}
+            </datalist>
+          </>
+        ) : (
+          <p className="text-sm text-slate-400">{user.formal_title || '—'}</p>
+        )}
+      </Field>
       <Field label="Agency">
-        {isDG && !isSelf && !MINISTRY_ROLES.includes(editRole) ? (
+        {isDG && !isSelf && (editRole) !== 'superadmin' ? (
           <select
             value={editAgency || ''}
             onChange={e => onFieldChange('agency', e.target.value || null)}
@@ -77,12 +100,12 @@ export function UserRolesSection({
           </select>
         ) : (
           <p className="text-sm text-slate-400">
-            {MINISTRY_ROLES.includes(editRole) ? 'Ministry (all agencies)' : user.agency?.toUpperCase() || 'None'}
+            {editRole === 'superadmin' ? 'All agencies' : user.agency?.toUpperCase() || 'None'}
           </p>
         )}
       </Field>
-      {MINISTRY_ROLES.includes(editRole) && (
-        <p className="text-xs text-navy-600">Ministry roles have access to all agencies.</p>
+      {editRole === 'superadmin' && (
+        <p className="text-xs text-navy-600">Super Admins have access to all agencies.</p>
       )}
     </div>
   );
@@ -175,7 +198,7 @@ export function ModuleAccessSection({
         {allModules
           .filter(m => m.is_active)
           .map(mod => {
-            const isDefaultForRole = mod.default_roles.includes(user.role);
+            const isDefaultForRole = mod.default_roles.some(r => normalizeRole(r) === normalizeRole(user.role));
             const override = overrideMap.get(mod.slug);
             const detailed = detailedMap.get(mod.slug);
             const hasExplicitGrant = override === 'grant';

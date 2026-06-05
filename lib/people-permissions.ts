@@ -1,6 +1,7 @@
 import { supabaseAdmin } from './db';
 import type { Role, AccessLevel, ActionResult, RoleWithPermissions, ActivityLog, ObjectAccessGrant } from './people-types';
-import { ROLE_HIERARCHY, ROLE_DISPLAY_ORDER } from './people-types';
+import { ROLE_DISPLAY_ORDER } from './people-types';
+import { normalizeRole } from './auth-session';
 
 // ─── Pattern 1: Check role-based permission ─────────────────────────
 export async function checkPermission(
@@ -104,8 +105,9 @@ export async function checkObjectAccess(
 
   if (!user) return false;
 
-  // DG and minister always have full access
-  if (ROLE_HIERARCHY[user.role as Role] >= 5) return true;
+  // Superadmins always have full access (user.role is a raw DB value — may
+  // still be a legacy name until Phase 3 — so normalize before comparing).
+  if (normalizeRole(user.role) === 'superadmin') return true;
 
   // Check ownership
   const { data: ownership } = await supabaseAdmin
@@ -316,14 +318,15 @@ export async function getUserAccessibleObjects(
   return Array.from(ids);
 }
 
-// ─── Pattern 8: Can manage user (hierarchy check) ────────────────────
+// ─── Pattern 8: Can manage user (two-level) ──────────────────────────
 export function canManageUser(
   actorRole: Role,
-  targetRole: Role
+  _targetRole: Role
 ): boolean {
-  // DG is the system administrator — can manage all users regardless of hierarchy
-  if (actorRole === 'dg') return true;
-  return ROLE_HIERARCHY[actorRole] > ROLE_HIERARCHY[targetRole];
+  // Only superadmins manage users. (Owner-only superadmin GRANTING is enforced
+  // separately via users.is_owner in the admin routes — see Phase 1 / D4.)
+  void _targetRole;
+  return actorRole === 'superadmin';
 }
 
 // ─── Pattern 9: Object activity trail ────────────────────────────────

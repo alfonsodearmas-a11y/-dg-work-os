@@ -106,7 +106,7 @@ export function InterventionsTab({ interventionSummary }: InterventionSectionPro
   }
 
   function canDelete(inv: Intervention): boolean {
-    const isDG = effectiveUser.role === 'dg';
+    const isDG = effectiveUser.role === 'superadmin';
     const isCreator =
       inv.created_by === effectiveUser.name ||
       inv.created_by === effectiveUser.email;

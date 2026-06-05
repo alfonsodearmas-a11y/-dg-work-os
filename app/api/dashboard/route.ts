@@ -22,14 +22,14 @@ const AGENCY_METRIC_MAP: Record<string, string[]> = {
 };
 
 export async function GET(request: Request) {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
   try {
     const { searchParams } = new URL(request.url);
-    const viewAsRole = session.user.role === 'dg' ? searchParams.get('viewAsRole') : null;
-    const viewAsAgency = session.user.role === 'dg' ? searchParams.get('viewAsAgency') : null;
+    const viewAsRole = session.user.role === 'superadmin' ? searchParams.get('viewAsRole') : null;
+    const viewAsAgency = session.user.role === 'superadmin' ? searchParams.get('viewAsAgency') : null;
     const scope = getViewAsAgencyScope(session, viewAsRole, viewAsAgency);
     const allowedAgencies = scope
       ? AGENCY_METRIC_MAP[scope.toLowerCase()] || []

@@ -223,7 +223,7 @@ describe('fetchDelayedProjectSignals', () => {
     });
     fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain); // stalled
 
-    const signals = await fetchDelayedProjectSignals('dg', null, NOW);
+    const signals = await fetchDelayedProjectSignals('superadmin', null, NOW);
 
     expect(signals).toHaveLength(3);
     const byId = Object.fromEntries(signals.map((s) => [s.sourceId, s]));
@@ -243,13 +243,13 @@ describe('fetchDelayedProjectSignals', () => {
     getProjectsMock.mockResolvedValue({ projects: [], total: 0 });
     fromMock.mockImplementation(() => makeChain({ data: [], error: null }).chain);
 
-    await fetchDelayedProjectSignals('dg', 'GPL', NOW);
+    await fetchDelayedProjectSignals('superadmin', 'GPL', NOW);
     expect(getProjectsMock).toHaveBeenLastCalledWith(
       expect.objectContaining({ risk_tiers: ['HIGH'] }),
       undefined,
     );
 
-    await fetchDelayedProjectSignals('agency_admin', 'GPL', NOW);
+    await fetchDelayedProjectSignals('agency_manager', 'GPL', NOW);
     expect(getProjectsMock).toHaveBeenLastCalledWith(
       expect.objectContaining({ risk_tiers: ['HIGH'] }),
       'GPL',
@@ -288,7 +288,7 @@ describe('fetchDelayedProjectSignals', () => {
         }).chain,
     );
 
-    const signals = await fetchDelayedProjectSignals('dg', null, NOW);
+    const signals = await fetchDelayedProjectSignals('superadmin', null, NOW);
     const ids = signals.map((s) => s.sourceId).sort();
     expect(ids).toEqual(['high1', 'stall1']);
     const stall = signals.find((s) => s.sourceId === 'stall1')!;
@@ -306,7 +306,7 @@ describe('fetchTenderSlaSignals', () => {
       baseTender({ id: 't-over', stage: 'evaluation', days_at_current_stage: 31 }),
     ]);
 
-    const signals = await fetchTenderSlaSignals('dg', null, NOW);
+    const signals = await fetchTenderSlaSignals('superadmin', null, NOW);
     expect(signals.map((s) => s.sourceId)).toEqual(['t-over']);
     expect(signals[0].metric).toContain('Evaluation');
     expect(signals[0].metric).toContain('over SLA');
@@ -323,7 +323,7 @@ describe('fetchTenderSlaSignals', () => {
       baseTender({ id: 't-aa-high', stage: 'awaiting_award', days_at_current_stage: 35 }),   // over=14 → high
     ]);
 
-    const signals = await fetchTenderSlaSignals('dg', null, NOW);
+    const signals = await fetchTenderSlaSignals('superadmin', null, NOW);
     const sev = Object.fromEntries(signals.map((s) => [s.sourceId, s.severity]));
     expect(sev).toEqual({
       't-ad-crit': 'critical',
@@ -339,7 +339,7 @@ describe('fetchTenderSlaSignals', () => {
       baseTender({ id: 't-ok', stage: 'advertised', days_at_current_stage: 45 }),
     ]);
 
-    const signals = await fetchTenderSlaSignals('dg', null, NOW);
+    const signals = await fetchTenderSlaSignals('superadmin', null, NOW);
     expect(signals.map((s) => s.sourceId)).toEqual(['t-ok']);
   });
 
@@ -350,17 +350,17 @@ describe('fetchTenderSlaSignals', () => {
       baseTender({ id: 't-ok', stage: 'evaluation', days_at_current_stage: 60 }),
     ]);
 
-    const signals = await fetchTenderSlaSignals('dg', null, NOW);
+    const signals = await fetchTenderSlaSignals('superadmin', null, NOW);
     expect(signals.map((s) => s.sourceId)).toEqual(['t-ok']);
   });
 
   it('passes agency filter for non-ministry roles, undefined for ministry', async () => {
     listTendersMock.mockResolvedValue([]);
 
-    await fetchTenderSlaSignals('dg', 'GPL', NOW);
+    await fetchTenderSlaSignals('superadmin', 'GPL', NOW);
     expect(listTendersMock).toHaveBeenLastCalledWith(expect.objectContaining({ agency: undefined }));
 
-    await fetchTenderSlaSignals('officer', 'GWI', NOW);
+    await fetchTenderSlaSignals('agency_manager', 'GWI', NOW);
     expect(listTendersMock).toHaveBeenLastCalledWith(expect.objectContaining({ agency: 'GWI' }));
   });
 });
@@ -383,7 +383,7 @@ describe('fetchStagnantTenderSignals — severity bands', () => {
     // Rows under 3 are filtered at the DB; the fetcher won't see them. Simulate
     // by returning an empty set — asserts the query path works.
     fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
-    const out = await fetchStagnantTenderSignals('dg', null, NOW);
+    const out = await fetchStagnantTenderSignals('superadmin', null, NOW);
     expect(out).toEqual([]);
   });
 
@@ -391,7 +391,7 @@ describe('fetchStagnantTenderSignals — severity bands', () => {
     fromMock.mockImplementationOnce(
       () => makeChain({ data: [stagnantRow('t-a', 'GPL', 3)], error: null }).chain,
     );
-    const out = await fetchStagnantTenderSignals('dg', null, NOW);
+    const out = await fetchStagnantTenderSignals('superadmin', null, NOW);
     expect(out).toHaveLength(1);
     expect(out[0].severity).toBe('medium');
     expect(out[0].kind).toBe('stagnant_tender');
@@ -410,7 +410,7 @@ describe('fetchStagnantTenderSignals — severity bands', () => {
           error: null,
         }).chain,
     );
-    const out = await fetchStagnantTenderSignals('dg', null, NOW);
+    const out = await fetchStagnantTenderSignals('superadmin', null, NOW);
     const sev = Object.fromEntries(out.map((s) => [s.sourceId, s.severity]));
     expect(sev).toEqual({ t4: 'medium', t5: 'high', t7: 'high', t8: 'critical' });
   });
@@ -432,13 +432,13 @@ describe('fetchStagnantTenderSignals — agency rollup', () => {
 
   it('emits individuals when agency count < 3 (count=2)', async () => {
     fromMock.mockImplementationOnce(() => makeChain({ data: rows(2, 'GPL'), error: null }).chain);
-    const out = await fetchStagnantTenderSignals('dg', null, NOW);
+    const out = await fetchStagnantTenderSignals('superadmin', null, NOW);
     expect(out.map((s) => s.kind)).toEqual(['stagnant_tender', 'stagnant_tender']);
   });
 
   it('emits one rollup (replaces individuals) when count = 3 (threshold)', async () => {
     fromMock.mockImplementationOnce(() => makeChain({ data: rows(3, 'GPL'), error: null }).chain);
-    const out = await fetchStagnantTenderSignals('dg', null, NOW);
+    const out = await fetchStagnantTenderSignals('superadmin', null, NOW);
     expect(out).toHaveLength(1);
     expect(out[0].kind).toBe('agency_stagnant_rollup');
     expect(out[0].agency).toBe('GPL');
@@ -449,7 +449,7 @@ describe('fetchStagnantTenderSignals — agency rollup', () => {
   it('rollup severity: medium at 4, high at 5, high at 9, critical at 10', async () => {
     for (const [count, expected] of [[4, 'medium'], [5, 'high'], [9, 'high'], [10, 'critical']] as const) {
       fromMock.mockImplementationOnce(() => makeChain({ data: rows(count, 'GPL'), error: null }).chain);
-      const out = await fetchStagnantTenderSignals('dg', null, NOW);
+      const out = await fetchStagnantTenderSignals('superadmin', null, NOW);
       expect(out).toHaveLength(1);
       expect(out[0].severity).toBe(expected);
     }
@@ -459,7 +459,7 @@ describe('fetchStagnantTenderSignals — agency rollup', () => {
     fromMock.mockImplementationOnce(
       () => makeChain({ data: [...rows(3, 'GPL'), ...rows(2, 'GWI')], error: null }).chain,
     );
-    const out = await fetchStagnantTenderSignals('dg', null, NOW);
+    const out = await fetchStagnantTenderSignals('superadmin', null, NOW);
     const gplSignals = out.filter((s) => s.agency === 'GPL');
     const gwiSignals = out.filter((s) => s.agency === 'GWI');
     expect(gplSignals).toHaveLength(1);
@@ -471,7 +471,7 @@ describe('fetchStagnantTenderSignals — agency rollup', () => {
   it('agency user scoping: passes upper-cased agency filter to the query', async () => {
     const chain = makeChain({ data: [], error: null });
     fromMock.mockImplementationOnce(() => chain.chain);
-    await fetchStagnantTenderSignals('agency_admin', 'gpl', NOW);
+    await fetchStagnantTenderSignals('agency_manager', 'gpl', NOW);
     const eqCalls = chain.calls.filter((c) => c.method === 'eq');
     expect(eqCalls).toContainEqual({ method: 'eq', args: ['agency', 'GPL'] });
   });
@@ -479,7 +479,7 @@ describe('fetchStagnantTenderSignals — agency rollup', () => {
   it('no agency filter for ministry roles', async () => {
     const chain = makeChain({ data: [], error: null });
     fromMock.mockImplementationOnce(() => chain.chain);
-    await fetchStagnantTenderSignals('dg', null, NOW);
+    await fetchStagnantTenderSignals('superadmin', null, NOW);
     const eqCalls = chain.calls.filter((c) => c.method === 'eq');
     expect(eqCalls).not.toContainEqual(expect.objectContaining({ args: expect.arrayContaining(['agency']) }));
   });
@@ -512,7 +512,7 @@ describe('fetchIncompletePsipDataSignals', () => {
 
   it('returns no signals when no agency has missing-date tenders', async () => {
     fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
-    expect(await fetchIncompletePsipDataSignals('dg', null, NOW)).toEqual([]);
+    expect(await fetchIncompletePsipDataSignals('superadmin', null, NOW)).toEqual([]);
   });
 
   it('agency with 3 missing-date tenders → 1 signal, medium severity', async () => {
@@ -527,7 +527,7 @@ describe('fetchIncompletePsipDataSignals', () => {
           error: null,
         }).chain,
     );
-    const out = await fetchIncompletePsipDataSignals('dg', null, NOW);
+    const out = await fetchIncompletePsipDataSignals('superadmin', null, NOW);
     expect(out).toHaveLength(1);
     expect(out[0].kind).toBe('incomplete_psip_data');
     expect(out[0].agency).toBe('HECI');
@@ -546,7 +546,7 @@ describe('fetchIncompletePsipDataSignals', () => {
           error: null,
         }).chain,
     );
-    const out = await fetchIncompletePsipDataSignals('dg', null, NOW);
+    const out = await fetchIncompletePsipDataSignals('superadmin', null, NOW);
     expect(out).toHaveLength(1);
     expect(out[0].severity).toBe('high');
   });
@@ -561,7 +561,7 @@ describe('fetchIncompletePsipDataSignals', () => {
           error: null,
         }).chain,
     );
-    const out = await fetchIncompletePsipDataSignals('dg', null, NOW);
+    const out = await fetchIncompletePsipDataSignals('superadmin', null, NOW);
     expect(out).toHaveLength(1);
     expect(out[0].severity).toBe('critical');
   });
@@ -583,7 +583,7 @@ describe('fetchIncompletePsipDataSignals', () => {
           error: null,
         }).chain,
     );
-    expect(await fetchIncompletePsipDataSignals('dg', null, NOW)).toEqual([]);
+    expect(await fetchIncompletePsipDataSignals('superadmin', null, NOW)).toEqual([]);
   });
 
   it('awaiting_award with ALL three eval/closed dates null → flagged', async () => {
@@ -594,7 +594,7 @@ describe('fetchIncompletePsipDataSignals', () => {
           error: null,
         }).chain,
     );
-    const out = await fetchIncompletePsipDataSignals('dg', null, NOW);
+    const out = await fetchIncompletePsipDataSignals('superadmin', null, NOW);
     expect(out).toHaveLength(1);
     expect(out[0].agency).toBe('CJIA');
   });
@@ -602,7 +602,7 @@ describe('fetchIncompletePsipDataSignals', () => {
   it('restricts the DB query to SLA-eligible stages, non-rollover, non-exception, non-missing', async () => {
     const chain = makeChain({ data: [], error: null });
     fromMock.mockImplementationOnce(() => chain.chain);
-    await fetchIncompletePsipDataSignals('dg', null, NOW);
+    await fetchIncompletePsipDataSignals('superadmin', null, NOW);
     const eqCalls = chain.calls.filter((c) => c.method === 'eq');
     const inCalls = chain.calls.filter((c) => c.method === 'in');
     expect(eqCalls).toContainEqual({ method: 'eq', args: ['is_rollover', false] });
@@ -614,7 +614,7 @@ describe('fetchIncompletePsipDataSignals', () => {
   it('agency scoping: non-ministry role adds agency eq filter with uppercase', async () => {
     const chain = makeChain({ data: [], error: null });
     fromMock.mockImplementationOnce(() => chain.chain);
-    await fetchIncompletePsipDataSignals('agency_admin', 'gpl', NOW);
+    await fetchIncompletePsipDataSignals('agency_manager', 'gpl', NOW);
     const eqCalls = chain.calls.filter((c) => c.method === 'eq');
     expect(eqCalls).toContainEqual({ method: 'eq', args: ['agency', 'GPL'] });
   });
@@ -622,7 +622,7 @@ describe('fetchIncompletePsipDataSignals', () => {
   it('ministry role does not add agency filter', async () => {
     const chain = makeChain({ data: [], error: null });
     fromMock.mockImplementationOnce(() => chain.chain);
-    await fetchIncompletePsipDataSignals('dg', null, NOW);
+    await fetchIncompletePsipDataSignals('superadmin', null, NOW);
     const eqCalls = chain.calls.filter((c) => c.method === 'eq');
     expect(eqCalls.some((c) => Array.isArray(c.args) && c.args[0] === 'agency')).toBe(false);
   });
@@ -632,7 +632,7 @@ describe('fetchIncompletePsipDataSignals', () => {
 
 describe('fetchMeetingActionSignals', () => {
   it('returns [] for non-ministry roles without touching the DB (agency scoping note)', async () => {
-    const out = await fetchMeetingActionSignals('agency_admin', 'GPL', NOW);
+    const out = await fetchMeetingActionSignals('agency_manager', 'GPL', NOW);
     expect(out).toEqual([]);
     expect(fromMock).not.toHaveBeenCalled();
   });
@@ -701,7 +701,7 @@ describe('fetchMeetingActionSignals', () => {
         }).chain,
     );
 
-    const signals = await fetchMeetingActionSignals('dg', null, NOW);
+    const signals = await fetchMeetingActionSignals('superadmin', null, NOW);
     const sev = Object.fromEntries(signals.map((s) => [s.sourceId, s.severity]));
     expect(sev).toEqual({
       'a-crit': 'critical',
@@ -720,7 +720,7 @@ describe('fetchMeetingActionSignals', () => {
     fromMock.mockImplementationOnce(
       () => makeChain({ data: null, error: new Error('db down') }).chain,
     );
-    await expect(fetchMeetingActionSignals('dg', null, NOW)).rejects.toThrow('db down');
+    await expect(fetchMeetingActionSignals('superadmin', null, NOW)).rejects.toThrow('db down');
   });
 });
 
@@ -765,7 +765,7 @@ describe('getTodaySignals', () => {
     // incomplete_psip query returns empty
     fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
 
-    const out = await getTodaySignals('user-1', 'dg', null, NOW);
+    const out = await getTodaySignals('user-1', 'superadmin', null, NOW);
 
     expect(out.counts.total).toBe(4);
     expect(out.counts.critical).toBe(3);
@@ -802,7 +802,7 @@ describe('getTodaySignals', () => {
     // Incomplete PSIP: succeed (empty)
     fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
 
-    const out = await getTodaySignals('user-1', 'dg', null, NOW);
+    const out = await getTodaySignals('user-1', 'superadmin', null, NOW);
 
     expect(out.sources.delayed_projects.ok).toBe(true);
     expect(out.sources.tenders.ok).toBe(false);
@@ -831,7 +831,7 @@ describe('getTodaySignals', () => {
     // Incomplete PSIP query (agency-scoped): empty.
     fromMock.mockImplementationOnce(() => makeChain({ data: [], error: null }).chain);
 
-    const out = await getTodaySignals('user-1', 'agency_admin', 'GPL', NOW);
+    const out = await getTodaySignals('user-1', 'agency_manager', 'GPL', NOW);
 
     expect(getProjectsMock).toHaveBeenCalledWith(expect.any(Object), 'GPL');
     expect(listTendersMock).toHaveBeenCalledWith(expect.objectContaining({ agency: 'GPL' }));

@@ -9,7 +9,7 @@ import { logger } from '@/lib/logger';
  * Returns cached enhanced forecast or latest available
  */
 export async function GET(_request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
   if (!canAccessAgency(session.user.role, session.user.agency, 'gpl')) {
@@ -53,7 +53,7 @@ export async function GET(_request: NextRequest) {
 }
 
 export const POST = withErrorHandler(async (_request: NextRequest) => {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session: postSession } = authResult;
   if (!canAccessAgency(postSession.user.role, postSession.user.agency, 'gpl')) {

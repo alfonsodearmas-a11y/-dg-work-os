@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
 import { auth } from './auth-supabase';
-import { MINISTRY_ROLES } from './people-types';
 
 // ── Auth ──────────────────────────────────────────────────────────────
 // Supabase Auth (GoTrue) owns sessions. `auth()` is implemented in
@@ -13,7 +12,10 @@ import { MINISTRY_ROLES } from './people-types';
 // authorizeRoles(), isDG(), isCEO(), canAccessTask(). Do NOT use in new code.
 // ──────────────────────────────────────────────────────────────────────
 
-export type Role = 'dg' | 'minister' | 'ps' | 'parl_sec' | 'agency_admin' | 'officer';
+// PHASE 2 (role simplification): two permission levels. The DB still stores the
+// legacy values (dg/minister/ps/parl_sec/agency_admin/officer); buildSession()
+// normalizes on read. 'system' stays outside the union — session-incapable.
+export type Role = 'superadmin' | 'agency_manager';
 
 // The single source of truth for the session accessor (Supabase-backed).
 export { auth };
@@ -73,29 +75,29 @@ export async function authenticateFromCookie(_request: NextRequest): Promise<Leg
 }
 
 export function isDG(user: LegacyUser): boolean {
-  return user.role === 'dg';
+  return user.role === 'superadmin';
 }
 
 export function isCEO(user: LegacyUser): boolean {
-  return user.role === 'dg';
+  return user.role === 'superadmin';
 }
 
 export function canAccessTask(user: LegacyUser, task: { assignee_id?: string; created_by?: string; agency?: string }): boolean {
-  if (MINISTRY_ROLES.includes(user.role)) return true;
+  if (user.role === 'superadmin') return true;
   if (task.assignee_id === user.id || task.created_by === user.id) return true;
-  if (user.role === 'agency_admin' && task.agency && user.agency === task.agency) return true;
+  if (user.role === 'agency_manager' && task.agency && user.agency === task.agency) return true;
   return false;
 }
 
 export function authorizeRoles(user: LegacyUser, ...roles: string[]): void {
-  // Map old role names to new ones
+  // Map the legacy tm-route role names onto the two-level model.
   const roleMap: Record<string, string[]> = {
-    director: ['dg'],
-    admin: ['dg', 'agency_admin'],
-    officer: ['officer'],
-    minister: ['minister'],
-    ps: ['ps', 'parl_sec'],
-    parl_sec: ['parl_sec'],
+    director: ['superadmin'],
+    admin: ['superadmin', 'agency_manager'],
+    officer: ['agency_manager'],
+    minister: ['superadmin'],
+    ps: ['superadmin'],
+    parl_sec: ['superadmin'],
   };
 
   const allowedNewRoles = roles.flatMap(r => roleMap[r] || [r]);

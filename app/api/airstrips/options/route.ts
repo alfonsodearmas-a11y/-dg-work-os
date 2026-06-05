@@ -6,7 +6,7 @@ import { supabaseAdmin } from '@/lib/db';
 // or  /api/airstrips/options?categories=activity_type,verification_method
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    const authResult = await requireRole(['superadmin', 'agency_manager']);
     if (authResult instanceof NextResponse) return authResult;
 
     const { searchParams } = new URL(request.url);

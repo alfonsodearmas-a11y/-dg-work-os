@@ -4,7 +4,7 @@ import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
   if (!canAccessAgency(session.user.role, session.user.agency, 'gpl')) {

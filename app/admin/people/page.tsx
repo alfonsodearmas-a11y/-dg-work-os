@@ -14,7 +14,8 @@ import { ActivityLogPanel } from '@/components/admin/ActivityLogPanel';
 import { usePermissions } from '@/hooks/usePeople';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatDistanceToNow, parseISO } from 'date-fns';
-import { ROLE_LABELS, ROLE_COLORS, ROLE_OPTIONS, MINISTRY_ROLES } from '@/lib/people-types';
+import { ROLE_LABELS, ROLE_COLORS, ROLE_OPTIONS, TITLE_PRESETS } from '@/lib/people-types';
+import { normalizeRole } from '@/lib/auth-session';
 
 interface User {
   id: string;
@@ -111,7 +112,7 @@ export default function PeoplePage() {
   const [drawerUser, setDrawerUser] = useState<User | null>(null);
 
   // Admin page deliberately uses realUser — DG keeps admin powers even when viewing as another user
-  const isDG = realUser.role === 'dg';
+  const isDG = realUser.role === 'superadmin';
   const currentUserId = realUser.id;
 
   const fetchUsers = useCallback(async () => {
@@ -195,7 +196,7 @@ export default function PeoplePage() {
           cmp = (a.name || '').localeCompare(b.name || '');
           break;
         case 'role': {
-          const order = ['minister', 'dg', 'parl_sec', 'ps', 'agency_admin', 'officer'];
+          const order = ['superadmin', 'agency_manager'];
           cmp = order.indexOf(a.role) - order.indexOf(b.role);
           break;
         }
@@ -347,7 +348,7 @@ export default function PeoplePage() {
           roles={rolesData}
           allPermissions={allPermsData}
           myPermissions={myPermissions}
-          myRole={realUser.role || 'officer'}
+          myRole={realUser.role || 'agency_manager'}
           loading={permsLoading}
         />
       )}
@@ -791,19 +792,21 @@ function InviteModal({
   onError: (msg: string) => void;
 }) {
   const { realUser } = useEffectiveUser();
-  const isDG = realUser.role === 'dg';
+  const isDG = realUser.role === 'superadmin';
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('officer');
+  const [role, setRole] = useState('agency_manager');
+  const [title, setTitle] = useState('');
   const [agency, setAgency] = useState('');
 
-  // DG can assign all roles; others only agency_admin and officer
+  // D4: only the owner can mint superadmins (enforced server-side); the UI
+  // hides the option from non-owners ("isDG" here = superadmin actor).
   const availableRoles = isDG
     ? ROLE_OPTIONS
-    : ROLE_OPTIONS.filter(r => !MINISTRY_ROLES.includes(r.value));
+    : ROLE_OPTIONS.filter(r => r.value !== 'superadmin');
 
-  const isMinistryRole = MINISTRY_ROLES.includes(role);
+  const isMinistryRole = role === 'superadmin';
   const [submitting, setSubmitting] = useState(false);
   const [modules, setModules] = useState<InviteModule[]>([]);
   const [modulePerms, setModulePerms] = useState<Map<string, InviteModulePermission>>(new Map());
@@ -839,7 +842,7 @@ function InviteModal({
     setModulePerms(prev => {
       const next = new Map(prev);
       for (const m of modules) {
-        const isDefault = m.default_roles.includes(role);
+        const isDefault = m.default_roles.some(r => normalizeRole(r) === role);
         const existing = next.get(m.slug);
         if (isDefault) {
           // Default modules: mark enabled, keep canEdit if set
@@ -881,7 +884,7 @@ function InviteModal({
     setModulePerms(() => {
       const next = new Map<string, InviteModulePermission>();
       for (const m of modules) {
-        const isDefault = m.default_roles.includes(role);
+        const isDefault = m.default_roles.some(r => normalizeRole(r) === role);
         switch (preset) {
           case 'full':
             next.set(m.slug, { enabled: true, canEdit: true });
@@ -921,7 +924,7 @@ function InviteModal({
       for (const [slug, perm] of modulePerms.entries()) {
         if (!perm.enabled) continue;
         const mod = modules.find(m => m.slug === slug);
-        const isDefault = mod?.default_roles.includes(role) ?? false;
+        const isDefault = mod?.default_roles.some(r => normalizeRole(r) === role) ?? false;
         // Always include in modulePermissions
         modulePermissions.push({ moduleSlug: slug, canEdit: perm.canEdit });
         // Backward compat: moduleGrants = non-default slugs that are granted
@@ -937,6 +940,7 @@ function InviteModal({
           name: name.trim(),
           email: email.trim(),
           role,
+          ...(title.trim() && { formal_title: title.trim() }),
           agency: agency || null,
           moduleGrants,
           modulePermissions,
@@ -1006,7 +1010,7 @@ function InviteModal({
               onChange={e => {
                 setRole(e.target.value);
                 // Clear agency when switching to a ministry role
-                if (MINISTRY_ROLES.includes(e.target.value)) setAgency('');
+                if ((e.target.value) === 'superadmin') setAgency('');
               }}
               className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
             >
@@ -1016,9 +1020,26 @@ function InviteModal({
             </select>
             {isMinistryRole && (
               <p className="text-[10px] text-gold-500 mt-1">
-                Ministry role — full access to all agencies and modules.
+                Super Admin — full access to all agencies and modules.
               </p>
             )}
+          </div>
+
+          {/* Title (display-only; never gates access) */}
+          <div>
+            <label htmlFor="invite-title" className="block text-xs text-slate-400 mb-1.5">Title (display only)</label>
+            <input
+              id="invite-title"
+              type="text"
+              list="invite-title-presets"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder={role === 'superadmin' ? 'e.g. Director General' : 'e.g. Agency Manager'}
+              className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
+            />
+            <datalist id="invite-title-presets">
+              {TITLE_PRESETS.map(t => <option key={t} value={t} />)}
+            </datalist>
           </div>
 
           {/* Agency (hidden for ministry roles) */}
@@ -1029,12 +1050,12 @@ function InviteModal({
                 id="invite-agency"
                 value={agency}
                 onChange={e => setAgency(e.target.value)}
-                required={role === 'agency_admin'}
-                aria-required={role === 'agency_admin' ? 'true' : undefined}
+                required={role === 'agency_manager'}
+                aria-required={role === 'agency_manager' ? 'true' : undefined}
                 className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
               >
                 <option value="">
-                  {role === 'agency_admin' ? 'Select agency (required)' : 'Select agency (optional)'}
+                  {role === 'agency_manager' ? 'Select agency (required)' : 'Select agency (optional)'}
                 </option>
                 {AGENCY_OPTIONS.map(a => (
                   <option key={a.value} value={a.value}>{a.label}</option>

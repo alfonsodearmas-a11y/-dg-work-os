@@ -9,7 +9,7 @@ import { ReviewClient } from '@/components/action-items/ReviewClient';
 import { getTranscript } from '@/lib/action-items/fireflies/client';
 import type { UserStaffFields } from '@/lib/action-items/types';
 
-const ALLOWED = new Set(['dg', 'ps', 'parl_sec']);
+const ALLOWED = new Set(['superadmin']);
 export const dynamic = 'force-dynamic';
 
 export default async function ReviewPage({ params }: { params: Promise<{ extractionId: string }> }) {

@@ -37,7 +37,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ agency: string }> },
 ) {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 

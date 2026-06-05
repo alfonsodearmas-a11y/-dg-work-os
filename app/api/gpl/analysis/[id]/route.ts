@@ -15,7 +15,7 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
   if (!canAccessAgency(session.user.role, session.user.agency, 'gpl')) {
@@ -177,7 +177,7 @@ export const POST = withErrorHandler(async (
   _request: NextRequest,
   ctx?: unknown
 ) => {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session: postSession } = authResult;
   if (!canAccessAgency(postSession.user.role, postSession.user.agency, 'gpl')) {

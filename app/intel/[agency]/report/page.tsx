@@ -20,7 +20,7 @@ export default async function ReportPage({
     notFound();
   }
 
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) notFound();
   const { session } = result;
   if (!canAccessAgency(session.user.role, session.user.agency, lower)) {

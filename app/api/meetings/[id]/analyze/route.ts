@@ -86,7 +86,7 @@ export const POST = withErrorHandler(async (
   _request: NextRequest,
   ctx?: unknown
 ) => {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 

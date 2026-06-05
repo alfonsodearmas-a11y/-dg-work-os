@@ -11,7 +11,7 @@ const SC_COLUMNS = 'id, customer_reference, service_order_number, first_name, la
 
 export async function GET() {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    const authResult = await requireRole(['superadmin', 'agency_manager']);
     if (authResult instanceof NextResponse) return authResult;
     const cached = await getCachedAnalysis();
     if (cached) {
@@ -25,7 +25,7 @@ export async function GET() {
 }
 
 export const POST = withErrorHandler(async (_request: NextRequest) => {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   const { data, error } = await supabaseAdmin

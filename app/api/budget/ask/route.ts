@@ -37,7 +37,7 @@ const askSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   const { data, error } = await parseBody(request, askSchema);

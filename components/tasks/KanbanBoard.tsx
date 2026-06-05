@@ -15,7 +15,6 @@ import { NewTaskModal } from './NewTaskModal';
 import { CreateEventModal } from '@/components/calendar/CreateEventModal';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import { useViewAsFetch } from '@/hooks/useViewAsFetch';
 import { useBoardReducer, COLUMNS } from '@/hooks/useBoardReducer';
 import { useBoardUrlSync } from '@/hooks/useBoardUrlSync';
@@ -185,7 +184,7 @@ function KanbanBoardInner() {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const isMinistry = MINISTRY_ROLES.includes(effectiveUser.role);
+      const isMinistry = (effectiveUser.role) === 'superadmin';
       const url = isMinistry
         ? '/api/tasks/users'
         : `/api/tasks/users?agency=${encodeURIComponent(effectiveUser.agency || '')}`;
@@ -592,7 +591,7 @@ function KanbanBoardInner() {
   // awaiting_verification rows folded into Done so the owner can still see
   // their pending-sign-off tasks.
   const showVerificationColumn = useMemo(() => {
-    if (effectiveUser.role === 'agency_admin') {
+    if (effectiveUser.role === 'agency_manager') {
       // Show only when no agency filter active OR the filter scopes to the
       // user's portfolio agency.
       if (state.agencyFilter.length === 0) {
@@ -768,8 +767,8 @@ function KanbanBoardInner() {
         templates={state.templates}
         showTemplates={state.showTemplates}
         creating={state.creatingTask}
-        lockedAgency={MINISTRY_ROLES.includes(effectiveUser.role) ? null : effectiveUser.agency}
-        selfAssignOnly={effectiveUser.role === 'officer'}
+        lockedAgency={(effectiveUser.role) === 'superadmin' ? null : effectiveUser.agency}
+        selfAssignOnly={false}
         onTitleChange={(v) => dispatch({ type: 'SET_NEW_TITLE', title: v })}
         onDescriptionChange={(v) => dispatch({ type: 'SET_NEW_DESCRIPTION', description: v })}
         onAgencyChange={(v) => dispatch({ type: 'SET_NEW_AGENCY', agency: v })}

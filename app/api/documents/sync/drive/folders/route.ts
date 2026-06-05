@@ -6,7 +6,7 @@ import { logger } from '@/lib/logger';
 
 /** GET — List folders in the user's Drive (for picker) */
 export async function GET(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   // TODO: migrate to requireRole() — remove redundant auth() call; requireRole() above already authenticates
   const session = await auth();
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
 /** POST — Save selected folder / DELETE body to disconnect */
 export async function POST(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   // TODO: migrate to requireRole() — remove redundant auth() call; requireRole() above already authenticates
   const session = await auth();

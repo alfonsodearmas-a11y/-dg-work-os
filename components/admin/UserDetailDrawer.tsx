@@ -13,7 +13,7 @@ import type { ModuleInfo } from './UserRolesSection';
 import type { ModuleOverride, ModuleOverrideDetailed } from '@/lib/module-types';
 import type { AuditEntry } from './UserActivitySection';
 import { UserCheck, UserX, Clock } from 'lucide-react';
-import { ROLE_LABELS, ROLE_COLORS, MINISTRY_ROLES } from '@/lib/people-types';
+import { ROLE_LABELS, ROLE_COLORS } from '@/lib/people-types';
 
 interface User {
   id: string;
@@ -56,6 +56,7 @@ const STATUS_STYLES: Record<string, { bg: string; label: string; icon: typeof Us
 export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, onUserUpdated, showToast }: UserDetailDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
   const [editRole, setEditRole] = useState('');
+  const [editTitle, setEditTitle] = useState('');
   const [editAgency, setEditAgency] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -80,6 +81,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
   // Derive dirty flag from comparing edit values to user prop
   const dirty = user
     ? editRole !== user.role ||
+      editTitle !== (user.formal_title || '') ||
       editAgency !== user.agency ||
       editName !== (user.name || '')
     : false;
@@ -88,6 +90,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
   useEffect(() => {
     if (user) {
       setEditRole(user.role);
+      setEditTitle(user.formal_title || '');
       setEditAgency(user.agency);
       setEditName(user.name || '');
       setShowDeleteConfirm(false);
@@ -292,7 +295,9 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
   const handleFieldChange = (field: string, value: string | null) => {
     if (field === 'role') {
       setEditRole(value || '');
-      if (MINISTRY_ROLES.includes(value || '')) setEditAgency(null);
+      if ((value || '') === 'superadmin') setEditAgency(null);
+    } else if (field === 'formal_title') {
+      setEditTitle(value || '');
     } else if (field === 'agency') {
       setEditAgency(value);
     } else if (field === 'name') {
@@ -306,7 +311,8 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
     try {
       const payload: Record<string, unknown> = {};
       if (editRole !== user.role) payload.role = editRole;
-      if (editAgency !== user.agency) payload.agency = MINISTRY_ROLES.includes(editRole) ? null : editAgency;
+      if (editTitle !== (user.formal_title || '') && editTitle.trim()) payload.formal_title = editTitle.trim();
+      if (editAgency !== user.agency) payload.agency = editRole === 'superadmin' ? null : editAgency;
       if (editName !== (user.name || '')) payload.name = editName;
 
       if (Object.keys(payload).length === 0) { setSaving(false); return; }
@@ -496,13 +502,14 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
               isDG={isDG}
               isSelf={isSelf}
               editRole={editRole}
+              editTitle={editTitle}
               editAgency={editAgency}
               onFieldChange={handleFieldChange}
             />
           </Section>
 
           {/* Module Access Section (DG only, not self, skip ministry roles who have full access) */}
-          {isDG && !isSelf && !MINISTRY_ROLES.includes(user.role) && (
+          {isDG && !isSelf && (user.role) !== 'superadmin' && (
             <Section title="Module Access" id="modules" expanded={expandedSection === 'modules'} onToggle={() => toggleSection('modules')}>
               <ModuleAccessSection
                 user={user}

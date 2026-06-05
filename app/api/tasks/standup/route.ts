@@ -7,7 +7,7 @@ import { AI_MODEL } from '@/lib/constants/ai-config';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
 
   const apiKey = process.env.ANTHROPIC_API_KEY;

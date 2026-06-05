@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
 
@@ -30,7 +29,7 @@ export interface DecisionLogRow {
  * resolved server-side so the UI is purely a renderer.
  */
 export async function GET(request: Request) {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
@@ -38,7 +37,7 @@ export async function GET(request: Request) {
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '200', 10), 500);
 
   try {
-    const isMinistry = MINISTRY_ROLES.includes(session.user.role);
+    const isMinistry = (session.user.role) === 'superadmin';
     const agencyFilter = isMinistry ? null : session.user.agency?.toUpperCase() ?? null;
 
     let query = supabaseAdmin

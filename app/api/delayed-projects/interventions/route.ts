@@ -8,7 +8,7 @@ import type { InterventionFilters, InterventionType, InterventionStatus } from '
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   const sp = request.nextUrl.searchParams;
@@ -44,7 +44,7 @@ const CreateSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 

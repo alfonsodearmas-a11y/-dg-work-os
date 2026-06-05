@@ -22,7 +22,7 @@ export const runtime = 'nodejs';
  */
 export async function POST(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const auth = await requireRole(['dg']);
+  const auth = await requireRole(['superadmin']);
   if (auth instanceof NextResponse) return auth;
   const { session } = auth;
 

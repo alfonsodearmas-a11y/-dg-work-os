@@ -219,7 +219,7 @@ async function handleJsonUpload(body: z.infer<typeof jsonUploadSchema>) {
 // ── Excel upload ──────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  const result = await requireRole(['dg', 'agency_admin']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
 
   try {

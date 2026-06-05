@@ -9,40 +9,44 @@ import { sendInviteEmail } from '@/lib/invite-email';
 import { withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { grantModuleAccess, bulkUpsertModulePermissions } from '@/lib/modules/access';
-import { ROLE_LABELS, MINISTRY_ROLES } from '@/lib/people-types';
-import type { Role } from '@/lib/people-types';
+import { ROLE_LABELS } from '@/lib/people-types';
+import { normalizeRole, denormalizeRoleForWrite } from '@/lib/auth-session';
 
 export async function GET() {
-  const authResult = await requireRole(['dg', 'minister', 'ps']);
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
 
   const { data, error } = await supabaseAdmin
     .from('users')
-    .select('id, email, name, avatar_url, role, formal_title, agency, is_active, status, last_login, login_count, invited_at, first_login_at, last_seen_at, created_at')
+    .select('id, email, name, avatar_url, role, formal_title, agency, is_owner, is_active, status, last_login, login_count, invited_at, first_login_at, last_seen_at, created_at')
     .order('created_at', { ascending: false });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ users: data });
+  // Phase 2: stored roles are legacy values — expose the two-level model to the
+  // UI (the 'system' row keeps its raw value; it is display-only there).
+  const users = (data || []).map((u) => ({ ...u, role: normalizeRole(u.role) ?? u.role }));
+
+  return NextResponse.json({ users });
 }
 
-const ALL_INVITE_ROLES = ['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer'] as const;
 const VALID_AGENCIES = ['GPL', 'CJIA', 'GWI', 'GCAA', 'HECI', 'MARAD', 'HAS'] as const;
 
 const inviteSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
-  role: z.enum(ALL_INVITE_ROLES),
+  role: z.enum(['superadmin', 'agency_manager'] as const),
   agency: z.enum(VALID_AGENCIES).nullable().optional(),
+  formal_title: z.string().min(1).optional(),
 }).refine(
-  (d) => d.role !== 'agency_admin' || !!d.agency,
-  { message: 'Agency is required for Agency Manager role', path: ['agency'] },
+  (d) => d.role !== 'agency_manager' || !!d.agency,
+  { message: 'Agency is required for the Agency Manager role', path: ['agency'] },
 );
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const authResult = await requireRole(['dg']);
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 
@@ -56,16 +60,16 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   const normalizedEmail = email.toLowerCase().trim();
   const moduleGrants: string[] = Array.isArray(body.moduleGrants) ? body.moduleGrants : [];
 
-  // D4 (role-simplification plan): only the system OWNER can create senior-role
-  // (future superadmin) accounts — not every DG-role user.
-  if (MINISTRY_ROLES.includes(role)) {
+  // D4 (role-simplification plan): only the system OWNER can create superadmin
+  // accounts — not every superadmin.
+  if (role === 'superadmin') {
     const { data: actor } = await supabaseAdmin
       .from('users')
       .select('is_owner')
       .eq('id', session.user.id)
       .single();
     if (!actor?.is_owner) {
-      return NextResponse.json({ error: 'Only the system owner can create senior-role accounts' }, { status: 403 });
+      return NextResponse.json({ error: 'Only the system owner can create superadmin accounts' }, { status: 403 });
     }
   }
 
@@ -79,8 +83,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     return NextResponse.json({ error: 'A user with this email already exists' }, { status: 409 });
   }
 
-  // Derive formal_title from role, or use custom title if provided
-  const formalTitle: string = body.formal_title?.trim() || ROLE_LABELS[role as Role] || role;
+  // Title is display-only: custom title if provided, else the role label.
+  const formalTitle: string = parsed.data.formal_title?.trim() || ROLE_LABELS[role] || role;
 
   // Generate secure invite token for self-service password setup (7-day expiry)
   const inviteToken = crypto.randomBytes(32).toString('hex');
@@ -109,9 +113,11 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       id: authData.user.id,
       email: normalizedEmail,
       name: name.trim(),
-      role,
+      // Phase 2: users_role_check still enforces legacy values — store the
+      // legacy equivalent; reads re-normalize to the two-level model.
+      role: denormalizeRoleForWrite(role),
       formal_title: formalTitle,
-      agency: MINISTRY_ROLES.includes(role) ? null : (agency || null),
+      agency: role === 'superadmin' ? null : (agency || null),
       is_active: false,
       status: 'pending',
       invited_by: session.user.id,
@@ -179,8 +185,11 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     // confirmation notification couldn't be delivered.
   }
 
+  // Expose the two-level role (stored value is legacy until Phase 3).
+  const responseUser = { ...newUser, role: normalizeRole(newUser.role) ?? newUser.role };
+
   return NextResponse.json({
-    user: newUser,
+    user: responseUser,
     ...(!emailResult.success && { warning: 'User created but invite email failed to send' }),
   }, { status: 201 });
 });

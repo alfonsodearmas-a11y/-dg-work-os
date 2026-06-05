@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
 import { parseBody, apiError } from '@/lib/api-utils';
-import { MINISTRY_ROLES } from '@/lib/people-types';
+import { LEGACY_DB_SENIOR_ROLES } from '@/lib/people-types';
 import { escalateProject, deescalateProject } from '@/lib/project-queries';
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
@@ -15,7 +15,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   const { data, error } = await parseBody(request, escalateSchema);
@@ -37,7 +37,7 @@ export async function POST(
     const { data: ministryUsers } = await supabaseAdmin
       .from('users')
       .select('id')
-      .in('role', [...MINISTRY_ROLES])
+      .in('role', [...LEGACY_DB_SENIOR_ROLES])
       .eq('is_active', true);
 
     if (ministryUsers?.length) {
@@ -97,7 +97,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   // Only dg, minister, ps can de-escalate
-  const authResult = await requireRole(['dg', 'minister', 'ps']);
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
 
   try {

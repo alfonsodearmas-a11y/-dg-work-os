@@ -3,10 +3,10 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import { sendInviteEmail } from '@/lib/invite-email';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+import { normalizeRole, denormalizeRoleForWrite } from '@/lib/auth-session';
 
 async function logAudit(actorId: string, targetUserId: string, action: string, metadata: Record<string, unknown> = {}) {
   await supabaseAdmin.from('admin_audit_log').insert({
@@ -19,7 +19,7 @@ async function logAudit(actorId: string, targetUserId: string, action: string, m
 
 const patchUserSchema = z.object({
   action: z.enum(['suspend', 'reactivate', 'archive', 'restore', 'force_signout', 'resend_invite']).optional(),
-  role: z.enum(['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer'] as const).optional(),
+  role: z.enum(['superadmin', 'agency_manager'] as const).optional(),
   agency: z.enum(['GPL', 'CJIA', 'GWI', 'GCAA', 'HECI', 'MARAD', 'HAS'] as const).nullable().optional(),
   name: z.string().min(1).optional(),
   formal_title: z.string().min(1).optional(),
@@ -27,7 +27,7 @@ const patchUserSchema = z.object({
 });
 
 export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown) => {
-  const authResult = await requireRole(['dg']);
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
   const { id } = await (ctx as { params: Promise<{ id: string }> }).params;
@@ -40,7 +40,7 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
   if (error) return error;
 
   // D4 (role-simplification plan): owner-only authority.
-  //  - Only the system owner can promote anyone to a senior (future superadmin) role.
+  //  - Only the system owner can promote anyone to superadmin.
   //  - A non-owner can never modify the owner account.
   const { data: actor } = await supabaseAdmin
     .from('users')
@@ -57,8 +57,8 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
     if (target?.is_owner) {
       return NextResponse.json({ error: 'Only the system owner can modify this account' }, { status: 403 });
     }
-    if (data!.role && MINISTRY_ROLES.includes(data!.role)) {
-      return NextResponse.json({ error: 'Only the system owner can assign senior roles' }, { status: 403 });
+    if (data!.role === 'superadmin') {
+      return NextResponse.json({ error: 'Only the system owner can assign the superadmin role' }, { status: 403 });
     }
   }
 
@@ -151,7 +151,9 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
   const updates: Record<string, unknown> = {};
 
   if (data!.role !== undefined) {
-    updates.role = data!.role;
+    // Phase 2: users_role_check still enforces legacy values — store the
+    // legacy equivalent; reads re-normalize to the two-level model.
+    updates.role = denormalizeRoleForWrite(data!.role);
   }
 
   if (data!.agency !== undefined) {
@@ -171,14 +173,13 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
     updates.status = data!.is_active ? 'active' : 'inactive';
   }
 
-  const newRole = (updates.role as string) || undefined;
-  if (newRole) {
-    if (MINISTRY_ROLES.includes(newRole)) {
+  if (data!.role !== undefined) {
+    if (data!.role === 'superadmin') {
       updates.agency = null;
-    } else if (['agency_admin', 'officer'].includes(newRole) && !updates.agency && data!.agency === undefined) {
+    } else if (!updates.agency && data!.agency === undefined) {
       const { data: existing } = await supabaseAdmin.from('users').select('agency').eq('id', id).single();
       if (!existing?.agency) {
-        return NextResponse.json({ error: 'Agency is required for agency_admin and officer roles' }, { status: 400 });
+        return NextResponse.json({ error: 'Agency is required for the agency manager role' }, { status: 400 });
       }
     }
   }
@@ -200,6 +201,9 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
     return NextResponse.json({ error: dbError.message }, { status: 500 });
   }
 
+  // Expose the two-level role to the UI (stored value is legacy until Phase 3).
+  if (updatedUser) updatedUser.role = normalizeRole(updatedUser.role) ?? updatedUser.role;
+
   const changes: Record<string, unknown> = {};
   if (updates.role && updates.role !== beforeUser?.role) changes.role = { from: beforeUser?.role, to: updates.role };
   if (updates.agency !== undefined && updates.agency !== beforeUser?.agency) changes.agency = { from: beforeUser?.agency, to: updates.agency };
@@ -215,7 +219,7 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
 });
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const authResult = await requireRole(['dg']);
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
   const { id } = await params;

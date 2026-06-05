@@ -1,4 +1,4 @@
-import { MINISTRY_ROLES } from '@/lib/people-types';
+import { normalizeRole } from '@/lib/auth-session';
 
 export type ImportanceTier = 'critical' | 'important' | 'informational';
 
@@ -21,10 +21,11 @@ export interface TierContext {
   taskStatus?: string;     // 'new' | 'active' | 'blocked' | 'done'
   isOverdue?: boolean;
   hoursUntilDue?: number;
-  assigneeRole?: string;   // 'dg' | 'minister' | 'ps' | 'agency_admin' | 'officer'
+  assigneeRole?: string;   // raw users.role value — may be legacy until Phase 3
 }
 
-const SENIOR_ROLES = new Set(MINISTRY_ROLES);
+// Callers pass raw users.role values (legacy names until Phase 3) — normalize.
+const isSeniorRole = (role: string | undefined) => normalizeRole(role) === 'superadmin';
 const HIGH_PRIORITIES = new Set(['high', 'critical']);
 
 /**
@@ -75,7 +76,7 @@ export function classifyNotificationTier(
       return 'informational';
 
     case 'task_completed':
-      if (assigneeRole && SENIOR_ROLES.has(assigneeRole)) return 'important';
+      if (isSeniorRole(assigneeRole)) return 'important';
       return 'informational';
 
     // ── Informational, never escalates ───────────────────────────────

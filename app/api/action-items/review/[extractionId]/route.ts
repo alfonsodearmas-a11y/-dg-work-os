@@ -25,7 +25,7 @@ const DecisionZ = z.object({
 const BodyZ = z.object({ decisions: z.array(DecisionZ) });
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ extractionId: string }> }) {
-  const a = await requireRole(['dg', 'ps']);
+  const a = await requireRole(['superadmin']);
   if (a instanceof NextResponse) return a;
   const { extractionId } = await ctx.params;
   const parsed = BodyZ.safeParse(await req.json().catch(() => null));
