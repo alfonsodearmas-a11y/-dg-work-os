@@ -12,7 +12,8 @@ SELECT
   (SELECT count(*) FROM auth.users a WHERE EXISTS
      (SELECT 1 FROM public.users u WHERE u.id = a.id))                          AS auth_users_for_profiles, -- expect 23
   (SELECT count(*) FROM auth.identities WHERE provider = 'google')             AS google_identities,     -- expect 3
-  (SELECT count(*) FROM auth.users WHERE banned_until = 'infinity')            AS banned_system;         -- expect 1
+  (SELECT count(*) FROM auth.users
+     WHERE banned_until IS NOT NULL AND banned_until > now())                  AS banned_system;         -- expect 1 (system; 03_*.sql bans to 2999-01-01 — a '=infinity' check is stale and false-negatives)
 
 -- REHEARSAL GOTCHA GUARD: no NULL string-token columns (would 500 GoTrue on sign-in).
 SELECT count(*) AS rows_with_null_tokens
