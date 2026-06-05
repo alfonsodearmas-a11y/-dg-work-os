@@ -54,7 +54,7 @@
     },
     {
       "path": "/api/cron/agency-scheduled-reports",
-      "schedule": "0 * * * *"
+      "schedule": "0 7 * * *"
     }
   ]
 }
