@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Trash2, Loader2, Plus, X, Square, CheckSquare, FileSignature } from 'lucide-react';
 import { EscalateModal } from '@/components/today/EscalateModal';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/providers/SupabaseSessionProvider';
 import { useRouter } from 'next/navigation';
 import { Task, TaskUpdate, Subtask, TaskActivity } from '@/lib/task-types';
 import { TaskComments } from './TaskComments';

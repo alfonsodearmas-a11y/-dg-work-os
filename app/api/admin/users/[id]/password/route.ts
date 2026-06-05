@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 
-// PUT /api/admin/users/[id]/password — DG sets/resets a user's password
+// PUT /api/admin/users/[id]/password — DG sets/resets a user's Supabase Auth
+// password. Supabase owns credentials post-cutover, so this updates
+// auth.users.encrypted_password via the admin API (not users.password_hash).
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -17,12 +18,7 @@ export async function PUT(
     return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
-
-  const { error } = await supabaseAdmin
-    .from('users')
-    .update({ password_hash: passwordHash })
-    .eq('id', id);
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(id, { password });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

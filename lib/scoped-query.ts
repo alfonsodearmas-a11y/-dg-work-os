@@ -1,4 +1,4 @@
-import type { Session } from 'next-auth';
+import type { Session } from '@/lib/auth-session';
 import { MINISTRY_ROLES } from '@/lib/people-types';
 
 /**

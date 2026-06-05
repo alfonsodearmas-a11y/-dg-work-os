@@ -48,7 +48,10 @@ function authorizeRoles(user: LegacyUser, ...roles: string[]): void {
   }
 }
 
-// Mock auth() for requireRole/requireUploadRole tests
+// Mock auth() for requireRole/requireUploadRole tests. auth-helpers imports auth
+// from '@/lib/auth' (the stable auth surface that re-exports the Supabase
+// accessor), so mocking that module both controls auth() and keeps the real
+// `server-only` import out of the vitest runtime.
 const { mockAuth } = vi.hoisted(() => ({
   mockAuth: vi.fn(),
 }));

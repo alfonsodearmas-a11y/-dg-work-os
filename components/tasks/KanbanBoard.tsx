@@ -19,7 +19,7 @@ import { MINISTRY_ROLES } from '@/lib/people-types';
 import { useViewAsFetch } from '@/hooks/useViewAsFetch';
 import { useBoardReducer, COLUMNS } from '@/hooks/useBoardReducer';
 import { useBoardUrlSync } from '@/hooks/useBoardUrlSync';
-import { canVerify } from '@/lib/auth-helpers';
+import { canVerify } from '@/lib/auth-roles';
 import { hasActiveFilters } from './KanbanFilters';
 import { BoardSelectionProvider, useSelection } from './BoardSelectionContext';
 import {

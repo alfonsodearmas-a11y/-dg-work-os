@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/providers/SupabaseSessionProvider';
 import {
   ArrowLeft, ShoppingCart, LayoutDashboard, BarChart3, Plus, Upload,
   Inbox, Activity, Archive as ArchiveIcon, Award, ScrollText,

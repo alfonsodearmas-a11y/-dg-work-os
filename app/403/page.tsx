@@ -1,6 +1,6 @@
 'use client';
 
-import { signOut } from 'next-auth/react';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 
 export default function AccessDeniedPage() {
   return (
@@ -42,7 +42,10 @@ export default function AccessDeniedPage() {
         </div>
 
         <button
-          onClick={() => signOut({ callbackUrl: '/login' })}
+          onClick={async () => {
+            await getBrowserSupabase().auth.signOut();
+            window.location.href = '/login';
+          }}
           className="btn-navy w-full py-3 text-sm font-medium"
         >
           Sign Out

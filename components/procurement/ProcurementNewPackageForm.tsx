@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/providers/SupabaseSessionProvider';
 import { Package } from 'lucide-react';
 import { SlidePanel } from '@/components/layout/SlidePanel';
 import { Spinner } from '@/components/ui/Spinner';

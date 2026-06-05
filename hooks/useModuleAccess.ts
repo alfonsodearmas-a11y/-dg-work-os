@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/providers/SupabaseSessionProvider';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import { MINISTRY_ROLES } from '@/lib/people-types';
 

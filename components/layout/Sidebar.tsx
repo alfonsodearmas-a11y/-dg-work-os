@@ -35,7 +35,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useState, useRef, useCallback, useEffect, Fragment } from 'react';
 import { createPortal } from 'react-dom';
-import { signOut } from 'next-auth/react';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 import { useSidebar } from './SidebarContext';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
@@ -190,8 +190,9 @@ export function Sidebar() {
 
   const gridHealthActive = pathname.startsWith('/pulse/gpl/grid-health');
 
-  const handleSignOut = () => {
-    signOut({ callbackUrl: '/login' });
+  const handleSignOut = async () => {
+    await getBrowserSupabase().auth.signOut();
+    window.location.href = '/login';
   };
 
   const allNavItems = [...mainNavItems, ...adminItems];

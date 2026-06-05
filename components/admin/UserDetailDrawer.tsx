@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   X, Shield, ShieldOff, Archive, RotateCcw, LogOut, Trash2,
-  ChevronDown, AlertTriangle,
+  ChevronDown, AlertTriangle, KeyRound,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import { UserProfileSection } from './UserProfileSection';
@@ -354,6 +354,34 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
     setActionLoading(null);
   };
 
+  const performPasswordReset = async () => {
+    if (!user) return;
+    const pw = window.prompt(`Set a new password for ${user.email} (min 8 characters):`);
+    if (pw === null) return; // cancelled
+    if (pw.length < 8) {
+      showToast('Password must be at least 8 characters', 'error');
+      return;
+    }
+    setActionLoading('reset_password');
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Password reset', 'success');
+        fetchAudit();
+      } else {
+        showToast(data.error || 'Failed to reset password', 'error');
+      }
+    } catch {
+      showToast('Failed to reset password', 'error');
+    }
+    setActionLoading(null);
+  };
+
   const handleDelete = async () => {
     if (!user) return;
     setActionLoading('delete');
@@ -502,6 +530,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                 showDeleteConfirm={showDeleteConfirm}
                 deleteConfirmEmail={deleteConfirmEmail}
                 onAction={performAction}
+                onResetPassword={performPasswordReset}
                 onDelete={handleDelete}
                 onShowDeleteConfirm={setShowDeleteConfirm}
                 onDeleteConfirmEmailChange={setDeleteConfirmEmail}
@@ -577,13 +606,14 @@ function Section({ title, id, expanded, onToggle, children }: {
   );
 }
 
-function SecuritySection({ user, status, actionLoading, showDeleteConfirm, deleteConfirmEmail, onAction, onDelete, onShowDeleteConfirm, onDeleteConfirmEmailChange }: {
+function SecuritySection({ user, status, actionLoading, showDeleteConfirm, deleteConfirmEmail, onAction, onResetPassword, onDelete, onShowDeleteConfirm, onDeleteConfirmEmailChange }: {
   user: { id: string; email: string };
   status: string;
   actionLoading: string | null;
   showDeleteConfirm: boolean;
   deleteConfirmEmail: string;
   onAction: (action: string, confirmMsg: string) => void;
+  onResetPassword: () => void;
   onDelete: () => void;
   onShowDeleteConfirm: (show: boolean) => void;
   onDeleteConfirmEmailChange: (email: string) => void;
@@ -631,6 +661,16 @@ function SecuritySection({ user, status, actionLoading, showDeleteConfirm, delet
           onClick={() => onAction('archive', 'Archive this user? They will be moved to the archived tab.')}
         />
       ) : null}
+
+      {/* Reset Password */}
+      <ActionButton
+        icon={KeyRound}
+        label="Reset Password"
+        desc="Set a new Supabase Auth password for this user"
+        color="text-gold-400 hover:bg-gold-500/10"
+        loading={actionLoading === 'reset_password'}
+        onClick={onResetPassword}
+      />
 
       {/* Force Sign Out */}
       <ActionButton

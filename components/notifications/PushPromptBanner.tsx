@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/providers/SupabaseSessionProvider';
 import { Bell, X, Share } from 'lucide-react';
 
 const DISMISS_KEY = 'dg-push-prompt-dismissed';

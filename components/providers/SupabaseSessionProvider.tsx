@@ -1,16 +1,9 @@
 'use client';
-// P6 — HELD FOR CUTOVER (step C5). NOT YET WIRED.
-//
-// Drop-in replacement for next-auth/react's <SessionProvider> + useSession().
-// Returns the SAME { data, status } shape, so the ~14 useSession() callsites +
-// ViewAsProvider become import-path swaps only.
-//
-// At cutover:
-//   1) swap <AuthSessionProvider> → <SupabaseSessionProvider> in the app layout;
-//   2) codemod the `from 'next-auth/react'` import sites to
-//      `from '@/components/providers/SupabaseSessionProvider'`
-//      (site list: scripts/auth-migration/README.md).
-// Until then this file is imported by nothing and is inert.
+// Supabase Auth session provider — the app's live session context. Returns the
+// same { data, status } shape the former next-auth useSession() did, so the
+// useSession() call-sites are import-path swaps. Wrapped by AuthSessionProvider
+// (components/providers/SessionProvider.tsx) in the app layout; hydrates from
+// /api/auth/me and refreshes on Supabase auth state changes.
 import {
   createContext,
   useContext,

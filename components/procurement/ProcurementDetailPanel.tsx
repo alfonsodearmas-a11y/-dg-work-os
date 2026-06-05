@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/providers/SupabaseSessionProvider';
 import {
   Package, MessageSquare, Send, FileText, Upload, Download,
   ArrowRight, Trash2, Loader2, History, Repeat, AlertTriangle, Award, HelpCircle,

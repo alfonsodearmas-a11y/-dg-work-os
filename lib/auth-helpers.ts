@@ -1,8 +1,23 @@
 import { NextResponse } from 'next/server';
+// `auth` is the Supabase-backed accessor, re-exported by lib/auth (the stable
+// auth surface). Importing it via lib/auth keeps that module the single mock
+// point for tests (vi.mock('@/lib/auth')).
 import { auth, type Role } from './auth';
-import { MINISTRY_ROLES } from './people-types';
+import {
+  canAccessAgency,
+  canUploadData,
+  canAssignTasks,
+  canVerify,
+  canAccessPsipSync,
+} from './auth-roles';
 
 export type { Role };
+
+// Re-export the client-safe pure permission helpers (defined in lib/auth-roles.ts)
+// so the ~49 server call-sites that import them from '@/lib/auth-helpers' keep
+// working unchanged. Client components must import these from '@/lib/auth-roles'
+// directly — this module pulls in the server-only Supabase auth().
+export { canAccessAgency, canUploadData, canAssignTasks, canVerify, canAccessPsipSync };
 
 export async function requireRole(allowedRoles: Role[]) {
   const session = await auth();
@@ -21,66 +36,6 @@ export async function requireRole(allowedRoles: Role[]) {
   }
 
   return { session };
-}
-
-// Canonical agency form is UPPERCASE per migration 106 (2026-05-05): the
-// users.agency column CHECK constraint enforces it. Helper does exact
-// match against the canonical form; the target is uppercased once at the
-// boundary so the ~70 legacy call-sites passing 'gpl' continue to work
-// without a coordinated rename.
-export function canAccessAgency(
-  userRole: Role,
-  userAgency: string | null,
-  targetAgency: string
-): boolean {
-  if (MINISTRY_ROLES.includes(userRole)) return true;
-  return userAgency === targetAgency.toUpperCase();
-}
-
-export function canUploadData(
-  userRole: Role,
-  userAgency: string | null,
-  targetAgency: string
-): boolean {
-  if (userRole === 'dg') return true;
-  if (userRole === 'minister' || userRole === 'ps' || userRole === 'parl_sec') return false;
-  if (userRole === 'agency_admin' || userRole === 'officer') {
-    return userAgency === targetAgency.toUpperCase();
-  }
-  return false;
-}
-
-export function canAssignTasks(userRole: Role): boolean {
-  return ['dg', 'minister', 'ps', 'parl_sec', 'agency_admin'].includes(userRole);
-}
-
-/**
- * Whether the user can verify a completed task (D7 — drives the role-aware
- * Pending Verification column). Ministry roles can verify any task; an
- * agency_admin can verify only tasks scoped to their portfolio agency.
- *
- * `taskAgency` is optional: when omitted, the helper answers the broad
- * question "could this user ever verify *some* task?", which is what the
- * board uses to decide whether to render a Pending Verification column.
- */
-export function canVerify(
-  userRole: Role,
-  userAgency: string | null,
-  taskAgency?: string | null
-): boolean {
-  if (['dg', 'minister', 'ps', 'parl_sec'].includes(userRole)) return true;
-  if (userRole === 'agency_admin' && userAgency) {
-    if (!taskAgency) return true;
-    return userAgency === taskAgency.toUpperCase();
-  }
-  return false;
-}
-
-// PSIP upload is ministry-only (dg/minister/ps). Deprecated GWI-specific
-// helper retained as a thin alias for any callers that haven't moved yet.
-export function canAccessPsipSync(userRole: Role, _userAgency: string | null | undefined): boolean {
-  void _userAgency;
-  return MINISTRY_ROLES.includes(userRole);
 }
 
 export async function requirePsipSyncAccess() {

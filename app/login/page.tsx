@@ -1,9 +1,9 @@
 'use client';
 
-import { signIn } from 'next-auth/react';
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AuthPageShell } from '@/components/auth/AuthPageShell';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 
 export default function LoginPage() {
   return (
@@ -21,7 +21,9 @@ function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(errorParam === 'CredentialsSignin' ? 'Invalid email or password' : '');
+  const [error, setError] = useState(
+    errorParam === 'oauth' ? 'Google sign-in failed. Please try again.' : ''
+  );
 
   async function handleCredentialsLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -29,21 +31,30 @@ function LoginForm() {
     setLoading(true);
     setError('');
 
-    const result = await signIn('credentials', {
-      email,
+    const supabase = getBrowserSupabase();
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.toLowerCase().trim(),
       password,
-      callbackUrl,
-      redirect: false,
     });
 
-    if (result?.error) {
+    if (signInError) {
       setError('Invalid email or password');
       setLoading(false);
-    } else if (result?.url) {
-      window.location.href = result.url;
     } else {
-      setLoading(false);
+      // Full navigation so the middleware picks up the freshly-set session cookie.
+      window.location.href = callbackUrl.startsWith('/') ? callbackUrl : '/';
     }
+  }
+
+  function handleGoogleLogin() {
+    const supabase = getBrowserSupabase();
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(
+      callbackUrl.startsWith('/') ? callbackUrl : '/'
+    )}`;
+    supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo },
+    });
   }
 
   return (
@@ -104,7 +115,7 @@ function LoginForm() {
 
       {/* Google Sign In */}
       <button
-        onClick={() => signIn('google', { callbackUrl })}
+        onClick={handleGoogleLogin}
         className="login-btn flex items-center justify-center gap-3 w-full"
         style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.15)' }}
       >

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/providers/SupabaseSessionProvider';
 import { AlertTriangle, Package, ChevronDown, LayoutGrid, List } from 'lucide-react';
 import Link from 'next/link';
 import { Award } from 'lucide-react';
