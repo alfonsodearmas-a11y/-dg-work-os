@@ -1,12 +1,11 @@
 'use client';
 
-import { ROLE_LABELS, ROLE_COLORS, ROLE_OPTIONS, TITLE_PRESETS } from '@/lib/people-types';
+import { ROLE_LABELS, ROLE_COLORS, ROLE_OPTIONS } from '@/lib/people-types';
 import { USER_AGENCIES } from '@/lib/constants/agencies';
 
 export interface UserRolesUser {
   id: string;
   role: string;
-  formal_title?: string | null;
   agency: string | null;
 }
 
@@ -18,7 +17,6 @@ interface UserRolesSectionProps {
   isDG: boolean;
   isSelf: boolean;
   editRole: string;
-  editTitle: string;
   editAgency: string | null;
   onFieldChange: (field: string, value: string | null) => void;
 }
@@ -28,7 +26,6 @@ export function UserRolesSection({
   isDG,
   isSelf,
   editRole,
-  editTitle,
   editAgency,
   onFieldChange,
 }: UserRolesSectionProps) {
@@ -48,28 +45,8 @@ export function UserRolesSection({
           </select>
         ) : (
           <span className={`text-xs px-2.5 py-1 rounded ${ROLE_COLORS[user.role] || ROLE_COLORS.agency_manager}`}>
-            {user.formal_title || ROLE_LABELS[user.role as keyof typeof ROLE_LABELS] || user.role}
+            {ROLE_LABELS[user.role as keyof typeof ROLE_LABELS] || user.role}
           </span>
-        )}
-      </Field>
-      <Field label="Title (display only)">
-        {isDG ? (
-          <>
-            <input
-              type="text"
-              list="user-title-presets"
-              value={editTitle}
-              onChange={e => onFieldChange('formal_title', e.target.value)}
-              aria-label="User title"
-              placeholder="e.g. Director General"
-              className="w-full px-3 py-1.5 bg-navy-950 border border-navy-800 rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
-            />
-            <datalist id="user-title-presets">
-              {TITLE_PRESETS.map(t => <option key={t} value={t} />)}
-            </datalist>
-          </>
-        ) : (
-          <p className="text-sm text-slate-400">{user.formal_title || '—'}</p>
         )}
       </Field>
       <Field label="Agency">

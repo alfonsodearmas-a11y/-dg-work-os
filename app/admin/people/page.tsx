@@ -14,7 +14,7 @@ import { ActivityLogPanel } from '@/components/admin/ActivityLogPanel';
 import { usePermissions } from '@/hooks/usePeople';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatDistanceToNow, parseISO } from 'date-fns';
-import { ROLE_LABELS, ROLE_COLORS, ROLE_OPTIONS, TITLE_PRESETS } from '@/lib/people-types';
+import { ROLE_LABELS, ROLE_COLORS, ROLE_OPTIONS } from '@/lib/people-types';
 import { normalizeRole } from '@/lib/auth-session';
 
 interface User {
@@ -631,13 +631,13 @@ export default function PeoplePage() {
                           </div>
                           {/* Mobile: inline role badge */}
                           <span className={`sm:hidden text-[10px] px-1.5 py-0.5 rounded shrink-0 ${ROLE_COLORS[u.role] || ROLE_COLORS.officer}`}>
-                            {u.formal_title || ROLE_LABELS[u.role as keyof typeof ROLE_LABELS] || u.role}
+                            {ROLE_LABELS[u.role as keyof typeof ROLE_LABELS] || u.role}
                           </span>
                         </div>
                       </td>
                       <td className="px-4 py-3 hidden sm:table-cell">
                         <span className={`text-xs px-2 py-0.5 rounded ${ROLE_COLORS[u.role] || ROLE_COLORS.officer}`}>
-                          {u.formal_title || ROLE_LABELS[u.role as keyof typeof ROLE_LABELS] || u.role}
+                          {ROLE_LABELS[u.role as keyof typeof ROLE_LABELS] || u.role}
                         </span>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
@@ -784,7 +784,6 @@ function InviteModal({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('agency_manager');
-  const [title, setTitle] = useState('');
   const [agency, setAgency] = useState('');
 
   // D4: only the owner can mint superadmins (enforced server-side); the UI
@@ -825,7 +824,6 @@ function InviteModal({
           name: name.trim(),
           email: email.trim(),
           role,
-          ...(title.trim() && { formal_title: title.trim() }),
           agency: agency || null,
         }),
       });
@@ -906,23 +904,6 @@ function InviteModal({
                 Super Admin — full access to all agencies and modules.
               </p>
             )}
-          </div>
-
-          {/* Title (display-only; never gates access) */}
-          <div>
-            <label htmlFor="invite-title" className="block text-xs text-slate-400 mb-1.5">Title (display only)</label>
-            <input
-              id="invite-title"
-              type="text"
-              list="invite-title-presets"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder={role === 'superadmin' ? 'e.g. Director General' : 'e.g. Agency Manager'}
-              className="w-full px-3 py-2 bg-navy-950 border border-navy-800 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
-            />
-            <datalist id="invite-title-presets">
-              {TITLE_PRESETS.map(t => <option key={t} value={t} />)}
-            </datalist>
           </div>
 
           {/* Agency (hidden for ministry roles) */}

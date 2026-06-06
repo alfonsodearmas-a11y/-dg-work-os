@@ -17,6 +17,7 @@ interface UserRow {
   name: string | null;
   avatar_url: string | null;
   role: string;
+  formal_title: string | null;
   agency: string | null;
   is_active: boolean;
   status: string | null;
@@ -77,6 +78,7 @@ export function ViewAsSelector({ isOpen, onClose }: ViewAsSelectorProps) {
       email: user.email,
       role: user.role,
       agency: user.agency,
+      title: user.formal_title,
       avatar_url: user.avatar_url,
     };
     startViewAs(target);

@@ -21,7 +21,6 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { CommandPalette } from '@/components/ui/CommandPalette';
 import { KeyboardShortcutsHelp } from '@/components/ui/KeyboardShortcutsHelp';
 
-import { ROLE_LABELS } from '@/lib/people-types';
 
 // Inner component that can use useSidebar (needs to be inside SidebarProvider)
 function AppShellInner({ children }: { children: React.ReactNode }) {
@@ -31,9 +30,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const isBareLayout = pathname === '/login' || pathname.startsWith('/upload');
 
   const userName = effectiveUser.name;
-  const userRole = effectiveUser.role;
   const userAgency = effectiveUser.agency;
-  const roleLabel = ROLE_LABELS[userRole as keyof typeof ROLE_LABELS] || userRole;
+  // Salutation: formal_title (Director General, CEO, Minister…) — never the
+  // role label, which is a permission word. Fall back to the person's name.
+  const greetingLabel = effectiveUser.title || userName;
   const initials = userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   // Keyboard shortcuts: Cmd+[ (left), Cmd+] (right), Cmd+\ (focus)
@@ -90,7 +90,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                 <div className="hidden md:block">
                   <h2 className="text-white/80 text-sm font-light tracking-wide">Welcome back,</h2>
                   <div className="flex items-center gap-2">
-                    <p className="text-gold-500 font-semibold tracking-tight">{roleLabel}</p>
+                    <p className="text-gold-500 font-semibold tracking-tight">{greetingLabel}</p>
                     {userAgency && (
                       <span className="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
                         {userAgency.toUpperCase()}

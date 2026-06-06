@@ -54,7 +54,6 @@ const STATUS_STYLES: Record<string, { bg: string; label: string; icon: typeof Us
 export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, onUserUpdated, showToast }: UserDetailDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
   const [editRole, setEditRole] = useState('');
-  const [editTitle, setEditTitle] = useState('');
   const [editAgency, setEditAgency] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -71,7 +70,6 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
   // Derive dirty flag from comparing edit values to user prop
   const dirty = user
     ? editRole !== user.role ||
-      editTitle !== (user.formal_title || '') ||
       editAgency !== user.agency ||
       editName !== (user.name || '')
     : false;
@@ -80,7 +78,6 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
   useEffect(() => {
     if (user) {
       setEditRole(user.role);
-      setEditTitle(user.formal_title || '');
       setEditAgency(user.agency);
       setEditName(user.name || '');
       setShowDeleteConfirm(false);
@@ -131,8 +128,6 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
     if (field === 'role') {
       setEditRole(value || '');
       if ((value || '') === 'superadmin') setEditAgency(null);
-    } else if (field === 'formal_title') {
-      setEditTitle(value || '');
     } else if (field === 'agency') {
       setEditAgency(value);
     } else if (field === 'name') {
@@ -150,7 +145,6 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
     try {
       const payload: Record<string, unknown> = {};
       if (editRole !== user.role) payload.role = editRole;
-      if (editTitle !== (user.formal_title || '') && editTitle.trim()) payload.formal_title = editTitle.trim();
       if (editAgency !== user.agency) payload.agency = editRole === 'superadmin' ? null : editAgency;
       if (editName !== (user.name || '')) payload.name = editName;
 
@@ -310,7 +304,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
             <div className="flex-1 min-w-0">
               <p className="text-white font-semibold truncate">{user.name || 'No name'}</p>
               <p className={`text-xs font-medium truncate ${ROLE_COLORS[user.role]?.includes('text-') ? ROLE_COLORS[user.role].split(' ').find(c => c.startsWith('text-'))! : 'text-gold-500'}`}>
-                {user.formal_title || ROLE_LABELS[user.role as keyof typeof ROLE_LABELS] || user.role}
+                {ROLE_LABELS[user.role as keyof typeof ROLE_LABELS] || user.role}
               </p>
               <p className="text-navy-600 text-xs truncate">{user.email}</p>
             </div>
@@ -345,7 +339,6 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
               isDG={isDG}
               isSelf={isSelf}
               editRole={editRole}
-              editTitle={editTitle}
               editAgency={editAgency}
               onFieldChange={handleFieldChange}
             />

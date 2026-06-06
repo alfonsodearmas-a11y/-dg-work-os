@@ -110,17 +110,6 @@ export const ROLE_DISPLAY_ORDER: Record<string, number> = {
   superadmin: 1, agency_manager: 2,
 };
 
-/** Title presets for the free-text title field (display-only; never gates access). */
-export const TITLE_PRESETS: readonly string[] = [
-  'Director General',
-  'Minister',
-  'Permanent Secretary',
-  'Parliamentary Secretary',
-  'Agency Manager',
-  'Analyst',
-] as const;
-
-
 // Canonical UPPERCASE values per migration 106 (2026-05-05).
 export const MPUA_AGENCIES = [
   { value: 'GPL', label: 'GPL — Guyana Power & Light' },

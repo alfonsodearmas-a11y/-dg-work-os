@@ -8,7 +8,6 @@ import { NotificationDeliveryError } from '@/lib/notifications/errors';
 import { sendInviteEmail } from '@/lib/invite-email';
 import { withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
-import { ROLE_LABELS } from '@/lib/people-types';
 import { normalizeRole } from '@/lib/auth-session';
 import { USER_AGENCIES } from '@/lib/constants/agencies';
 
@@ -80,8 +79,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     return NextResponse.json({ error: 'A user with this email already exists' }, { status: 409 });
   }
 
-  // Title is display-only: custom title if provided, else the role label.
-  const formalTitle: string = parsed.data.formal_title?.trim() || ROLE_LABELS[role] || role;
+  // Title is the human-facing salutation (greeting header), never a permission
+  // word — so DON'T default it to the role label. Null until the owner sets one;
+  // the greeting falls back to the person's name.
+  const formalTitle: string | null = parsed.data.formal_title?.trim() || null;
 
   // Generate secure invite token for self-service password setup (7-day expiry)
   const inviteToken = crypto.randomBytes(32).toString('hex');
