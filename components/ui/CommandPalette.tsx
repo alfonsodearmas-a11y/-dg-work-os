@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useModuleAccess } from '@/hooks/useModuleAccess';
 import {
   Search, LayoutDashboard, Activity, CheckSquare, Eye,
   DollarSign, Mic, CalendarDays, FileText, Users, Settings,
@@ -17,25 +18,26 @@ interface CommandItem {
   action?: () => void;
   section: string;
   keywords?: string[];
+  moduleSlug?: string;
 }
 
 const NAVIGATION_ITEMS: CommandItem[] = [
-  { id: 'home', label: 'Mission Control', description: 'Daily briefing & dashboard', icon: LayoutDashboard, href: '/', section: 'Navigation', keywords: ['briefing', 'dashboard', 'home'] },
-  { id: 'intel', label: 'Agency Intel', description: 'Agency overview & alerts', icon: Activity, href: '/intel', section: 'Navigation', keywords: ['agency', 'alerts', 'monitoring'] },
-  { id: 'intel-gpl', label: 'GPL Deep Dive', description: 'Power & light metrics', icon: Zap, href: '/intel/gpl', section: 'Navigation', keywords: ['power', 'electricity', 'gpl', 'guyana power'] },
-  { id: 'intel-cjia', label: 'CJIA Analytics', description: 'Airport passenger data', icon: Activity, href: '/intel/cjia', section: 'Navigation', keywords: ['airport', 'cjia', 'flights', 'passengers'] },
-  { id: 'intel-gwi', label: 'GWI Metrics', description: 'Water utility data', icon: Activity, href: '/intel/gwi', section: 'Navigation', keywords: ['water', 'gwi'] },
-  { id: 'intel-gcaa', label: 'GCAA Compliance', description: 'Aviation authority', icon: Activity, href: '/intel/gcaa', section: 'Navigation', keywords: ['aviation', 'gcaa', 'compliance'] },
-  { id: 'tasks', label: 'Task Board', description: 'Kanban task management', icon: CheckSquare, href: '/tasks', section: 'Navigation', keywords: ['kanban', 'todo', 'tasks'] },
-  { id: 'oversight', label: 'Oversight', description: 'Project monitoring', icon: Eye, href: '/oversight', section: 'Navigation', keywords: ['projects', 'monitoring', 'psip'] },
-  { id: 'budget', label: 'Budget 2026', description: 'Budget estimates & analysis', icon: DollarSign, href: '/budget', section: 'Navigation', keywords: ['budget', 'finance', 'allocation'] },
-  { id: 'meetings', label: 'Meetings', description: 'Meeting notes & transcripts', icon: Mic, href: '/meetings', section: 'Navigation', keywords: ['meeting', 'transcript', 'notes', 'recording'] },
-  { id: 'calendar', label: 'Calendar', description: 'Google Calendar', icon: CalendarDays, href: '/calendar', section: 'Navigation', keywords: ['calendar', 'events', 'schedule'] },
-  { id: 'documents', label: 'Documents', description: 'Document vault & AI search', icon: FileText, href: '/documents', section: 'Navigation', keywords: ['documents', 'files', 'vault', 'upload'] },
-  { id: 'projects', label: 'Projects', description: 'PSIP project tracker', icon: Eye, href: '/projects', section: 'Navigation', keywords: ['projects', 'psip', 'tracker'] },
-  { id: 'applications', label: 'Applications', description: 'Service applications', icon: FileText, href: '/applications', section: 'Navigation', keywords: ['applications', 'service', 'pending'] },
-  { id: 'people', label: 'People', description: 'User management', icon: Users, href: '/admin/people', section: 'Admin', keywords: ['users', 'people', 'team', 'roles'] },
-  { id: 'settings', label: 'Settings', description: 'App configuration', icon: Settings, href: '/admin', section: 'Admin', keywords: ['settings', 'admin', 'config'] },
+  { id: 'home', label: 'Mission Control', description: 'Daily briefing & dashboard', icon: LayoutDashboard, href: '/', section: 'Navigation', keywords: ['briefing', 'dashboard', 'home'], moduleSlug: 'briefing' },
+  { id: 'intel', label: 'Agency Intel', description: 'Agency overview & alerts', icon: Activity, href: '/intel', section: 'Navigation', keywords: ['agency', 'alerts', 'monitoring'], moduleSlug: 'agency-intel' },
+  { id: 'intel-gpl', label: 'GPL Deep Dive', description: 'Power & light metrics', icon: Zap, href: '/intel/gpl', section: 'Navigation', keywords: ['power', 'electricity', 'gpl', 'guyana power'], moduleSlug: 'gpl-deep-dive' },
+  { id: 'intel-cjia', label: 'CJIA Analytics', description: 'Airport passenger data', icon: Activity, href: '/intel/cjia', section: 'Navigation', keywords: ['airport', 'cjia', 'flights', 'passengers'], moduleSlug: 'cjia-deep-dive' },
+  { id: 'intel-gwi', label: 'GWI Metrics', description: 'Water utility data', icon: Activity, href: '/intel/gwi', section: 'Navigation', keywords: ['water', 'gwi'], moduleSlug: 'gwi-deep-dive' },
+  { id: 'intel-gcaa', label: 'GCAA Compliance', description: 'Aviation authority', icon: Activity, href: '/intel/gcaa', section: 'Navigation', keywords: ['aviation', 'gcaa', 'compliance'], moduleSlug: 'gcaa-deep-dive' },
+  { id: 'tasks', label: 'Task Board', description: 'Kanban task management', icon: CheckSquare, href: '/tasks', section: 'Navigation', keywords: ['kanban', 'todo', 'tasks'], moduleSlug: 'tasks' },
+  { id: 'oversight', label: 'Oversight', description: 'Project monitoring', icon: Eye, href: '/oversight', section: 'Navigation', keywords: ['projects', 'monitoring', 'psip'], moduleSlug: 'oversight' },
+  { id: 'budget', label: 'Budget 2026', description: 'Budget estimates & analysis', icon: DollarSign, href: '/budget', section: 'Navigation', keywords: ['budget', 'finance', 'allocation'], moduleSlug: 'budget' },
+  { id: 'meetings', label: 'Meetings', description: 'Meeting notes & transcripts', icon: Mic, href: '/meetings', section: 'Navigation', keywords: ['meeting', 'transcript', 'notes', 'recording'], moduleSlug: 'meetings' },
+  { id: 'calendar', label: 'Calendar', description: 'Google Calendar', icon: CalendarDays, href: '/calendar', section: 'Navigation', keywords: ['calendar', 'events', 'schedule'], moduleSlug: 'calendar' },
+  { id: 'documents', label: 'Documents', description: 'Document vault & AI search', icon: FileText, href: '/documents', section: 'Navigation', keywords: ['documents', 'files', 'vault', 'upload'], moduleSlug: 'documents' },
+  { id: 'projects', label: 'Projects', description: 'PSIP project tracker', icon: Eye, href: '/projects', section: 'Navigation', keywords: ['projects', 'psip', 'tracker'], moduleSlug: 'projects' },
+  { id: 'applications', label: 'Applications', description: 'Service applications', icon: FileText, href: '/applications', section: 'Navigation', keywords: ['applications', 'service', 'pending'], moduleSlug: 'applications' },
+  { id: 'people', label: 'People', description: 'User management', icon: Users, href: '/admin/people', section: 'Admin', keywords: ['users', 'people', 'team', 'roles'], moduleSlug: 'people' },
+  { id: 'settings', label: 'Settings', description: 'App configuration', icon: Settings, href: '/admin', section: 'Admin', keywords: ['settings', 'admin', 'config'], moduleSlug: 'settings' },
 ];
 
 export function CommandPalette() {
@@ -45,9 +47,15 @@ export function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { canAccess } = useModuleAccess();
+
+  // Only offer destinations the (effective) user's role can actually open
+  const accessibleItems = NAVIGATION_ITEMS.filter(
+    (item) => !item.moduleSlug || canAccess(item.moduleSlug),
+  );
 
   const filtered = query.trim()
-    ? NAVIGATION_ITEMS.filter((item) => {
+    ? accessibleItems.filter((item) => {
         const q = query.toLowerCase();
         return (
           item.label.toLowerCase().includes(q) ||
@@ -55,7 +63,7 @@ export function CommandPalette() {
           item.keywords?.some((k) => k.includes(q))
         );
       })
-    : NAVIGATION_ITEMS;
+    : accessibleItems;
 
   const sections = filtered.reduce<Record<string, CommandItem[]>>((acc, item) => {
     (acc[item.section] ??= []).push(item);
