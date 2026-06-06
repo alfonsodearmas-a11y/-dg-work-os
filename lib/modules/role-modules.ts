@@ -33,6 +33,7 @@ const SUPERADMIN_MODULES = [
   'action-items',
   'nptab-reports',
   'minister-attention',
+  'projects', // PSIP tracker (/projects) — superadmin-only today (no modules row; only the role bypass admitted it)
   'people',
   'settings',
 ] as const;

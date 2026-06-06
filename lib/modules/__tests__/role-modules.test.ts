@@ -18,6 +18,11 @@ describe('modulesForUser', () => {
     expect(m).not.toContain('action-items');
     expect(m).not.toContain('nptab-reports');
     expect(m).not.toContain('minister-attention');
+    expect(m).not.toContain('projects');
+  });
+
+  it('superadmin keeps /projects (PSIP tracker) access', () => {
+    expect(canAccessModule('superadmin', null, 'projects')).toBe(true);
   });
 
   it('grid-health is GPL-only; airstrips is HAS-only', () => {
