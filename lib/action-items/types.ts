@@ -141,7 +141,7 @@ export interface UserStaffFields {
   id: string;
   email: string;
   name: string | null;
-  role: 'dg' | 'minister' | 'ps' | 'parl_sec' | 'agency_admin' | 'officer';
+  role: 'superadmin' | 'agency_manager';
   agency: string | null;
   aliases: string[];
   closure_mode: ClosureMode;

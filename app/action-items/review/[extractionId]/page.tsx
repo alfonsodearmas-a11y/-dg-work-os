@@ -93,7 +93,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ extract
   } = { mandatory: [], quickScan: [], autoAccepted: [] };
   for (const r of reviewables) {
     const owner = allUsers.find(u => u.id === r.item.owner_id) ?? {
-      id: '', email: '', name: null, role: 'officer', agency: null, aliases: [],
+      id: '', email: '', name: null, role: 'agency_manager', agency: null, aliases: [],
       closure_mode: 'self_close', is_agency_head: false, is_active: true,
     } as UserStaffFields;
     const mand = requiresMandatoryReview(

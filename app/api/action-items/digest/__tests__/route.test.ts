@@ -38,33 +38,33 @@ describe('GET /api/action-items/digest — recipient gate', () => {
     process.env.CRON_SECRET = 'test-secret';
   });
 
-  it('queries dg + minister + ps + parl_sec, active only', async () => {
-    const inSpy = vi.fn().mockReturnThis();
-    const eqSpy = vi.fn().mockResolvedValue({ data: [], error: null });
+  it('queries active superadmins only (two-level model)', async () => {
+    const roleEqSpy = vi.fn();
+    const activeEqSpy = vi.fn().mockResolvedValue({ data: [], error: null });
     mockFrom.mockReturnValue({
-      select: vi.fn().mockReturnValue({ in: inSpy, eq: eqSpy }),
+      select: vi.fn().mockReturnValue({ eq: roleEqSpy }),
     });
-    // The chain is: from('users').select('id').in(...).eq(...)
-    inSpy.mockReturnValue({ eq: eqSpy });
+    // The chain is: from('users').select('id').eq('role', ...).eq('is_active', ...)
+    roleEqSpy.mockReturnValue({ eq: activeEqSpy });
 
     const res = await GET(reqWithAuth('Bearer test-secret'));
     expect(res.status).toBe(200);
 
     expect(mockFrom).toHaveBeenCalledWith('users');
-    expect(inSpy).toHaveBeenCalledWith('role', ['dg', 'minister', 'ps', 'parl_sec']);
-    expect(eqSpy).toHaveBeenCalledWith('is_active', true);
+    expect(roleEqSpy).toHaveBeenCalledWith('role', 'superadmin');
+    expect(activeEqSpy).toHaveBeenCalledWith('is_active', true);
   });
 
   it('pushes a notification per recipient', async () => {
     const recipients = [
       { id: 'u-dg' }, { id: 'u-minister' }, { id: 'u-ps' }, { id: 'u-parl-sec' },
     ];
-    const inSpy = vi.fn().mockReturnThis();
-    const eqSpy = vi.fn().mockResolvedValue({ data: recipients, error: null });
+    const roleEqSpy = vi.fn();
+    const activeEqSpy = vi.fn().mockResolvedValue({ data: recipients, error: null });
     mockFrom.mockReturnValue({
-      select: vi.fn().mockReturnValue({ in: inSpy, eq: eqSpy }),
+      select: vi.fn().mockReturnValue({ eq: roleEqSpy }),
     });
-    inSpy.mockReturnValue({ eq: eqSpy });
+    roleEqSpy.mockReturnValue({ eq: activeEqSpy });
 
     const res = await GET(reqWithAuth('Bearer test-secret'));
     const json = await res.json();

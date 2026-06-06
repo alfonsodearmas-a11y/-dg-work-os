@@ -42,89 +42,89 @@ const baseTask: TaskWithExtensions = {
 
 const u = (over: Partial<UserStaffFields>): UserStaffFields => ({
   id: 'u', email: 'x@example.com', name: 'X',
-  role: 'officer', agency: null,
+  role: 'agency_manager', agency: null,
   aliases: [], closure_mode: 'self_close', is_agency_head: false,
   is_active: true, ...over,
 });
 
 describe('canSeeTask', () => {
   it('DG sees everything (agency_normal)', () => {
-    expect(canSeeTask(u({ id: 'dg', role: 'dg' }), baseTask)).toBe(true);
+    expect(canSeeTask(u({ id: 'dg', role: 'superadmin' }), baseTask)).toBe(true);
   });
 
   it('DG sees dg_only tasks', () => {
-    expect(canSeeTask(u({ id: 'dg', role: 'dg' }),
+    expect(canSeeTask(u({ id: 'dg', role: 'superadmin' }),
       { ...baseTask, visibility_scope: 'dg_only' })).toBe(true);
   });
 
   it('PS sees agency_normal tasks in any agency', () => {
-    expect(canSeeTask(u({ id: 'ps', role: 'ps' }), baseTask)).toBe(true);
+    expect(canSeeTask(u({ id: 'ps', role: 'superadmin' }), baseTask)).toBe(true);
   });
 
   it('parl_sec is treated as PS for visibility', () => {
-    expect(canSeeTask(u({ id: 'p', role: 'parl_sec' }), baseTask)).toBe(true);
+    expect(canSeeTask(u({ id: 'p', role: 'superadmin' }), baseTask)).toBe(true);
   });
 
   it('PS (superadmin under the two-level model) DOES see dg_only tasks — D1', () => {
-    expect(canSeeTask(u({ id: 'ps', role: 'ps' }),
+    expect(canSeeTask(u({ id: 'ps', role: 'superadmin' }),
       { ...baseTask, visibility_scope: 'dg_only' })).toBe(true);
   });
 
   it('Minister sees agency_normal tasks', () => {
-    expect(canSeeTask(u({ id: 'm', role: 'minister' }), baseTask)).toBe(true);
+    expect(canSeeTask(u({ id: 'm', role: 'superadmin' }), baseTask)).toBe(true);
   });
 
   it('Minister (superadmin under the two-level model) DOES see dg_only tasks — D1', () => {
-    expect(canSeeTask(u({ id: 'm', role: 'minister' }),
+    expect(canSeeTask(u({ id: 'm', role: 'superadmin' }),
       { ...baseTask, visibility_scope: 'dg_only' })).toBe(true);
   });
 
   it('agency officer sees tasks in their home agency', () => {
-    expect(canSeeTask(u({ id: 'k', role: 'officer', agency: 'GPL' }), baseTask)).toBe(true);
+    expect(canSeeTask(u({ id: 'k', role: 'agency_manager', agency: 'GPL' }), baseTask)).toBe(true);
   });
 
   it('agency officer does NOT see tasks in another agency', () => {
-    expect(canSeeTask(u({ id: 'mark', role: 'officer', agency: 'GWI' }), baseTask)).toBe(false);
+    expect(canSeeTask(u({ id: 'mark', role: 'agency_manager', agency: 'GWI' }), baseTask)).toBe(false);
   });
 
   it('owner sees their own task even outside their home agency', () => {
     expect(canSeeTask(
-      u({ id: 'kesh', role: 'officer', agency: 'GWI' }),
+      u({ id: 'kesh', role: 'agency_manager', agency: 'GWI' }),
       { ...baseTask, owner_user_id: 'kesh', agency: 'MPUA-DG' },
     )).toBe(true);
   });
 
   it('delegate sees a task delegated to them', () => {
     expect(canSeeTask(
-      u({ id: 'kesh', role: 'officer', agency: 'GWI' }),
+      u({ id: 'kesh', role: 'agency_manager', agency: 'GWI' }),
       { ...baseTask, owner_user_id: 'someone-else', delegated_to_id: 'kesh', agency: 'MPUA-DG' },
     )).toBe(true);
   });
 
   it('agency officer does NOT see dg_only tasks even in their own agency', () => {
     expect(canSeeTask(
-      u({ id: 'kesh', role: 'officer', agency: 'GPL' }),
+      u({ id: 'kesh', role: 'agency_manager', agency: 'GPL' }),
       { ...baseTask, visibility_scope: 'dg_only' },
     )).toBe(false);
   });
 
   it('agency_admin behaves like officer for visibility', () => {
-    expect(canSeeTask(u({ id: 'a', role: 'agency_admin', agency: 'GPL' }), baseTask)).toBe(true);
+    expect(canSeeTask(u({ id: 'a', role: 'agency_manager', agency: 'GPL' }), baseTask)).toBe(true);
   });
 
   it('inactive user sees nothing', () => {
-    expect(canSeeTask(u({ id: 'dg', role: 'dg', is_active: false }), baseTask)).toBe(false);
+    expect(canSeeTask(u({ id: 'dg', role: 'superadmin', is_active: false }), baseTask)).toBe(false);
   });
 
   it('agency comparison is case-insensitive (tasks.agency is freeform)', () => {
-    expect(canSeeTask(u({ id: 'k', role: 'officer', agency: 'gpl' }), baseTask)).toBe(true);
-    expect(canSeeTask(u({ id: 'k', role: 'officer', agency: 'gpl' }),
+    expect(canSeeTask(u({ id: 'k', role: 'agency_manager', agency: 'gpl' }), baseTask)).toBe(true);
+    expect(canSeeTask(u({ id: 'k', role: 'agency_manager', agency: 'gpl' }),
       { ...baseTask, agency: 'gpl' })).toBe(true);
   });
 
   it('null task.agency does not match', () => {
     expect(canSeeTask(
-      u({ id: 'k', role: 'officer', agency: 'GPL' }),
+      u({ id: 'k', role: 'agency_manager', agency: 'GPL' }),
       { ...baseTask, agency: null },
     )).toBe(false);
   });

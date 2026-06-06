@@ -5,7 +5,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { checkPermission, logActivity } from '@/lib/people-permissions';
 import { sendInviteEmail } from '@/lib/invite-email';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
-import { normalizeRole, denormalizeRoleForWrite } from '@/lib/auth-session';
+import { normalizeRole } from '@/lib/auth-session';
 
 export async function GET() {
   const authResult = await requireRole(['superadmin', 'agency_manager']);
@@ -102,9 +102,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       id: authData.user.id,
       email: normalizedEmail,
       name: data!.name.trim(),
-      // Phase 2: the users_role_check still enforces legacy values — store the
-      // legacy equivalent; reads re-normalize.
-      role: denormalizeRoleForWrite(data!.role),
+      role: data!.role,
       agency: data!.role === 'superadmin' ? null : (data!.agency || null),
       is_active: false,
       status: 'pending',

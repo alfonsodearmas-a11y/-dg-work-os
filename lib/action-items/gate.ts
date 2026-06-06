@@ -32,7 +32,7 @@ export function requiresMandatoryReview(
   if (meeting.detected_modality === 'in_person' || meeting.detected_modality === 'mixed') return true;
   if (owner.is_agency_head) return true;                 // 7 agency CEOs
   if (owner.closure_mode === 'dg_managed') return true;  // Minister, PS, parl_sec
-  if (owner.role === 'dg') return true;                  // DGs themselves
+  if (owner.role === 'superadmin') return true;          // superadmins themselves
   if (item.owner_id === null) return true;
   if (item.confidence_overall < 0.85) return true;
   if (item.validation_failed) return true;

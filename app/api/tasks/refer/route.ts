@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
       const { data: ministers } = await supabaseAdmin
         .from('users')
         .select('id')
-        .eq('role', 'minister')
+        .eq('role', 'superadmin')
         .eq('is_active', true);
       for (const m of ministers ?? []) {
         await createNotification({

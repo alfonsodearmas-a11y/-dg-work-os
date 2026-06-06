@@ -10,7 +10,7 @@ import { withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { grantModuleAccess, bulkUpsertModulePermissions } from '@/lib/modules/access';
 import { ROLE_LABELS } from '@/lib/people-types';
-import { normalizeRole, denormalizeRoleForWrite } from '@/lib/auth-session';
+import { normalizeRole } from '@/lib/auth-session';
 
 export async function GET() {
   const authResult = await requireRole(['superadmin']);
@@ -25,8 +25,8 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Phase 2: stored roles are legacy values — expose the two-level model to the
-  // UI (the 'system' row keeps its raw value; it is display-only there).
+  // The 'system' row keeps its raw value in the list (display-only there);
+  // human rows already store two-level values (migration 128).
   const users = (data || []).map((u) => ({ ...u, role: normalizeRole(u.role) ?? u.role }));
 
   return NextResponse.json({ users });
@@ -113,9 +113,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       id: authData.user.id,
       email: normalizedEmail,
       name: name.trim(),
-      // Phase 2: users_role_check still enforces legacy values — store the
-      // legacy equivalent; reads re-normalize to the two-level model.
-      role: denormalizeRoleForWrite(role),
+      role,
       formal_title: formalTitle,
       agency: role === 'superadmin' ? null : (agency || null),
       is_active: false,
@@ -185,7 +183,6 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     // confirmation notification couldn't be delivered.
   }
 
-  // Expose the two-level role (stored value is legacy until Phase 3).
   const responseUser = { ...newUser, role: normalizeRole(newUser.role) ?? newUser.role };
 
   return NextResponse.json({

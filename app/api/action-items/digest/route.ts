@@ -29,7 +29,7 @@ async function handler(request: NextRequest) {
   // additional surface, not a substitute.
   const { data: recipients } = await supabaseAdmin
     .from('users').select('id')
-    .in('role', ['dg', 'minister', 'ps', 'parl_sec'])
+    .eq('role', 'superadmin')
     .eq('is_active', true);
 
   const now = new Date().toISOString();

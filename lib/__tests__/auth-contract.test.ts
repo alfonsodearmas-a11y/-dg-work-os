@@ -3,21 +3,20 @@ import {
   buildSession,
   assertSessionShape,
   normalizeRole,
-  denormalizeRoleForWrite,
   SESSION_FIELDS,
   type ProfileRow,
 } from '@/lib/auth-session';
 
-// The auth() contract lock — Phase 2 (role simplification).
-// Asserts the session shape the 327 requireRole() routes + useSession callsites
-// + ViewAsProvider depend on, INCLUDING the read-time normalization that lets
-// the two-level code run against the still-legacy DB role values.
+// The auth() contract lock — Phase 3 (post DB flip, migration 128).
+// The DB stores the two-level values directly; normalizeRole() is a strict
+// validator. Legacy values no longer exist in the DB — if one ever appears,
+// the safe behaviour is NO session (null), which these tests pin down.
 
 const baseProfile: ProfileRow = {
   email: 'user@mpua.gov.gy',
   name: 'Test User',
   avatar_url: 'https://example.com/a.png',
-  role: 'agency_admin', // legacy stored value — MUST normalize to agency_manager
+  role: 'agency_manager',
   agency: 'gpl', // stored lowercase historically — MUST come out uppercase
   is_active: true,
   status: 'active',
@@ -34,27 +33,13 @@ describe('auth() session contract (buildSession)', () => {
       email: 'user@mpua.gov.gy',
       name: 'Test User',
       image: 'https://example.com/a.png',
-      role: 'agency_manager', // NORMALIZED from legacy 'agency_admin'
+      role: 'agency_manager',
       agency: 'GPL', // UPPERCASED
       title: 'Agency Manager',
     });
   });
 
-  it('normalizes every legacy senior role to superadmin', () => {
-    for (const legacy of ['dg', 'minister', 'ps', 'parl_sec']) {
-      const s = buildSession('u', { ...baseProfile, role: legacy, agency: null });
-      expect(s!.user.role).toBe('superadmin');
-    }
-  });
-
-  it('normalizes every legacy agency role to agency_manager', () => {
-    for (const legacy of ['agency_admin', 'officer']) {
-      const s = buildSession('u', { ...baseProfile, role: legacy });
-      expect(s!.user.role).toBe('agency_manager');
-    }
-  });
-
-  it('passes the new two-level values through unchanged (post-Phase-3 identity)', () => {
+  it('resolves both two-level roles directly', () => {
     expect(buildSession('u', { ...baseProfile, role: 'superadmin', agency: null })!.user.role).toBe('superadmin');
     expect(buildSession('u', { ...baseProfile, role: 'agency_manager' })!.user.role).toBe('agency_manager');
   });
@@ -65,7 +50,7 @@ describe('auth() session contract (buildSession)', () => {
   });
 
   it('title never affects role (a superadmin may carry any title)', () => {
-    const s = buildSession('u', { ...baseProfile, role: 'dg', agency: null, formal_title: 'Analyst' });
+    const s = buildSession('u', { ...baseProfile, role: 'superadmin', agency: null, formal_title: 'Analyst' });
     expect(s!.user.role).toBe('superadmin');
     expect(s!.user.title).toBe('Analyst');
   });
@@ -87,8 +72,7 @@ describe('auth() session contract (buildSession)', () => {
   });
 
   it('superadmins keep null agency', () => {
-    const s = buildSession('u', { ...baseProfile, role: 'dg', agency: null });
-    expect(s!.user.role).toBe('superadmin');
+    const s = buildSession('u', { ...baseProfile, role: 'superadmin', agency: null });
     expect(s!.user.agency).toBeNull();
   });
 
@@ -115,13 +99,10 @@ describe('auth() session contract (buildSession)', () => {
     expect(s!.user.role).toBe('agency_manager');
   });
 
-  it("returns null for the unmodeled 'system' role and unknown role values", () => {
-    expect(
-      buildSession('uid', { ...baseProfile, role: 'system', agency: null }),
-    ).toBeNull();
-    expect(
-      buildSession('uid', { ...baseProfile, role: 'something_else' }),
-    ).toBeNull();
+  it("returns null for 'system', retired legacy values, and unknowns — no session", () => {
+    for (const value of ['system', 'dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer', 'something_else']) {
+      expect(buildSession('uid', { ...baseProfile, role: value, agency: null })).toBeNull();
+    }
   });
 
   it('snapshots the exact key set so any drift fails CI', () => {
@@ -129,30 +110,15 @@ describe('auth() session contract (buildSession)', () => {
   });
 });
 
-describe('normalizeRole / denormalizeRoleForWrite', () => {
-  it('maps each legacy value to its two-level role', () => {
-    expect(normalizeRole('dg')).toBe('superadmin');
-    expect(normalizeRole('minister')).toBe('superadmin');
-    expect(normalizeRole('ps')).toBe('superadmin');
-    expect(normalizeRole('parl_sec')).toBe('superadmin');
-    expect(normalizeRole('agency_admin')).toBe('agency_manager');
-    expect(normalizeRole('officer')).toBe('agency_manager');
-  });
-
-  it('is identity for two-level values and null for everything else', () => {
+describe('normalizeRole (strict two-level validator)', () => {
+  it('is identity for the two-level values', () => {
     expect(normalizeRole('superadmin')).toBe('superadmin');
     expect(normalizeRole('agency_manager')).toBe('agency_manager');
-    expect(normalizeRole('system')).toBeNull();
-    expect(normalizeRole('')).toBeNull();
-    expect(normalizeRole(null)).toBeNull();
-    expect(normalizeRole(undefined)).toBeNull();
   });
 
-  it('denormalizes writes to values the current users_role_check accepts (Phase 2 only)', () => {
-    expect(denormalizeRoleForWrite('superadmin')).toBe('dg');
-    expect(denormalizeRoleForWrite('agency_manager')).toBe('agency_admin');
-    // round-trip: a write then a read lands on the same two-level role
-    expect(normalizeRole(denormalizeRoleForWrite('superadmin'))).toBe('superadmin');
-    expect(normalizeRole(denormalizeRoleForWrite('agency_manager'))).toBe('agency_manager');
+  it('is null for everything else (system, retired legacy names, unknowns)', () => {
+    for (const value of ['system', 'dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer', '', undefined, null]) {
+      expect(normalizeRole(value as string | null | undefined)).toBeNull();
+    }
   });
 });

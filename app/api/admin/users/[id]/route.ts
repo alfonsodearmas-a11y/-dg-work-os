@@ -6,7 +6,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { sendInviteEmail } from '@/lib/invite-email';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
-import { normalizeRole, denormalizeRoleForWrite } from '@/lib/auth-session';
+import { normalizeRole } from '@/lib/auth-session';
 
 async function logAudit(actorId: string, targetUserId: string, action: string, metadata: Record<string, unknown> = {}) {
   await supabaseAdmin.from('admin_audit_log').insert({
@@ -151,9 +151,7 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
   const updates: Record<string, unknown> = {};
 
   if (data!.role !== undefined) {
-    // Phase 2: users_role_check still enforces legacy values — store the
-    // legacy equivalent; reads re-normalize to the two-level model.
-    updates.role = denormalizeRoleForWrite(data!.role);
+    updates.role = data!.role;
   }
 
   if (data!.agency !== undefined) {
@@ -201,7 +199,6 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
     return NextResponse.json({ error: dbError.message }, { status: 500 });
   }
 
-  // Expose the two-level role to the UI (stored value is legacy until Phase 3).
   if (updatedUser) updatedUser.role = normalizeRole(updatedUser.role) ?? updatedUser.role;
 
   const changes: Record<string, unknown> = {};

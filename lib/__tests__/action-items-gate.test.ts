@@ -3,7 +3,7 @@ import { requiresMandatoryReview } from '@/lib/action-items/gate';
 import type { UserStaffFields } from '@/lib/action-items/types';
 
 const u = (over: Partial<UserStaffFields>): UserStaffFields => ({
-  id: 'u', email: '', name: null, role: 'officer', agency: 'gpl', aliases: [],
+  id: 'u', email: '', name: null, role: 'agency_manager', agency: 'gpl', aliases: [],
   closure_mode: 'self_close', is_agency_head: false, is_active: true, ...over,
 });
 
@@ -43,13 +43,13 @@ describe('requiresMandatoryReview', () => {
     expect(requiresMandatoryReview(baseItem, baseMeeting, u({ is_agency_head: true }))).toBe(true);
   });
   it('mandatory when owner is DG', () => {
-    expect(requiresMandatoryReview({ ...baseItem, owner_id: 'dg' }, baseMeeting, u({ id: 'dg', role: 'dg' }))).toBe(true);
+    expect(requiresMandatoryReview({ ...baseItem, owner_id: 'dg' }, baseMeeting, u({ id: 'dg', role: 'superadmin' }))).toBe(true);
   });
   // Three populations gated by closure_mode='dg_managed' — Minister, PS, parl_sec.
   // is_agency_head=false for these (per spec §0 #12). Same gate trigger, distinct semantic.
   it('mandatory when owner is Minister (closure_mode=dg_managed)', () => {
     expect(requiresMandatoryReview(baseItem, baseMeeting,
-      u({ id: 'min', role: 'minister', closure_mode: 'dg_managed', is_agency_head: false })
+      u({ id: 'min', role: 'superadmin', closure_mode: 'dg_managed', is_agency_head: false })
     )).toBe(true);
   });
   it('mandatory when owner is PS (closure_mode=dg_managed)', () => {

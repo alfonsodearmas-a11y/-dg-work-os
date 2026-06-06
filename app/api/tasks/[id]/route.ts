@@ -243,7 +243,7 @@ export const PATCH = withErrorHandler(async (
         const { data: dgUsers } = await supabaseAdmin
           .from('users')
           .select('id')
-          .eq('role', 'dg')
+          .eq('role', 'superadmin')
           .eq('is_active', true);
 
         const notifiedIds = new Set<string>();

@@ -120,14 +120,6 @@ export const TITLE_PRESETS: readonly string[] = [
   'Analyst',
 ] as const;
 
-/**
- * PHASE 2 ONLY — legacy stored role values for DIRECT DB QUERIES (the DB still
- * holds the old 6-role values until the Phase 3 migration). Use ONLY in
- * `.in('role', ...)` / `.eq('role', ...)` query filters, never for permission
- * logic — sessions are already normalized to the two-level model.
- */
-export const LEGACY_DB_SENIOR_ROLES: readonly string[] = ['dg', 'minister', 'ps', 'parl_sec'] as const;
-export const LEGACY_DB_AGENCY_ROLES: readonly string[] = ['agency_admin', 'officer'] as const;
 
 // Canonical UPPERCASE values per migration 106 (2026-05-05).
 export const MPUA_AGENCIES = [

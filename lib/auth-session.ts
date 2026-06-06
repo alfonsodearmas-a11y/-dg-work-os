@@ -4,12 +4,11 @@
 // This module deliberately has NO `server-only` and NO Supabase/db imports so it
 // stays importable from vitest and is safe anywhere.
 //
-// PHASE 2 (role simplification, docs/role-simplification-plan.md): the app runs
-// the TWO-LEVEL permission model (superadmin | agency_manager) while the DB
-// still stores the legacy role values. `normalizeRole()` is the safety device:
-// every read of users.role goes through it, so code and DB can flip
-// independently. Phase 3 rewrites the stored values; normalization then
-// becomes identity and is removed in cleanup.
+// PHASE 3 (role simplification, docs/role-simplification-plan.md): the DB now
+// stores the two-level values directly (migration 128). `normalizeRole()` is a
+// strict validator — anything outside the two-level model (incl. 'system' and
+// unknown values) resolves to null, which callers treat as "no session"/"no
+// access".
 
 import type { Role } from '@/lib/auth';
 
@@ -45,36 +44,13 @@ export interface ProfileRow {
 }
 
 /**
- * Map a stored role value (legacy 6-role world OR new two-level world) to the
- * two-level permission model. Returns null for 'system' and anything unknown —
- * callers treat that as "no session" / "no access".
+ * Strict role validation: the stored value IS the two-level role (post
+ * migration 128). Returns null for 'system' and anything unknown — callers
+ * treat that as "no session" / "no access".
  */
 export function normalizeRole(stored: string | null | undefined): Role | null {
-  switch (stored) {
-    case 'superadmin':
-    case 'dg':
-    case 'minister':
-    case 'ps':
-    case 'parl_sec':
-      return 'superadmin';
-    case 'agency_manager':
-    case 'agency_admin':
-    case 'officer':
-      return 'agency_manager';
-    default:
-      return null;
-  }
-}
-
-/**
- * Map a two-level role to a value the CURRENT users_role_check accepts.
- * Phase 2 only: the DB CHECK still allows only legacy values, so role WRITES
- * (invite, role change) store the legacy equivalent; reads re-normalize.
- * Phase 3 flips the stored values + CHECK, after which this becomes identity
- * and is deleted.
- */
-export function denormalizeRoleForWrite(role: Role): string {
-  return role === 'superadmin' ? 'dg' : 'agency_admin';
+  if (stored === 'superadmin' || stored === 'agency_manager') return stored;
+  return null;
 }
 
 /**
