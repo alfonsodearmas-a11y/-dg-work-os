@@ -5,6 +5,10 @@ import { randomBytes } from 'crypto';
 const SCOPES = [
   'https://www.googleapis.com/auth/calendar',
   'https://www.googleapis.com/auth/calendar.events',
+  // drive.readonly: required by Document Vault sync. Previously requested by the
+  // NextAuth Google login; that flow is gone post-cutover, so this connect flow
+  // is now the only place that grants it.
+  'https://www.googleapis.com/auth/drive.readonly',
   'https://www.googleapis.com/auth/userinfo.email',
 ];
 

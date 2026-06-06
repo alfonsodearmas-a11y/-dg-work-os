@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/providers/SupabaseSessionProvider';
 import { Smartphone, Monitor, Send, Trash2, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 
 interface PushSub {

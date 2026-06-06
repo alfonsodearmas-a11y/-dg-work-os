@@ -3,7 +3,7 @@ import { requireRole } from '@/lib/auth-helpers';
 import { getTaskNotifications, getUnreadCount } from '@/lib/task-notifications';
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 

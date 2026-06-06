@@ -21,7 +21,7 @@ async function handleSendEmail(request: NextRequest) {
   try {
     // Auth: cron secret OR any authenticated role
     if (!isCronAuthorized(request)) {
-      const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+      const authResult = await requireRole(['superadmin', 'agency_manager']);
       if (authResult instanceof NextResponse) return authResult;
     }
 

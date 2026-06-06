@@ -17,7 +17,7 @@ function getClient(): Anthropic {
 }
 
 export async function POST() {
-  const authResult = await requireRole(['dg', 'minister', 'ps']);
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
 
   try {

@@ -13,7 +13,6 @@
 
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import type { Role } from '@/lib/auth';
 import { getProjects } from '@/lib/delayed-projects/queries';
 import { enrichProject } from '@/lib/delayed-projects/types';
@@ -87,7 +86,7 @@ export async function getStalledProjectIds(): Promise<string[]> {
 // ── Scoping helper ───────────────────────────────────────────────────────────
 
 function scopedAgency(role: Role, agency: string | null): string | undefined {
-  return MINISTRY_ROLES.includes(role) ? undefined : (agency ?? undefined);
+  return (role) === 'superadmin' ? undefined : (agency ?? undefined);
 }
 
 // Per-source fetch limit; also the final cap on the merged list.
@@ -223,7 +222,7 @@ export async function fetchMeetingActionSignals(
   _agency: string | null,
   now: Date = new Date(),
 ): Promise<TodaySignal[]> {
-  if (!MINISTRY_ROLES.includes(role)) return [];
+  if ((role) !== 'superadmin') return [];
 
   const { data, error } = await supabaseAdmin
     .from('meeting_actions')

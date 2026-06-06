@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/providers/SupabaseSessionProvider';
 
 export interface ViewAsTarget {
   id: string;
@@ -9,6 +9,7 @@ export interface ViewAsTarget {
   email: string;
   role: string;
   agency: string | null;
+  title?: string | null;
   avatar_url?: string | null;
 }
 
@@ -18,6 +19,7 @@ interface EffectiveUser {
   email: string;
   role: string;
   agency: string | null;
+  title?: string | null;
   image?: string | null;
 }
 
@@ -46,8 +48,9 @@ export function ViewAsProvider({ children }: { children: React.ReactNode }) {
     id: (session?.user as { id?: string })?.id || '',
     name: session?.user?.name || 'User',
     email: session?.user?.email || '',
-    role: (session?.user as { role?: string })?.role || 'officer',
+    role: (session?.user as { role?: string })?.role || 'agency_manager',
     agency: (session?.user as { agency?: string | null })?.agency || null,
+    title: (session?.user as { title?: string | null })?.title || null,
     image: session?.user?.image,
   }), [session]);
 
@@ -63,6 +66,7 @@ export function ViewAsProvider({ children }: { children: React.ReactNode }) {
       email: viewAsTarget.email,
       role: viewAsTarget.role,
       agency: viewAsTarget.agency,
+      title: viewAsTarget.title ?? null,
       image: viewAsTarget.avatar_url,
     };
   }, [realUser, viewAsTarget]);
@@ -70,8 +74,8 @@ export function ViewAsProvider({ children }: { children: React.ReactNode }) {
   const startViewAs = useCallback((target: ViewAsTarget) => {
     // Don't view-as yourself
     if (target.id === realUser.id) return;
-    // Only DG can use View As
-    if (realUser.role !== 'dg') return;
+    // Only superadmins can use View As
+    if (realUser.role !== 'superadmin') return;
     setViewAsTarget(target);
   }, [realUser.id, realUser.role]);
 

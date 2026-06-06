@@ -5,7 +5,7 @@ import { apiError } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 
 export async function POST() {
-  const result = await requireRole(['dg']);
+  const result = await requireRole(['superadmin']);
   if (result instanceof NextResponse) return result;
 
   try {

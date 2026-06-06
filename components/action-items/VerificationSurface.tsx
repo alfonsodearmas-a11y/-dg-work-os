@@ -6,7 +6,7 @@ import { PushbackQueueList, type PushbackEntry } from './PushbackQueueList';
 
 export async function VerificationSurface() {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== 'dg') return null;
+  if (!session?.user?.id || session.user.role !== 'superadmin') return null;
 
   // 1) awaiting_verification items
   const { data: awaitingRaw } = await supabaseAdmin

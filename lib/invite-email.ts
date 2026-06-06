@@ -1,5 +1,6 @@
 import { sendEmail } from './email';
 import { ROLE_LABELS } from './people-types';
+import { normalizeRole } from './auth-session';
 
 interface SendInviteParams {
   to: string;
@@ -16,7 +17,9 @@ export async function sendInviteEmail({ to, name, role, agency, inviterName, inv
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
     : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
   const loginUrl = `${baseUrl}/login`;
-  const roleLabel = ROLE_LABELS[role as keyof typeof ROLE_LABELS] || role;
+  // `role` may be a raw stored value (legacy names until Phase 3) — normalize for the label.
+  const normalized = normalizeRole(role);
+  const roleLabel = (normalized && ROLE_LABELS[normalized]) || role;
   const agencyLabel = agency ? ` (${agency.toUpperCase()})` : '';
 
   const setPasswordUrl = inviteToken ? `${baseUrl}/set-password?token=${inviteToken}` : null;

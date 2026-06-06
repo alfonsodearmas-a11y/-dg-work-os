@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import { listAwardedTenders } from '@/lib/tender/queries';
 import { logger } from '@/lib/logger';
 
@@ -12,12 +11,12 @@ import { logger } from '@/lib/logger';
  *                  (used by the "awarded since last upload" banner click-through).
  */
 export async function GET(request: NextRequest) {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
   try {
-    const isMinistry = MINISTRY_ROLES.includes(session.user.role);
+    const isMinistry = (session.user.role) === 'superadmin';
     const agencyFilter = isMinistry ? undefined : session.user.agency ?? undefined;
     const since = request.nextUrl.searchParams.get('since');
 

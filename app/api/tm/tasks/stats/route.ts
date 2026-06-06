@@ -3,7 +3,7 @@ import { requireRole } from '@/lib/auth-helpers';
 import { getTaskStats } from '@/lib/task-queries';
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     if (url.searchParams.get('agency')) filters.agency = url.searchParams.get('agency');
 
     // Non-DG users can only see their own stats
-    if (session.user.role !== 'dg') {
+    if (session.user.role !== 'superadmin') {
       filters.assignee_id = session.user.id;
     }
 

@@ -29,7 +29,7 @@ const VALID_SORTS = new Set(['grade_asc', 'grade_desc', 'outages', 'customers'])
 const GRADE_ORDER: FeederGrade[] = ['F', 'D', 'C', 'B', 'A'];
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 

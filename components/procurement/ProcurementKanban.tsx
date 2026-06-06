@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/providers/SupabaseSessionProvider';
 import { AlertTriangle, Package, ChevronDown, LayoutGrid, List } from 'lucide-react';
 import Link from 'next/link';
 import { Award } from 'lucide-react';
@@ -22,7 +22,6 @@ import { useToast } from '@/components/ui/Toast';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SELECTABLE_AGENCIES } from '@/lib/constants/agencies';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import { supabase } from '@/lib/db';
 import type { Role } from '@/lib/auth';
 
@@ -43,13 +42,9 @@ function canDragTender(
   userAgency: string | null | undefined,
   tender: Tender,
 ): boolean {
-  if (role === 'dg') return true;
-  if (role === 'agency_admin') {
+  if (role === 'superadmin') return true;
+  if (role === 'agency_manager') {
     return tender.agency.toLowerCase() === (userAgency || '').toLowerCase();
-  }
-  // Officers can only drag manual tenders they created.
-  if (role === 'officer') {
-    return tender.source === 'manual' && tender.created_by === userId;
   }
   return false;
 }
@@ -273,7 +268,7 @@ export function ProcurementKanban({
   const userRole = session?.user?.role;
   const userAgency = session?.user?.agency;
   const userId = session?.user?.id;
-  const isMinistry = MINISTRY_ROLES.includes(userRole || '');
+  const isMinistry = (userRole || '') === 'superadmin';
   const visibleAgencies = isMinistry
     ? SELECTABLE_AGENCIES
     : SELECTABLE_AGENCIES.filter((a) => a.toLowerCase() === (userAgency || '').toLowerCase());

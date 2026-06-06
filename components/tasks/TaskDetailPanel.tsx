@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Trash2, Loader2, Plus, X, Square, CheckSquare, FileSignature } from 'lucide-react';
 import { EscalateModal } from '@/components/today/EscalateModal';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/providers/SupabaseSessionProvider';
 import { useRouter } from 'next/navigation';
 import { Task, TaskUpdate, Subtask, TaskActivity } from '@/lib/task-types';
 import { TaskComments } from './TaskComments';
@@ -478,8 +478,8 @@ interface MinisterAttentionStripProps {
 
 function MinisterAttentionStrip({ task, userRole, onRefer, onChanged }: MinisterAttentionStripProps) {
   const [busy, setBusy] = useState(false);
-  const isDG = userRole === 'dg';
-  const isMinister = userRole === 'minister';
+  const isDG = userRole === 'superadmin';
+  const isMinister = userRole === 'superadmin'; // D1: minister-only actions are superadmin-wide
   const isFlagged = task.requires_minister_attention && !task.minister_closed_at;
   const isSeen = !!task.minister_seen_at;
 

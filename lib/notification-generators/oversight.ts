@@ -3,7 +3,6 @@ import { join } from 'path';
 import { insertNotification } from '../notifications';
 import type { Notification, GenerateResult, GenerateContext } from '../notifications';
 import { NotificationDeliveryError } from '../notifications/errors';
-import { MINISTRY_ROLES } from '../people-types';
 import { logger } from '@/lib/logger';
 
 interface OversightProject {
@@ -41,7 +40,7 @@ function formatValue(val: number | null | undefined): string {
 }
 
 export async function generateOversightNotifications(ctx: GenerateContext): Promise<GenerateResult> {
-  if (!MINISTRY_ROLES.includes(ctx.role)) {
+  if ((ctx.role) !== 'superadmin') {
     return { count: 0, notifications: [] };
   }
 

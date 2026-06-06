@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/providers/SupabaseSessionProvider';
 import {
   ArrowLeft, ShoppingCart, LayoutDashboard, BarChart3, Plus, Upload,
   Inbox, Activity, Archive as ArchiveIcon, Award, ScrollText,
@@ -36,8 +36,8 @@ export default function ProcurementPage() {
   const [optimisticTender, setOptimisticTender] = useState<Tender | null>(null);
 
   const userRole = session?.user?.role;
-  const canCreate = userRole === 'dg' || userRole === 'minister' || userRole === 'ps' || userRole === 'agency_admin' || userRole === 'officer';
-  const canUpload = userRole === 'dg' || userRole === 'minister' || userRole === 'ps';
+  const canCreate = userRole === 'superadmin' || userRole === 'agency_manager';
+  const canUpload = userRole === 'superadmin'; // D3: all superadmins gain upload breadth
 
   return (
     <div className="space-y-4 md:space-y-6">

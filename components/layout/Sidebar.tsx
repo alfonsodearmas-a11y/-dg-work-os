@@ -35,14 +35,14 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useState, useRef, useCallback, useEffect, Fragment } from 'react';
 import { createPortal } from 'react-dom';
-import { signOut } from 'next-auth/react';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 import { useSidebar } from './SidebarContext';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import { ViewAsSelector } from './ViewAsSelector';
 import type { Role } from '@/lib/auth';
 
-import { ROLE_LABELS, MINISTRY_ROLES } from '@/lib/people-types';
+import { ROLE_LABELS } from '@/lib/people-types';
 
 // ---------------------------------------------------------------------------
 // Sidebar Tooltip — glassmorphism floating label for collapsed icon rail
@@ -82,9 +82,8 @@ function useTooltip() {
   return { tooltip, onEnter, onLeave };
 }
 
-// Restrict visibility beyond module access when set. Used for role-exclusive
-// items where the ministry-bypass in module access (lib/modules/access.ts)
-// would otherwise leak the item across roles.
+// requireRole restricts visibility beyond module access (lib/modules/role-modules.ts)
+// when set — belt-and-braces for role-exclusive items.
 interface NavItem {
   href: string;
   label: string;
@@ -104,8 +103,8 @@ const mainNavItems: NavItem[] = [
   { href: '/meetings', label: 'Meetings', icon: Mic, moduleSlug: 'meetings' },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays, moduleSlug: 'calendar' },
   { href: '/documents', label: 'Documents', icon: FileText, moduleSlug: 'documents' },
-  { href: '/nptab-reports', label: 'NPTAB Reports', icon: FileBarChart, moduleSlug: 'nptab-reports', requireRole: ['dg', 'ps'] },
-  { href: '/minister/attention', label: 'Minister Attention', icon: Inbox, moduleSlug: 'minister-attention', requireRole: ['minister'] },
+  { href: '/nptab-reports', label: 'NPTAB Reports', icon: FileBarChart, moduleSlug: 'nptab-reports', requireRole: ['superadmin'] },
+  { href: '/minister/attention', label: 'Minister Attention', icon: Inbox, moduleSlug: 'minister-attention', requireRole: ['superadmin'] },
 ];
 
 type AgencyItem = {
@@ -132,8 +131,7 @@ const adminItems = [
   { href: '/admin', label: 'Settings', icon: Settings, moduleSlug: 'settings' },
 ];
 
-// Roles that can see the admin section + full agency list
-const ADMIN_ROLES = MINISTRY_ROLES;
+// Superadmins see the admin section + full agency list.
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -166,13 +164,13 @@ export function Sidebar() {
   const userRole = effectiveUser.role;
   const userAgency = effectiveUser.agency;
   const userName = effectiveUser.name;
-  const roleLabel = ROLE_LABELS[userRole as keyof typeof ROLE_LABELS] || userRole;
+  const roleLabel = effectiveUser.title || ROLE_LABELS[userRole as keyof typeof ROLE_LABELS] || userRole;
 
-  // Admin section: show if real user is admin OR effective user is admin
-  // (DG always keeps admin access even when viewing as)
-  const showAdmin = ADMIN_ROLES.includes(realUser.role) || ADMIN_ROLES.includes(userRole);
-  const isMinistry = MINISTRY_ROLES.includes(userRole);
-  const canViewAs = realUser.role === 'dg';
+  // Admin section: show if real user is superadmin OR effective user is
+  // (a superadmin keeps admin access even when viewing as)
+  const showAdmin = realUser.role === 'superadmin' || userRole === 'superadmin';
+  const isMinistry = userRole === 'superadmin';
+  const canViewAs = realUser.role === 'superadmin';
 
   // Agency users only see their own agency in the sidebar
   const visibleAgencies = isMinistry
@@ -190,8 +188,9 @@ export function Sidebar() {
 
   const gridHealthActive = pathname.startsWith('/pulse/gpl/grid-health');
 
-  const handleSignOut = () => {
-    signOut({ callbackUrl: '/login' });
+  const handleSignOut = async () => {
+    await getBrowserSupabase().auth.signOut();
+    window.location.href = '/login';
   };
 
   const allNavItems = [...mainNavItems, ...adminItems];

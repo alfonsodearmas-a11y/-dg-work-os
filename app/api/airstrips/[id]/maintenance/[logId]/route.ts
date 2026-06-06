@@ -17,7 +17,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; logId: string }> },
 ) {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    const authResult = await requireRole(['superadmin', 'agency_manager']);
     if (authResult instanceof NextResponse) return authResult;
 
     const { id, logId } = await params;
@@ -82,7 +82,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; logId: string }> },
 ) {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+    const authResult = await requireRole(['superadmin', 'agency_manager']);
     if (authResult instanceof NextResponse) return authResult;
 
     const { id, logId } = await params;

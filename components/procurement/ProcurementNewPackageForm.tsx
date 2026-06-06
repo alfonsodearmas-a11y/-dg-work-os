@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/providers/SupabaseSessionProvider';
 import { Package } from 'lucide-react';
 import { SlidePanel } from '@/components/layout/SlidePanel';
 import { Spinner } from '@/components/ui/Spinner';
@@ -17,7 +17,6 @@ import {
   AGENCY_CODES,
 } from '@/lib/tender/types';
 import { LINE_ITEM_CODE_RE } from '@/lib/psip/parser';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 
 interface ProcurementNewPackageFormProps {
   isOpen: boolean;
@@ -43,7 +42,7 @@ export function ProcurementNewPackageForm({ isOpen, onClose, onCreated }: Procur
 
   const userRole = session?.user?.role;
   const userAgency = session?.user?.agency;
-  const isMinistry = MINISTRY_ROLES.includes(userRole ?? '');
+  const isMinistry = (userRole ?? '') === 'superadmin';
 
   const [description, setDescription] = useState('');
   const [agency, setAgency] = useState('');

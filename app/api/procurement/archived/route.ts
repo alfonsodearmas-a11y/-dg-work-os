@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import { listArchivedTenders, unarchiveTender } from '@/lib/tender/queries';
 import { supabaseAdmin } from '@/lib/db';
 import { recordDecision } from '@/lib/procurement/decisions';
@@ -8,12 +7,12 @@ import { recordStatusTransition } from '@/lib/procurement/status';
 import { logger } from '@/lib/logger';
 
 export async function GET() {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
   try {
-    const isMinistry = MINISTRY_ROLES.includes(session.user.role);
+    const isMinistry = (session.user.role) === 'superadmin';
     const agency = isMinistry ? undefined : session.user.agency ?? undefined;
     const tenders = await listArchivedTenders({ agency });
     return NextResponse.json({ tenders });
@@ -29,7 +28,7 @@ export async function GET() {
  * Reverses a soft archive. DG only. Records a procurement_decision row.
  */
 export async function POST(request: NextRequest) {
-  const result = await requireRole(['dg']);
+  const result = await requireRole(['superadmin']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 

@@ -9,7 +9,7 @@ import { logger } from '@/lib/logger';
  * whose fields changed, scoped to that upload. Stage changes first.
  */
 export async function GET(request: Request) {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
 
   try {

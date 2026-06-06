@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import {
   ArrowLeft,
   ClipboardList,
@@ -47,7 +46,7 @@ interface Props {
 
 export default function PendingApplicationsClient(_props: Props) {
   const { effectiveUser } = useEffectiveUser();
-  const isDG = MINISTRY_ROLES.includes(effectiveUser.role);
+  const isDG = (effectiveUser.role) === 'superadmin';
   const userAgency = effectiveUser.agency;
 
   // Tab visibility:

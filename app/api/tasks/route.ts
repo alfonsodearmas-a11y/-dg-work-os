@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireRole, canAssignTasks } from '@/lib/auth-helpers';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import { supabaseAdmin } from '@/lib/db';
 import { createNotification } from '@/lib/notifications/notification-service';
 import { NotificationDeliveryError } from '@/lib/notifications/errors';
@@ -48,7 +47,7 @@ const createTaskSchema = z.object({
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
@@ -65,8 +64,8 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(1000, Math.max(1, parseInt(searchParams.get('limit') || '500', 10)));
 
   // View As support: DG can pass viewAsRole/viewAsAgency to see data as another role
-  const viewAsRole = session.user.role === 'dg' ? searchParams.get('viewAsRole') : null;
-  const viewAsAgency = session.user.role === 'dg' ? searchParams.get('viewAsAgency') : null;
+  const viewAsRole = session.user.role === 'superadmin' ? searchParams.get('viewAsRole') : null;
+  const viewAsAgency = session.user.role === 'superadmin' ? searchParams.get('viewAsAgency') : null;
   const effectiveRole = viewAsRole || session.user.role;
   const effectiveAgency = viewAsAgency || session.user.agency;
 
@@ -84,10 +83,8 @@ export async function GET(request: NextRequest) {
     .order('status', { ascending: true })
     .order('due_date', { ascending: true, nullsFirst: false });
 
-  // Scope by role
-  if (effectiveRole === 'officer') {
-    query = query.eq('owner_user_id', session.user.id);
-  } else if (effectiveRole === 'agency_admin' && effectiveAgency) {
+  // Scope by role (two-level: agency managers see their agency, superadmins all)
+  if (effectiveRole === 'agency_manager' && effectiveAgency) {
     query = query.ilike('agency', effectiveAgency);
   }
 
@@ -151,9 +148,7 @@ export async function GET(request: NextRequest) {
       .select('id', { count: 'exact', head: true })
       .in('status', TERMINAL_STATUSES)
       .lt('completed_at', graceCutoff);
-    if (effectiveRole === 'officer') {
-      countQuery = countQuery.eq('owner_user_id', session.user.id);
-    } else if (effectiveRole === 'agency_admin' && effectiveAgency) {
+    if (effectiveRole === 'agency_manager' && effectiveAgency) {
       countQuery = countQuery.ilike('agency', effectiveAgency);
     }
     if (agencyList.length === 1) {
@@ -178,14 +173,14 @@ export async function GET(request: NextRequest) {
 }
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
   const { data, error: validationError } = await parseBody(request, createTaskSchema);
   if (validationError) return validationError;
 
-  const isMinistry = MINISTRY_ROLES.includes(session.user.role);
+  const isMinistry = (session.user.role) === 'superadmin';
 
   // Officers cannot assign to others
   let ownerId = session.user.id;

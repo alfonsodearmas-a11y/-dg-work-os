@@ -134,7 +134,7 @@ function buildStats(rows: Record<string, unknown>[]): PendingApplicationStats {
 
 export async function GET() {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer']);
+    const authResult = await requireRole(['superadmin', 'agency_manager']);
     if (authResult instanceof NextResponse) return authResult;
 
     // Override the Supabase PostgREST default 1000-row cap. GPL alone has

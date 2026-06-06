@@ -12,7 +12,7 @@ const ALL_TABLES: Record<string, string> = {
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    const authResult = await requireRole(['superadmin', 'agency_manager']);
     if (authResult instanceof NextResponse) return authResult;
 
     const pending: Record<string, any[]> = {};

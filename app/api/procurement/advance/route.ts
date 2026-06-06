@@ -5,7 +5,7 @@ import { TENDER_STAGES, type TenderStage } from '@/lib/tender/types';
 import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
-  const result = await requireRole(['dg', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
@@ -26,12 +26,8 @@ export async function POST(request: NextRequest) {
     if (!canAccessAgency(session.user.role, session.user.agency, existing.agency)) {
       return NextResponse.json({ error: 'Cannot advance tenders from another agency' }, { status: 403 });
     }
-    if (session.user.role === 'officer') {
-      const isOwnManual = existing.source === 'manual' && existing.created_by === session.user.id;
-      if (!isOwnManual) {
-        return NextResponse.json({ error: 'Only the creator can advance a manual tender' }, { status: 403 });
-      }
-    }
+    // (D2, role simplification: the old officer-only "creator must advance own
+    // manual tender" restriction is gone — agency managers have full agency powers.)
     if (existing.stage === newStage) {
       return NextResponse.json({ error: 'Tender is already at this stage' }, { status: 400 });
     }

@@ -77,62 +77,37 @@ export interface ActivityLog {
 }
 
 export const ROLE_HIERARCHY: Record<Role, number> = {
-  minister: 7,
-  dg: 7,
-  parl_sec: 6,
-  ps: 5,
-  agency_admin: 3,
-  officer: 2,
+  superadmin: 7,
+  agency_manager: 3,
 };
 
-/** Formal display labels for each role — use these in all user-facing UI */
+/** Formal display labels for each role — prefer `title` (formal_title) in UI;
+ *  these are the fallback when a user has no title set. */
 export const ROLE_LABELS: Record<Role, string> = {
-  dg: 'Director General',
-  minister: 'Minister',
-  parl_sec: 'Parliamentary Secretary',
-  ps: 'Permanent Secretary',
-  agency_admin: 'Agency Manager',
-  officer: 'Analyst',
+  superadmin: 'Super Admin',
+  agency_manager: 'Agency Manager',
 };
 
 /** Role badge colors for people list and badges */
 export const ROLE_COLORS: Record<string, string> = {
-  dg: 'bg-gold-500/20 text-gold-500 border border-gold-500/30',
-  minister: 'bg-amber-500/20 text-amber-300 border border-amber-400/30',
-  parl_sec: 'bg-violet-500/20 text-violet-300 border border-violet-400/30',
-  ps: 'bg-slate-400/20 text-slate-300 border border-slate-400/30',
-  agency_admin: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30',
-  officer: 'bg-navy-700/20 text-slate-400 border border-navy-700/30',
+  superadmin: 'bg-gold-500/20 text-gold-500 border border-gold-500/30',
+  agency_manager: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30',
 };
 
 /** All role options for dropdowns */
 export const ROLE_OPTIONS: { value: Role; label: string }[] = [
-  { value: 'minister', label: 'Minister' },
-  { value: 'dg', label: 'Director General' },
-  { value: 'parl_sec', label: 'Parliamentary Secretary' },
-  { value: 'ps', label: 'Permanent Secretary' },
-  { value: 'agency_admin', label: 'Agency Manager' },
-  { value: 'officer', label: 'Analyst' },
+  { value: 'superadmin', label: 'Super Admin' },
+  { value: 'agency_manager', label: 'Agency Manager' },
 ];
 
-/** Ministry-level roles (full system access, no agency restriction) */
-export const MINISTRY_ROLES: readonly string[] = ['dg', 'minister', 'ps', 'parl_sec'] as const;
-
-/** Senior roles that only DG can assign via invite */
-export const SENIOR_INVITE_ROLES: readonly string[] = ['minister', 'ps', 'parl_sec', 'dg'] as const;
-
 export const ROLE_DESCRIPTIONS: Record<Role, string> = {
-  dg: 'System administrator. Full access. Can view all data, manage all users, change any settings.',
-  minister: 'Highest authority. Full system access and visibility across all agencies.',
-  parl_sec: 'Member of Parliament. Full system access and visibility across all agencies.',
-  ps: 'System-wide access. Can view all data, manage dashboards, assign roles, full permissions.',
-  agency_admin: 'Manages specific agency. Full visibility and control of agency metrics, reports, and team tasks.',
-  officer: 'Content creator. Create and edit dashboards, reports, and tasks. Access to assigned objects only.',
+  superadmin: 'Sees and does everything across all agencies. Title (DG, Minister, PS…) is display-only.',
+  agency_manager: 'Sees and does everything for their own agency only.',
 };
 
-/** Display order for the permission matrix columns (breaks ties when hierarchy_level is equal) */
+/** Display order for the permission matrix columns */
 export const ROLE_DISPLAY_ORDER: Record<string, number> = {
-  minister: 1, dg: 2, parl_sec: 3, ps: 4, agency_admin: 5, officer: 6,
+  superadmin: 1, agency_manager: 2,
 };
 
 // Canonical UPPERCASE values per migration 106 (2026-05-05).

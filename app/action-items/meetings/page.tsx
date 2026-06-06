@@ -7,7 +7,7 @@ import { DailyDigestCard } from '@/components/action-items/DailyDigestCard';
 import { buildDailyDigest } from '@/lib/action-items/digest';
 import type { MeetingRow } from '@/components/action-items/MeetingDetectionRow';
 
-const ALLOWED = new Set(['dg', 'ps', 'parl_sec']);
+const ALLOWED = new Set(['superadmin']);
 export const dynamic = 'force-dynamic';
 
 export default async function MeetingsPage() {

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import { archiveTender, listMissingTenders } from '@/lib/tender/queries';
 import { supabaseAdmin } from '@/lib/db';
 import { recordDecision } from '@/lib/procurement/decisions';
@@ -10,12 +9,12 @@ import { ARCHIVE_REASON_CODES, type ArchiveReasonCode } from '@/lib/tender/types
 import { logger } from '@/lib/logger';
 
 export async function GET() {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
   try {
-    const isMinistry = MINISTRY_ROLES.includes(session.user.role);
+    const isMinistry = (session.user.role) === 'superadmin';
     const agency = isMinistry ? undefined : session.user.agency ?? undefined;
     const tenders = await listMissingTenders(agency);
     return NextResponse.json({ tenders });
@@ -34,7 +33,7 @@ export async function GET() {
  *   ARCHIVE_REASON_CODES. Records a procurement_decision row.
  */
 export async function POST(request: NextRequest) {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
 
@@ -103,7 +102,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'archive') {
-      if (session.user.role !== 'dg') {
+      if (session.user.role !== 'superadmin') {
         return NextResponse.json({ error: 'Only DG can archive tenders' }, { status: 403 });
       }
 

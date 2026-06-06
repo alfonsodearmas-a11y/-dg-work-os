@@ -7,7 +7,7 @@ import {
   Trash2, AlertTriangle, CheckCircle2, XCircle, Clock,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/providers/SupabaseSessionProvider';
 import { STAGE_CONFIG, TENDER_STAGES, ARCHIVE_REASON_CODES, ARCHIVE_REASON_LABELS, type TenderStage, type ArchiveReasonCode } from '@/lib/tender/types';
 import { AgencyBadge } from '@/components/procurement/AgencyBadge';
 import { ProcurementStageBadge } from '@/components/procurement/ProcurementStageBadge';
@@ -72,7 +72,7 @@ export default function InboxPage() {
   const [archivePicker, setArchivePicker] = useState<string | null>(null);
   const [archiveReason, setArchiveReason] = useState<ArchiveReasonCode>('withdrawn');
 
-  const isDg = session?.user?.role === 'dg';
+  const isDg = session?.user?.role === 'superadmin';
 
   const load = useCallback(async () => {
     const res = await fetch('/api/procurement/inbox');

@@ -1,288 +1,27 @@
 import { NextRequest } from 'next/server';
-import NextAuth from 'next-auth';
-import Google from 'next-auth/providers/google';
-import Credentials from 'next-auth/providers/credentials';
-import bcrypt from 'bcryptjs';
-import { supabaseAdmin } from './db';
-import { MINISTRY_ROLES } from './people-types';
+import { auth } from './auth-supabase';
 
-// ── Auth Migration Guide ──────────────────────────────────────────────
-// CANONICAL PATTERN: Use `requireRole()` from `lib/auth-helpers.ts` for
-// all new API routes. It validates the NextAuth session and checks role.
+// ── Auth ──────────────────────────────────────────────────────────────
+// Supabase Auth (GoTrue) owns sessions. `auth()` is implemented in
+// lib/auth-supabase.ts; this module re-exports it as the canonical `@/lib/auth`
+// import used by the ~47 server call-sites, and keeps the `Role` type plus the
+// legacy shims still used by a few old admin/tm routes.
 //
+// CANONICAL PATTERN for new API routes: `requireRole()` from `lib/auth-helpers.ts`.
 // LEGACY SHIMS (being phased out): authenticateAny(), authenticateFromCookie(),
-// authorizeRoles(), isDG(), isCEO(), canAccessTask() exist at the bottom of
-// this file for backward compatibility with old admin/tm routes.
-// Do NOT use them in new code — they will be removed once all routes migrate.
-//
-// New routes should always use:
-//   import { requireRole } from '@/lib/auth-helpers';
+// authorizeRoles(), isDG(), isCEO(), canAccessTask(). Do NOT use in new code.
 // ──────────────────────────────────────────────────────────────────────
 
-export type Role = 'dg' | 'minister' | 'ps' | 'parl_sec' | 'agency_admin' | 'officer';
+// PHASE 2 (role simplification): two permission levels. The DB still stores the
+// legacy values (dg/minister/ps/parl_sec/agency_admin/officer); buildSession()
+// normalizes on read. 'system' stays outside the union — session-incapable.
+export type Role = 'superadmin' | 'agency_manager';
 
-declare module 'next-auth' {
-  interface Session {
-    user: {
-      id: string;
-      email: string;
-      name: string;
-      image?: string | null;
-      role: Role;
-      agency: string | null;
-    };
-  }
-}
-
-declare module '@auth/core/jwt' {
-  interface JWT {
-    userId: string;
-    role: Role;
-    agency: string | null;
-  }
-}
-
-const allowedDomains = (process.env.ALLOWED_GOOGLE_DOMAINS || '')
-  .split(',')
-  .map(d => d.trim().toLowerCase())
-  .filter(Boolean);
-
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      authorization: {
-        params: {
-          // Scopes: calendar.events (create/edit), drive.readonly (Doc Vault sync)
-          // Existing users must sign out and sign back in to grant new permissions.
-          scope: 'openid email profile https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.readonly',
-          access_type: 'offline',
-          prompt: 'consent',
-        },
-      },
-    }),
-    Credentials({
-      name: 'Email & Password',
-      credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials) {
-        const email = credentials?.email as string | undefined;
-        const password = credentials?.password as string | undefined;
-        if (!email || !password) return null;
-
-        const { data: user } = await supabaseAdmin
-          .from('users')
-          .select('id, email, name, avatar_url, role, agency, is_active, status, password_hash, login_count')
-          .eq('email', email.toLowerCase().trim())
-          .single();
-
-        if (!user) return null;
-        if (!user.is_active && user.status !== 'pending') return null;
-        if (!user.password_hash) return null;
-
-        const valid = await bcrypt.compare(password, user.password_hash);
-        if (!valid) return null;
-
-        // Update login stats
-        const now = new Date().toISOString();
-        await supabaseAdmin
-          .from('users')
-          .update({
-            is_active: true,
-            status: 'active',
-            last_login: now,
-            last_seen_at: now,
-            first_login_at: user.status === 'pending' ? now : undefined,
-            login_count: (user.login_count ?? 0) + 1,
-          })
-          .eq('id', user.id);
-
-        // Return user object — NextAuth uses `id` to populate the token
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.avatar_url,
-        };
-      },
-    }),
-  ],
-  session: { strategy: 'jwt' },
-  pages: {
-    signIn: '/login',
-  },
-  callbacks: {
-    async signIn({ user, profile, account }) {
-      // Credentials provider: user was already validated in authorize()
-      if (account?.provider === 'credentials') {
-        return true;
-      }
-
-      // Google OAuth flow below
-      if (!profile?.email) return false;
-
-      // Domain check
-      const domain = profile.email.split('@')[1]?.toLowerCase();
-      if (allowedDomains.length > 0 && !allowedDomains.includes(domain)) {
-        return '/403';
-      }
-
-      const googleSub = profile.sub;
-      if (!googleSub) return false;
-
-      const now = new Date().toISOString();
-      let userId: string;
-
-      // 1. Check by google_sub (returning user)
-      const { data: existingBySub } = await supabaseAdmin
-        .from('users')
-        .select('id, is_active, status, login_count')
-        .eq('google_sub', googleSub)
-        .single();
-
-      if (existingBySub) {
-        if (!existingBySub.is_active) return '/403';
-        userId = existingBySub.id;
-        await supabaseAdmin
-          .from('users')
-          .update({
-            email: profile.email,
-            name: profile.name || null,
-            avatar_url: profile.picture || null,
-            last_login: now,
-            last_seen_at: now,
-            login_count: (existingBySub.login_count ?? 0) + 1,
-          })
-          .eq('id', userId);
-      } else {
-        // 2. Check by email (invited user, first sign-in)
-        const { data: existingByEmail } = await supabaseAdmin
-          .from('users')
-          .select('id, is_active, status, first_login_at, login_count')
-          .eq('email', profile.email)
-          .single();
-
-        if (!existingByEmail) {
-          // Email not in whitelist — deny access
-          return '/403';
-        }
-
-        if (!existingByEmail.is_active && existingByEmail.status !== 'pending') {
-          // Deactivated user — deny access
-          return '/403';
-        }
-
-        // First sign-in for invited user, or re-sign-in for active user without google_sub
-        userId = existingByEmail.id;
-        await supabaseAdmin
-          .from('users')
-          .update({
-            google_sub: googleSub,
-            name: profile.name || null,
-            avatar_url: profile.picture || null,
-            is_active: true,
-            status: 'active',
-            first_login_at: existingByEmail.first_login_at || now,
-            last_login: now,
-            last_seen_at: now,
-            login_count: (existingByEmail.login_count ?? 0) + 1,
-          })
-          .eq('id', userId);
-      }
-
-      // Store refresh token for calendar access (keyed by user UUID)
-      if (account?.refresh_token && userId) {
-        await supabaseAdmin
-          .from('integration_tokens')
-          .upsert(
-            {
-              user_id: userId,
-              provider: 'google_calendar',
-              refresh_token: account.refresh_token,
-              access_token: account.access_token || null,
-              token_expiry: account.expires_at
-                ? new Date(account.expires_at * 1000).toISOString()
-                : null,
-              account_email: profile.email,
-              scopes: (account.scope as string) || null,
-            },
-            { onConflict: 'user_id,provider' }
-          );
-      }
-
-      return true;
-    },
-
-    async jwt({ token, user, account, profile }) {
-      // Credentials provider: user.id is the DB UUID set in authorize()
-      if (account?.provider === 'credentials' && user?.id) {
-        const { data: dbUser } = await supabaseAdmin
-          .from('users')
-          .select('id, role, agency')
-          .eq('id', user.id)
-          .single();
-
-        if (dbUser) {
-          token.userId = dbUser.id;
-          token.role = dbUser.role as Role;
-          token.agency = dbUser.agency;
-        }
-        return token;
-      }
-
-      // Google OAuth: on initial sign-in, load user from DB
-      if (account && profile?.sub) {
-        const { data: dbUser } = await supabaseAdmin
-          .from('users')
-          .select('id, role, agency')
-          .eq('google_sub', profile.sub)
-          .single();
-
-        if (dbUser) {
-          token.userId = dbUser.id;
-          token.role = dbUser.role as Role;
-          token.agency = dbUser.agency;
-        }
-      }
-
-      // Refresh role/agency on every token refresh (catches admin changes).
-      if (token.userId && !account) {
-        const { data: dbUser } = await supabaseAdmin
-          .from('users')
-          .select('role, agency, is_active')
-          .eq('id', token.userId)
-          .single();
-
-        if (dbUser && dbUser.is_active) {
-          token.role = dbUser.role as Role;
-          token.agency = dbUser.agency;
-        } else {
-          // User was deactivated — clear token so middleware redirects to /403
-          token.userId = '';
-        }
-      }
-
-      return token;
-    },
-
-    async session({ session, token }) {
-      if (token.userId) {
-        session.user.id = token.userId;
-        session.user.role = token.role;
-        // Normalize agency to uppercase to match AGENCY_CODES — DB stores lowercase
-        session.user.agency = token.agency?.toUpperCase() ?? null;
-      }
-      return session;
-    },
-  },
-});
+// The single source of truth for the session accessor (Supabase-backed).
+export { auth };
 
 // ── Backward-compatible shims for old admin/tm routes ──────────────────
-// These bridge the old JWT-based auth API to NextAuth sessions.
-// Phase 4 will convert each route to use requireRole() directly.
+// Bridge the old user-object auth API onto the Supabase session.
 
 export class AuthError extends Error {
   status: number;
@@ -336,29 +75,29 @@ export async function authenticateFromCookie(_request: NextRequest): Promise<Leg
 }
 
 export function isDG(user: LegacyUser): boolean {
-  return user.role === 'dg';
+  return user.role === 'superadmin';
 }
 
 export function isCEO(user: LegacyUser): boolean {
-  return user.role === 'dg';
+  return user.role === 'superadmin';
 }
 
 export function canAccessTask(user: LegacyUser, task: { assignee_id?: string; created_by?: string; agency?: string }): boolean {
-  if (MINISTRY_ROLES.includes(user.role)) return true;
+  if (user.role === 'superadmin') return true;
   if (task.assignee_id === user.id || task.created_by === user.id) return true;
-  if (user.role === 'agency_admin' && task.agency && user.agency === task.agency) return true;
+  if (user.role === 'agency_manager' && task.agency && user.agency === task.agency) return true;
   return false;
 }
 
 export function authorizeRoles(user: LegacyUser, ...roles: string[]): void {
-  // Map old role names to new ones
+  // Map the legacy tm-route role names onto the two-level model.
   const roleMap: Record<string, string[]> = {
-    director: ['dg'],
-    admin: ['dg', 'agency_admin'],
-    officer: ['officer'],
-    minister: ['minister'],
-    ps: ['ps', 'parl_sec'],
-    parl_sec: ['parl_sec'],
+    director: ['superadmin'],
+    admin: ['superadmin', 'agency_manager'],
+    officer: ['agency_manager'],
+    minister: ['superadmin'],
+    ps: ['superadmin'],
+    parl_sec: ['superadmin'],
   };
 
   const allowedNewRoles = roles.flatMap(r => roleMap[r] || [r]);

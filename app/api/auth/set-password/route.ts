@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from '@/lib/db';
 import { withErrorHandler } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 /** Look up user by invite token and verify it hasn't expired. */
 async function validateToken(token: string) {
@@ -32,27 +32,32 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
-
-  // Atomic: UPDATE only if the token still matches (prevents TOCTOU race).
-  // If a concurrent request already consumed the token, this returns zero rows.
-  const { data: updated, error: updateError } = await supabaseAdmin
-    .from('users')
-    .update({
-      password_hash: passwordHash,
-      invite_token: null,
-      invite_token_expires_at: null,
-    })
-    .eq('invite_token', token)
-    .gte('invite_token_expires_at', new Date().toISOString())
-    .select('id, email')
-    .single();
-
-  if (updateError || !updated) {
-    return NextResponse.json({ error: 'Invalid or expired invite link' }, { status: 400 });
+  const result = await validateToken(token);
+  if (!result.valid) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
   }
 
-  return NextResponse.json({ success: true, email: updated.email });
+  // Supabase Auth owns credentials post-cutover: set the password on the
+  // auth.users record (same uuid as public.users via users_id_authusers_fkey).
+  // The legacy users.password_hash column is dead — GoTrue never reads it.
+  const { error: pwError } = await supabaseAdmin.auth.admin.updateUserById(result.user.id, {
+    password,
+  });
+
+  if (pwError) {
+    logger.error({ err: pwError }, 'set-password: auth.admin.updateUserById failed');
+    return NextResponse.json({ error: 'Could not set password. Please contact your administrator.' }, { status: 500 });
+  }
+
+  // Consume the token only after the password is set (token-match condition so
+  // a concurrently re-issued invite token isn't clobbered).
+  await supabaseAdmin
+    .from('users')
+    .update({ invite_token: null, invite_token_expires_at: null })
+    .eq('id', result.user.id)
+    .eq('invite_token', token);
+
+  return NextResponse.json({ success: true, email: result.user.email });
 });
 
 // GET /api/auth/set-password?token=xxx — Validate token before showing the form

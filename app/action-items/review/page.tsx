@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
-const ALLOWED = new Set(['dg', 'ps', 'parl_sec']);
+const ALLOWED = new Set(['superadmin']);
 
 export default async function ReviewListPage() {
   const session = await auth();

@@ -30,7 +30,7 @@ interface ReferBody {
  * Flagging an EXISTING task uses POST /api/tasks/[id]/refer instead.
  */
 export async function POST(request: NextRequest) {
-  const auth = await requireRole(['dg']);
+  const auth = await requireRole(['superadmin']);
   if (auth instanceof NextResponse) return auth;
   const { session } = auth;
 
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
       const { data: ministers } = await supabaseAdmin
         .from('users')
         .select('id')
-        .eq('role', 'minister')
+        .eq('role', 'superadmin')
         .eq('is_active', true);
       for (const m of ministers ?? []) {
         await createNotification({

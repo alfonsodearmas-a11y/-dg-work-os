@@ -12,7 +12,7 @@ import { EmDashError } from '@/lib/text/punctuation-guard';
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
-  const auth = await requireRole(['dg', 'ps']);
+  const auth = await requireRole(['superadmin']);
   if (auth instanceof NextResponse) return auth;
   const tenderId = request.nextUrl.searchParams.get('tender_id');
   try {
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireRole(['dg']);
+  const auth = await requireRole(['superadmin']);
   if (auth instanceof NextResponse) return auth;
   const { session } = auth;
   let body: { tender_id?: unknown; reason?: unknown };
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const auth = await requireRole(['dg']);
+  const auth = await requireRole(['superadmin']);
   if (auth instanceof NextResponse) return auth;
   const { session } = auth;
   const queueId = request.nextUrl.searchParams.get('queue_id');

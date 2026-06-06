@@ -55,7 +55,7 @@ function emptyBucket(): Record<AgencyKey, AgencySummary> {
 }
 
 export async function GET(_req: NextRequest) {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
 
   const buckets = emptyBucket();

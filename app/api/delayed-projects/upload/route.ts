@@ -9,7 +9,7 @@ import type { UploadResult, DeltaEntry } from '@/lib/delayed-projects/types';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'ps']);
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
 
   let body: { rows: ParsedDelayedProject[] };

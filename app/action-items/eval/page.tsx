@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function EvalPage() {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== 'dg') redirect('/login');
+  if (!session?.user?.id || session.user.role !== 'superadmin') redirect('/login');
 
   const tuples = MEETING_TYPES.flatMap(t =>
     MODALITIES.map(m => [t, m] as const),

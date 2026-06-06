@@ -6,7 +6,7 @@ import { withErrorHandler } from '@/lib/api-utils';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   const formData = await request.formData();

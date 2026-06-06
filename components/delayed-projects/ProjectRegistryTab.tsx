@@ -22,7 +22,7 @@ export function ProjectRegistryTab({ isMobile, onRefresh, onLogIntervention }: P
   const pathname = usePathname();
   const { effectiveUser } = useEffectiveUser();
 
-  const isAgencyUser = effectiveUser.role === 'agency_admin' || effectiveUser.role === 'officer';
+  const isAgencyUser = effectiveUser.role === 'agency_manager';
   const lockedAgency = isAgencyUser ? effectiveUser.agency?.toUpperCase() : undefined;
 
   // ── State ──

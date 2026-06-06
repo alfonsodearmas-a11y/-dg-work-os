@@ -9,7 +9,7 @@ const SC_COLUMNS = 'id, customer_reference, service_order_number, first_name, la
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    const authResult = await requireRole(['superadmin', 'agency_manager']);
     if (authResult instanceof NextResponse) return authResult;
     const { searchParams } = new URL(request.url);
     const months = parseInt(searchParams.get('months') || '12', 10);

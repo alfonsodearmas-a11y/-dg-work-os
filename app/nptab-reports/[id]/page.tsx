@@ -13,7 +13,7 @@ interface PageProps {
 
 export default async function NptabReportDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const result = await requireRole(['dg', 'ps']);
+  const result = await requireRole(['superadmin']);
   if (result instanceof NextResponse) notFound();
   const { session } = result;
 
@@ -43,7 +43,7 @@ export default async function NptabReportDetailPage({ params }: PageProps) {
         tenders={tenders}
         audit={audit}
         userLookup={userLookup}
-        canEdit={session.user.role === 'dg'}
+        canEdit={session.user.role === 'superadmin'}
       />
     </div>
   );

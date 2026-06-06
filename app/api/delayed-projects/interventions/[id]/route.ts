@@ -14,7 +14,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   const { id } = await params;
@@ -33,7 +33,7 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 
@@ -46,7 +46,7 @@ export async function DELETE(
   }
 
   // Only DG or the creator can delete
-  const isDG = session.user.role === 'dg';
+  const isDG = session.user.role === 'superadmin';
   const isCreator =
     intervention.created_by === session.user.name ||
     intervention.created_by === session.user.email;

@@ -19,7 +19,7 @@ function sanitizeFileName(name: string): string {
 }
 
 export async function POST(request: NextRequest) {
-  const result = await requireRole(['dg', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
 
   try {

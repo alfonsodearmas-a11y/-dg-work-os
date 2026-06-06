@@ -8,41 +8,42 @@ import { NotificationDeliveryError } from '@/lib/notifications/errors';
 import { sendInviteEmail } from '@/lib/invite-email';
 import { withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
-import { grantModuleAccess, bulkUpsertModulePermissions } from '@/lib/modules/access';
-import { ROLE_LABELS, MINISTRY_ROLES } from '@/lib/people-types';
-import type { Role } from '@/lib/people-types';
+import { normalizeRole } from '@/lib/auth-session';
+import { USER_AGENCIES } from '@/lib/constants/agencies';
 
 export async function GET() {
-  const authResult = await requireRole(['dg', 'minister', 'ps']);
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
 
   const { data, error } = await supabaseAdmin
     .from('users')
-    .select('id, email, name, avatar_url, role, formal_title, agency, is_active, status, last_login, login_count, invited_at, first_login_at, last_seen_at, created_at')
+    .select('id, email, name, avatar_url, role, formal_title, agency, is_owner, is_active, status, last_login, login_count, invited_at, first_login_at, last_seen_at, created_at')
     .order('created_at', { ascending: false });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ users: data });
-}
+  // The 'system' row keeps its raw value in the list (display-only there);
+  // human rows already store two-level values (migration 128).
+  const users = (data || []).map((u) => ({ ...u, role: normalizeRole(u.role) ?? u.role }));
 
-const ALL_INVITE_ROLES = ['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer'] as const;
-const VALID_AGENCIES = ['GPL', 'CJIA', 'GWI', 'GCAA', 'HECI', 'MARAD', 'HAS'] as const;
+  return NextResponse.json({ users });
+}
 
 const inviteSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
-  role: z.enum(ALL_INVITE_ROLES),
-  agency: z.enum(VALID_AGENCIES).nullable().optional(),
+  role: z.enum(['superadmin', 'agency_manager'] as const),
+  agency: z.enum(USER_AGENCIES).nullable().optional(),
+  formal_title: z.string().min(1).optional(),
 }).refine(
-  (d) => d.role !== 'agency_admin' || !!d.agency,
-  { message: 'Agency is required for Agency Manager role', path: ['agency'] },
+  (d) => d.role !== 'agency_manager' || !!d.agency,
+  { message: 'Agency is required for the Agency Manager role', path: ['agency'] },
 );
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const authResult = await requireRole(['dg']);
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 
@@ -53,38 +54,66 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   }
 
   const { email, name, role, agency } = parsed.data;
-  const moduleGrants: string[] = Array.isArray(body.moduleGrants) ? body.moduleGrants : [];
+  const normalizedEmail = email.toLowerCase().trim();
 
-  // Only DG (super admin) can invite senior roles (minister, ps, dg)
-  if (MINISTRY_ROLES.includes(role) && session.user.role !== 'dg') {
-    return NextResponse.json({ error: 'Only the Director General can invite senior roles' }, { status: 403 });
+  // D4 (role-simplification plan): only the system OWNER can create superadmin
+  // accounts — not every superadmin.
+  if (role === 'superadmin') {
+    const { data: actor } = await supabaseAdmin
+      .from('users')
+      .select('is_owner')
+      .eq('id', session.user.id)
+      .single();
+    if (!actor?.is_owner) {
+      return NextResponse.json({ error: 'Only the system owner can create superadmin accounts' }, { status: 403 });
+    }
   }
 
   const { data: existing } = await supabaseAdmin
     .from('users')
     .select('id, email')
-    .eq('email', email.toLowerCase().trim())
+    .eq('email', normalizedEmail)
     .single();
 
   if (existing) {
     return NextResponse.json({ error: 'A user with this email already exists' }, { status: 409 });
   }
 
-  // Derive formal_title from role, or use custom title if provided
-  const formalTitle: string = body.formal_title?.trim() || ROLE_LABELS[role as Role] || role;
+  // Title is the human-facing salutation (greeting header), never a permission
+  // word — so DON'T default it to the role label. Null until the owner sets one;
+  // the greeting falls back to the person's name.
+  const formalTitle: string | null = parsed.data.formal_title?.trim() || null;
 
   // Generate secure invite token for self-service password setup (7-day expiry)
   const inviteToken = crypto.randomBytes(32).toString('hex');
   const tokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
+  // Supabase Auth owns identity: create the auth.users record FIRST and reuse
+  // its id for the profile row — users_id_authusers_fkey requires it, and
+  // set-password/login resolve credentials against auth.users (post-cutover).
+  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    email: normalizedEmail,
+    email_confirm: true,
+  });
+
+  if (authError || !authData?.user) {
+    logger.error({ err: authError }, '[admin-users] auth.admin.createUser failed');
+    const isConflict = authError?.code === 'email_exists';
+    return NextResponse.json(
+      { error: isConflict ? 'An auth account with this email already exists' : 'Failed to create auth account' },
+      { status: isConflict ? 409 : 500 },
+    );
+  }
+
   const { data: newUser, error: dbError } = await supabaseAdmin
     .from('users')
     .insert({
-      email: email.toLowerCase().trim(),
+      id: authData.user.id,
+      email: normalizedEmail,
       name: name.trim(),
       role,
       formal_title: formalTitle,
-      agency: MINISTRY_ROLES.includes(role) ? null : (agency || null),
+      agency: role === 'superadmin' ? null : (agency || null),
       is_active: false,
       status: 'pending',
       invited_by: session.user.id,
@@ -96,6 +125,11 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     .single();
 
   if (dbError) {
+    // Roll back the auth user so a failed invite doesn't orphan an
+    // auth.users record (which would 409 every retry of this email).
+    await supabaseAdmin.auth.admin.deleteUser(authData.user.id).catch((err) => {
+      logger.error({ err }, '[admin-users] failed to roll back orphaned auth user');
+    });
     return NextResponse.json({ error: dbError.message }, { status: 500 });
   }
 
@@ -108,19 +142,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     inviteToken,
   }).catch(() => ({ success: false, error: 'Email send failed' }));
 
-  // Grant explicit module access (prefer granular modulePermissions, fall back to moduleGrants)
-  const modulePermissions: Array<{ moduleSlug: string; canEdit: boolean }> = Array.isArray(body.modulePermissions) ? body.modulePermissions : [];
-  if (modulePermissions.length > 0) {
-    await bulkUpsertModulePermissions(
-      newUser.id,
-      modulePermissions.map(p => ({ moduleSlug: p.moduleSlug, accessType: 'grant' as const, canEdit: p.canEdit ?? false })),
-      session.user.id,
-    );
-  } else if (moduleGrants.length > 0) {
-    await Promise.all(
-      moduleGrants.map(slug => grantModuleAccess(newUser.id, slug, session.user.id))
-    );
-  }
+  // Module access is pure role-based (lib/modules/role-modules.ts) — nothing to grant at invite time.
 
   try {
     await insertNotification({
@@ -147,8 +169,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     // confirmation notification couldn't be delivered.
   }
 
+  const responseUser = { ...newUser, role: normalizeRole(newUser.role) ?? newUser.role };
+
   return NextResponse.json({
-    user: newUser,
+    user: responseUser,
     ...(!emailResult.success && { warning: 'User created but invite email failed to send' }),
   }, { status: 201 });
 });

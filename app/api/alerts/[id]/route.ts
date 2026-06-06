@@ -9,7 +9,7 @@ const alertPatchSchema = z.object({
 });
 
 export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown) => {
-  const authResult = await requireRole(['dg', 'ps', 'agency_admin']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
   const userId = session.user.id;

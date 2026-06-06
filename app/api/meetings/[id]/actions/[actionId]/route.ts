@@ -18,7 +18,7 @@ export const PATCH = withErrorHandler(async (
   request: NextRequest,
   ctx?: unknown
 ) => {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
 
   const { id, actionId } = await (ctx as { params: Promise<{ id: string; actionId: string }> }).params;
@@ -74,7 +74,7 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string; actionId: string }> }
 ) {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
 
   const { id, actionId } = await params;

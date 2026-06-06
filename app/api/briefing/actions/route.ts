@@ -55,7 +55,7 @@ function daysBetween(a: Date, b: Date): number {
 }
 
 export async function GET() {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   if (cache && Date.now() < cache.expiry) {

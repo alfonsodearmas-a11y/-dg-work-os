@@ -3,17 +3,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   X, Shield, ShieldOff, Archive, RotateCcw, LogOut, Trash2,
-  ChevronDown, AlertTriangle,
+  ChevronDown, AlertTriangle, KeyRound,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import { UserProfileSection } from './UserProfileSection';
-import { UserRolesSection, ModuleAccessSection } from './UserRolesSection';
+import { UserRolesSection } from './UserRolesSection';
 import { UserActivitySection } from './UserActivitySection';
-import type { ModuleInfo } from './UserRolesSection';
-import type { ModuleOverride, ModuleOverrideDetailed } from '@/lib/module-types';
 import type { AuditEntry } from './UserActivitySection';
 import { UserCheck, UserX, Clock } from 'lucide-react';
-import { ROLE_LABELS, ROLE_COLORS, MINISTRY_ROLES } from '@/lib/people-types';
+import { ROLE_LABELS, ROLE_COLORS } from '@/lib/people-types';
 
 interface User {
   id: string;
@@ -66,14 +64,6 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [expandedSection, setExpandedSection] = useState<string | null>('profile');
 
-  // Module access state
-  const [allModules, setAllModules] = useState<ModuleInfo[]>([]);
-  const [moduleOverrides, setModuleOverrides] = useState<ModuleOverride[]>([]);
-  const [overridesDetailed, setOverridesDetailed] = useState<ModuleOverrideDetailed[]>([]);
-  const [modulesLoading, setModulesLoading] = useState(false);
-  const [moduleToggling, setModuleToggling] = useState<string | null>(null);
-  const [resettingDefaults, setResettingDefaults] = useState(false);
-
   const isSelf = user?.id === currentUserId;
   const status = user?.status || (user?.is_active ? 'active' : 'inactive');
 
@@ -95,161 +85,6 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
       setExpandedSection('profile');
     }
   }, [user]);
-
-  // Fetch modules + user overrides
-  const fetchModuleAccess = useCallback(async () => {
-    if (!user || !isDG) return;
-    setModulesLoading(true);
-    try {
-      const [modulesRes, overridesRes] = await Promise.all([
-        fetch('/api/admin/modules'),
-        fetch(`/api/admin/modules/access?userId=${user.id}`),
-      ]);
-      if (modulesRes.ok) {
-        const data = await modulesRes.json();
-        setAllModules(data.modules || []);
-      }
-      if (overridesRes.ok) {
-        const data = await overridesRes.json();
-        setModuleOverrides(data.overrides || []);
-        setOverridesDetailed(data.overridesDetailed || []);
-      }
-    } catch {}
-    setModulesLoading(false);
-  }, [user, isDG]);
-
-  useEffect(() => {
-    if (isOpen && user && isDG) fetchModuleAccess();
-  }, [isOpen, user, isDG, fetchModuleAccess]);
-
-  const toggleModuleAccess = async (moduleSlug: string, currentlyHasAccess: boolean) => {
-    if (!user) return;
-    setModuleToggling(moduleSlug);
-    try {
-      const res = await fetch('/api/admin/modules/access', {
-        method: currentlyHasAccess ? 'DELETE' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, moduleSlug }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setModuleOverrides(data.overrides || []);
-        setOverridesDetailed(data.overridesDetailed || []);
-        showToast(
-          currentlyHasAccess ? `Revoked access to ${moduleSlug}` : `Granted access to ${moduleSlug}`,
-          'success'
-        );
-      } else {
-        const data = await res.json().catch(() => ({}));
-        showToast(data.error || 'Failed to update module access', 'error');
-      }
-    } catch {
-      showToast('Failed to update module access', 'error');
-    }
-    setModuleToggling(null);
-  };
-
-  const toggleModuleEdit = async (moduleSlug: string, currentCanEdit: boolean) => {
-    if (!user) return;
-    setModuleToggling(moduleSlug);
-    try {
-      const res = await fetch('/api/admin/modules/access', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, moduleSlug, canEdit: !currentCanEdit }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setModuleOverrides(data.overrides || []);
-        setOverridesDetailed(data.overridesDetailed || []);
-        showToast(
-          !currentCanEdit ? `Edit access granted for ${moduleSlug}` : `Edit access revoked for ${moduleSlug}`,
-          'success'
-        );
-      } else {
-        const data = await res.json().catch(() => ({}));
-        showToast(data.error || 'Failed to update edit permission', 'error');
-      }
-    } catch {
-      showToast('Failed to update edit permission', 'error');
-    }
-    setModuleToggling(null);
-  };
-
-  const handleBulkPreset = async (preset: 'full' | 'view-only' | 'clear') => {
-    if (!user) return;
-    setResettingDefaults(true);
-    try {
-      if (preset === 'clear') {
-        const res = await fetch('/api/admin/modules/access/reset', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id }),
-        });
-        if (res.ok) {
-          setModuleOverrides([]);
-          setOverridesDetailed([]);
-          showToast('All module overrides cleared', 'success');
-        } else {
-          showToast('Failed to clear module access', 'error');
-        }
-      } else {
-        const activeModules = allModules.filter(m => m.is_active);
-        const permissions = activeModules.map(m => ({
-          moduleSlug: m.slug,
-          accessType: 'grant' as const,
-          canEdit: preset === 'full',
-        }));
-        const res = await fetch('/api/admin/modules/access/bulk', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id, permissions }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setOverridesDetailed(data.overridesDetailed || []);
-          // Rebuild overrides from detailed
-          setModuleOverrides(
-            (data.overridesDetailed || []).map((o: ModuleOverrideDetailed) => ({
-              slug: o.slug,
-              access_type: o.access_type,
-            }))
-          );
-          showToast(
-            preset === 'full' ? 'Full access granted to all modules' : 'View-only access granted to all modules',
-            'success'
-          );
-        } else {
-          showToast('Failed to apply bulk preset', 'error');
-        }
-      }
-    } catch {
-      showToast('Failed to apply bulk preset', 'error');
-    }
-    setResettingDefaults(false);
-  };
-
-  const resetToDefaults = async () => {
-    if (!user) return;
-    setResettingDefaults(true);
-    try {
-      const res = await fetch('/api/admin/modules/access/reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
-      });
-      if (res.ok) {
-        setModuleOverrides([]);
-        setOverridesDetailed([]);
-        showToast('Module access reset to role defaults', 'success');
-      } else {
-        showToast('Failed to reset module access', 'error');
-      }
-    } catch {
-      showToast('Failed to reset module access', 'error');
-    }
-    setResettingDefaults(false);
-  };
 
   // Fetch audit log
   const fetchAudit = useCallback(async () => {
@@ -292,7 +127,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
   const handleFieldChange = (field: string, value: string | null) => {
     if (field === 'role') {
       setEditRole(value || '');
-      if (MINISTRY_ROLES.includes(value || '')) setEditAgency(null);
+      if ((value || '') === 'superadmin') setEditAgency(null);
     } else if (field === 'agency') {
       setEditAgency(value);
     } else if (field === 'name') {
@@ -302,11 +137,15 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
 
   const saveChanges = async () => {
     if (!user || !dirty) return;
+    if (editRole === 'agency_manager' && !editAgency) {
+      showToast('Select an agency — agency managers must belong to one', 'error');
+      return;
+    }
     setSaving(true);
     try {
       const payload: Record<string, unknown> = {};
       if (editRole !== user.role) payload.role = editRole;
-      if (editAgency !== user.agency) payload.agency = MINISTRY_ROLES.includes(editRole) ? null : editAgency;
+      if (editAgency !== user.agency) payload.agency = editRole === 'superadmin' ? null : editAgency;
       if (editName !== (user.name || '')) payload.name = editName;
 
       if (Object.keys(payload).length === 0) { setSaving(false); return; }
@@ -322,7 +161,11 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
         onUserUpdated();
         fetchAudit();
       } else {
-        showToast(data.error || 'Failed to update', 'error');
+        // Surface Zod VALIDATION_ERROR shapes ({code, errors}) instead of a generic message
+        const firstFieldError = data.errors
+          ? (Object.values(data.errors as Record<string, string[]>).flat()[0] ?? null)
+          : null;
+        showToast(data.error || data.message || firstFieldError || 'Failed to update', 'error');
       }
     } catch {
       showToast('Failed to update', 'error');
@@ -350,6 +193,34 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
       }
     } catch {
       showToast('Action failed', 'error');
+    }
+    setActionLoading(null);
+  };
+
+  const performPasswordReset = async () => {
+    if (!user) return;
+    const pw = window.prompt(`Set a new password for ${user.email} (min 8 characters):`);
+    if (pw === null) return; // cancelled
+    if (pw.length < 8) {
+      showToast('Password must be at least 8 characters', 'error');
+      return;
+    }
+    setActionLoading('reset_password');
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Password reset', 'success');
+        fetchAudit();
+      } else {
+        showToast(data.error || 'Failed to reset password', 'error');
+      }
+    } catch {
+      showToast('Failed to reset password', 'error');
     }
     setActionLoading(null);
   };
@@ -433,7 +304,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
             <div className="flex-1 min-w-0">
               <p className="text-white font-semibold truncate">{user.name || 'No name'}</p>
               <p className={`text-xs font-medium truncate ${ROLE_COLORS[user.role]?.includes('text-') ? ROLE_COLORS[user.role].split(' ').find(c => c.startsWith('text-'))! : 'text-gold-500'}`}>
-                {user.formal_title || ROLE_LABELS[user.role as keyof typeof ROLE_LABELS] || user.role}
+                {ROLE_LABELS[user.role as keyof typeof ROLE_LABELS] || user.role}
               </p>
               <p className="text-navy-600 text-xs truncate">{user.email}</p>
             </div>
@@ -473,25 +344,6 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
             />
           </Section>
 
-          {/* Module Access Section (DG only, not self, skip ministry roles who have full access) */}
-          {isDG && !isSelf && !MINISTRY_ROLES.includes(user.role) && (
-            <Section title="Module Access" id="modules" expanded={expandedSection === 'modules'} onToggle={() => toggleSection('modules')}>
-              <ModuleAccessSection
-                user={user}
-                allModules={allModules}
-                moduleOverrides={moduleOverrides}
-                overridesDetailed={overridesDetailed}
-                modulesLoading={modulesLoading}
-                moduleToggling={moduleToggling}
-                resettingDefaults={resettingDefaults}
-                onToggleModuleAccess={toggleModuleAccess}
-                onToggleModuleEdit={toggleModuleEdit}
-                onResetToDefaults={resetToDefaults}
-                onBulkPreset={handleBulkPreset}
-              />
-            </Section>
-          )}
-
           {/* Security Section (DG only, not self) */}
           {isDG && !isSelf && (
             <Section title="Security" id="security" expanded={expandedSection === 'security'} onToggle={() => toggleSection('security')}>
@@ -502,6 +354,7 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
                 showDeleteConfirm={showDeleteConfirm}
                 deleteConfirmEmail={deleteConfirmEmail}
                 onAction={performAction}
+                onResetPassword={performPasswordReset}
                 onDelete={handleDelete}
                 onShowDeleteConfirm={setShowDeleteConfirm}
                 onDeleteConfirmEmailChange={setDeleteConfirmEmail}
@@ -577,13 +430,14 @@ function Section({ title, id, expanded, onToggle, children }: {
   );
 }
 
-function SecuritySection({ user, status, actionLoading, showDeleteConfirm, deleteConfirmEmail, onAction, onDelete, onShowDeleteConfirm, onDeleteConfirmEmailChange }: {
+function SecuritySection({ user, status, actionLoading, showDeleteConfirm, deleteConfirmEmail, onAction, onResetPassword, onDelete, onShowDeleteConfirm, onDeleteConfirmEmailChange }: {
   user: { id: string; email: string };
   status: string;
   actionLoading: string | null;
   showDeleteConfirm: boolean;
   deleteConfirmEmail: string;
   onAction: (action: string, confirmMsg: string) => void;
+  onResetPassword: () => void;
   onDelete: () => void;
   onShowDeleteConfirm: (show: boolean) => void;
   onDeleteConfirmEmailChange: (email: string) => void;
@@ -631,6 +485,16 @@ function SecuritySection({ user, status, actionLoading, showDeleteConfirm, delet
           onClick={() => onAction('archive', 'Archive this user? They will be moved to the archived tab.')}
         />
       ) : null}
+
+      {/* Reset Password */}
+      <ActionButton
+        icon={KeyRound}
+        label="Reset Password"
+        desc="Set a new Supabase Auth password for this user"
+        color="text-gold-400 hover:bg-gold-500/10"
+        loading={actionLoading === 'reset_password'}
+        onClick={onResetPassword}
+      />
 
       {/* Force Sign Out */}
       <ActionButton

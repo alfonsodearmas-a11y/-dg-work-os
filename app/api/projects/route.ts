@@ -6,7 +6,7 @@ import { logger } from '@/lib/logger';
 
 // Backwards-compatible route — redirects to /api/projects/list logic
 export async function GET(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 
@@ -14,8 +14,8 @@ export async function GET(request: NextRequest) {
     const p = request.nextUrl.searchParams;
 
     // Agency scoping: non-ministry users are locked to their agency's projects
-    const viewAsRole = session.user.role === 'dg' ? p.get('viewAsRole') : null;
-    const viewAsAgency = session.user.role === 'dg' ? p.get('viewAsAgency') : null;
+    const viewAsRole = session.user.role === 'superadmin' ? p.get('viewAsRole') : null;
+    const viewAsAgency = session.user.role === 'superadmin' ? p.get('viewAsAgency') : null;
     const scope = getViewAsAgencyScope(session, viewAsRole, viewAsAgency);
     const agency = scope?.toUpperCase() || p.get('agency') || undefined;
 

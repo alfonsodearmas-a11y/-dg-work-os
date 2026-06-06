@@ -13,7 +13,7 @@ const bulkUpdateSchema = z.object({
 });
 
 export async function PATCH(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   const { data, error } = await parseBody(request, bulkUpdateSchema);
@@ -26,17 +26,14 @@ export async function PATCH(request: NextRequest) {
     const role = session.user.role;
     const userAgency = session.user.agency;
 
-    if (role === 'agency_admin' || role === 'officer') {
+    if (role === 'agency_manager') {
       // Verify all projects belong to user's agency (or are assigned to them)
       const { data: projects } = await supabaseAdmin
         .from('projects')
         .select('id, sub_agency, assigned_to')
         .in('id', project_ids);
 
-      const unauthorized = (projects || []).filter(p => {
-        if (role === 'officer') return p.assigned_to !== session.user.id;
-        return p.sub_agency !== userAgency;
-      });
+      const unauthorized = (projects || []).filter(p => p.sub_agency !== userAgency);
 
       if (unauthorized.length > 0) {
         return NextResponse.json({ error: 'You do not have permission to update some of the selected projects' }, { status: 403 });

@@ -3,10 +3,12 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
-import { MINISTRY_ROLES } from '@/lib/people-types';
 import { sendInviteEmail } from '@/lib/invite-email';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+import { normalizeRole } from '@/lib/auth-session';
+import { agencyPatchError } from '@/lib/admin/validate-user-patch';
+import { USER_AGENCIES } from '@/lib/constants/agencies';
 
 async function logAudit(actorId: string, targetUserId: string, action: string, metadata: Record<string, unknown> = {}) {
   await supabaseAdmin.from('admin_audit_log').insert({
@@ -19,15 +21,15 @@ async function logAudit(actorId: string, targetUserId: string, action: string, m
 
 const patchUserSchema = z.object({
   action: z.enum(['suspend', 'reactivate', 'archive', 'restore', 'force_signout', 'resend_invite']).optional(),
-  role: z.enum(['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer'] as const).optional(),
-  agency: z.enum(['GPL', 'CJIA', 'GWI', 'GCAA', 'HECI', 'MARAD', 'HAS'] as const).nullable().optional(),
+  role: z.enum(['superadmin', 'agency_manager'] as const).optional(),
+  agency: z.enum(USER_AGENCIES).nullable().optional(),
   name: z.string().min(1).optional(),
   formal_title: z.string().min(1).optional(),
   is_active: z.boolean().optional(),
 });
 
 export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown) => {
-  const authResult = await requireRole(['dg']);
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
   const { id } = await (ctx as { params: Promise<{ id: string }> }).params;
@@ -38,6 +40,29 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
 
   const { data, error } = await parseBody(request, patchUserSchema);
   if (error) return error;
+
+  // D4 (role-simplification plan): owner-only authority.
+  //  - Only the system owner can promote anyone to superadmin.
+  //  - A non-owner can never modify the owner account.
+  const { data: actor } = await supabaseAdmin
+    .from('users')
+    .select('is_owner')
+    .eq('id', session.user.id)
+    .single();
+
+  if (!actor?.is_owner) {
+    const { data: target } = await supabaseAdmin
+      .from('users')
+      .select('is_owner')
+      .eq('id', id)
+      .single();
+    if (target?.is_owner) {
+      return NextResponse.json({ error: 'Only the system owner can modify this account' }, { status: 403 });
+    }
+    if (data!.role === 'superadmin') {
+      return NextResponse.json({ error: 'Only the system owner can assign the superadmin role' }, { status: 403 });
+    }
+  }
 
   if (data!.action === 'suspend') {
     const { data: user } = await supabaseAdmin.from('users').select('email, status').eq('id', id).single();
@@ -148,23 +173,23 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
     updates.status = data!.is_active ? 'active' : 'inactive';
   }
 
-  const newRole = (updates.role as string) || undefined;
-  if (newRole) {
-    if (MINISTRY_ROLES.includes(newRole)) {
-      updates.agency = null;
-    } else if (['agency_admin', 'officer'].includes(newRole) && !updates.agency && data!.agency === undefined) {
-      const { data: existing } = await supabaseAdmin.from('users').select('agency').eq('id', id).single();
-      if (!existing?.agency) {
-        return NextResponse.json({ error: 'Agency is required for agency_admin and officer roles' }, { status: 400 });
-      }
-    }
-  }
-
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
   }
 
   const { data: beforeUser } = await supabaseAdmin.from('users').select('role, agency, is_active, status, name, formal_title').eq('id', id).single();
+  if (!beforeUser) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  }
+
+  // Mirror users_agency_manager_agency_check for EVERY patch shape (incl. agency-only changes)
+  const agencyError = agencyPatchError(beforeUser, data!);
+  if (agencyError) {
+    return NextResponse.json({ error: agencyError }, { status: 400 });
+  }
+  if (data!.role === 'superadmin') {
+    updates.agency = null; // superadmins are agency-less
+  }
 
   const { data: updatedUser, error: dbError } = await supabaseAdmin
     .from('users')
@@ -176,6 +201,8 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
   if (dbError) {
     return NextResponse.json({ error: dbError.message }, { status: 500 });
   }
+
+  if (updatedUser) updatedUser.role = normalizeRole(updatedUser.role) ?? updatedUser.role;
 
   const changes: Record<string, unknown> = {};
   if (updates.role && updates.role !== beforeUser?.role) changes.role = { from: beforeUser?.role, to: updates.role };
@@ -192,13 +219,24 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
 });
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const authResult = await requireRole(['dg']);
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
   const { id } = await params;
 
   if (session.user.id === id) {
     return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 });
+  }
+
+  // D4: a non-owner can never delete the owner account. (Combined with the
+  // self-delete block above, the owner row is effectively undeletable.)
+  const { data: deleteTarget } = await supabaseAdmin
+    .from('users')
+    .select('is_owner')
+    .eq('id', id)
+    .single();
+  if (deleteTarget?.is_owner) {
+    return NextResponse.json({ error: 'The system owner account cannot be deleted' }, { status: 403 });
   }
 
   const body = await request.json().catch(() => ({}));

@@ -6,7 +6,7 @@ import { fetchTodayEvents } from '@/lib/google-calendar';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
   const { session } = result;
   const userId = session.user.id;

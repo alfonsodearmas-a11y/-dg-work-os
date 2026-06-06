@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Archive as ArchiveIcon, RotateCcw } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/providers/SupabaseSessionProvider';
 import type { Tender } from '@/lib/tender/types';
 import { ARCHIVE_REASON_LABELS, type ArchiveReasonCode } from '@/lib/tender/types';
 import { AgencyBadge } from '@/components/procurement/AgencyBadge';
@@ -16,7 +16,7 @@ export default function ArchivedPage() {
   const [tenders, setTenders] = useState<Tender[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const isDg = session?.user?.role === 'dg';
+  const isDg = session?.user?.role === 'superadmin';
 
   const load = useCallback(async () => {
     const res = await fetch('/api/procurement/archived');

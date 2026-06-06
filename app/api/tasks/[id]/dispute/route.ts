@@ -10,7 +10,7 @@ const BodyZ = z.object({ note: z.string().min(20).max(1000) });
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const auth = await requireRole(['dg']);
+  const auth = await requireRole(['superadmin']);
   if (auth instanceof NextResponse) return auth;
   const { id } = await ctx.params;
   const parsed = BodyZ.safeParse(await req.json().catch(() => null));

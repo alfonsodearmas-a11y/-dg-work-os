@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 const BodyZ = z.object({ task_id: z.string().uuid() });
 
 export async function POST(req: NextRequest) {
-  const a = await requireRole(['dg', 'ps']);
+  const a = await requireRole(['superadmin']);
   if (a instanceof NextResponse) return a;
   const parsed = BodyZ.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: 'Invalid body' }, { status: 400 });

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/providers/SupabaseSessionProvider';
 import {
   Package, MessageSquare, Send, FileText, Upload, Download,
   ArrowRight, Trash2, Loader2, History, Repeat, AlertTriangle, Award, HelpCircle,
@@ -119,8 +119,8 @@ export function ProcurementDetailPanel({ tenderId, isOpen, onClose, onDeleted }:
 
   const userRole = session?.user?.role;
   const userAgency = session?.user?.agency;
-  const isDG = userRole === 'dg';
-  const isAgencyAdmin = userRole === 'agency_admin';
+  const isDG = userRole === 'superadmin';
+  const isAgencyAdmin = userRole === 'agency_manager';
   const isOwnAgency = tender && userAgency?.toLowerCase() === tender.agency.toLowerCase();
   const canModify = isDG || (isAgencyAdmin && isOwnAgency);
 

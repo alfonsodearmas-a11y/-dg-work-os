@@ -6,7 +6,7 @@ import { logger } from '@/lib/logger';
 // auth import removed — now using requireRole()
 
 export async function GET() {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
   if (!canAccessAgency(session.user.role, session.user.agency, 'gpl')) {
@@ -61,7 +61,7 @@ export async function GET() {
 }
 
 export const POST = withErrorHandler(async (_request: NextRequest) => {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
   if (!canAccessAgency(session.user.role, session.user.agency, 'gpl')) {

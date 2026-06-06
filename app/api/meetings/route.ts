@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 const MEETING_COLUMNS = 'id, title, date, attendees, status, summary, key_decisions, transcript, created_at, updated_at';
 
 export async function GET(request: NextRequest) {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
 
   const { searchParams } = new URL(request.url);
@@ -48,7 +48,7 @@ const createMeetingSchema = z.object({
 });
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const result = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const result = await requireRole(['superadmin', 'agency_manager']);
   if (result instanceof NextResponse) return result;
 
   const { data, error } = await parseBody(request, createMeetingSchema);

@@ -106,6 +106,10 @@ Two database connections:
 
 Users table is in Supabase (see `supabase/migrations/021_multi_user.sql`). Tasks table is in Supabase (see `supabase/migrations/022_tasks.sql`).
 
+## Migrations
+
+Write every migration as a numbered file in `supabase/migrations/`. Apply the migration yourself using the Supabase MCP as part of the implementation, after I have approved the plan. The migration file remains in the repo as the canonical record. You do not need to ask before running a migration that the approved plan covers. If a migration contains anything destructive (DROP TABLE, DROP COLUMN, ALTER COLUMN TYPE, RENAME, or a data backfill), stop and tell me before running it; I will decide whether to proceed.
+
 ## API Route Organization
 
 ```

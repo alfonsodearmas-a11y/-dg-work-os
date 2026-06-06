@@ -37,7 +37,7 @@ function mapRow(row: Record<string, unknown>): PendingApplication {
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'parl_sec', 'agency_admin', 'officer']);
+    const authResult = await requireRole(['superadmin', 'agency_manager']);
     if (authResult instanceof NextResponse) return authResult;
 
     const agency = request.nextUrl.searchParams.get('agency')?.toUpperCase();

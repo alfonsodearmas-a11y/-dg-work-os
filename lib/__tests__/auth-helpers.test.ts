@@ -11,6 +11,10 @@ vi.mock('@/lib/auth', () => ({
 
 import { requireRole, canAccessAgency, canUploadData, canAssignTasks } from '@/lib/auth-helpers';
 
+// Phase 2 (role simplification): two permission levels. auth() returns
+// NORMALIZED roles (superadmin | agency_manager) — the legacy values never
+// reach requireRole or the helpers.
+
 describe('requireRole', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -18,18 +22,18 @@ describe('requireRole', () => {
 
   it('returns auth result when role matches', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-1', role: 'dg', agency: null },
+      user: { id: 'user-1', role: 'superadmin', agency: null },
     });
 
-    const result = await requireRole(['dg']);
+    const result = await requireRole(['superadmin']);
     expect(result).not.toBeInstanceOf(NextResponse);
-    expect((result as any).session.user.role).toBe('dg');
+    expect((result as any).session.user.role).toBe('superadmin');
   });
 
   it('returns 401 when no session', async () => {
     mockAuth.mockResolvedValue(null);
 
-    const result = await requireRole(['dg']);
+    const result = await requireRole(['superadmin']);
     expect(result).toBeInstanceOf(NextResponse);
     const body = await (result as NextResponse).json();
     expect(body.error).toBe('Authentication required');
@@ -38,18 +42,18 @@ describe('requireRole', () => {
   it('returns 401 when session has no user id', async () => {
     mockAuth.mockResolvedValue({ user: {} });
 
-    const result = await requireRole(['dg']);
+    const result = await requireRole(['superadmin']);
     expect(result).toBeInstanceOf(NextResponse);
     const body = await (result as NextResponse).json();
     expect(body.error).toBe('Authentication required');
   });
 
-  it('returns 403 when role is officer but dg required', async () => {
+  it('returns 403 when role is agency_manager but superadmin required', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-2', role: 'officer', agency: 'GPL' },
+      user: { id: 'user-2', role: 'agency_manager', agency: 'GPL' },
     });
 
-    const result = await requireRole(['dg']);
+    const result = await requireRole(['superadmin']);
     expect(result).toBeInstanceOf(NextResponse);
     const body = await (result as NextResponse).json();
     expect(body.error).toBe('Insufficient permissions');
@@ -57,97 +61,63 @@ describe('requireRole', () => {
 
   it('allows multiple roles', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-3', role: 'ps', agency: null },
+      user: { id: 'user-3', role: 'agency_manager', agency: 'GWI' },
     });
 
-    const result = await requireRole(['dg', 'minister', 'ps']);
+    const result = await requireRole(['superadmin', 'agency_manager']);
     expect(result).not.toBeInstanceOf(NextResponse);
-    expect((result as any).session.user.role).toBe('ps');
+    expect((result as any).session.user.role).toBe('agency_manager');
   });
 });
 
 describe('canAccessAgency', () => {
-  it('returns true for dg regardless of agency', () => {
-    expect(canAccessAgency('dg', null, 'GPL')).toBe(true);
+  it('returns true for superadmin regardless of agency', () => {
+    expect(canAccessAgency('superadmin', null, 'GPL')).toBe(true);
+    expect(canAccessAgency('superadmin', null, 'GWI')).toBe(true);
+    expect(canAccessAgency('superadmin', null, 'CJIA')).toBe(true);
   });
 
-  it('returns true for minister regardless of agency', () => {
-    expect(canAccessAgency('minister', null, 'GWI')).toBe(true);
+  it('returns true for agency_manager with matching agency', () => {
+    expect(canAccessAgency('agency_manager', 'GPL', 'GPL')).toBe(true);
   });
 
-  it('returns true for ps regardless of agency', () => {
-    expect(canAccessAgency('ps', null, 'CJIA')).toBe(true);
+  it('uppercases the target (canonical agency form is UPPERCASE)', () => {
+    expect(canAccessAgency('agency_manager', 'GPL', 'gpl')).toBe(true);
   });
 
-  it('returns true for agency_admin with matching agency', () => {
-    expect(canAccessAgency('agency_admin', 'GPL', 'GPL')).toBe(true);
+  it('returns false for agency_manager with non-matching agency', () => {
+    expect(canAccessAgency('agency_manager', 'GWI', 'GPL')).toBe(false);
   });
 
-  it('returns true for case-insensitive agency match', () => {
-    expect(canAccessAgency('agency_admin', 'gpl', 'GPL')).toBe(true);
-  });
-
-  it('returns false for agency_admin with non-matching agency', () => {
-    expect(canAccessAgency('agency_admin', 'GWI', 'GPL')).toBe(false);
-  });
-
-  it('returns false for officer with non-matching agency', () => {
-    expect(canAccessAgency('officer', 'CJIA', 'GPL')).toBe(false);
-  });
-
-  it('returns false for officer with null agency', () => {
-    expect(canAccessAgency('officer', null, 'GPL')).toBe(false);
+  it('returns false for agency_manager with null agency', () => {
+    expect(canAccessAgency('agency_manager', null, 'GPL')).toBe(false);
   });
 });
 
 describe('canUploadData', () => {
-  it('returns true for dg regardless of agency', () => {
-    expect(canUploadData('dg', null, 'GPL')).toBe(true);
+  it('returns true for superadmin regardless of agency (D3 breadth)', () => {
+    expect(canUploadData('superadmin', null, 'GPL')).toBe(true);
   });
 
-  it('returns false for minister', () => {
-    expect(canUploadData('minister', null, 'GPL')).toBe(false);
+  it('returns true for agency_manager with matching agency', () => {
+    expect(canUploadData('agency_manager', 'GPL', 'GPL')).toBe(true);
   });
 
-  it('returns false for ps', () => {
-    expect(canUploadData('ps', null, 'GPL')).toBe(false);
+  it('returns false for agency_manager with non-matching agency', () => {
+    expect(canUploadData('agency_manager', 'GWI', 'GPL')).toBe(false);
   });
 
-  it('returns true for agency_admin with matching agency', () => {
-    expect(canUploadData('agency_admin', 'GPL', 'GPL')).toBe(true);
-  });
-
-  it('returns false for agency_admin with non-matching agency', () => {
-    expect(canUploadData('agency_admin', 'GWI', 'GPL')).toBe(false);
-  });
-
-  it('returns true for officer with matching agency', () => {
-    expect(canUploadData('officer', 'GPL', 'GPL')).toBe(true);
-  });
-
-  it('returns false for officer with non-matching agency', () => {
-    expect(canUploadData('officer', 'GWI', 'GPL')).toBe(false);
+  it('returns false for agency_manager with null agency', () => {
+    expect(canUploadData('agency_manager', null, 'GPL')).toBe(false);
   });
 });
 
 describe('canAssignTasks', () => {
-  it('returns true for dg', () => {
-    expect(canAssignTasks('dg')).toBe(true);
+  it('returns true for superadmin', () => {
+    expect(canAssignTasks('superadmin')).toBe(true);
   });
 
-  it('returns true for minister', () => {
-    expect(canAssignTasks('minister')).toBe(true);
-  });
-
-  it('returns true for ps', () => {
-    expect(canAssignTasks('ps')).toBe(true);
-  });
-
-  it('returns true for agency_admin', () => {
-    expect(canAssignTasks('agency_admin')).toBe(true);
-  });
-
-  it('returns false for officer', () => {
-    expect(canAssignTasks('officer')).toBe(false);
+  it('returns true for agency_manager (D2: ex-officers gain assignment)', () => {
+    expect(canAssignTasks('agency_manager')).toBe(true);
   });
 });

@@ -4,7 +4,7 @@ import { withErrorHandler } from '@/lib/api-utils';
 import { recalculateAllHealth } from '@/lib/project-queries';
 
 export const POST = withErrorHandler(async (_req: NextRequest) => {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   const result = await recalculateAllHealth();

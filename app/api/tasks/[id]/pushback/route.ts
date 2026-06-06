@@ -31,7 +31,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   });
 
   const { data: dgUsers } = await supabaseAdmin
-    .from('users').select('id').eq('role', 'dg').eq('is_active', true);
+    .from('users').select('id').eq('role', 'superadmin').eq('is_active', true);
   const now = new Date().toISOString();
   for (const dg of dgUsers ?? []) {
     try {

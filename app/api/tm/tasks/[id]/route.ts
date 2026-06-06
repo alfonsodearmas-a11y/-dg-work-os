@@ -16,7 +16,7 @@ const patchTmTaskSchema = z.object({
 });
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const user = { ...authResult.session.user, fullName: authResult.session.user.name, full_name: authResult.session.user.name };
 
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown) => {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const user = { ...authResult.session.user, fullName: authResult.session.user.name, full_name: authResult.session.user.name };
 
@@ -74,7 +74,7 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
 });
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const user = { ...authResult.session.user, fullName: authResult.session.user.name, full_name: authResult.session.user.name };
 

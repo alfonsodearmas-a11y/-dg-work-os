@@ -22,7 +22,7 @@ export const runtime = 'nodejs';
  */
 export async function POST(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const auth = await requireRole(['dg']);
+  const auth = await requireRole(['superadmin']);
   if (auth instanceof NextResponse) return auth;
   const { session } = auth;
 
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       const { data: ministers } = await supabaseAdmin
         .from('users')
         .select('id')
-        .eq('role', 'minister')
+        .eq('role', 'superadmin')
         .eq('is_active', true);
       for (const m of ministers ?? []) {
         await createNotification({

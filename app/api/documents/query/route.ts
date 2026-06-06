@@ -9,7 +9,7 @@ import { AI_MODEL_OPUS } from '@/lib/constants/ai-config';
 const anthropic = new Anthropic();
 
 export async function POST(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   try {

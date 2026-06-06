@@ -10,7 +10,7 @@ export const maxDuration = 120;
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const auth = await requireRole(['dg', 'ps']);
+  const auth = await requireRole(['superadmin']);
   if (auth instanceof NextResponse) return auth;
 
   try {

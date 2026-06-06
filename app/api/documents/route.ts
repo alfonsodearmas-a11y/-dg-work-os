@@ -8,7 +8,7 @@ import { sanitizeSearchInput } from '@/lib/parse-utils';
 const DOC_LIST_COLUMNS = 'id, filename, original_filename, title, summary, document_type, agency, tags, file_size, mime_type, processing_status, uploaded_at, created_at';
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 
@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
       .in('processing_status', ['completed', 'processing', 'failed']);
 
     // Agency scoping: non-ministry users see only their agency's docs + untagged
-    const viewAsRole = session.user.role === 'dg' ? searchParams.get('viewAsRole') : null;
-    const viewAsAgency = session.user.role === 'dg' ? searchParams.get('viewAsAgency') : null;
+    const viewAsRole = session.user.role === 'superadmin' ? searchParams.get('viewAsRole') : null;
+    const viewAsAgency = session.user.role === 'superadmin' ? searchParams.get('viewAsAgency') : null;
     const scope = getViewAsAgencyScope(session, viewAsRole, viewAsAgency);
     if (scope) {
       query = query.or(`agency.ilike.${scope},agency.is.null`);

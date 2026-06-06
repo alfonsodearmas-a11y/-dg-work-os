@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { checkPermission } from '@/lib/people-permissions';
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps']);
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 

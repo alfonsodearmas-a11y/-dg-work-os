@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger';
 import { GPL_SUMMARY_SELECT } from '@/lib/gpl-constants';
 
 export async function GET(_request: NextRequest) {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 

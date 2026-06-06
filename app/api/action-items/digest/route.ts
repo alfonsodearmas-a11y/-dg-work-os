@@ -16,7 +16,7 @@ async function handler(request: NextRequest) {
   let isAuthed = isCron;
   if (!isAuthed) {
     const session = await auth();
-    isAuthed = !!session?.user?.id && session.user.role === 'dg';
+    isAuthed = !!session?.user?.id && session.user.role === 'superadmin';
   }
   if (!isAuthed) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -29,7 +29,7 @@ async function handler(request: NextRequest) {
   // additional surface, not a substitute.
   const { data: recipients } = await supabaseAdmin
     .from('users').select('id')
-    .in('role', ['dg', 'minister', 'ps', 'parl_sec'])
+    .eq('role', 'superadmin')
     .eq('is_active', true);
 
   const now = new Date().toISOString();

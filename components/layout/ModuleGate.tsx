@@ -1,9 +1,9 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
-import { ShieldOff, Lock } from 'lucide-react';
+import { ShieldOff } from 'lucide-react';
 
 /**
  * Maps URL paths to module slugs.
@@ -14,8 +14,8 @@ const ROUTE_MODULE_MAP: [string, string][] = [
   ['/intel/cjia', 'cjia-deep-dive'],
   ['/intel/gwi', 'gwi-deep-dive'],
   ['/intel/gcaa', 'gcaa-deep-dive'],
-  ['/intel/heci', 'agency-intel'],
-  ['/intel/marad', 'agency-intel'],
+  ['/intel/heci', 'heci-deep-dive'],
+  ['/intel/marad', 'marad-deep-dive'],
   ['/intel', 'agency-intel'],
   ['/tasks', 'tasks'],
   ['/oversight', 'oversight'],
@@ -43,48 +43,23 @@ function getModuleForPath(pathname: string): string | null {
   return null;
 }
 
-interface ModuleGateProps {
-  children: React.ReactNode;
-  mode?: 'view' | 'edit';
-}
-
-export function ModuleGate({ children, mode = 'view' }: ModuleGateProps) {
+/**
+ * Route-level gate over the pure role-based module resolution.
+ * Synchronous — no loading window, no optimistic allow.
+ */
+export function ModuleGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { canAccess, canEdit, loading } = useModuleAccess();
-  const [denied, setDenied] = useState(false);
-  const [editDenied, setEditDenied] = useState(false);
+  const { canAccess } = useModuleAccess();
 
   const moduleSlug = getModuleForPath(pathname);
+  const denied = moduleSlug !== null && !canAccess(moduleSlug);
 
   useEffect(() => {
-    if (loading || !moduleSlug) {
-      setDenied(false);
-      setEditDenied(false);
-      return;
-    }
-
-    if (!canAccess(moduleSlug)) {
-      setDenied(true);
-      setEditDenied(false);
-      // Redirect after showing message briefly
-      const timer = setTimeout(() => {
-        router.replace('/');
-      }, 2500);
-      return () => clearTimeout(timer);
-    } else if (mode === 'edit' && !canEdit(moduleSlug)) {
-      setDenied(false);
-      setEditDenied(true);
-      // Redirect after showing message briefly
-      const timer = setTimeout(() => {
-        router.replace('/');
-      }, 2500);
-      return () => clearTimeout(timer);
-    } else {
-      setDenied(false);
-      setEditDenied(false);
-    }
-  }, [loading, moduleSlug, canAccess, canEdit, mode, router]);
+    if (!denied) return;
+    const timer = setTimeout(() => router.replace('/'), 2500);
+    return () => clearTimeout(timer);
+  }, [denied, router]);
 
   if (denied) {
     return (
@@ -94,57 +69,11 @@ export function ModuleGate({ children, mode = 'view' }: ModuleGateProps) {
         </div>
         <h2 className="text-xl font-bold text-white mb-2">Access Denied</h2>
         <p className="text-navy-600 text-sm max-w-md">
-          You don&apos;t have access to this module. Contact the Director General to request access.
+          This module isn&apos;t available for your role.
         </p>
         <p className="text-navy-700 text-xs mt-4">Redirecting to home...</p>
       </div>
     );
-  }
-
-  if (editDenied) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-        <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-4">
-          <Lock className="h-8 w-8 text-amber-400" />
-        </div>
-        <h2 className="text-xl font-bold text-white mb-2">View-Only Access</h2>
-        <p className="text-navy-600 text-sm max-w-md">
-          You have view-only access to this module. Contact the Director General for edit permissions.
-        </p>
-        <p className="text-navy-700 text-xs mt-4">Redirecting to home...</p>
-      </div>
-    );
-  }
-
-  return <>{children}</>;
-}
-
-/** Wraps content that requires edit access to the current module */
-export function ModuleEditGate({
-  children,
-  fallback,
-}: {
-  children: React.ReactNode;
-  fallback?: React.ReactNode;
-}) {
-  const pathname = usePathname();
-  const { canAccess, canEdit, loading } = useModuleAccess();
-
-  const moduleSlug = getModuleForPath(pathname);
-
-  // While loading, don't render edit-gated content (safer default)
-  if (loading) return null;
-
-  // No module slug for this route — render children (no gating)
-  if (!moduleSlug) return <>{children}</>;
-
-  // If user has no view access at all, render nothing
-  // (the parent ModuleGate will handle the redirect)
-  if (!canAccess(moduleSlug)) return null;
-
-  // If user can view but not edit, render fallback or nothing
-  if (!canEdit(moduleSlug)) {
-    return fallback ? <>{fallback}</> : null;
   }
 
   return <>{children}</>;

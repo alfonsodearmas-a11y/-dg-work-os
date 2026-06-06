@@ -7,7 +7,7 @@ const MONTHLY_STATS_COLUMNS = 'id, report_month, opened_count, completed_count, 
 
 export async function GET() {
   try {
-    const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+    const authResult = await requireRole(['superadmin', 'agency_manager']);
     if (authResult instanceof NextResponse) return authResult;
 
     const { data, error } = await supabaseAdmin

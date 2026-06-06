@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/db';
-import { canAccessModule } from '@/lib/modules/access';
+import { canAccessModule } from '@/lib/modules/role-modules';
 import { withErrorHandler } from '@/lib/api-utils';
 
 // GET /api/applications — list with filters, agency-scoped
@@ -11,7 +11,7 @@ async function _GET(req: NextRequest) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }
 
-  const hasAccess = await canAccessModule(session.user.id, session.user.role, 'applications');
+  const hasAccess = canAccessModule(session.user.role, session.user.agency, 'applications');
   if (!hasAccess) {
     return NextResponse.json({ error: "You don't have access to this module." }, { status: 403 });
   }
@@ -31,10 +31,10 @@ async function _GET(req: NextRequest) {
 
   // Agency scoping: DG sees all, others see only their agency
   // View As support: DG can scope to a specific agency
-  const viewAsAgency = session.user.role === 'dg' ? url.searchParams.get('viewAsAgency') : null;
+  const viewAsAgency = session.user.role === 'superadmin' ? url.searchParams.get('viewAsAgency') : null;
   if (viewAsAgency) {
     query = query.eq('agency', viewAsAgency);
-  } else if (session.user.role !== 'dg') {
+  } else if (session.user.role !== 'superadmin') {
     query = query.eq('agency', session.user.agency || '');
   }
 
@@ -55,7 +55,7 @@ async function _GET(req: NextRequest) {
 
   // Get summary stats (agency-scoped)
   let statsQuery = supabaseAdmin.from('customer_applications').select('status');
-  if (session.user.role !== 'dg') {
+  if (session.user.role !== 'superadmin') {
     statsQuery = statsQuery.eq('agency', session.user.agency || '');
   }
   const { data: allApps } = await statsQuery;
@@ -83,7 +83,7 @@ async function _GET(req: NextRequest) {
     .select('status')
     .in('status', ['approved', 'rejected'])
     .gte('updated_at', thirtyDaysAgo);
-  if (session.user.role !== 'dg') {
+  if (session.user.role !== 'superadmin') {
     recentQuery = recentQuery.eq('agency', session.user.agency || '');
   }
   const { data: recentApps } = await recentQuery;
@@ -119,7 +119,7 @@ async function _POST(req: NextRequest) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }
 
-  const hasAccess = await canAccessModule(session.user.id, session.user.role, 'applications');
+  const hasAccess = canAccessModule(session.user.role, session.user.agency, 'applications');
   if (!hasAccess) {
     return NextResponse.json({ error: "You don't have access to this module." }, { status: 403 });
   }
@@ -132,7 +132,7 @@ async function _POST(req: NextRequest) {
   }
 
   // Agency from user's profile (DG can specify)
-  const agency = session.user.role === 'dg' ? (body.agency || session.user.agency) : session.user.agency;
+  const agency = session.user.role === 'superadmin' ? (body.agency || session.user.agency) : session.user.agency;
   if (!agency) {
     return NextResponse.json({ error: 'Agency is required' }, { status: 400 });
   }

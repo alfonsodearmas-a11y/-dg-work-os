@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/components/providers/SupabaseSessionProvider';
 import type { TeamMember, ActivityLog, ObjectAccessGrant, RoleWithPermissions, CorePermission } from '@/lib/people-types';
 
 // ─── usePermission ───────────────────────────────────────────────────

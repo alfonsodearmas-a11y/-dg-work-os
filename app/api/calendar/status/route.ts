@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 /** GET /api/calendar/status — check Google Calendar connection health */
 export async function GET() {
-  const authResult = await requireRole(['dg', 'minister', 'ps', 'agency_admin', 'officer']);
+  const authResult = await requireRole(['superadmin', 'agency_manager']);
   if (authResult instanceof NextResponse) return authResult;
 
   const status = await testCalendarConnection();
