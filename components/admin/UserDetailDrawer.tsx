@@ -307,6 +307,10 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
 
   const saveChanges = async () => {
     if (!user || !dirty) return;
+    if (editRole === 'agency_manager' && !editAgency) {
+      showToast('Select an agency — agency managers must belong to one', 'error');
+      return;
+    }
     setSaving(true);
     try {
       const payload: Record<string, unknown> = {};
@@ -328,7 +332,11 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
         onUserUpdated();
         fetchAudit();
       } else {
-        showToast(data.error || 'Failed to update', 'error');
+        // Surface Zod VALIDATION_ERROR shapes ({code, errors}) instead of a generic message
+        const firstFieldError = data.errors
+          ? (Object.values(data.errors as Record<string, string[]>).flat()[0] ?? null)
+          : null;
+        showToast(data.error || data.message || firstFieldError || 'Failed to update', 'error');
       }
     } catch {
       showToast('Failed to update', 'error');

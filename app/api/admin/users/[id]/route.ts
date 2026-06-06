@@ -7,6 +7,8 @@ import { sendInviteEmail } from '@/lib/invite-email';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { normalizeRole } from '@/lib/auth-session';
+import { agencyPatchError } from '@/lib/admin/validate-user-patch';
+import { USER_AGENCIES } from '@/lib/constants/agencies';
 
 async function logAudit(actorId: string, targetUserId: string, action: string, metadata: Record<string, unknown> = {}) {
   await supabaseAdmin.from('admin_audit_log').insert({
@@ -20,7 +22,7 @@ async function logAudit(actorId: string, targetUserId: string, action: string, m
 const patchUserSchema = z.object({
   action: z.enum(['suspend', 'reactivate', 'archive', 'restore', 'force_signout', 'resend_invite']).optional(),
   role: z.enum(['superadmin', 'agency_manager'] as const).optional(),
-  agency: z.enum(['GPL', 'CJIA', 'GWI', 'GCAA', 'HECI', 'MARAD', 'HAS'] as const).nullable().optional(),
+  agency: z.enum(USER_AGENCIES).nullable().optional(),
   name: z.string().min(1).optional(),
   formal_title: z.string().min(1).optional(),
   is_active: z.boolean().optional(),
@@ -171,22 +173,23 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
     updates.status = data!.is_active ? 'active' : 'inactive';
   }
 
-  if (data!.role !== undefined) {
-    if (data!.role === 'superadmin') {
-      updates.agency = null;
-    } else if (!updates.agency && data!.agency === undefined) {
-      const { data: existing } = await supabaseAdmin.from('users').select('agency').eq('id', id).single();
-      if (!existing?.agency) {
-        return NextResponse.json({ error: 'Agency is required for the agency manager role' }, { status: 400 });
-      }
-    }
-  }
-
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
   }
 
   const { data: beforeUser } = await supabaseAdmin.from('users').select('role, agency, is_active, status, name, formal_title').eq('id', id).single();
+  if (!beforeUser) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  }
+
+  // Mirror users_agency_manager_agency_check for EVERY patch shape (incl. agency-only changes)
+  const agencyError = agencyPatchError(beforeUser, data!);
+  if (agencyError) {
+    return NextResponse.json({ error: agencyError }, { status: 400 });
+  }
+  if (data!.role === 'superadmin') {
+    updates.agency = null; // superadmins are agency-less
+  }
 
   const { data: updatedUser, error: dbError } = await supabaseAdmin
     .from('users')

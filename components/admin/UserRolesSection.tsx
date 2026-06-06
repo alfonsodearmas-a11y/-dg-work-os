@@ -3,6 +3,7 @@
 import { Spinner } from '@/components/ui/Spinner';
 import { RotateCcw } from 'lucide-react';
 import { ROLE_LABELS, ROLE_COLORS, ROLE_OPTIONS, TITLE_PRESETS } from '@/lib/people-types';
+import { USER_AGENCIES } from '@/lib/constants/agencies';
 import { normalizeRole } from '@/lib/auth-session';
 import type { ModuleRecord, ModuleOverride, ModuleOverrideDetailed } from '@/lib/module-types';
 
@@ -16,15 +17,8 @@ export interface UserRolesUser {
   agency: string | null;
 }
 
-const AGENCY_OPTIONS = [
-  { value: 'gpl', label: 'GPL' },
-  { value: 'gwi', label: 'GWI' },
-  { value: 'cjia', label: 'CJIA' },
-  { value: 'gcaa', label: 'GCAA' },
-  { value: 'heci', label: 'HECI' },
-  { value: 'marad', label: 'MARAD' },
-  { value: 'has', label: 'HAS' },
-];
+// Canonical UPPERCASE values per migration 106 — must match stored users.agency and the API's Zod enum.
+const AGENCY_OPTIONS = USER_AGENCIES.map(a => ({ value: a, label: a }));
 
 interface UserRolesSectionProps {
   user: UserRolesUser;
@@ -93,7 +87,7 @@ export function UserRolesSection({
             aria-label="User agency"
             className="w-full px-3 py-1.5 bg-navy-950 border border-navy-800 rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500/50"
           >
-            <option value="">No agency</option>
+            {!editAgency && <option value="" disabled>Select agency…</option>}
             {AGENCY_OPTIONS.map(a => (
               <option key={a.value} value={a.value}>{a.label}</option>
             ))}

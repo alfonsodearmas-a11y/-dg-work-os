@@ -4,6 +4,10 @@ export const AGENCY_CODES = ['MPUA', 'GPL', 'GWI', 'HECI', 'CJIA', 'MARAD', 'GCA
 /** Agency codes excluding internal-only slots — for user-facing filters and dropdowns */
 export const SELECTABLE_AGENCIES = AGENCY_CODES.filter(c => c !== 'MOPUA' && c !== 'HAS');
 
+/** Canonical users.agency values — mirrors the users_agency_check DB constraint exactly (migration 106). */
+export const USER_AGENCIES = ['GPL', 'GWI', 'CJIA', 'GCAA', 'HECI', 'MARAD', 'HAS'] as const;
+export type UserAgency = (typeof USER_AGENCIES)[number];
+
 /** Agency code → full display name mapping */
 export const AGENCY_NAMES: Record<string, string> = {
   MPUA: 'Ministry of Public Utilities and Aviation',

@@ -11,6 +11,7 @@ import { logger } from '@/lib/logger';
 import { grantModuleAccess, bulkUpsertModulePermissions } from '@/lib/modules/access';
 import { ROLE_LABELS } from '@/lib/people-types';
 import { normalizeRole } from '@/lib/auth-session';
+import { USER_AGENCIES } from '@/lib/constants/agencies';
 
 export async function GET() {
   const authResult = await requireRole(['superadmin']);
@@ -32,13 +33,11 @@ export async function GET() {
   return NextResponse.json({ users });
 }
 
-const VALID_AGENCIES = ['GPL', 'CJIA', 'GWI', 'GCAA', 'HECI', 'MARAD', 'HAS'] as const;
-
 const inviteSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
   role: z.enum(['superadmin', 'agency_manager'] as const),
-  agency: z.enum(VALID_AGENCIES).nullable().optional(),
+  agency: z.enum(USER_AGENCIES).nullable().optional(),
   formal_title: z.string().min(1).optional(),
 }).refine(
   (d) => d.role !== 'agency_manager' || !!d.agency,
