@@ -8,7 +8,6 @@ import { NotificationDeliveryError } from '@/lib/notifications/errors';
 import { sendInviteEmail } from '@/lib/invite-email';
 import { withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
-import { grantModuleAccess, bulkUpsertModulePermissions } from '@/lib/modules/access';
 import { ROLE_LABELS } from '@/lib/people-types';
 import { normalizeRole } from '@/lib/auth-session';
 import { USER_AGENCIES } from '@/lib/constants/agencies';
@@ -57,7 +56,6 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   const { email, name, role, agency } = parsed.data;
   const normalizedEmail = email.toLowerCase().trim();
-  const moduleGrants: string[] = Array.isArray(body.moduleGrants) ? body.moduleGrants : [];
 
   // D4 (role-simplification plan): only the system OWNER can create superadmin
   // accounts — not every superadmin.
@@ -143,19 +141,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     inviteToken,
   }).catch(() => ({ success: false, error: 'Email send failed' }));
 
-  // Grant explicit module access (prefer granular modulePermissions, fall back to moduleGrants)
-  const modulePermissions: Array<{ moduleSlug: string; canEdit: boolean }> = Array.isArray(body.modulePermissions) ? body.modulePermissions : [];
-  if (modulePermissions.length > 0) {
-    await bulkUpsertModulePermissions(
-      newUser.id,
-      modulePermissions.map(p => ({ moduleSlug: p.moduleSlug, accessType: 'grant' as const, canEdit: p.canEdit ?? false })),
-      session.user.id,
-    );
-  } else if (moduleGrants.length > 0) {
-    await Promise.all(
-      moduleGrants.map(slug => grantModuleAccess(newUser.id, slug, session.user.id))
-    );
-  }
+  // Module access is pure role-based (lib/modules/role-modules.ts) — nothing to grant at invite time.
 
   try {
     await insertNotification({

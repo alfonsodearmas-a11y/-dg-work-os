@@ -7,10 +7,8 @@ import {
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import { UserProfileSection } from './UserProfileSection';
-import { UserRolesSection, ModuleAccessSection } from './UserRolesSection';
+import { UserRolesSection } from './UserRolesSection';
 import { UserActivitySection } from './UserActivitySection';
-import type { ModuleInfo } from './UserRolesSection';
-import type { ModuleOverride, ModuleOverrideDetailed } from '@/lib/module-types';
 import type { AuditEntry } from './UserActivitySection';
 import { UserCheck, UserX, Clock } from 'lucide-react';
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/people-types';
@@ -67,14 +65,6 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [expandedSection, setExpandedSection] = useState<string | null>('profile');
 
-  // Module access state
-  const [allModules, setAllModules] = useState<ModuleInfo[]>([]);
-  const [moduleOverrides, setModuleOverrides] = useState<ModuleOverride[]>([]);
-  const [overridesDetailed, setOverridesDetailed] = useState<ModuleOverrideDetailed[]>([]);
-  const [modulesLoading, setModulesLoading] = useState(false);
-  const [moduleToggling, setModuleToggling] = useState<string | null>(null);
-  const [resettingDefaults, setResettingDefaults] = useState(false);
-
   const isSelf = user?.id === currentUserId;
   const status = user?.status || (user?.is_active ? 'active' : 'inactive');
 
@@ -98,161 +88,6 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
       setExpandedSection('profile');
     }
   }, [user]);
-
-  // Fetch modules + user overrides
-  const fetchModuleAccess = useCallback(async () => {
-    if (!user || !isDG) return;
-    setModulesLoading(true);
-    try {
-      const [modulesRes, overridesRes] = await Promise.all([
-        fetch('/api/admin/modules'),
-        fetch(`/api/admin/modules/access?userId=${user.id}`),
-      ]);
-      if (modulesRes.ok) {
-        const data = await modulesRes.json();
-        setAllModules(data.modules || []);
-      }
-      if (overridesRes.ok) {
-        const data = await overridesRes.json();
-        setModuleOverrides(data.overrides || []);
-        setOverridesDetailed(data.overridesDetailed || []);
-      }
-    } catch {}
-    setModulesLoading(false);
-  }, [user, isDG]);
-
-  useEffect(() => {
-    if (isOpen && user && isDG) fetchModuleAccess();
-  }, [isOpen, user, isDG, fetchModuleAccess]);
-
-  const toggleModuleAccess = async (moduleSlug: string, currentlyHasAccess: boolean) => {
-    if (!user) return;
-    setModuleToggling(moduleSlug);
-    try {
-      const res = await fetch('/api/admin/modules/access', {
-        method: currentlyHasAccess ? 'DELETE' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, moduleSlug }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setModuleOverrides(data.overrides || []);
-        setOverridesDetailed(data.overridesDetailed || []);
-        showToast(
-          currentlyHasAccess ? `Revoked access to ${moduleSlug}` : `Granted access to ${moduleSlug}`,
-          'success'
-        );
-      } else {
-        const data = await res.json().catch(() => ({}));
-        showToast(data.error || 'Failed to update module access', 'error');
-      }
-    } catch {
-      showToast('Failed to update module access', 'error');
-    }
-    setModuleToggling(null);
-  };
-
-  const toggleModuleEdit = async (moduleSlug: string, currentCanEdit: boolean) => {
-    if (!user) return;
-    setModuleToggling(moduleSlug);
-    try {
-      const res = await fetch('/api/admin/modules/access', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, moduleSlug, canEdit: !currentCanEdit }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setModuleOverrides(data.overrides || []);
-        setOverridesDetailed(data.overridesDetailed || []);
-        showToast(
-          !currentCanEdit ? `Edit access granted for ${moduleSlug}` : `Edit access revoked for ${moduleSlug}`,
-          'success'
-        );
-      } else {
-        const data = await res.json().catch(() => ({}));
-        showToast(data.error || 'Failed to update edit permission', 'error');
-      }
-    } catch {
-      showToast('Failed to update edit permission', 'error');
-    }
-    setModuleToggling(null);
-  };
-
-  const handleBulkPreset = async (preset: 'full' | 'view-only' | 'clear') => {
-    if (!user) return;
-    setResettingDefaults(true);
-    try {
-      if (preset === 'clear') {
-        const res = await fetch('/api/admin/modules/access/reset', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id }),
-        });
-        if (res.ok) {
-          setModuleOverrides([]);
-          setOverridesDetailed([]);
-          showToast('All module overrides cleared', 'success');
-        } else {
-          showToast('Failed to clear module access', 'error');
-        }
-      } else {
-        const activeModules = allModules.filter(m => m.is_active);
-        const permissions = activeModules.map(m => ({
-          moduleSlug: m.slug,
-          accessType: 'grant' as const,
-          canEdit: preset === 'full',
-        }));
-        const res = await fetch('/api/admin/modules/access/bulk', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id, permissions }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setOverridesDetailed(data.overridesDetailed || []);
-          // Rebuild overrides from detailed
-          setModuleOverrides(
-            (data.overridesDetailed || []).map((o: ModuleOverrideDetailed) => ({
-              slug: o.slug,
-              access_type: o.access_type,
-            }))
-          );
-          showToast(
-            preset === 'full' ? 'Full access granted to all modules' : 'View-only access granted to all modules',
-            'success'
-          );
-        } else {
-          showToast('Failed to apply bulk preset', 'error');
-        }
-      }
-    } catch {
-      showToast('Failed to apply bulk preset', 'error');
-    }
-    setResettingDefaults(false);
-  };
-
-  const resetToDefaults = async () => {
-    if (!user) return;
-    setResettingDefaults(true);
-    try {
-      const res = await fetch('/api/admin/modules/access/reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
-      });
-      if (res.ok) {
-        setModuleOverrides([]);
-        setOverridesDetailed([]);
-        showToast('Module access reset to role defaults', 'success');
-      } else {
-        showToast('Failed to reset module access', 'error');
-      }
-    } catch {
-      showToast('Failed to reset module access', 'error');
-    }
-    setResettingDefaults(false);
-  };
 
   // Fetch audit log
   const fetchAudit = useCallback(async () => {
@@ -515,25 +350,6 @@ export function UserDetailDrawer({ user, isOpen, isDG, currentUserId, onClose, o
               onFieldChange={handleFieldChange}
             />
           </Section>
-
-          {/* Module Access Section (DG only, not self, skip ministry roles who have full access) */}
-          {isDG && !isSelf && (user.role) !== 'superadmin' && (
-            <Section title="Module Access" id="modules" expanded={expandedSection === 'modules'} onToggle={() => toggleSection('modules')}>
-              <ModuleAccessSection
-                user={user}
-                allModules={allModules}
-                moduleOverrides={moduleOverrides}
-                overridesDetailed={overridesDetailed}
-                modulesLoading={modulesLoading}
-                moduleToggling={moduleToggling}
-                resettingDefaults={resettingDefaults}
-                onToggleModuleAccess={toggleModuleAccess}
-                onToggleModuleEdit={toggleModuleEdit}
-                onResetToDefaults={resetToDefaults}
-                onBulkPreset={handleBulkPreset}
-              />
-            </Section>
-          )}
 
           {/* Security Section (DG only, not self) */}
           {isDG && !isSelf && (

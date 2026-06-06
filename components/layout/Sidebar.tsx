@@ -82,9 +82,8 @@ function useTooltip() {
   return { tooltip, onEnter, onLeave };
 }
 
-// Restrict visibility beyond module access when set. Used for role-exclusive
-// items where the ministry-bypass in module access (lib/modules/access.ts)
-// would otherwise leak the item across roles.
+// requireRole restricts visibility beyond module access (lib/modules/role-modules.ts)
+// when set — belt-and-braces for role-exclusive items.
 interface NavItem {
   href: string;
   label: string;

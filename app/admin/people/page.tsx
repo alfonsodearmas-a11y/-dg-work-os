@@ -769,19 +769,6 @@ function FilterPill({ label, onRemove }: { label: string; onRemove: () => void }
   );
 }
 
-interface InviteModule {
-  id: string;
-  slug: string;
-  name: string;
-  default_roles: string[];
-  is_active: boolean;
-}
-
-interface InviteModulePermission {
-  enabled: boolean;
-  canEdit: boolean;
-}
-
 function InviteModal({
   onClose,
   onSuccess,
@@ -808,8 +795,6 @@ function InviteModal({
 
   const isMinistryRole = role === 'superadmin';
   const [submitting, setSubmitting] = useState(false);
-  const [modules, setModules] = useState<InviteModule[]>([]);
-  const [modulePerms, setModulePerms] = useState<Map<string, InviteModulePermission>>(new Map());
   const inviteModalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -827,112 +812,12 @@ function InviteModal({
     }
   }, []);
 
-  // Fetch available modules
-  useEffect(() => {
-    fetch('/api/admin/modules')
-      .then(r => r.json())
-      .then(data => {
-        if (data.modules) setModules(data.modules.filter((m: InviteModule) => m.is_active));
-      })
-      .catch(() => {});
-  }, []);
-
-  // When role changes, rebuild module permissions map with defaults
-  useEffect(() => {
-    setModulePerms(prev => {
-      const next = new Map(prev);
-      for (const m of modules) {
-        const isDefault = m.default_roles.some(r => normalizeRole(r) === role);
-        const existing = next.get(m.slug);
-        if (isDefault) {
-          // Default modules: mark enabled, keep canEdit if set
-          next.set(m.slug, { enabled: true, canEdit: existing?.canEdit ?? false });
-        } else if (!existing) {
-          // Non-default: disabled by default unless previously set
-          next.set(m.slug, { enabled: false, canEdit: false });
-        }
-      }
-      return next;
-    });
-  }, [role, modules]);
-
-  const toggleModuleEnabled = (slug: string) => {
-    setModulePerms(prev => {
-      const next = new Map(prev);
-      const current = next.get(slug);
-      if (current) {
-        next.set(slug, { enabled: !current.enabled, canEdit: !current.enabled ? current.canEdit : false });
-      } else {
-        next.set(slug, { enabled: true, canEdit: false });
-      }
-      return next;
-    });
-  };
-
-  const toggleModuleEdit = (slug: string) => {
-    setModulePerms(prev => {
-      const next = new Map(prev);
-      const current = next.get(slug);
-      if (current && current.enabled) {
-        next.set(slug, { ...current, canEdit: !current.canEdit });
-      }
-      return next;
-    });
-  };
-
-  const applyBulkPreset = (preset: 'full' | 'view-only' | 'clear') => {
-    setModulePerms(() => {
-      const next = new Map<string, InviteModulePermission>();
-      for (const m of modules) {
-        const isDefault = m.default_roles.some(r => normalizeRole(r) === role);
-        switch (preset) {
-          case 'full':
-            next.set(m.slug, { enabled: true, canEdit: true });
-            break;
-          case 'view-only':
-            next.set(m.slug, { enabled: true, canEdit: false });
-            break;
-          case 'clear':
-            // Keep defaults enabled but view-only, disable non-defaults
-            next.set(m.slug, { enabled: isDefault, canEdit: false });
-            break;
-        }
-      }
-      return next;
-    });
-  };
-
-  // Computed summary
-  const { enabledCount, editCount } = useMemo(() => {
-    let enabled = 0;
-    let edit = 0;
-    for (const p of modulePerms.values()) {
-      if (p.enabled) { enabled++; if (p.canEdit) edit++; }
-    }
-    return { enabledCount: enabled, editCount: edit };
-  }, [modulePerms]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim()) return;
 
     setSubmitting(true);
     try {
-      // Build modulePermissions array for new granular format
-      const modulePermissions: Array<{ moduleSlug: string; canEdit: boolean }> = [];
-      const moduleGrants: string[] = [];
-      for (const [slug, perm] of modulePerms.entries()) {
-        if (!perm.enabled) continue;
-        const mod = modules.find(m => m.slug === slug);
-        const isDefault = mod?.default_roles.some(r => normalizeRole(r) === role) ?? false;
-        // Always include in modulePermissions
-        modulePermissions.push({ moduleSlug: slug, canEdit: perm.canEdit });
-        // Backward compat: moduleGrants = non-default slugs that are granted
-        if (!isDefault) {
-          moduleGrants.push(slug);
-        }
-      }
-
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -942,8 +827,6 @@ function InviteModal({
           role,
           ...(title.trim() && { formal_title: title.trim() }),
           agency: agency || null,
-          moduleGrants,
-          modulePermissions,
         }),
       });
       const data = await res.json();
@@ -1072,99 +955,11 @@ function InviteModal({
             </p>
           </div>
 
-          {/* Module Permissions Grid */}
-          {modules.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs text-slate-400">Module Permissions</label>
-                <span className="text-[10px] text-navy-600">
-                  {enabledCount} enabled{editCount > 0 ? ` (${editCount} with edit)` : ''}
-                </span>
-              </div>
-
-              {/* Bulk preset buttons */}
-              <div className="flex items-center gap-2 mb-2">
-                <button
-                  type="button"
-                  onClick={() => applyBulkPreset('full')}
-                  className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-gold-500/20 text-gold-500 hover:bg-gold-500/30 transition-colors"
-                >
-                  Full Access
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyBulkPreset('view-only')}
-                  className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-navy-800/50 text-slate-400 hover:bg-navy-800 hover:text-white transition-colors"
-                >
-                  View Only All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyBulkPreset('clear')}
-                  className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-navy-800/50 text-slate-400 hover:bg-navy-800 hover:text-white transition-colors"
-                >
-                  Clear All
-                </button>
-              </div>
-
-              <div className="space-y-1 max-h-52 overflow-y-auto rounded-lg border border-navy-800 p-2 bg-navy-950">
-                {modules.map(mod => {
-                  const isDefault = mod.default_roles.includes(role);
-                  const perm = modulePerms.get(mod.slug);
-                  const isEnabled = perm?.enabled ?? isDefault;
-                  const canEdit = perm?.canEdit ?? false;
-
-                  return (
-                    <div
-                      key={mod.slug}
-                      className={`flex items-center gap-2.5 px-2 py-1.5 rounded transition-colors ${
-                        isEnabled ? 'bg-gold-500/5' : 'hover:bg-navy-800/30'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isEnabled}
-                        onChange={() => toggleModuleEnabled(mod.slug)}
-                        className="w-3.5 h-3.5 rounded border-navy-800 accent-gold-500 cursor-pointer shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <span className={`text-xs ${isEnabled ? 'text-white' : 'text-slate-400'}`}>{mod.name}</span>
-                        {isDefault && (
-                          <p className="text-[9px] text-gold-500">Default for role</p>
-                        )}
-                      </div>
-                      {/* View / Edit segmented toggle */}
-                      {isEnabled && (
-                        <div className="flex rounded-md border border-navy-800 overflow-hidden shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => { if (canEdit) toggleModuleEdit(mod.slug); }}
-                            className={`px-1.5 py-0.5 text-[9px] font-medium transition-colors ${
-                              !canEdit
-                                ? 'bg-navy-800/60 text-white'
-                                : 'bg-transparent text-navy-600 hover:text-slate-300'
-                            }`}
-                          >
-                            View
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => { if (!canEdit) toggleModuleEdit(mod.slug); }}
-                            className={`px-1.5 py-0.5 text-[9px] font-medium transition-colors ${
-                              canEdit
-                                ? 'bg-gold-500/20 text-gold-500'
-                                : 'bg-transparent text-navy-600 hover:text-slate-300'
-                            }`}
-                          >
-                            Edit
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+          {/* Module access is role-based: superadmin → everything; agency manager → all modules for their agency */}
+          {!isMinistryRole && (
+            <p className="text-[11px] text-navy-600">
+              Agency Managers automatically get every module for their agency — no per-user configuration.
+            </p>
           )}
 
           <button
