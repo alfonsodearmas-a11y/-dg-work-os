@@ -1,20 +1,13 @@
 -- 129_module_simplification_cleanup.sql
--- ⚠️ DESTRUCTIVE — STAGED, NOT YET RUN. Requires explicit owner approval before applying.
--- Module simplification cleanup ONLY (docs/module-simplification-plan.md, Phase 4).
--- Code stopped reading every object below at commit e0ab6e5 (Phase 1, 2026-06-06).
+-- ⚠️ DESTRUCTIVE — approved by owner 2026-06-06 (run-everything directive).
+-- Module simplification cleanup + role-flip soak items, in one pass.
+-- Code stopped reading the module/role tables at commit e0ab6e5 (2026-06-06);
+-- password_hash has had no readers/writers since the Supabase Auth cutover.
+-- Full pre-drop contents archived locally at ~/dg-work-os-archives/129/ (8 files).
 --
--- Explicitly EXCLUDED from this migration (approval revisions, 2026-06-06):
---   * users.formal_title — RETAINED (human-facing greeting label)
---   * Role-simplification soak items (users.password_hash, _role_migration_backup,
---     users_agency_values CHECK) — separate later step after a full week of soak;
---     _role_migration_backup stays as rollback insurance for the role flip.
---
--- Pre-flight (run before applying):
---   1. Branch rehearsal: create_branch (replays prod ledger) → apply this file → verify.
---   2. grep -rn "user_module_access\|from('modules')\|role_permissions\|core_permissions\|delegated_permissions" app lib components hooks
---      → must return nothing outside supabase/migrations/.
+-- RETAINED on purpose: users.formal_title (human-facing greeting label).
 
--- Pre-drop snapshots (kept until post-soak cleanup, mirroring 128's backup pattern)
+-- Pre-drop snapshots kept in-DB as a second safety net (drop after next soak)
 CREATE TABLE public._module_access_backup_129 AS
   SELECT u.email, m.slug, uma.access_type, uma.can_edit, uma.agency, uma.granted_at
   FROM public.user_module_access uma
@@ -31,3 +24,8 @@ DROP TABLE public.delegated_permissions;   -- 0 rows, no writers
 DROP TABLE public.role_permissions;
 DROP TABLE public.core_permissions;
 DROP TABLE public.roles;
+
+-- Role-flip soak items (migration 128 aftermath; archived locally before drop)
+ALTER TABLE public.users DROP COLUMN password_hash;          -- dead since Supabase Auth cutover
+ALTER TABLE public.users DROP CONSTRAINT users_agency_values; -- legacy lowercase-tolerant CHECK (045); users_agency_check (uppercase) remains
+DROP TABLE public._role_migration_backup;                     -- role-flip rollback snapshot, superseded by local archive
