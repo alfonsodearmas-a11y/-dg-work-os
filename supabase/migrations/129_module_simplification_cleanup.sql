@@ -23,6 +23,7 @@ DROP TABLE public.modules;
 DROP TABLE public.delegated_permissions;   -- 0 rows, no writers
 DROP TABLE public.role_permissions;
 DROP TABLE public.core_permissions;
+DROP TABLE public.invitation_tokens;       -- dead legacy invite table (0 rows, 0 code refs; live flow uses users.invite_token) — held an FK to roles
 DROP TABLE public.roles;
 
 -- Role-flip soak items (migration 128 aftermath; archived locally before drop)
