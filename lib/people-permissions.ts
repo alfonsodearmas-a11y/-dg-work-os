@@ -1,14 +1,29 @@
 import { supabaseAdmin } from './db';
-import type { Role, AccessLevel, ActionResult, RoleWithPermissions, ActivityLog, ObjectAccessGrant } from './people-types';
-import { ROLE_DISPLAY_ORDER } from './people-types';
+import type { Role, AccessLevel, ActionResult, ActivityLog, ObjectAccessGrant } from './people-types';
 import { normalizeRole } from './auth-session';
 
-// ─── Pattern 1: Check role-based permission ─────────────────────────
+// ─── Pattern 1: Check role-based permission (pure code map) ──────────
+// Role → permission is code, not DB config. Transcribed 1:1 from prod
+// role_permissions on 2026-06-06; superadmin holds every permission.
+const AGENCY_MANAGER_PERMISSIONS = new Set([
+  'agency.manage', 'agency.read',
+  'dashboard.create', 'dashboard.edit', 'dashboard.export', 'dashboard.read', 'dashboard.share',
+  'report.create', 'report.edit', 'report.export', 'report.read', 'report.share',
+  'task.create', 'task.delete', 'task.edit', 'task.read', 'task.share',
+  'user.invite', 'user.read',
+]);
+
+export function roleHasPermission(role: string, permissionName: string): boolean {
+  const normalized = normalizeRole(role) ?? role;
+  if (normalized === 'superadmin') return true;
+  if (normalized === 'agency_manager') return AGENCY_MANAGER_PERMISSIONS.has(permissionName);
+  return false;
+}
+
 export async function checkPermission(
   userId: string,
   permissionName: string
 ): Promise<boolean> {
-  // Get user role
   const { data: user } = await supabaseAdmin
     .from('users')
     .select('role')
@@ -16,74 +31,7 @@ export async function checkPermission(
     .single();
 
   if (!user) return false;
-
-  // Get role id
-  const { data: role } = await supabaseAdmin
-    .from('roles')
-    .select('id')
-    .eq('name', user.role)
-    .single();
-
-  if (!role) return false;
-
-  // Check role_permissions
-  const { data: perm } = await supabaseAdmin
-    .from('role_permissions')
-    .select('id, permission_id')
-    .eq('role_id', role.id)
-    .single();
-
-  // More efficient: join through permission name
-  const { count } = await supabaseAdmin
-    .from('role_permissions')
-    .select('id', { count: 'exact', head: true })
-    .eq('role_id', role.id)
-    .in('permission_id', (
-      await supabaseAdmin
-        .from('core_permissions')
-        .select('id')
-        .eq('name', permissionName)
-    ).data?.map(p => p.id) || []);
-
-  if ((count || 0) > 0) return true;
-
-  // Check delegated permissions
-  const { count: delegatedCount } = await supabaseAdmin
-    .from('delegated_permissions')
-    .select('id', { count: 'exact', head: true })
-    .eq('to_user_id', userId)
-    .in('permission_id', (
-      await supabaseAdmin
-        .from('core_permissions')
-        .select('id')
-        .eq('name', permissionName)
-    ).data?.map(p => p.id) || [])
-    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
-
-  return (delegatedCount || 0) > 0;
-}
-
-// ─── Optimized: batch check permissions for a role ───────────────────
-export async function getPermissionsForRole(roleName: Role): Promise<string[]> {
-  const { data: role } = await supabaseAdmin
-    .from('roles')
-    .select('id')
-    .eq('name', roleName)
-    .single();
-
-  if (!role) return [];
-
-  const { data } = await supabaseAdmin
-    .from('role_permissions')
-    .select('permission_id, core_permissions(name)')
-    .eq('role_id', role.id);
-
-  if (!data) return [];
-
-  return data.map((rp: Record<string, unknown>) => {
-    const cp = rp.core_permissions as { name: string } | null;
-    return cp?.name || '';
-  }).filter(Boolean);
+  return roleHasPermission(user.role, permissionName);
 }
 
 // ─── Pattern 2: Check object-level access ────────────────────────────
@@ -241,54 +189,6 @@ export async function setObjectOwnership(
   return { success: true };
 }
 
-// ─── Pattern 6: Delegate permission ──────────────────────────────────
-export async function delegatePermission(params: {
-  fromUserId: string;
-  toUserId: string;
-  permissionName: string;
-  expiresAt?: string;
-}): Promise<{ success: boolean; error?: string }> {
-  // Verify the granter has the permission
-  const hasPermission = await checkPermission(params.fromUserId, params.permissionName);
-  if (!hasPermission) {
-    return { success: false, error: 'You do not have this permission to delegate' };
-  }
-
-  // Get permission id
-  const { data: perm } = await supabaseAdmin
-    .from('core_permissions')
-    .select('id')
-    .eq('name', params.permissionName)
-    .single();
-
-  if (!perm) return { success: false, error: 'Permission not found' };
-
-  const { error } = await supabaseAdmin
-    .from('delegated_permissions')
-    .upsert({
-      from_user_id: params.fromUserId,
-      to_user_id: params.toUserId,
-      permission_id: perm.id,
-      expires_at: params.expiresAt || null,
-    }, {
-      onConflict: 'from_user_id,to_user_id,permission_id',
-    });
-
-  if (error) return { success: false, error: error.message };
-
-  await logActivity({
-    userId: params.fromUserId,
-    action: 'delegate_permission',
-    objectType: 'permission',
-    objectId: perm.id,
-    objectName: params.permissionName,
-    changes: { to_user_id: params.toUserId, expires_at: params.expiresAt },
-    result: 'success',
-  });
-
-  return { success: true };
-}
-
 // ─── Pattern 7: Get user's accessible objects ────────────────────────
 export async function getUserAccessibleObjects(
   userId: string,
@@ -369,52 +269,6 @@ export async function getUserActivityLog(
     .range(offset, offset + limit - 1);
 
   return (data || []) as ActivityLog[];
-}
-
-// ─── Get all roles with permissions ──────────────────────────────────
-export async function getRolesWithPermissions(): Promise<RoleWithPermissions[]> {
-  const { data: roles } = await supabaseAdmin
-    .from('roles')
-    .select('*')
-    .order('hierarchy_level', { ascending: false });
-
-  if (!roles) return [];
-
-  // Sort by explicit display order (handles same-level roles like Minister/DG)
-  roles.sort((a: { name: string }, b: { name: string }) =>
-    (ROLE_DISPLAY_ORDER[a.name] || 99) - (ROLE_DISPLAY_ORDER[b.name] || 99)
-  );
-
-  const result: RoleWithPermissions[] = [];
-
-  for (const role of roles) {
-    const { data: rps } = await supabaseAdmin
-      .from('role_permissions')
-      .select('core_permissions(*)')
-      .eq('role_id', role.id);
-
-    const permissions = (rps || []).map((rp: Record<string, unknown>) => {
-      return rp.core_permissions as unknown;
-    }).filter(Boolean);
-
-    result.push({
-      ...role,
-      permissions,
-    } as RoleWithPermissions);
-  }
-
-  return result;
-}
-
-// ─── Get all core permissions ────────────────────────────────────────
-export async function getAllPermissions() {
-  const { data } = await supabaseAdmin
-    .from('core_permissions')
-    .select('*')
-    .order('resource')
-    .order('action');
-
-  return data || [];
 }
 
 // ─── Get grants for an object ────────────────────────────────────────
