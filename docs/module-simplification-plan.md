@@ -8,7 +8,12 @@
 
 **Tech Stack:** Next.js 16 App Router, TypeScript, Supabase (project `ozcdsnpieeetzzwjqvjo`), Zod, vitest.
 
-**Status: AWAITING APPROVAL — nothing has been built.**
+**Status: APPROVED 2026-06-06 for Phases 0–3 with a REVISED Phase 2 (see below). Phase 4 (migration 129) is HELD for separate explicit approval — module cleanup only, `formal_title` is RETAINED.**
+
+**Approval revisions (override the original text where they conflict):**
+- D2, D3, deny-row vaporization: approved as written.
+- **D6 REVERSED:** `formal_title` is **KEPT** (column + data). It is the human-facing label; the role label is a permission word and must never be a salutation. Phase 2 below is rewritten accordingly; migration 129 no longer drops it.
+- Soak items (`password_hash`, `_role_migration_backup`, `users_agency_values`) are **NOT** in migration 129 — separate later step after a full week of soak. Migration 129 is module cleanup ONLY.
 
 ---
 
@@ -198,7 +203,7 @@ export const canEditModule = canAccessModule;
 - **D3 — `can_edit` concept is deleted; edit = access.** The only consumer is the airstrips page edit controls. Consequence: HAS managers (abraham, akeems) gain airstrips *edit* (today view-only). The two dormant procurement `can_edit=true` rows had no effect and lose nothing. `ModuleEditGate` (zero usages) is deleted.
 - **D4 — `grid-health` is GPL-specific** (it's "GPL Grid Health"; the sidebar already nests it under GPL). Non-GPL managers lose nominal (sidebar-hidden) access.
 - **D5 — `roles`/`role_permissions`/`core_permissions`/`delegated_permissions` become a code map and are dropped in cleanup.** `checkPermission()` keeps its signature but resolves from a constant (superadmin = all 31 permissions — verified exact against prod; agency_manager = the 19 rows in prod, transcribed in Task 1.7). `delegated_permissions` has 0 rows + no writers. `/api/people/permissions` has no client callers → deleted. `canManageUser()` is already pure code → untouched. Object sharing (`object_access_grants`, `object_ownership`, AccessControlPanel) is **kept** — it's content sharing, not role config.
-- **D6 — `formal_title` column: recommend DROP** in the Phase 4 cleanup migration (alongside the already-flagged soak items). Until then the column simply stops being read/written. NPTAB report signature (the only functional read) becomes a hardcoded constant — those reports are superadmin-generated ministry documents signed by the DG; today's code already falls back to exactly that string.
+- **D6 (REVISED AT APPROVAL) — `formal_title` is RETAINED** as the human-facing display label (greeting header, sidebar identity). It is removed only as *editable admin clutter* (drawer field, invite modal field, admin badge/list subtitles — those show the role label, the permission word). The greeting must render the title, never the role label. NPTAB signature reads stay as they are. Title is not derivable from role, so it stays stored per-user.
 - **D7 — `modules` table: DROP** in Phase 4. Once resolution is code, nothing reads it (Sidebar/ModuleGate/CommandPalette already hardcode slugs, names, icons).
 - **D8 — Invites become role + agency only.** The invite modal's per-module picker and the `modulePermissions`/`moduleGrants` body fields are removed.
 
@@ -553,23 +558,34 @@ Delete `getPermissionsForRole`, `getRolesWithPermissions`, `getAllPermissions`, 
 
 - [ ] **Step 4:** `npm test && npx tsc --noEmit` → PASS/clean. Commit: `feat(roles): role permissions resolved from code, not role_permissions table`
 
-## Phase 2 — Title removal (code-only)
+## Phase 2 (REVISED) — Title: remove as admin clutter, keep as human-facing greeting label
 
-### Task 2.1: Strip `formal_title` from UI
+The role label (Super Admin, Agency Manager) is a **permission word** — never a salutation. `formal_title` is the human label and is **retained** (column, data, session).
 
-**Files:** Modify `components/admin/UserRolesSection.tsx` (delete the entire "Title (display only)" `Field` 68-87 + `editTitle` prop + `TITLE_PRESETS` import; role badge at :64 → `ROLE_LABELS[user.role] ?? user.role`); `components/admin/UserDetailDrawer.tsx` (drop `editTitle` state/payload/handler; header :470 → `ROLE_LABELS[user.role] ?? user.role`; remove `formal_title` from its `User` type); `app/admin/people/page.tsx` (displays :634/:640 → `ROLE_LABELS[u.role] ?? u.role`; InviteModal: delete title state :800, input :1030-1039, payload :943; remove `formal_title` from the page's `User` type); `components/layout/Sidebar.tsx:168` → `const roleLabel = ROLE_LABELS[userRole as keyof typeof ROLE_LABELS] || userRole;`; `components/providers/ViewAsProvider.tsx` (remove `title` from `ViewAsTarget`/`EffectiveUser` and both `useMemo` blocks); `lib/people-types.ts` (delete `TITLE_PRESETS`; remove `formal_title` from `TeamMember`)
+### Task 2.1: Remove the editable Title field + role-subtitle clutter from admin screens
 
-- [ ] **Step 1:** Make the edits. **Step 2:** `npx tsc --noEmit && npm run build` → clean (compiler finds any missed consumer). Commit: `feat(people): remove Title (display only) — role label is the only descriptor`
+**Files:** Modify `components/admin/UserRolesSection.tsx` (delete the "Title (display only)" `Field` 68-87 + `editTitle` prop + `TITLE_PRESETS` import; role badge at :64 → `ROLE_LABELS[user.role] ?? user.role`); `components/admin/UserDetailDrawer.tsx` (drop `editTitle` state/payload/handler; header :470 → `ROLE_LABELS[user.role] ?? user.role`); `app/admin/people/page.tsx` (list displays :634/:640 → `ROLE_LABELS[u.role] ?? u.role`; InviteModal: delete title state :800, input :1030-1039, `formal_title` from payload :943); `lib/people-types.ts` (delete `TITLE_PRESETS`)
 
-### Task 2.2: Strip `formal_title` from APIs + session
+Admin screens show **role** (the permission), with no editable title field. `formal_title` stays in the user types/API selects (it still feeds the greeting and View As).
 
-**Files:** Modify `app/api/admin/users/route.ts` (GET select :21 drop `formal_title`; POST: remove from schema, drop `formalTitle` default :87 and insert :117); `app/api/admin/users/[id]/route.ts` (schema :25, update :165-167, selects :189/:195, audit :209); `lib/auth-session.ts` (remove `'title'`… wait — remove `formal_title` from `SESSION_FIELDS` :16, the `title` property :26-27, `ProfileRow.formal_title` :43, mapping :84); `lib/auth-supabase.ts:41` (drop `formal_title` from select); `app/api/nptab-reports/[id]/pdf/route.ts` + `submit/route.ts` (select `'name'` only; replace fallback expression with the constant below); Test `lib/__tests__/auth-contract.test.ts` (drop title fixtures/assertions :23/:38/:47-56)
+- [ ] **Step 1:** Make the edits. **Step 2:** `npx tsc --noEmit && npm run build` → clean. Commit: `feat(people): admin screens show role only — title is no longer admin-editable clutter`
+
+### Task 2.2: Greeting renders the title, never the role label
+
+**Files:** Modify `components/layout/AppShell.tsx` (~:91, the "Welcome back," header block) and/or `components/today/GreetingHeading.tsx` — wherever the role label is rendered as a salutation, switch to:
 
 ```ts
-const NPTAB_SIGNATURE_TITLE = 'Director General, Ministry of Public Utilities and Aviation';
+// Human-facing label: formal_title first; graceful fallback (name handled by the heading itself).
+const displayTitle = effectiveUser.title || null;  // null → render name only, no role word
 ```
 
-- [ ] **Step 1:** Make the edits. **Step 2:** `npm test && npx tsc --noEmit && npm run build` → clean. Commit: `feat(auth): drop formal_title from session and admin APIs`
+`components/layout/Sidebar.tsx:168` already prefers `effectiveUser.title` — keep. Invite route (`app/api/admin/users/route.ts:87`) stops defaulting `formal_title = ROLE_LABELS[role]` (that default *generates* the wrong data) — new users get `null` until the owner sets a title. PATCH route keeps accepting optional `formal_title` (plumbing for future edits — just no UI field). NPTAB signature reads: untouched. Session (`lib/auth-session.ts` `title`) and ViewAsProvider `title`: untouched (the greeting needs them).
+
+- [ ] **Step 1:** Make the edits. **Step 2:** `npm test && npx tsc --noEmit && npm run build` → clean. Commit: `feat(greeting): salute with formal_title, never the role label`
+
+### Task 2.3: Per-user title data (CONFIRM BEFORE WRITING)
+
+Audit prod `formal_title` for all 24 users; propose corrections (Director General, Minister, Permanent Secretary, Parliamentary Secretary, CEO where applicable). **Present the before/after table and get explicit confirmation before any UPDATE.**
 
 ## Phase 3 — Deploy + prod verification
 
@@ -579,6 +595,7 @@ const NPTAB_SIGNATURE_TITLE = 'Director General, Ministry of Public Utilities an
   - `test.gpl.manager@mpua.gov.gy`: sidebar = Mission Control, Agency Intel, Tasks, Oversight, Budget, Meetings, Calendar, Documents, Procurement + GPL agency section (with Grid Health); **no** Admin section, no other agencies. Mission Control shows GPL-scoped signals. Direct `/intel/gwi` → redirected home. `/applications` loads (GPL-scoped).
   - `test.heci.analyst@mpua.gov.gy` (ex-officer): same common set + HECI deep dive; Mission Control visible (deny rows now inert — code no longer reads them).
   - Owner account: People drawer for Christopher Vandeyar shows **Agency: GWI** (display bug gone); change a *test* user's agency GPL→GWI→GPL: both saves succeed; attempt is blocked client-side if agency cleared.
+  - Greeting header shows the owner's **formal_title ("Director General")**, not "Super Admin"; admin screens have **no editable Title field**.
   - Airstrips page as HAS manager: edit controls visible.
 - [ ] **Step 4:** Soak 3–7 days (overrides are inert but still in the DB — instant rollback = redeploy previous build).
 
@@ -606,11 +623,10 @@ DROP TABLE public.role_permissions;
 DROP TABLE public.core_permissions;
 DROP TABLE public.roles;
 
--- Title concept removed (D6)
-ALTER TABLE public.users DROP COLUMN formal_title;
+-- NOTE (approval revision): formal_title is RETAINED — no column drop here.
 ```
 
-Optionally fold in the already-flagged role-simplification soak items (decide at approval time): `DROP COLUMN users.password_hash`, `DROP TABLE public._role_migration_backup`, `DROP CONSTRAINT users_agency_values`.
+**Explicitly excluded** (approval revision): `users.formal_title` (retained — greeting label), and the role-simplification soak items (`password_hash`, `_role_migration_backup`, `users_agency_values`) — those are a separate later step after a full week of soak; `_role_migration_backup` stays as rollback insurance for the role flip. Migration 129 is module cleanup ONLY.
 
 **Branch rehearsal (before prod):** `create_branch` (replays the reconciled prod ledger → zero-diff schema) → `apply_migration` 129 on the branch → verify it applies cleanly (catches FK/dependency-order surprises, e.g. any unknown FK into `core_permissions`) → `list_tables` to confirm the six tables + column are gone and `_*_backup_129` exist → delete branch. Also re-run the Task 1.5 grep to prove zero code references before dropping.
 
