@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/db';
-import { canAccessModule } from '@/lib/modules/access';
+import { canAccessModule } from '@/lib/modules/role-modules';
 import { withErrorHandler } from '@/lib/api-utils';
 
 // GET /api/applications — list with filters, agency-scoped
@@ -11,7 +11,7 @@ async function _GET(req: NextRequest) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }
 
-  const hasAccess = await canAccessModule(session.user.id, session.user.role, 'applications');
+  const hasAccess = canAccessModule(session.user.role, session.user.agency, 'applications');
   if (!hasAccess) {
     return NextResponse.json({ error: "You don't have access to this module." }, { status: 403 });
   }
@@ -119,7 +119,7 @@ async function _POST(req: NextRequest) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }
 
-  const hasAccess = await canAccessModule(session.user.id, session.user.role, 'applications');
+  const hasAccess = canAccessModule(session.user.role, session.user.agency, 'applications');
   if (!hasAccess) {
     return NextResponse.json({ error: "You don't have access to this module." }, { status: 403 });
   }
