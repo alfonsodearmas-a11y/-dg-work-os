@@ -3,15 +3,16 @@
 import { useState, useCallback } from 'react';
 import {
   X, Upload, FileSpreadsheet, Check, AlertCircle, Loader2,
-  ArrowRight, ChevronDown, ChevronRight, AlertTriangle,
+  ChevronDown, ChevronRight, AlertTriangle, RotateCcw,
 } from 'lucide-react';
 import { DropZone } from '@/components/ui/DropZone';
 import { useToast } from '@/components/ui/Toast';
 import { parseDelayedProjectsFile, type ParsedUploadResult } from '@/lib/delayed-projects/upload-parser';
 import { validateRows, type ValidationResult } from '@/lib/delayed-projects/row-validator';
 import type { UploadResult } from '@/lib/delayed-projects/types';
-import { fmtCurrency, fmtDate } from '@/components/oversight/types';
+import { fmtCurrency } from '@/components/oversight/types';
 import { AgencyBadge } from './shared';
+import { getShortName } from '@/lib/delayed-projects/short-names';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -26,6 +27,13 @@ const ACCEPTED = {
   'text/csv': ['.csv'],
 };
 
+interface NeedsConfirmation {
+  activeDelayed: number;
+  absentCount: number;
+  absentFraction: number;
+  threshold: number;
+}
+
 export function UploadModal({ isOpen, onClose, onUploaded }: UploadModalProps) {
   const { toast } = useToast();
   const [step, setStep] = useState<0 | 1>(0);
@@ -36,6 +44,7 @@ export function UploadModal({ isOpen, onClose, onUploaded }: UploadModalProps) {
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const [showWarnings, setShowWarnings] = useState(false);
   const [showBlocked, setShowBlocked] = useState(false);
+  const [needsConfirmation, setNeedsConfirmation] = useState<NeedsConfirmation | null>(null);
 
   const reset = useCallback(() => {
     setStep(0);
@@ -46,6 +55,7 @@ export function UploadModal({ isOpen, onClose, onUploaded }: UploadModalProps) {
     setUploadResult(null);
     setShowWarnings(false);
     setShowBlocked(false);
+    setNeedsConfirmation(null);
   }, []);
 
   const handleClose = useCallback(() => {
@@ -72,7 +82,7 @@ export function UploadModal({ isOpen, onClose, onUploaded }: UploadModalProps) {
     }
   }, [toast]);
 
-  const handleUpload = useCallback(async () => {
+  const handleUpload = useCallback(async (confirmFullExport = false) => {
     if (!validation) return;
 
     const importable = validation.rows.filter((r) => r.status !== 'blocked').map((r) => r.data);
@@ -86,8 +96,22 @@ export function UploadModal({ isOpen, onClose, onUploaded }: UploadModalProps) {
       const res = await fetch('/api/delayed-projects/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: importable }),
+        body: JSON.stringify({ rows: importable, fileName: file?.name, confirmFullExport }),
       });
+
+      if (res.status === 409) {
+        const body = await res.json();
+        if (body.needsConfirmation) {
+          setNeedsConfirmation({
+            activeDelayed: body.activeDelayed,
+            absentCount: body.absentCount,
+            absentFraction: body.absentFraction,
+            threshold: body.threshold,
+          });
+          setUploading(false);
+          return;
+        }
+      }
 
       if (!res.ok) {
         const err = await res.json();
@@ -95,8 +119,10 @@ export function UploadModal({ isOpen, onClose, onUploaded }: UploadModalProps) {
       }
 
       const result: UploadResult = await res.json();
+      setNeedsConfirmation(null);
       setUploadResult(result);
-      toast.success(`Upload complete: ${result.inserted} new, ${result.updated} updated`);
+      const summary = `${result.new_count} new · ${result.updated_count} updated · ${result.resolved_count} cleared`;
+      toast.success(`Upload complete: ${summary}`);
       onUploaded();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Upload failed';
@@ -104,9 +130,14 @@ export function UploadModal({ isOpen, onClose, onUploaded }: UploadModalProps) {
     } finally {
       setUploading(false);
     }
-  }, [validation, toast, onUploaded]);
+  }, [validation, file, toast, onUploaded]);
 
   if (!isOpen) return null;
+
+  // Derived
+  const importableCount = validation
+    ? validation.rows.filter((r) => r.status !== 'blocked').length
+    : 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -120,7 +151,7 @@ export function UploadModal({ isOpen, onClose, onUploaded }: UploadModalProps) {
             <div>
               <h2 className="text-lg font-semibold text-white">Upload Project Data</h2>
               <p className="text-xs text-navy-600">
-                {step === 0 ? 'Select a spreadsheet file' : uploadResult ? 'Upload complete' : 'Review and confirm'}
+                {step === 0 ? 'Select a spreadsheet file' : uploadResult ? 'Upload complete' : needsConfirmation ? 'Confirm before proceeding' : 'Review and confirm'}
               </p>
             </div>
           </div>
@@ -141,8 +172,44 @@ export function UploadModal({ isOpen, onClose, onUploaded }: UploadModalProps) {
             />
           )}
 
+          {/* Step 1: Confirmation panel (409 guard trip) */}
+          {step === 1 && !uploadResult && needsConfirmation && (
+            <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-amber-300">Confirm full export?</p>
+                  <p className="text-xs text-amber-300/80 leading-relaxed">
+                    This file lists <span className="font-semibold">{importableCount}</span> projects,
+                    but <span className="font-semibold">{needsConfirmation.absentCount}</span> of{' '}
+                    <span className="font-semibold">{needsConfirmation.activeDelayed}</span> currently-delayed
+                    projects (<span className="font-semibold">{Math.round(needsConfirmation.absentFraction * 100)}%</span>) are
+                    not in it. If this is the complete current export, those{' '}
+                    <span className="font-semibold">{needsConfirmation.absentCount}</span> will be marked cleared.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleUpload(true)}
+                  disabled={uploading}
+                  className="btn-gold px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-50"
+                >
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  Yes — clear them
+                </button>
+                <button
+                  onClick={() => setNeedsConfirmation(null)}
+                  className="btn-navy px-4 py-2 text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Step 1: Validation + Upload */}
-          {step === 1 && !uploadResult && validation && parseResult && (
+          {step === 1 && !uploadResult && !needsConfirmation && validation && parseResult && (
             <>
               {/* File info */}
               <div className="flex items-center gap-3 p-3 bg-navy-950/60 rounded-lg border border-navy-800">
@@ -280,50 +347,84 @@ export function UploadModal({ isOpen, onClose, onUploaded }: UploadModalProps) {
           {/* Upload result */}
           {uploadResult && (
             <div className="space-y-4">
+              {/* Partial banner */}
+              {uploadResult.partial && (
+                <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                  <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+                  <p className="text-xs text-amber-300">
+                    <span className="font-semibold">{uploadResult.applied ?? '?'} of {uploadResult.planned ?? '?'} applied</span>
+                    {' '}— re-upload to finish.
+                  </p>
+                </div>
+              )}
+
+              {/* Success summary */}
               <div className="flex items-center gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
                 <Check className="h-6 w-6 text-emerald-400 shrink-0" />
                 <div>
                   <p className="text-sm font-semibold text-white">Upload Complete</p>
                   <p className="text-xs text-emerald-300/70">
-                    {uploadResult.inserted} new &middot; {uploadResult.updated} updated &middot; {uploadResult.unchanged} unchanged
+                    {uploadResult.new_count} new &middot; {uploadResult.updated_count} updated &middot;{' '}
+                    {uploadResult.resolved_count} cleared &middot; {uploadResult.reopened_count} reopened
                   </p>
                 </div>
               </div>
 
-              {/* Not in upload */}
-              {uploadResult.not_in_upload.length > 0 && (
-                <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="h-4 w-4 text-amber-400" />
-                    <p className="text-sm font-medium text-amber-400">
-                      {uploadResult.not_in_upload.length} projects not in this upload
-                    </p>
+              {/* Cleared analytics strip */}
+              {uploadResult.cleared_analytics && uploadResult.cleared_analytics.count > 0 && (
+                <div className={`grid gap-3 ${uploadResult.cleared_analytics.avg_days_to_clear !== null ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-center">
+                    <p className="text-lg font-bold text-amber-400">{uploadResult.cleared_analytics.count}</p>
+                    <p className="text-xs text-amber-400/70">Cleared</p>
                   </div>
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
-                    {uploadResult.not_in_upload.map((p) => (
-                      <div key={p.project_reference} className="flex items-center gap-2 text-xs text-amber-300/70">
-                        <AgencyBadge agency={p.sub_agency} />
-                        <span className="truncate">{p.project_name}</span>
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-center">
+                    <p className="text-lg font-bold text-amber-400">
+                      {fmtCurrency(uploadResult.cleared_analytics.total_contract_value / 100)}
+                    </p>
+                    <p className="text-xs text-amber-400/70">Value cleared</p>
+                  </div>
+                  {uploadResult.cleared_analytics.avg_days_to_clear !== null && (
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-center">
+                      <p className="text-lg font-bold text-amber-400">{uploadResult.cleared_analytics.avg_days_to_clear}d</p>
+                      <p className="text-xs text-amber-400/70">Avg time-to-clear</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Recently Cleared panel */}
+              {uploadResult.cleared.length > 0 && (
+                <div className="p-4 bg-navy-950/60 border border-navy-800 rounded-xl space-y-3">
+                  <p className="text-sm font-semibold text-white">Recently Cleared / No Longer Delayed</p>
+                  <div className="space-y-2 max-h-52 overflow-y-auto">
+                    {uploadResult.cleared.map((c) => (
+                      <div
+                        key={c.project_reference}
+                        className="flex items-center gap-2 text-xs py-1.5 border-b border-navy-800/60 last:border-0"
+                      >
+                        <AgencyBadge agency={c.sub_agency} />
+                        <span className="text-white flex-1 truncate font-medium">{getShortName(c.project_name)}</span>
+                        <span className="text-slate-400 tabular-nums shrink-0">{c.completion_percent}%</span>
+                        <span className="text-emerald-400/80 shrink-0">
+                          {new Date(c.resolved_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                        </span>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Biggest deltas */}
-              {uploadResult.biggest_deltas.length > 0 && (
-                <div className="p-4 bg-navy-950/60 border border-navy-800 rounded-xl">
-                  <p className="text-sm font-medium text-white mb-2">Biggest Changes</p>
-                  <div className="space-y-1.5">
-                    {uploadResult.biggest_deltas.slice(0, 5).map((d) => (
-                      <div key={d.project_id} className="flex items-center gap-2 text-xs">
-                        <AgencyBadge agency={d.sub_agency} />
-                        <span className="text-white truncate flex-1">{d.project_name}</span>
-                        <span className="text-slate-400">{d.previous_pct}%</span>
-                        <ArrowRight className="h-3 w-3 text-navy-600" />
-                        <span className="text-white font-medium">{d.current_pct}%</span>
-                        <span className={`font-medium ${d.delta > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          ({d.delta > 0 ? '+' : ''}{d.delta.toFixed(1)}%)
+              {/* Reopened list */}
+              {uploadResult.reopened.length > 0 && (
+                <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl space-y-2">
+                  <p className="text-sm font-semibold text-blue-300">Reopened</p>
+                  <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                    {uploadResult.reopened.map((r) => (
+                      <div key={`${r.sub_agency}-${r.project_name}`} className="flex items-center gap-2 text-xs">
+                        <AgencyBadge agency={r.sub_agency} />
+                        <span className="text-white flex-1 truncate">{getShortName(r.project_name)}</span>
+                        <span className="px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-medium border border-blue-500/30">
+                          reopened
                         </span>
                       </div>
                     ))}
@@ -340,11 +441,11 @@ export function UploadModal({ isOpen, onClose, onUploaded }: UploadModalProps) {
             <button onClick={handleClose} className="btn-gold px-4 py-2 text-sm">
               Done
             </button>
-          ) : step === 1 ? (
+          ) : step === 1 && !needsConfirmation ? (
             <>
               <button onClick={reset} className="btn-navy px-4 py-2 text-sm">Back</button>
               <button
-                onClick={handleUpload}
+                onClick={() => handleUpload(false)}
                 disabled={
                   uploading ||
                   !validation ||

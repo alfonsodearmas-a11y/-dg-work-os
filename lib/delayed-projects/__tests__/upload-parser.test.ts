@@ -38,10 +38,10 @@ describe('parseDelayedProjectsFile — oversight-project-list-2026 fixture', () 
     expect(first.executing_agency).toBe('MOPUA');
   });
 
-  it('skips the View Project column without dropping anything else', () => {
-    expect(result.headerMapping['View Project']).toBeNull();
-    expect(result.headerMapping['Project Title']).toBe('project_name');
-    expect(result.headerMapping['Agency Short Name']).toBe('executing_agency');
-    expect(result.headerMapping['Sub Agency Short Name']).toBe('sub_agency');
+  it('captures View Project as a numeric source_id', () => {
+    expect(result.headerMapping['View Project']).toBe('source_id');
+    expect(result.rows[0].source_id).toBe(30068);
+    expect(result.rows.every((r) => typeof r.source_id === 'number')).toBe(true);
+    expect(new Set(result.rows.map((r) => r.source_id)).size).toBe(result.rows.length); // unique
   });
 });

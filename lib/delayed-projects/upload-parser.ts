@@ -44,16 +44,11 @@ const COLUMN_MAP: { pattern: string[]; field: string }[] = [
   { pattern: ['has images'], field: 'has_images' },
 ];
 
-/**
- * Columns to skip (not mapped to DB fields). Anchored regexes — bare
- * substrings here are dangerous (a substring 'view' silently drops 'Overview',
- * 'Preview', 'Reviewed', etc.).
- */
-const SKIP_PATTERNS: RegExp[] = [/^view( project)?$/];
-
 function mapHeader(header: string): string | null {
   const norm = normalize(header);
-  if (SKIP_PATTERNS.some((re) => re.test(norm))) return null;
+  // Exact-equality match for "view project"/"view" → source_id. Must stay anchored
+  // so "Overview", "Preview", "Reviewed", etc. never match.
+  if (norm === 'view project' || norm === 'view') return 'source_id';
   for (const entry of COLUMN_MAP) {
     if (entry.pattern.some((p) => norm.includes(p))) return entry.field;
   }
@@ -75,6 +70,8 @@ export interface ParsedDelayedProject {
   completion_percent: number;
   has_images: boolean;
   status: string;
+  /** Numeric id from the oversight portal "View Project" column. Null when absent or non-numeric. */
+  source_id: number | null;
 }
 
 export interface ParsedUploadResult {
@@ -179,6 +176,10 @@ export function parseDelayedProjectsFile(
 
     if (executingAgencyDefaulted) executingAgencyDefaultedCount++;
 
+    // Parse source_id from the "View Project" column (numeric oversight portal id)
+    const sid = parseInt(String(mapped.source_id ?? '').trim(), 10);
+    const sourceId: number | null = Number.isNaN(sid) ? null : sid;
+
     rows.push({
       project_reference: ref,
       executing_agency: mapped.executing_agency?.trim() || 'MOPUA',
@@ -192,6 +193,7 @@ export function parseDelayedProjectsFile(
       completion_percent: Math.round(completionPct * 100) / 100, // 2 decimal places
       has_images: hasImages,
       status: mapped.status?.trim() || 'DELAYED',
+      source_id: sourceId,
     });
   }
 

@@ -114,7 +114,7 @@ export async function fetchDelayedProjectSignals(
 
   const missingStalled = stalledIds.filter((id) => !byId.has(id));
   if (missingStalled.length > 0) {
-    let q = supabaseAdmin.from('delayed_projects').select('*').in('id', missingStalled);
+    let q = supabaseAdmin.from('delayed_projects').select('*').eq('status', 'DELAYED').in('id', missingStalled);
     if (agencyFilter) q = q.eq('sub_agency', agencyFilter);
     const { data: extra, error } = await q;
     if (error) {

@@ -12,7 +12,8 @@ export async function snapshotBeforeUpload(): Promise<{ snapshotted: number; dat
 
   const { data: projects, error } = await supabaseAdmin
     .from('delayed_projects')
-    .select('id, completion_percent, contract_value, project_end_date, status');
+    .select('id, completion_percent, contract_value, project_end_date, status')
+    .eq('status', 'DELAYED');
 
   if (error) {
     logger.error({ error }, 'Failed to fetch projects for snapshot');
