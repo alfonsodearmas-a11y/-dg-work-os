@@ -44,20 +44,11 @@ const COLUMN_MAP: { pattern: string[]; field: string }[] = [
   { pattern: ['has images'], field: 'has_images' },
 ];
 
-/**
- * Columns to skip (not mapped to DB fields). Anchored regexes — bare
- * substrings here are dangerous (a substring 'view' silently drops 'Overview',
- * 'Preview', 'Reviewed', etc.).
- */
-const SKIP_PATTERNS: RegExp[] = [];
-
 function mapHeader(header: string): string | null {
   const norm = normalize(header);
-  // Anchored exact match for the "View Project" column — captures the numeric
-  // oversight source id. Must be exact to avoid matching "Overview", "Preview",
-  // "Reviewed", etc.
+  // Exact-equality match for "view project"/"view" → source_id. Must stay anchored
+  // so "Overview", "Preview", "Reviewed", etc. never match.
   if (norm === 'view project' || norm === 'view') return 'source_id';
-  if (SKIP_PATTERNS.some((re) => re.test(norm))) return null;
   for (const entry of COLUMN_MAP) {
     if (entry.pattern.some((p) => norm.includes(p))) return entry.field;
   }

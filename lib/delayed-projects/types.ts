@@ -196,14 +196,7 @@ export interface UploadBatch {
 }
 
 export interface UploadResult {
-  // Legacy fields — kept for UploadModal.tsx compat (Task 7 migrates them)
-  updated: number;
-  inserted: number;
-  unchanged: number;
-  not_in_upload: { project_reference: string; project_name: string; sub_agency: string }[];
-  biggest_deltas: DeltaEntry[];
-  snapshot_date: string;
-  // New committed-count fields
+  // Committed-count fields
   new_count: number;
   updated_count: number;
   resolved_count: number;
