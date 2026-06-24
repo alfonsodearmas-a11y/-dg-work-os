@@ -437,7 +437,7 @@ async function getWeeklyMovement(): Promise<WeeklyMovement | null> {
 
   // Top movers (positive delta, top 5 desc) and top stalls (|delta| < 1, top 5)
   const sorted = [...deltas].sort((a, b) => b.delta - a.delta);
-  const topMovers = sorted.filter((d) => d.delta > 0).slice(0, 5);
+  const topMovers = sorted.filter((d) => d.delta > 1).slice(0, 5);
   const topStalls = sorted.filter((d) => Math.abs(d.delta) < 1).slice(0, 5);
 
   return {
@@ -642,22 +642,31 @@ export async function deleteIntervention(id: string): Promise<void> {
 }
 
 export async function getInterventionSummary(): Promise<InterventionSummary> {
+  // Scope to DELAYED projects only via inner join so counts never include RESOLVED-project interventions.
+  // This ensures total_projects (DELAYED count) >= projectsWithInterventions.size, keeping projects_with_zero >= 0.
   const { data: interventions, error } = await supabaseAdmin
     .from('interventions')
-    .select('id, status, project_id');
+    .select('id, status, project_id, delayed_projects!inner(status)')
+    .eq('delayed_projects.status', 'DELAYED');
 
   if (error) {
     logger.error({ error }, 'Failed to fetch intervention summary');
     return { total: 0, pending: 0, in_progress: 0, completed: 0, overdue: 0, projects_with_zero: 0, total_projects: 0 };
   }
 
-  const rows = interventions || [];
+  // Strip the joined `delayed_projects` field — we only needed it for filtering.
+  const rows = (interventions || []).map((row: Record<string, unknown>) => ({
+    id: row.id as string,
+    status: row.status as string,
+    project_id: row.project_id as string,
+  }));
+
   const pending = rows.filter((r) => r.status === 'PENDING').length;
   const in_progress = rows.filter((r) => r.status === 'IN_PROGRESS').length;
   const completed = rows.filter((r) => r.status === 'COMPLETED').length;
   const overdue = rows.filter((r) => r.status === 'OVERDUE').length;
 
-  // Count projects with zero interventions (DELAYED only — RESOLVED shouldn't be flagged as unattended)
+  // Count DELAYED projects (now guaranteed >= projectsWithInterventions.size).
   const { count: totalProjects } = await supabaseAdmin
     .from('delayed_projects')
     .select('id', { count: 'exact', head: true })
