@@ -417,6 +417,9 @@ async function getWeeklyMovement(): Promise<WeeklyMovement | null> {
     regressed,
     new_entries: newEntries,
     exits,
+    // cleared/reopened derived from reconcile batches — Task 5 fills these from DB
+    cleared: 0,
+    reopened: 0,
     top_movers: topMovers,
     top_stalls: topStalls,
   };

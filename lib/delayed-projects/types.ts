@@ -13,7 +13,12 @@ export interface DelayedProject {
   project_end_date: string | null; // ISO date
   completion_percent: number;
   has_images: boolean;
-  status: string;
+  status: 'DELAYED' | 'RESOLVED';
+  source_id: number | null;
+  resolved_at: string | null;
+  reopened_at: string | null;
+  last_seen_batch_id: string | null;
+  resolved_by_batch_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -138,7 +143,10 @@ export interface WeeklyMovement {
   stalled: number;
   regressed: number;
   new_entries: number;
-  exits: number;
+  /** @deprecated Use `cleared` instead. Kept for backward-compat until Task 5 migrates queries. */
+  exits?: number;
+  cleared: number;
+  reopened: number;
   top_movers: DeltaEntry[];
   top_stalls: DeltaEntry[];
 }
@@ -153,13 +161,64 @@ export interface DeltaEntry {
   stalled_weeks?: number;
 }
 
+// ── Upload / Batch Types ─────────────────────────────────────────────────────
+
+export interface ClearedProjectRef {
+  source_id: number | null;
+  project_reference: string;
+  project_name: string;
+  sub_agency: string;
+  completion_percent: number;
+  contract_value: number;
+  resolved_at: string;
+  created_at: string | null;
+  resolved_by_file?: string;
+}
+
+export interface ClearedAnalytics {
+  count: number;
+  total_contract_value: number;
+  avg_days_to_clear: number | null;
+}
+
+export interface UploadBatch {
+  id: string;
+  file_name: string | null;
+  uploaded_at: string;
+  uploaded_by: string | null;
+  row_count: number;
+  new_count: number;
+  updated_count: number;
+  resolved_count: number;
+  reopened_count: number;
+  created_at: string;
+}
+
 export interface UploadResult {
+  // Legacy fields — kept for UploadModal.tsx compat (Task 7 migrates them)
   updated: number;
   inserted: number;
   unchanged: number;
   not_in_upload: { project_reference: string; project_name: string; sub_agency: string }[];
   biggest_deltas: DeltaEntry[];
   snapshot_date: string;
+  // New committed-count fields
+  new_count: number;
+  updated_count: number;
+  resolved_count: number;
+  reopened_count: number;
+  cleared: ClearedProjectRef[];
+  reopened: { project_name: string; sub_agency: string }[];
+  cleared_analytics: ClearedAnalytics;
+  partial: boolean;
+  applied?: number;
+  planned?: number;
+  // Guard-trip response fields (only present when needsConfirmation = true)
+  needsConfirmation?: boolean;
+  activeDelayed?: number;
+  absentCount?: number;
+  absentFraction?: number;
+  threshold?: number;
 }
 
 export interface InterventionSummary {

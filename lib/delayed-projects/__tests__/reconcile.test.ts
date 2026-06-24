@@ -17,7 +17,7 @@ const inc = (o: Partial<any> = {}) => ({
   status: 'DELAYED',
   ...o,
 });
-const ex = (o: Partial<any> = {}) => ({
+const ex = (o: Partial<any> = {}): import('../reconcile').ExistingRow => ({
   id: 'u1',
   source_id: 1,
   project_reference: 'R1',
