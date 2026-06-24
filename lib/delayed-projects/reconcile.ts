@@ -257,12 +257,20 @@ export async function reconcileUpload(
       last_seen_batch_id: batchId,
     }));
 
-    const { error: insertErr } = await supabaseAdmin.from('delayed_projects').insert(insertRows);
+    // Upsert on project_reference (the table's natural unique key) rather than a plain
+    // insert: a genuinely-new ref inserts, while a raw-vs-trimmed ref collision with a
+    // legacy row updates in place instead of raising a unique violation. Matches the
+    // pre-reconciliation upload behavior.
+    const { error: insertErr } = await supabaseAdmin
+      .from('delayed_projects')
+      .upsert(insertRows, { onConflict: 'project_reference' });
 
     if (insertErr) {
       logger.error({ error: insertErr, chunk: i }, 'reconcileUpload: bulk insert chunk failed — falling back one-by-one');
       for (const row of insertRows) {
-        const { error: singleErr } = await supabaseAdmin.from('delayed_projects').insert(row);
+        const { error: singleErr } = await supabaseAdmin
+          .from('delayed_projects')
+          .upsert(row, { onConflict: 'project_reference' });
         if (singleErr) {
           logger.error({ error: singleErr, ref: row.project_reference }, 'reconcileUpload: single insert failed');
         } else {
