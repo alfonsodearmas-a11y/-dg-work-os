@@ -81,6 +81,7 @@ export async function GET(_req: NextRequest) {
       supabaseAdmin
         .from('delayed_projects')
         .select('sub_agency, contract_value, completion_percent, project_end_date')
+        .eq('status', 'DELAYED')
         .in('sub_agency', Object.keys(upperToLower)),
       supabaseAdmin
         .from('tender')
