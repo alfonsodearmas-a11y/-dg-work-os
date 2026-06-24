@@ -234,6 +234,7 @@ export async function reconcileUpload(
   let committedNew = 0;
   let committedUpdated = 0;
   let committedReopened = 0;
+  const committedReopenedList: { project_name: string; sub_agency: string }[] = [];
 
   // Track reopen status per id for attribution
   const updateReopenMap = new Map<string, boolean>();
@@ -315,14 +316,26 @@ export async function reconcileUpload(
           logger.error({ error: singleErr, id: row.id }, 'reconcileUpload: single update failed');
         } else {
           const reopened = updateReopenMap.get(row.id) ?? false;
-          if (reopened) committedReopened++;
-          else committedUpdated++;
+          if (reopened) {
+            committedReopened++;
+            // Find the plan entry to get project_name / sub_agency
+            const planEntry = plan.toUpdate.find((u) => u.existing.id === row.id);
+            if (planEntry) {
+              committedReopenedList.push({ project_name: planEntry.incoming.project_name, sub_agency: planEntry.incoming.sub_agency });
+            }
+          } else {
+            committedUpdated++;
+          }
         }
       }
     } else {
       for (const u of chunk) {
-        if (u.reopened) committedReopened++;
-        else committedUpdated++;
+        if (u.reopened) {
+          committedReopened++;
+          committedReopenedList.push({ project_name: u.incoming.project_name, sub_agency: u.incoming.sub_agency });
+        } else {
+          committedUpdated++;
+        }
       }
     }
   }
@@ -426,14 +439,6 @@ export async function reconcileUpload(
   const planned = plan.toInsert.length + plan.toUpdate.length + plan.toResolveIds.length;
   const applied = committedNew + committedUpdated + committedReopened + committedResolved;
 
-  // Reopened list (from committed updates that were reopens)
-  const reopenedList: { project_name: string; sub_agency: string }[] = plan.toUpdate
-    .filter((u) => u.reopened)
-    .map((u) => ({ project_name: u.incoming.project_name, sub_agency: u.incoming.sub_agency }));
-  // Note: we use plan.toUpdate filtered by .reopened since chunk-level fallback
-  // tracks counts but not which specific rows committed. For the reopen list,
-  // optimistic inclusion is acceptable (partial flag signals any partial failure).
-
   logger.info(
     { batchId, committedNew, committedUpdated, committedReopened, committedResolved, partial: applied < planned },
     'reconcileUpload: complete',
@@ -457,7 +462,7 @@ export async function reconcileUpload(
     resolved_count: committedResolved,
     reopened_count: committedReopened,
     cleared: clearedRefs,
-    reopened: reopenedList,
+    reopened: committedReopenedList,
     cleared_analytics: {
       count: clearedRefs.length,
       total_contract_value: totalContractValue,
