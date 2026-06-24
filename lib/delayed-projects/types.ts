@@ -89,6 +89,9 @@ export interface ComputedFields {
   delta_completion: number | null;
   stalled_weeks: number | null;
   intervention_count: number;
+  // Populated only in RESOLVED view
+  resolved_by_file?: string | null;
+  resolved_by_uploaded_at?: string | null;
 }
 
 export type DelayedProjectWithComputed = DelayedProject & ComputedFields;
@@ -143,8 +146,6 @@ export interface WeeklyMovement {
   stalled: number;
   regressed: number;
   new_entries: number;
-  /** @deprecated Use `cleared` instead. Kept for backward-compat until Task 5 migrates queries. */
-  exits?: number;
   cleared: number;
   reopened: number;
   top_movers: DeltaEntry[];
@@ -249,6 +250,7 @@ export interface RegistryFilters {
   sort_dir?: 'asc' | 'desc';
   page?: number;
   limit?: number;
+  status?: 'DELAYED' | 'RESOLVED';
 }
 
 export interface InterventionFilters {

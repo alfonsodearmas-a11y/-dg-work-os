@@ -16,6 +16,7 @@ import {
   type InterventionFilters,
   type InterventionType,
   type InterventionStatus,
+  type ClearedAnalytics,
   enrichProject,
   computeDaysOverdue,
   computeRemainingValue,
@@ -31,6 +32,7 @@ const SORT_MAP: Record<string, string> = {
   agency: 'sub_agency',
   name: 'project_name',
   region: 'region',
+  resolved_at: 'resolved_at',
 };
 
 // ── Snapshot Delta Computation ───────────────────────────────────────────────
@@ -95,6 +97,7 @@ export async function getProjects(
   const page = filters.page || 1;
   const limit = filters.limit || 25;
   const offset = (page - 1) * limit;
+  const statusFilter = filters.status ?? 'DELAYED';
 
   let countQuery = supabaseAdmin
     .from('delayed_projects')
@@ -102,6 +105,7 @@ export async function getProjects(
   let dataQuery = supabaseAdmin.from('delayed_projects').select('*');
 
   function applyFilters<T extends typeof countQuery>(q: T): T {
+    q = q.eq('status', statusFilter) as T;
     if (agencyFilter) q = q.eq('sub_agency', agencyFilter) as T;
     if (filters.sub_agencies?.length) q = q.in('sub_agency', filters.sub_agencies) as T;
     if (filters.regions?.length) q = q.in('region', filters.regions) as T;
@@ -116,7 +120,9 @@ export async function getProjects(
   countQuery = applyFilters(countQuery);
   dataQuery = applyFilters(dataQuery);
 
-  const sortField = filters.sort || 'remaining_value';
+  // Default sort: RESOLVED view sorts by resolved_at desc; DELAYED view by remaining_value desc
+  const defaultSort = statusFilter === 'RESOLVED' ? 'resolved_at' : 'remaining_value';
+  const sortField = filters.sort || defaultSort;
   const sortDir = filters.sort_dir || 'desc';
   const COMPUTED_SORTS = new Set(['remaining_value', 'risk', 'overdue', 'interventions']);
   const isComputedSort = COMPUTED_SORTS.has(sortField);
@@ -176,6 +182,40 @@ export async function getProjects(
     return { projects: enriched, total: enriched.length };
   }
 
+  // For RESOLVED view: attach human-readable batch metadata
+  if (statusFilter === 'RESOLVED') {
+    const batchIds = [
+      ...new Set(
+        enriched
+          .map((p) => p.resolved_by_batch_id)
+          .filter((id): id is string => id != null),
+      ),
+    ];
+    if (batchIds.length > 0) {
+      const { data: batches } = await supabaseAdmin
+        .from('upload_batches')
+        .select('id, file_name, uploaded_at')
+        .in('id', batchIds);
+      const batchMap = new Map<string, { file_name: string | null; uploaded_at: string }>();
+      for (const b of batches || []) {
+        batchMap.set(b.id, { file_name: b.file_name, uploaded_at: b.uploaded_at });
+      }
+      enriched = enriched.map((p) => {
+        if (p.resolved_by_batch_id) {
+          const batch = batchMap.get(p.resolved_by_batch_id);
+          if (batch) {
+            return {
+              ...p,
+              resolved_by_file: batch.file_name,
+              resolved_by_uploaded_at: batch.uploaded_at,
+            };
+          }
+        }
+        return p;
+      });
+    }
+  }
+
   return {
     projects: enriched,
     total: countResult.count || 0,
@@ -187,7 +227,8 @@ export async function getProjects(
 export async function getSummary(agencyFilter?: string): Promise<WarRoomSummary> {
   let query = supabaseAdmin
     .from('delayed_projects')
-    .select('id, sub_agency, region, contract_value, completion_percent, project_end_date, status, project_name');
+    .select('id, sub_agency, region, contract_value, completion_percent, project_end_date, status, project_name')
+    .eq('status', 'DELAYED');
   if (agencyFilter) query = query.eq('sub_agency', agencyFilter);
 
   const { data: rows, error } = await query;
@@ -329,82 +370,72 @@ function emptySummary(): WarRoomSummary {
 // ── Weekly Movement ─────────────────────────────────────────────────────────
 
 async function getWeeklyMovement(): Promise<WeeklyMovement | null> {
-  // Get the two most recent distinct snapshot dates
-  const { data: dates } = await supabaseAdmin
-    .from('delayed_project_snapshots')
-    .select('snapshot_date')
-    .order('snapshot_date', { ascending: false });
-
-  if (!dates || dates.length === 0) return null;
-
-  const uniqueDates = [...new Set(dates.map((d) => d.snapshot_date))].sort().reverse();
-  if (uniqueDates.length < 2) return null;
-
-  const currentDate = uniqueDates[0];
-  const previousDate = uniqueDates[1];
-
-  // Fetch snapshots for both dates
-  const [{ data: currentSnaps }, { data: previousSnaps }] = await Promise.all([
-    supabaseAdmin.from('delayed_project_snapshots').select('*').eq('snapshot_date', currentDate),
-    supabaseAdmin.from('delayed_project_snapshots').select('*').eq('snapshot_date', previousDate),
+  // Get snapshot map (pre-upload state) and latest batch in parallel
+  const [snapshotMap, batchResult, delayedResult] = await Promise.all([
+    getLatestSnapshotMap(),
+    supabaseAdmin
+      .from('upload_batches')
+      .select('uploaded_at, new_count, resolved_count, reopened_count')
+      .order('uploaded_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('delayed_projects')
+      .select('id, project_name, sub_agency, completion_percent')
+      .eq('status', 'DELAYED'),
   ]);
 
-  if (!currentSnaps || !previousSnaps) return null;
+  // No snapshots = no movement data
+  if (snapshotMap.size === 0) return null;
 
-  const prevMap = new Map<string, DelayedProjectSnapshot>();
-  for (const s of previousSnaps as DelayedProjectSnapshot[]) {
-    prevMap.set(s.project_id, s);
-  }
+  const latestBatch = batchResult.data;
+  const liveProjects = (delayedResult.data || []) as {
+    id: string;
+    project_name: string;
+    sub_agency: string;
+    completion_percent: number;
+  }[];
 
-  const currMap = new Map<string, DelayedProjectSnapshot>();
-  for (const s of currentSnaps as DelayedProjectSnapshot[]) {
-    currMap.set(s.project_id, s);
-  }
+  // Determine anchor dates
+  const snapshotDates = [...snapshotMap.values()].map((v) => v.snapshot_date);
+  const latestSnapshotDate = snapshotDates.reduce((a, b) => (a > b ? a : b), snapshotDates[0]);
+  const previousDate = latestSnapshotDate;
+  const currentDate = latestBatch?.uploaded_at
+    ? latestBatch.uploaded_at.slice(0, 10)
+    : latestSnapshotDate;
 
+  // Source new_entries / cleared / reopened from latest batch
+  const newEntries = latestBatch?.new_count ?? 0;
+  const cleared = latestBatch?.resolved_count ?? 0;
+  const reopened = latestBatch?.reopened_count ?? 0;
+
+  // Compute progressed / stalled / regressed: snapshot (pre-upload) vs live (still DELAYED)
   let progressed = 0;
   let stalled = 0;
   let regressed = 0;
   const deltas: DeltaEntry[] = [];
 
-  // Fetch project names for display
-  const projectIds = [...new Set([...currMap.keys(), ...prevMap.keys()])];
-  const { data: projectNames } = await supabaseAdmin
-    .from('delayed_projects')
-    .select('id, project_name, sub_agency')
-    .in('id', projectIds);
+  for (const live of liveProjects) {
+    const snap = snapshotMap.get(live.id);
+    if (!snap) continue; // no snapshot = we can't compute a delta
 
-  const nameMap = new Map<string, { name: string; agency: string }>();
-  for (const p of projectNames || []) {
-    nameMap.set(p.id, { name: p.project_name, agency: p.sub_agency });
-  }
-
-  for (const [pid, curr] of currMap) {
-    const prev = prevMap.get(pid);
-    if (!prev) continue; // new entry — skip delta calc
-
-    const delta = (curr.completion_percent ?? 0) - (prev.completion_percent ?? 0);
-    const info = nameMap.get(pid);
+    const delta = Number(live.completion_percent) - snap.completion_percent;
 
     if (delta > 1) progressed++;
     else if (delta < -1) regressed++;
     else stalled++;
 
     deltas.push({
-      project_id: pid,
-      project_name: info?.name || 'Unknown',
-      sub_agency: info?.agency || 'Unknown',
-      previous_pct: prev.completion_percent ?? 0,
-      current_pct: curr.completion_percent ?? 0,
+      project_id: live.id,
+      project_name: live.project_name || 'Unknown',
+      sub_agency: live.sub_agency || 'Unknown',
+      previous_pct: snap.completion_percent,
+      current_pct: Number(live.completion_percent),
       delta,
     });
   }
 
-  // New entries: in current but not in previous
-  const newEntries = [...currMap.keys()].filter((id) => !prevMap.has(id)).length;
-  // Exits: in previous but not in current
-  const exits = [...prevMap.keys()].filter((id) => !currMap.has(id)).length;
-
-  // Top movers (biggest positive delta) and top stalls (smallest delta, longest stall)
+  // Top movers (positive delta, top 5 desc) and top stalls (|delta| < 1, top 5)
   const sorted = [...deltas].sort((a, b) => b.delta - a.delta);
   const topMovers = sorted.filter((d) => d.delta > 0).slice(0, 5);
   const topStalls = sorted.filter((d) => Math.abs(d.delta) < 1).slice(0, 5);
@@ -416,10 +447,8 @@ async function getWeeklyMovement(): Promise<WeeklyMovement | null> {
     stalled,
     regressed,
     new_entries: newEntries,
-    exits,
-    // cleared/reopened derived from reconcile batches — Task 5 fills these from DB
-    cleared: 0,
-    reopened: 0,
+    cleared,
+    reopened,
     top_movers: topMovers,
     top_stalls: topStalls,
   };
@@ -628,10 +657,11 @@ export async function getInterventionSummary(): Promise<InterventionSummary> {
   const completed = rows.filter((r) => r.status === 'COMPLETED').length;
   const overdue = rows.filter((r) => r.status === 'OVERDUE').length;
 
-  // Count projects with zero interventions
+  // Count projects with zero interventions (DELAYED only — RESOLVED shouldn't be flagged as unattended)
   const { count: totalProjects } = await supabaseAdmin
     .from('delayed_projects')
-    .select('id', { count: 'exact', head: true });
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'DELAYED');
 
   const projectsWithInterventions = new Set(rows.map((r) => r.project_id));
 
@@ -649,12 +679,72 @@ export async function getInterventionSummary(): Promise<InterventionSummary> {
 // ── Last Upload Date ────────────────────────────────────────────────────────
 
 export async function getLastUploadDate(): Promise<string | null> {
-  const { data } = await supabaseAdmin
+  // Primary: authoritative upload record
+  const { data: batchRow } = await supabaseAdmin
+    .from('upload_batches')
+    .select('uploaded_at')
+    .order('uploaded_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (batchRow?.uploaded_at) return batchRow.uploaded_at;
+
+  // Fallback: pre-reconcile data (no batch rows yet) — use max updated_at
+  const { data: projectRow } = await supabaseAdmin
     .from('delayed_projects')
     .select('updated_at')
     .order('updated_at', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
-  return data?.updated_at || null;
+  return projectRow?.updated_at || null;
+}
+
+// ── Cleared Analytics ────────────────────────────────────────────────────────
+
+export async function getClearedAnalytics(
+  agencyFilter?: string,
+  filters?: Pick<RegistryFilters, 'sub_agencies' | 'regions' | 'search'>,
+): Promise<ClearedAnalytics> {
+  let query = supabaseAdmin
+    .from('delayed_projects')
+    .select('contract_value, resolved_at, created_at')
+    .eq('status', 'RESOLVED');
+
+  if (agencyFilter) query = query.eq('sub_agency', agencyFilter);
+  if (filters?.sub_agencies?.length) query = query.in('sub_agency', filters.sub_agencies);
+  if (filters?.regions?.length) query = query.in('region', filters.regions);
+  if (filters?.search) {
+    query = query.or(
+      `project_name.ilike.%${filters.search}%,project_reference.ilike.%${filters.search}%,contractors.ilike.%${filters.search}%`,
+    );
+  }
+
+  const { data: rows, error } = await query;
+  if (error) {
+    logger.error({ error }, 'getClearedAnalytics failed');
+    return { count: 0, total_contract_value: 0, avg_days_to_clear: null };
+  }
+
+  const records = rows || [];
+  let totalValue = 0;
+  let daysSum = 0;
+  let daysCount = 0;
+
+  for (const r of records) {
+    totalValue += Number(r.contract_value) || 0;
+    if (r.resolved_at && r.created_at) {
+      const days = (new Date(r.resolved_at).getTime() - new Date(r.created_at).getTime()) / 86400000;
+      if (!isNaN(days)) {
+        daysSum += days;
+        daysCount++;
+      }
+    }
+  }
+
+  return {
+    count: records.length,
+    total_contract_value: totalValue,
+    avg_days_to_clear: daysCount > 0 ? Math.round((daysSum / daysCount) * 10) / 10 : null,
+  };
 }

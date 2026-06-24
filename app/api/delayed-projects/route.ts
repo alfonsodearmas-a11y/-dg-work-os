@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
-import { getProjects } from '@/lib/delayed-projects/queries';
+import { getProjects, getClearedAnalytics } from '@/lib/delayed-projects/queries';
 import type { RegistryFilters, RiskTier } from '@/lib/delayed-projects/types';
 
 export const dynamic = 'force-dynamic';
@@ -19,6 +19,8 @@ export async function GET(request: NextRequest) {
     agencyFilter = userAgency || undefined;
   }
 
+  const status = sp.get('status') === 'RESOLVED' ? 'RESOLVED' : 'DELAYED';
+
   const filters: RegistryFilters = {
     sub_agencies: sp.get('sub_agencies')?.split(',').filter(Boolean),
     regions: sp.get('regions')?.split(',').filter(Boolean),
@@ -30,7 +32,16 @@ export async function GET(request: NextRequest) {
     sort_dir: (sp.get('sort_dir') as 'asc' | 'desc') || undefined,
     page: sp.get('page') ? Number(sp.get('page')) : 1,
     limit: sp.get('limit') ? Number(sp.get('limit')) : 25,
+    status,
   };
+
+  if (status === 'RESOLVED') {
+    const [result, cleared_analytics] = await Promise.all([
+      getProjects(filters, agencyFilter),
+      getClearedAnalytics(agencyFilter, filters),
+    ]);
+    return NextResponse.json({ ...result, cleared_analytics });
+  }
 
   const result = await getProjects(filters, agencyFilter);
   return NextResponse.json(result);

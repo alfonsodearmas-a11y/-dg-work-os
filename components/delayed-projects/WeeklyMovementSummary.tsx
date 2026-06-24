@@ -30,8 +30,8 @@ export function WeeklyMovementSummary({ movement }: WeeklyMovementSummaryProps) 
         {movement.new_entries > 0 && (
           <Pill icon={PlusCircle} count={movement.new_entries} label="new" color="text-blue-400" bg="bg-blue-500/10" />
         )}
-        {(movement.cleared ?? movement.exits ?? 0) > 0 && (
-          <Pill icon={MinusCircle} count={movement.cleared ?? movement.exits ?? 0} label="cleared" color="text-amber-400" bg="bg-amber-500/10" />
+        {(movement.cleared ?? 0) > 0 && (
+          <Pill icon={MinusCircle} count={movement.cleared ?? 0} label="cleared" color="text-amber-400" bg="bg-amber-500/10" />
         )}
       </div>
 
