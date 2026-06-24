@@ -75,11 +75,9 @@ export function ProjectRegistryTab({ isMobile, onRefresh, onLogIntervention }: P
       if (filters.search) p.set('search', filters.search);
       if (view === 'cleared') {
         p.set('status', 'RESOLVED');
+        p.set('sort', 'resolved_at');
+        p.set('sort_dir', 'desc');
       } else {
-        p.set('sort', sort.field);
-        p.set('sort_dir', sort.dir);
-      }
-      if (view === 'active') {
         p.set('sort', sort.field);
         p.set('sort_dir', sort.dir);
       }
