@@ -1,6 +1,6 @@
 'use client';
 
-import { TrendingUp, TrendingDown, Minus, PlusCircle, MinusCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, PlusCircle, MinusCircle, RotateCcw } from 'lucide-react';
 import type { WeeklyMovement } from '@/lib/delayed-projects/types';
 import { getShortName } from '@/lib/delayed-projects/short-names';
 import { AgencyBadge } from './shared';
@@ -18,7 +18,10 @@ export function WeeklyMovementSummary({ movement }: WeeklyMovementSummaryProps) 
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-white">Weekly Movement</h3>
         <span className="text-[10px] text-navy-600">
-          Since {new Date(movement.previous_date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+          Since last upload{' '}
+          <span className="opacity-60">
+            ({new Date(movement.previous_date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })})
+          </span>
         </span>
       </div>
 
@@ -32,6 +35,9 @@ export function WeeklyMovementSummary({ movement }: WeeklyMovementSummaryProps) 
         )}
         {(movement.cleared ?? 0) > 0 && (
           <Pill icon={MinusCircle} count={movement.cleared ?? 0} label="cleared" color="text-amber-400" bg="bg-amber-500/10" />
+        )}
+        {(movement.reopened ?? 0) > 0 && (
+          <Pill icon={RotateCcw} count={movement.reopened ?? 0} label="reopened" color="text-blue-400" bg="bg-blue-500/10" />
         )}
       </div>
 

@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import { Download } from 'lucide-react';
-import type { DelayedProjectWithComputed, RiskTier } from '@/lib/delayed-projects/types';
+import type { DelayedProjectWithComputed, RiskTier, ClearedAnalytics } from '@/lib/delayed-projects/types';
+import { fmtCurrency } from '@/components/oversight/types';
 import { getShortName } from '@/lib/delayed-projects/short-names';
 import { RegistryFilters, DEFAULT_FILTERS, type FilterState } from './RegistryFilters';
 import { RegistryTable } from './RegistryTable';
@@ -16,6 +17,8 @@ interface ProjectRegistryTabProps {
   onLogIntervention?: (projectId: string, projectName: string) => void;
 }
 
+type ViewMode = 'active' | 'cleared';
+
 export function ProjectRegistryTab({ isMobile, onRefresh, onLogIntervention }: ProjectRegistryTabProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -26,6 +29,7 @@ export function ProjectRegistryTab({ isMobile, onRefresh, onLogIntervention }: P
   const lockedAgency = isAgencyUser ? effectiveUser.agency?.toUpperCase() : undefined;
 
   // ── State ──
+  const [view, setView] = useState<ViewMode>('active');
   const [filters, setFilters] = useState<FilterState>(() => {
     const f = { ...DEFAULT_FILTERS };
     if (lockedAgency) f.sub_agencies = [lockedAgency];
@@ -42,6 +46,7 @@ export function ProjectRegistryTab({ isMobile, onRefresh, onLogIntervention }: P
   const [projects, setProjects] = useState<DelayedProjectWithComputed[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [clearedAnalytics, setClearedAnalytics] = useState<ClearedAnalytics | null>(null);
   // URL is the source of truth — the drawer opens iff ?project=<id> is present.
   const selectedProjectId = searchParams.get('project');
 
@@ -68,8 +73,16 @@ export function ProjectRegistryTab({ isMobile, onRefresh, onLogIntervention }: P
       if (filters.regions.length) p.set('regions', filters.regions.join(','));
       if (filters.risk_tiers.length) p.set('risk_tiers', filters.risk_tiers.join(','));
       if (filters.search) p.set('search', filters.search);
-      p.set('sort', sort.field);
-      p.set('sort_dir', sort.dir);
+      if (view === 'cleared') {
+        p.set('status', 'RESOLVED');
+      } else {
+        p.set('sort', sort.field);
+        p.set('sort_dir', sort.dir);
+      }
+      if (view === 'active') {
+        p.set('sort', sort.field);
+        p.set('sort_dir', sort.dir);
+      }
       p.set('page', String(page));
       p.set('limit', String(limit));
 
@@ -78,10 +91,11 @@ export function ProjectRegistryTab({ isMobile, onRefresh, onLogIntervention }: P
         const data = await res.json();
         setProjects(data.projects || []);
         setTotal(data.total || 0);
+        setClearedAnalytics(data.cleared_analytics ?? null);
       }
     } catch {}
     setLoading(false);
-  }, [filters, sort, page]);
+  }, [filters, sort, page, view]);
 
   useEffect(() => {
     fetchProjects();
@@ -102,6 +116,11 @@ export function ProjectRegistryTab({ isMobile, onRefresh, onLogIntervention }: P
 
   function clearFilters() {
     setFilters(lockedAgency ? { ...DEFAULT_FILTERS, sub_agencies: [lockedAgency] } : DEFAULT_FILTERS);
+  }
+
+  function handleViewChange(v: ViewMode) {
+    setView(v);
+    setPage(1);
   }
 
   async function handleExport() {
@@ -131,18 +150,64 @@ export function ProjectRegistryTab({ isMobile, onRefresh, onLogIntervention }: P
 
   return (
     <div className="space-y-4">
+      {/* View toggle */}
+      <div className="flex items-center gap-1 p-1 bg-navy-950/60 rounded-lg border border-navy-800 w-fit">
+        <button
+          onClick={() => handleViewChange('active')}
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            view === 'active'
+              ? 'bg-gold-500/20 text-gold-400 border border-gold-500/30'
+              : 'text-navy-600 hover:text-white'
+          }`}
+        >
+          Active (Delayed)
+        </button>
+        <button
+          onClick={() => handleViewChange('cleared')}
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            view === 'cleared'
+              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+              : 'text-navy-600 hover:text-white'
+          }`}
+        >
+          Recently Cleared
+        </button>
+      </div>
+
       {/* Filters */}
       <RegistryFilters filters={filters} onChange={updateFilters} onClear={clearFilters} />
 
+      {/* Cleared analytics strip (only in cleared view) */}
+      {view === 'cleared' && clearedAnalytics && clearedAnalytics.count > 0 && (
+        <div className={`grid gap-3 ${clearedAnalytics.avg_days_to_clear !== null ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-center">
+            <p className="text-lg font-bold text-amber-400">{clearedAnalytics.count}</p>
+            <p className="text-xs text-amber-400/70">Cleared</p>
+          </div>
+          <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-center">
+            <p className="text-lg font-bold text-amber-400">{fmtCurrency(clearedAnalytics.total_contract_value / 100)}</p>
+            <p className="text-xs text-amber-400/70">Value cleared</p>
+          </div>
+          {clearedAnalytics.avg_days_to_clear !== null && (
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-center">
+              <p className="text-lg font-bold text-amber-400">{clearedAnalytics.avg_days_to_clear}d</p>
+              <p className="text-xs text-amber-400/70">Avg time-to-clear</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Count + Export */}
       <div className="flex items-center justify-between">
-        <span className="text-xs text-navy-600">{total} projects</span>
-        <button
-          onClick={handleExport}
-          className="flex items-center gap-1.5 text-xs text-navy-600 hover:text-gold-500 transition-colors"
-        >
-          <Download className="h-3.5 w-3.5" /> Export CSV
-        </button>
+        <span className="text-xs text-navy-600">{total} {view === 'cleared' ? 'cleared projects' : 'projects'}</span>
+        {view === 'active' && (
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-1.5 text-xs text-navy-600 hover:text-gold-500 transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" /> Export CSV
+          </button>
+        )}
       </div>
 
       {/* Table */}
@@ -152,12 +217,13 @@ export function ProjectRegistryTab({ isMobile, onRefresh, onLogIntervention }: P
         sort={sort}
         onSort={handleSort}
         onSelectProject={(p) => setProjectParam(p.id)}
-        onLogIntervention={onLogIntervention ? (p) => onLogIntervention(p.id, getShortName(p.project_name)) : undefined}
+        onLogIntervention={onLogIntervention && view === 'active' ? (p) => onLogIntervention(p.id, getShortName(p.project_name)) : undefined}
         page={page}
         totalPages={totalPages}
         total={total}
         onPageChange={setPage}
         isMobile={isMobile}
+        isCleared={view === 'cleared'}
       />
 
       {/* Detail Panel */}
