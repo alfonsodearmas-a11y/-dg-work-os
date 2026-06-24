@@ -419,8 +419,8 @@ export function UploadModal({ isOpen, onClose, onUploaded }: UploadModalProps) {
                 <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl space-y-2">
                   <p className="text-sm font-semibold text-blue-300">Reopened</p>
                   <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                    {uploadResult.reopened.map((r, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs">
+                    {uploadResult.reopened.map((r) => (
+                      <div key={`${r.sub_agency}-${r.project_name}`} className="flex items-center gap-2 text-xs">
                         <AgencyBadge agency={r.sub_agency} />
                         <span className="text-white flex-1 truncate">{getShortName(r.project_name)}</span>
                         <span className="px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-medium border border-blue-500/30">

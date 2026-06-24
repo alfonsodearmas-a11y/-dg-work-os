@@ -63,6 +63,9 @@ export function planReconciliation(
     }
 
     if (matched) {
+      // Defensive dedup: export guarantees unique source_id/ref, but if two
+      // incoming rows somehow match the same existing row, skip the duplicate.
+      if (matchedExistingIds.has(matched.id)) continue;
       matchedExistingIds.add(matched.id);
       toUpdate.push({
         existing: matched,
@@ -92,7 +95,7 @@ export function planReconciliation(
   const toResolveIds = guardTripped ? [] : absentDelayedRows.map((r) => r.id);
 
   const newCount = toInsert.length;
-  const updatedCount = toUpdate.filter((u) => !u.reopened).length;
+  const updatedCount = toUpdate.filter((u) => u.existing.status === 'DELAYED').length;
   const reopenedCount = toUpdate.filter((u) => u.reopened).length;
   const resolvedCount = toResolveIds.length;
 
@@ -182,14 +185,6 @@ export async function reconcileUpload(
   // ── Step 3: Guard check ───────────────────────────────────────────────────────
   if (plan.guardTripped) {
     return {
-      // Legacy compat fields — zeroed
-      updated: 0,
-      inserted: 0,
-      unchanged: 0,
-      not_in_upload: [],
-      biggest_deltas: [],
-      snapshot_date: '',
-      // New fields — zeroed
       new_count: 0,
       updated_count: 0,
       resolved_count: 0,
@@ -208,7 +203,7 @@ export async function reconcileUpload(
   }
 
   // ── Step 4: Snapshot (DELAYED-only — guard passed) ───────────────────────────
-  const { date: snapshotDate } = await snapshotBeforeUpload();
+  await snapshotBeforeUpload();
 
   // ── Step 5: Insert batch record ───────────────────────────────────────────────
   const { data: batchData, error: batchError } = await supabaseAdmin
@@ -445,18 +440,6 @@ export async function reconcileUpload(
   );
 
   return {
-    // Legacy compat
-    inserted: committedNew,
-    updated: committedUpdated,
-    unchanged: 0,
-    not_in_upload: clearedRefs.map((c) => ({
-      project_reference: c.project_reference,
-      project_name: c.project_name,
-      sub_agency: c.sub_agency,
-    })),
-    biggest_deltas: [],
-    snapshot_date: snapshotDate,
-    // New fields
     new_count: committedNew,
     updated_count: committedUpdated,
     resolved_count: committedResolved,
