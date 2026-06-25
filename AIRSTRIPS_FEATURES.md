@@ -71,7 +71,31 @@ Maintenance Health + Responsibility cards on detail. `CadenceSettingsModal` (edi
   no-maintenance strip → valid PDF (doesn't throw); photo embed proven by PDF-size delta (not just validity);
   route auth-gated (401/403/404/200); static guard extended to the renderer.
 
-## Phase 3 — clean hooks only — pending
+## Phase 3 — clean hooks only (Part D) — seams documented, NOT built
+
+No sending/scheduling code was written. The seams below are deliberately left so each can be added additively.
+
+- **Cron / push digest (the primary seam, already present):** `computeAirstripWarnings`
+  (`lib/airstrips/warnings.ts`) returns plain, JSON-serializable `AirstripWarning[]` (no `Date`, no class
+  instances), and `augmentAirstrip` (`lib/airstrips/queries.ts`) already assembles per-strip cadence +
+  responsibility names from the `airstrip_overview` view. A future scheduled job calls the *same* augment path
+  over all strips, filters `attentionLevel !== 'ok'`, and sends — no recompute, no shape change. Attach point:
+  a new `app/api/cron/airstrip-digest/route.ts` (+ the existing push infrastructure). Nothing sends today.
+- **Forward maintenance schedule (planned vs actual):** add an additive `airstrip_maintenance_schedule`
+  (airstrip_id, planned_date, note). Planned-vs-actual = compare planned dates to `airstrip_maintenance_log`.
+  Attach points: extend `airstrip_overview` with the next planned date; add a `planned` warning type to the
+  engine; add a "Planned vs actual" section to `prepare-airstrip-report`.
+- **No-signal physical-inspection requirement:** `airstrip_inspections.signal_available` already exists. Add
+  `airstrips.requires_physical_inspection` (or derive from latest inspection's `signal_available = false`) plus a
+  `last_physical_inspection_on` aggregate to the view; add a `physical_inspection_overdue` warning type. The
+  engine's warning array absorbs it without callers changing.
+- **Per-contractor response-time metric:** days from a warning becoming active (`cadence.nextDueOn`) to the next
+  maintenance logged, grouped by the responsible contractor at that time (`airstrip_contractors` history makes
+  "responsible at that time" answerable). Attach point: a query helper in `lib/airstrips/`, surfaced in the
+  report or a contractor view.
+
+These keep the warning states in a shape a scheduled job can read and send later, exactly as required — but
+this task ships none of the sending.
 
 ## ⚠️ Deploy checklist (MUST hold at deploy time)
 - **Migration `131` (bucket → private) and the Phase 0 proxy route MUST ship in the SAME deploy.** The proxy
