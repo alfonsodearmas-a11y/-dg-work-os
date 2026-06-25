@@ -46,3 +46,8 @@ next-env.d.ts
 /video/
 /s3-video/
 .playwright-mcp/
+
+# Playwright E2E artifacts (screenshots under e2e/screenshots are kept as evidence)
+/e2e/.artifacts/
+/playwright-report/
+/test-results/

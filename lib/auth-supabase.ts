@@ -1,7 +1,9 @@
 import 'server-only';
+import { cookies } from 'next/headers';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/db';
 import { buildSession, type Session, type ProfileRow } from '@/lib/auth-session';
+import { e2eAuthEnabled, e2eSessionFromCookie } from '@/lib/e2e-auth';
 
 // P3 — reimplemented auth() over Supabase Auth: the cutover replacement for the
 // NextAuth auth() in lib/auth.ts.
@@ -14,6 +16,14 @@ import { buildSession, type Session, type ProfileRow } from '@/lib/auth-session'
 export type { Session };
 
 export async function auth(): Promise<Session | null> {
+  // E2E ONLY (dead in production — see lib/e2e-auth.ts): return the deterministic
+  // cookie session with no Supabase/DB contact.
+  if (e2eAuthEnabled()) {
+    const c = await cookies();
+    const e2e = e2eSessionFromCookie(c.get('e2e_user')?.value);
+    if (e2e) return e2e;
+  }
+
   const supabase = await getServerSupabase();
 
   // Hot path: getClaims() verifies the JWT locally (via JWKS) when asymmetric

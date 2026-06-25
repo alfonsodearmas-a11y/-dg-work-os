@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { e2eAuthEnabled } from '@/lib/e2e-auth';
 
 // Supabase Auth middleware. Refreshes the @supabase/ssr cookie session on every
 // request and guards non-public routes.
@@ -31,6 +32,13 @@ function isPublicPath(pathname: string): boolean {
 }
 
 export async function middleware(req: NextRequest) {
+  // E2E ONLY (dead in production — see lib/e2e-auth.ts): a deterministic session
+  // cookie stands in for a real Supabase session, so skip getUser() and the
+  // /login redirect entirely. Never reachable in a production build.
+  if (e2eAuthEnabled() && req.cookies.get('e2e_user')?.value) {
+    return NextResponse.next({ request: req });
+  }
+
   // Start with a passthrough response we can attach refreshed cookies to.
   let response = NextResponse.next({ request: req });
 

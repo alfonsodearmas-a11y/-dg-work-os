@@ -65,10 +65,29 @@ rolled-back transaction** — prod is never mutated.
 - ✅ Report route auth-gated: 403 non-HAS, 401 unauth, 404 missing strip, 200 `application/pdf` authorized.
 - ✅ Static guard extended to `lib/pdf/airstrip-report-render.tsx` — no public/signed URL in the PDF path.
 
+## Browser E2E (Playwright) — `npm run test:e2e` → 7/7 green against a real rendered build
+Renders the real Next app in Chromium with a **bulletproof-gated** test session (`lib/e2e-auth.ts`, dead in any
+production build) + fully-mocked APIs (no request reaches prod; a leak would fail the fixture-only assertions).
+Screenshots in `e2e/screenshots/`.
+- **List:** Needs-Attention section renders; the never-recorded strip appears **red in the actual DOM** with
+  "responsibility unassigned"; the overdue strip names contractor + manager inline; queue counts match.
+- **Detail:** page loads; **Maintenance Health** + **Responsibility** cards render; a photo **paints through the
+  proxy** (`/api/airstrips/[id]/photos/[photoId]/file`, asserted `naturalWidth > 0`); **Generate Report** opens
+  the PDF route with the chosen range; **contractor swap** updates the badge to the new contractor.
+- **RBAC:** superadmin can open + edit **Cadence Settings**; the HAS agency_manager does **not** see the control.
+- **Safety:** `lib/__tests__/e2e-auth.test.ts` asserts the gate is enabled only in non-prod-with-flag and **dead
+  in production** even with the flag set.
+
 ## Coverage honesty
-- **True browser E2E:** none (no harness in repo; not stood up per instruction).
-- **Integration-level (stands in for E2E):** all route/auth/RPC/proxy checks above. The *rendered* UI (Needs
-  Attention list, badges, modal interactions) is exercised only via the data/route layer it depends on, not a
-  real browser — a gap to close with Playwright if/when a harness is added.
-- **Live-DB-verified (not in the mocked vitest run):** photo storage_path shape; RPC atomicity. Re-runnable via
-  the queries in this session's history.
+- **True browser E2E: now exists** (Playwright, 7 tests, real Chromium render of the real Next app). Closes the
+  prior "no UI ever rendered" gap for the list, detail, report, contractor-swap, and RBAC surfaces, with
+  screenshots as visual evidence.
+- **What the browser E2E mocks:** the API layer (so no prod contact) and the photo *bytes* (a real PNG returned
+  by the mocked proxy so the `<img>` paints). It therefore proves the UI **uses** the proxy URL and renders the
+  image, but **not** the real private-bucket `storage.download()` round-trip.
+- **UNVERIFIED-PENDING-DEPLOY:** the real private-bucket photo round-trip (Migration 131 applied + a real storage
+  object served through the proxy in the deployed app). Not provable in the sandbox without paid
+  branch+preview infra; covered by post-deploy human check #1 in `AIRSTRIPS_DEPLOY.md`. 131 is **not** flipped on
+  prod.
+- **Live-DB-verified (read-only / rolled-back, not in the mocked runs):** photo storage_path shape (0 baked
+  URLs), one-open-contractor invariant, FK integrity, RPC atomicity, superadmin intact.
