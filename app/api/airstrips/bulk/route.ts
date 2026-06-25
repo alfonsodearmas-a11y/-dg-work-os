@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireRole } from '@/lib/auth-helpers';
+import { requireAirstripAccess } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import { AIRSTRIP_STATUSES, SURFACE_CONDITIONS, FLIGHT_FREQUENCIES } from '@/lib/airstrip-types';
@@ -29,7 +29,7 @@ const bodySchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requireRole(['superadmin', 'agency_manager']);
+    const authResult = await requireAirstripAccess();
     if (authResult instanceof NextResponse) return authResult;
     const { session } = authResult;
 
@@ -50,28 +50,26 @@ export async function POST(request: NextRequest) {
 
     const { rows } = parsed.data;
 
-    // Snapshot existing names for insert-vs-update counting
-    const { data: existingAirstrips } = await supabaseAdmin
+    // Snapshot existing strips (id + name) to partition insert vs update and to
+    // target updates by id. Re-uploading the tracker must NOT reset operational
+    // status or rewrite the original creator on existing strips — `status` and
+    // `created_by` are therefore written on INSERT only, never on UPDATE. Only the
+    // descriptive tracker fields are refreshed for strips that already exist.
+    const { data: existingAirstrips, error: snapshotErr } = await supabaseAdmin
       .from('airstrips')
-      .select('name');
+      .select('id, name');
 
-    const existingNames = new Set(
-      (existingAirstrips ?? []).map(a => a.name.toLowerCase()),
-    );
-
-    // Count how many are inserts vs updates before upserting
-    let inserted = 0;
-    let updated = 0;
-    for (const row of rows) {
-      if (existingNames.has(row.name.trim().toLowerCase())) {
-        updated++;
-      } else {
-        inserted++;
-      }
+    if (snapshotErr) {
+      logger.error({ err: snapshotErr }, 'Airstrip bulk: snapshot fetch failed');
+      return NextResponse.json({ error: 'Bulk upsert failed' }, { status: 500 });
     }
 
-    // Build upsert payload
-    const upsertRows = rows.map(row => ({
+    const existingIdByName = new Map(
+      (existingAirstrips ?? []).map(a => [a.name.trim().toLowerCase(), a.id as string]),
+    );
+
+    // Descriptive fields sourced from the tracker — shared by insert and update.
+    const descriptiveFields = (row: (typeof rows)[number]) => ({
       name: row.name.trim(),
       region: row.region,
       engineered_structure: row.engineered_structure,
@@ -83,25 +81,49 @@ export async function POST(request: NextRequest) {
       flight_frequency: row.flight_frequency,
       airside_buildings: row.airside_buildings,
       remarks: row.remarks,
-      status: 'operational',
-      updated_by: session.user.id,
-      created_by: session.user.id,
-    }));
+    });
 
-    // Single upsert — ON CONFLICT (name) DO UPDATE
-    const { error } = await supabaseAdmin
-      .from('airstrips')
-      .upsert(upsertRows, { onConflict: 'name' });
+    const toInsert: Record<string, unknown>[] = [];
+    const toUpdate: { id: string; fields: Record<string, unknown> }[] = [];
+    for (const row of rows) {
+      const existingId = existingIdByName.get(row.name.trim().toLowerCase());
+      if (existingId) {
+        toUpdate.push({ id: existingId, fields: { ...descriptiveFields(row), updated_by: session.user.id } });
+      } else {
+        toInsert.push({
+          ...descriptiveFields(row),
+          status: 'operational',
+          created_by: session.user.id,
+          updated_by: session.user.id,
+        });
+      }
+    }
 
-    if (error) {
-      logger.error({ err: error }, 'Airstrip bulk upsert failed');
-      return NextResponse.json({ error: 'Bulk upsert failed' }, { status: 500 });
+    // Insert new strips in one statement; update existing strips by id with
+    // descriptive fields only (status & created_by deliberately untouched).
+    if (toInsert.length > 0) {
+      const { error: insertErr } = await supabaseAdmin.from('airstrips').insert(toInsert);
+      if (insertErr) {
+        logger.error({ err: insertErr }, 'Airstrip bulk insert failed');
+        return NextResponse.json({ error: 'Bulk upsert failed' }, { status: 500 });
+      }
+    }
+
+    if (toUpdate.length > 0) {
+      const updateResults = await Promise.all(
+        toUpdate.map(u => supabaseAdmin.from('airstrips').update(u.fields).eq('id', u.id)),
+      );
+      const updErr = updateResults.find(r => r.error)?.error;
+      if (updErr) {
+        logger.error({ err: updErr }, 'Airstrip bulk update failed');
+        return NextResponse.json({ error: 'Bulk upsert failed' }, { status: 500 });
+      }
     }
 
     return NextResponse.json({
       success: true,
-      inserted,
-      updated,
+      inserted: toInsert.length,
+      updated: toUpdate.length,
       skipped: 0,
       total: rows.length,
     });
@@ -127,7 +149,7 @@ const bulkUpdateSchema = z.object({
 
 export async function PATCH(request: NextRequest) {
   try {
-    const authResult = await requireRole(['superadmin', 'agency_manager']);
+    const authResult = await requireAirstripAccess();
     if (authResult instanceof NextResponse) return authResult;
     const { session } = authResult;
 

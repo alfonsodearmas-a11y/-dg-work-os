@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireRole } from '@/lib/auth-helpers';
+import { requireAirstripAccess } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import { PHOTO_TYPES } from '@/lib/airstrip-types';
@@ -15,7 +15,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const authResult = await requireRole(['superadmin', 'agency_manager']);
+    const authResult = await requireAirstripAccess();
     if (authResult instanceof NextResponse) return authResult;
     const { session } = authResult;
 
@@ -34,8 +34,8 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid photo type' }, { status: 400 });
     }
 
-    const uploaded = [];
-
+    // Validate all files up-front so a single bad file can't leave earlier files
+    // half-saved (the loop below has side effects).
     for (const file of files) {
       if (!ALLOWED_TYPES.includes(file.type)) {
         return NextResponse.json({ error: `Invalid file type: ${file.name}. Only JPG, PNG, WebP are allowed.` }, { status: 400 });
@@ -43,7 +43,12 @@ export async function POST(
       if (file.size > MAX_FILE_SIZE) {
         return NextResponse.json({ error: `File too large: ${file.name}. Max 10MB.` }, { status: 400 });
       }
+    }
 
+    const uploaded = [];
+    const failures: string[] = [];
+
+    for (const file of files) {
       const timestamp = Date.now();
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
       const storagePath = `${id}/${photoType}/${timestamp}_${safeName}`;
@@ -55,6 +60,7 @@ export async function POST(
 
       if (uploadError) {
         logger.error({ err: uploadError }, `Photo upload error: ${file.name}`);
+        failures.push(file.name);
         continue;
       }
 
@@ -75,13 +81,25 @@ export async function POST(
 
       if (dbError) {
         logger.error({ err: dbError }, `Photo DB record error: ${file.name}`);
+        // Remove the just-uploaded object so the failed insert doesn't orphan a
+        // file in storage (no DB row would ever reference it).
+        await supabaseAdmin.storage.from(BUCKET).remove([storagePath]);
+        failures.push(file.name);
         continue;
       }
 
       uploaded.push(record);
     }
 
-    return NextResponse.json({ photos: uploaded }, { status: 201 });
+    // Don't return a misleading 201 when nothing was actually saved.
+    if (uploaded.length === 0 && failures.length > 0) {
+      return NextResponse.json(
+        { error: `Failed to save ${failures.length} photo(s)`, failures },
+        { status: 502 },
+      );
+    }
+
+    return NextResponse.json({ photos: uploaded, failures }, { status: 201 });
   } catch (error) {
     logger.error({ err: error }, 'Airstrip photo upload error');
     return NextResponse.json({ error: 'Failed to upload photos' }, { status: 500 });
@@ -94,7 +112,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const authResult = await requireRole(['superadmin', 'agency_manager']);
+    const authResult = await requireAirstripAccess();
     if (authResult instanceof NextResponse) return authResult;
 
     const { id } = await params;

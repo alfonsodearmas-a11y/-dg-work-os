@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireRole } from '@/lib/auth-helpers';
+import { requireAirstripAccess } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
-import { ACTIVITY_TYPES, VERIFICATION_METHODS } from '@/lib/airstrip-types';
+import { ACTIVITY_TYPES, VERIFICATION_METHODS, quarterFromISODate } from '@/lib/airstrip-types';
 import type { ActivityType, VerificationMethod } from '@/lib/airstrip-types';
-
-function computeQuarter(performedDate: string): string {
-  const d = new Date(performedDate);
-  const q = Math.ceil((d.getMonth() + 1) / 3);
-  return `Q${q} ${d.getFullYear()}`;
-}
 
 // PATCH /api/airstrips/[id]/maintenance/[logId] — edit a maintenance log
 export async function PATCH(
@@ -17,7 +11,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; logId: string }> },
 ) {
   try {
-    const authResult = await requireRole(['superadmin', 'agency_manager']);
+    const authResult = await requireAirstripAccess();
     if (authResult instanceof NextResponse) return authResult;
 
     const { id, logId } = await params;
@@ -38,8 +32,12 @@ export async function PATCH(
       if (!body.performed_date) {
         return NextResponse.json({ error: 'Performed date cannot be empty' }, { status: 400 });
       }
+      const quarter = quarterFromISODate(String(body.performed_date));
+      if (!quarter) {
+        return NextResponse.json({ error: 'Invalid performed date' }, { status: 400 });
+      }
       updates.performed_date = body.performed_date;
-      updates.quarter = computeQuarter(body.performed_date);
+      updates.quarter = quarter;
     }
     if (body.contractor_name !== undefined) {
       updates.contractor_name = body.contractor_name?.toString().trim() || null;
@@ -82,7 +80,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; logId: string }> },
 ) {
   try {
-    const authResult = await requireRole(['superadmin', 'agency_manager']);
+    const authResult = await requireAirstripAccess();
     if (authResult instanceof NextResponse) return authResult;
 
     const { id, logId } = await params;

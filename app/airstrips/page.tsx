@@ -12,6 +12,7 @@ import {
 import {
   STATUS_CONFIG, CONDITION_CONFIG, FREQUENCY_CONFIG,
   AIRSTRIP_STATUSES, SURFACE_CONDITIONS, FLIGHT_FREQUENCIES,
+  quarterFromISODate,
 } from '@/lib/airstrip-types';
 import type { Airstrip, AirstripMaintenanceLog } from '@/lib/airstrip-types';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -296,10 +297,7 @@ function DrawerLogMaintenanceModal({
     }
   }, [open]);
 
-  const quarter = performedDate ? (() => {
-    const d = new Date(performedDate);
-    return `Q${Math.ceil((d.getMonth() + 1) / 3)} ${d.getFullYear()}`;
-  })() : '';
+  const quarter = performedDate ? (quarterFromISODate(performedDate) ?? '') : '';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

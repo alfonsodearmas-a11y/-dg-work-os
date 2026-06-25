@@ -17,6 +17,34 @@ export const VERIFICATION_METHODS = [
 export const PHOTO_TYPES = ['verification', 'inspection', 'aerial', 'damage', 'general', 'maintenance'] as const;
 export const VEGETATION_STATUSES = ['cleared', 'overgrown', 'partially_cleared'] as const;
 
+// -- Date helpers (timezone-safe) ---------------------------------------------
+// Guyana is UTC-4 year-round (no DST). Quarter labels are derived from the date
+// STRING's own components — never `new Date(str).getMonth()`, which parses the
+// string as UTC midnight then reads it with LOCAL getters, landing a quarter/year
+// off on any non-UTC runtime (e.g. "2026-01-01" → "Q4 2025" under UTC-4).
+
+const GUYANA_UTC_OFFSET_MS = 4 * 60 * 60 * 1000;
+
+/** Quarter label (e.g. "Q1 2026") for a `YYYY-MM-DD` string, or null if malformed. */
+export function quarterFromISODate(date: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(date);
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]); // 1–12
+  if (month < 1 || month > 12) return null;
+  return `Q${Math.ceil(month / 3)} ${year}`;
+}
+
+/** Today's date in Guyana local time as `YYYY-MM-DD` (fixed UTC-4, no DST). */
+export function guyanaToday(now: Date = new Date()): string {
+  return new Date(now.getTime() - GUYANA_UTC_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/** Current quarter label (e.g. "Q2 2026"), anchored to Guyana local time. */
+export function currentQuarter(now: Date = new Date()): string {
+  return quarterFromISODate(guyanaToday(now))!;
+}
+
 // -- Union types from constants -----------------------------------------------
 
 export type AirstripStatus = (typeof AIRSTRIP_STATUSES)[number];

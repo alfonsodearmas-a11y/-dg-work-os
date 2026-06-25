@@ -10,6 +10,7 @@ import {
   canVerify,
   canAccessPsipSync,
 } from './auth-roles';
+import { canAccessModule } from './modules/role-modules';
 
 export type { Role };
 
@@ -32,6 +33,32 @@ export async function requireRole(allowedRoles: Role[]) {
 
   return { session };
 }
+
+/**
+ * Combined auth check for a module-scoped route. Returns `{ session }` only for a
+ * superadmin or an `agency_manager` whose agency actually grants `moduleSlug`
+ * (per `canAccessModule`) — keeping the server boundary in lockstep with the
+ * client ModuleGate so a route can never be more permissive than the UI that
+ * exposes it.
+ */
+export async function requireModuleAccess(moduleSlug: string) {
+  const result = await requireRole(['superadmin', 'agency_manager']);
+  if (result instanceof NextResponse) return result;
+  const { session } = result;
+
+  if (!canAccessModule(session.user.role, session.user.agency, moduleSlug)) {
+    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+  }
+
+  return { session };
+}
+
+/**
+ * Hinterland Airstrips module gate — superadmin or the `HAS` agency_manager.
+ * Closes the gap where a bare role check let any agency_manager (GPL/GWI/…)
+ * reach airstrip data the UI hides.
+ */
+export const requireAirstripAccess = () => requireModuleAccess('airstrips');
 
 export async function requirePsipSyncAccess() {
   const result = await requireRole(['superadmin']);

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireRole } from '@/lib/auth-helpers';
+import { requireAirstripAccess } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 
 // GET /api/airstrips/options?category=activity_type
 // or  /api/airstrips/options?categories=activity_type,verification_method
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireRole(['superadmin', 'agency_manager']);
+    const authResult = await requireAirstripAccess();
     if (authResult instanceof NextResponse) return authResult;
 
     const { searchParams } = new URL(request.url);

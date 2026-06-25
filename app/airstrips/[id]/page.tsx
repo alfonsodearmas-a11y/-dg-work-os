@@ -15,6 +15,7 @@ import {
   ACTIVITY_CONFIG, VERIFICATION_CONFIG, VEGETATION_CONFIG,
   AIRSTRIP_STATUSES, SURFACE_CONDITIONS, ACTIVITY_TYPES,
   VERIFICATION_METHODS, PHOTO_TYPES, VEGETATION_STATUSES,
+  quarterFromISODate, currentQuarter,
 } from '@/lib/airstrip-types';
 import type {
   Airstrip, AirstripMaintenanceLog, AirstripPhoto,
@@ -82,8 +83,7 @@ function isOverdue(date: string | null): boolean {
 }
 
 function getQuarter(date: string): string {
-  const d = new Date(date);
-  return `Q${Math.ceil((d.getMonth() + 1) / 3)} ${d.getFullYear()}`;
+  return quarterFromISODate(date) ?? '';
 }
 
 function getStorageUrl(path: string, thumbnail = false): string {
@@ -492,11 +492,7 @@ function MaintenanceTab({ maintenance, photos, onLogMaintenance, onVerify, onEdi
     return map;
   }, [photos]);
   const quarters = [...new Set(maintenance.map(m => m.quarter).filter((q): q is string => !!q))].sort().reverse();
-  const [selectedQuarter, setSelectedQuarter] = useState(() => {
-    const now = new Date();
-    const q = Math.ceil((now.getMonth() + 1) / 3);
-    return `Q${q} ${now.getFullYear()}`;
-  });
+  const [selectedQuarter, setSelectedQuarter] = useState(() => currentQuarter());
 
   const filtered = maintenance.filter(m => m.quarter === selectedQuarter);
   const verifiedCount = filtered.filter(m => m.verified).length;
@@ -957,15 +953,32 @@ function LogMaintenanceModal({ open, onClose, airstripId, onSaved }: {
       if (!res.ok) { const d = await res.json(); alert(d.error || 'Failed'); setSaving(false); return; }
       const { maintenance } = await res.json();
 
-      // 2. Upload photos if any
+      // 2. Upload verification photos if any. The maintenance log is already saved,
+      // so a photo failure is a NON-fatal warning — never report it as a log failure
+      // (that would prompt a re-submit and duplicate the log). Guarded separately so
+      // it can't fall through to the outer "Failed to log maintenance" catch.
+      let failedPhotos = 0;
       if (photoFiles.length > 0 && showPhotoUpload) {
-        const formData = new FormData();
-        photoFiles.forEach(f => formData.append('files', f));
-        formData.append('photo_type', 'verification');
-        formData.append('maintenance_log_id', maintenance.id);
-        await fetch(`/api/airstrips/${airstripId}/photos`, { method: 'POST', body: formData });
+        try {
+          const formData = new FormData();
+          photoFiles.forEach(f => formData.append('files', f));
+          formData.append('photo_type', 'verification');
+          formData.append('maintenance_log_id', maintenance.id);
+          const photoRes = await fetch(`/api/airstrips/${airstripId}/photos`, { method: 'POST', body: formData });
+          if (!photoRes.ok) {
+            failedPhotos = photoFiles.length;
+          } else {
+            const { failures } = await photoRes.json();
+            failedPhotos = Array.isArray(failures) ? failures.length : 0;
+          }
+        } catch {
+          failedPhotos = photoFiles.length;
+        }
       }
 
+      if (failedPhotos > 0) {
+        alert(`Maintenance logged, but ${failedPhotos} verification photo(s) failed to upload. Re-add them from the Photos tab.`);
+      }
       onSaved();
       onClose();
     } catch { alert('Failed to log maintenance'); }

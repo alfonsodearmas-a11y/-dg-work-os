@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireRole } from '@/lib/auth-helpers';
+import { requireAirstripAccess } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
-import { ACTIVITY_TYPES, VERIFICATION_METHODS } from '@/lib/airstrip-types';
+import { ACTIVITY_TYPES, VERIFICATION_METHODS, quarterFromISODate } from '@/lib/airstrip-types';
 import type { ActivityType, VerificationMethod } from '@/lib/airstrip-types';
 
 // GET /api/airstrips/[id]/maintenance — list maintenance logs
@@ -11,7 +11,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const authResult = await requireRole(['superadmin', 'agency_manager']);
+    const authResult = await requireAirstripAccess();
     if (authResult instanceof NextResponse) return authResult;
 
     const { id } = await params;
@@ -35,7 +35,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const authResult = await requireRole(['superadmin', 'agency_manager']);
+    const authResult = await requireAirstripAccess();
     if (authResult instanceof NextResponse) return authResult;
     const { session } = authResult;
 
@@ -54,10 +54,11 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid verification method' }, { status: 400 });
     }
 
-    // Auto-calculate quarter from performed_date
-    const date = new Date(performed_date);
-    const q = Math.ceil((date.getMonth() + 1) / 3);
-    const quarter = `Q${q} ${date.getFullYear()}`;
+    // Auto-calculate quarter from performed_date (string-based — TZ-safe).
+    const quarter = quarterFromISODate(String(performed_date));
+    if (!quarter) {
+      return NextResponse.json({ error: 'Invalid performed date' }, { status: 400 });
+    }
 
     const { data, error } = await supabaseAdmin
       .from('airstrip_maintenance_log')
@@ -91,7 +92,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const authResult = await requireRole(['superadmin', 'agency_manager']);
+    const authResult = await requireAirstripAccess();
     if (authResult instanceof NextResponse) return authResult;
     const { session } = authResult;
 

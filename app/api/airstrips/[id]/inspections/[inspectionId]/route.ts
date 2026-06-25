@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireRole } from '@/lib/auth-helpers';
+import { requireAirstripAccess } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import { SURFACE_CONDITIONS, VEGETATION_STATUSES } from '@/lib/airstrip-types';
@@ -11,7 +11,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; inspectionId: string }> },
 ) {
   try {
-    const authResult = await requireRole(['superadmin', 'agency_manager']);
+    const authResult = await requireAirstripAccess();
     if (authResult instanceof NextResponse) return authResult;
     const { session } = authResult;
 
@@ -103,7 +103,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; inspectionId: string }> },
 ) {
   try {
-    const authResult = await requireRole(['superadmin', 'agency_manager']);
+    const authResult = await requireAirstripAccess();
     if (authResult instanceof NextResponse) return authResult;
 
     const { id, inspectionId } = await params;

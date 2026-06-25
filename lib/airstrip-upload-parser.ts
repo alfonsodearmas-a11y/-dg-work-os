@@ -184,8 +184,10 @@ export function transformRows(
       if ((SURFACE_CONDITIONS as readonly string[]).includes(normalized)) {
         surface_condition = normalized;
       } else {
-        surface_condition = rawCondition;
-        issues.push(`Unrecognized surface condition "${rawCondition}"`);
+        // Leave blank rather than carry a non-enum value: the server validates
+        // surface_condition with a strict z.enum and would reject the whole batch.
+        surface_condition = null;
+        issues.push(`Unrecognized surface condition "${rawCondition}" — left blank`);
       }
     }
 
@@ -207,8 +209,9 @@ export function transformRows(
       if ((FLIGHT_FREQUENCIES as readonly string[]).includes(normalized)) {
         flight_frequency = normalized;
       } else {
-        flight_frequency = rawFreq;
-        issues.push(`Unrecognized flight frequency "${rawFreq}"`);
+        // Leave blank rather than carry a non-enum value (server uses strict z.enum).
+        flight_frequency = null;
+        issues.push(`Unrecognized flight frequency "${rawFreq}" — left blank`);
       }
     }
 
@@ -243,7 +246,7 @@ export function transformRows(
 // ── Date parser ──────────────────────────────────────────────────────────────
 
 function parseFlexibleDate(value: string): string | null {
-  // Already ISO format
+  // Already ISO format (YYYY-MM-DD) — round-trips through UTC unchanged.
   if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
     const d = new Date(value);
     if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
@@ -256,18 +259,24 @@ function parseFlexibleDate(value: string): string | null {
     if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
   }
 
-  // MM/DD/YYYY or DD/MM/YYYY — try native parse
-  const d = new Date(value);
-  if (!isNaN(d.getTime()) && d.getFullYear() >= 2000) {
-    return d.toISOString().slice(0, 10);
+  // Excel serial number (a bare number — e.g. a Number/General-formatted date cell
+  // that xlsx didn't coerce to a Date). MUST be handled before the generic Date()
+  // parse below: `new Date("45000")` yields a *valid* date in the year 45000, which
+  // would otherwise mask the serial and corrupt the value. Converted in UTC so the
+  // result is independent of the host timezone (epoch 1899-12-30 per Excel).
+  if (/^\d+(\.\d+)?$/.test(value)) {
+    const serial = parseFloat(value);
+    if (serial > 30000 && serial < 60000) {
+      const ms = Date.UTC(1899, 11, 30) + Math.floor(serial) * 86400000;
+      return new Date(ms).toISOString().slice(0, 10);
+    }
+    return null; // a bare number outside the serial range is not a date
   }
 
-  // Excel serial number
-  const serial = parseFloat(value);
-  if (!isNaN(serial) && serial > 30000 && serial < 60000) {
-    const epoch = new Date(1899, 11, 30);
-    epoch.setDate(epoch.getDate() + serial);
-    return epoch.toISOString().slice(0, 10);
+  // MM/DD/YYYY or other native-parseable formats — non-numeric only, sane year.
+  const d = new Date(value);
+  if (!isNaN(d.getTime()) && d.getFullYear() >= 2000 && d.getFullYear() <= 2100) {
+    return d.toISOString().slice(0, 10);
   }
 
   return null;

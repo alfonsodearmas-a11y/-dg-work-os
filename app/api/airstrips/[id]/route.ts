@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireRole } from '@/lib/auth-helpers';
+import { requireAirstripAccess } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
-import { AIRSTRIP_STATUSES, SURFACE_CONDITIONS, FLIGHT_FREQUENCIES } from '@/lib/airstrip-types';
+import { AIRSTRIP_STATUSES, SURFACE_CONDITIONS, FLIGHT_FREQUENCIES, currentQuarter } from '@/lib/airstrip-types';
 import { parseBody } from '@/lib/api-utils';
 
 // GET /api/airstrips/[id] — full detail with related data
@@ -12,7 +12,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const authResult = await requireRole(['superadmin', 'agency_manager']);
+    const authResult = await requireAirstripAccess();
     if (authResult instanceof NextResponse) return authResult;
 
     const { id } = await params;
@@ -46,11 +46,8 @@ export async function GET(
       return NextResponse.json({ error: 'Airstrip not found' }, { status: 404 });
     }
 
-    // Compute quick stats
-    const now = new Date();
-    const currentQ = Math.ceil((now.getMonth() + 1) / 3);
-    const currentYear = now.getFullYear();
-    const quarterStr = `Q${currentQ} ${currentYear}`;
+    // Compute quick stats — current quarter anchored to Guyana local time (UTC-4).
+    const quarterStr = currentQuarter();
 
     const maintenance = maintenanceRes.data || [];
     const quarterMaintenance = maintenance.filter(m => m.quarter === quarterStr);
@@ -103,7 +100,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const authResult = await requireRole(['superadmin', 'agency_manager']);
+    const authResult = await requireAirstripAccess();
     if (authResult instanceof NextResponse) return authResult;
     const { session } = authResult;
 

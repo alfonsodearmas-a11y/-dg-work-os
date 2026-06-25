@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireRole } from '@/lib/auth-helpers';
+import { requireAirstripAccess } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import type { AirstripStatus, SurfaceCondition } from '@/lib/airstrip-types';
@@ -12,7 +12,7 @@ import { parseBody } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireRole(['superadmin', 'agency_manager']);
+    const authResult = await requireAirstripAccess();
     if (authResult instanceof NextResponse) return authResult;
 
     const p = request.nextUrl.searchParams;
@@ -126,7 +126,7 @@ const createSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requireRole(['superadmin', 'agency_manager']);
+    const authResult = await requireAirstripAccess();
     if (authResult instanceof NextResponse) return authResult;
     const { session } = authResult;
 
