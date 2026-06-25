@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAirstripAccess } from '@/lib/auth-helpers';
+import { requireAirstripAccess, requireRole } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -27,9 +27,11 @@ const patchSchema = z.object({
   verification_stale_after_days: z.number().int().positive().optional(),
 });
 
-// PATCH /api/airstrips/settings — update thresholds.
+// PATCH /api/airstrips/settings — update thresholds. Superadmin only: cadence
+// thresholds are a ministry-wide policy, so an agency_manager (incl. HAS) may view
+// them (GET) but not change them.
 export async function PATCH(request: NextRequest) {
-  const authResult = await requireAirstripAccess();
+  const authResult = await requireRole(['superadmin']);
   if (authResult instanceof NextResponse) return authResult;
   const { session } = authResult;
 

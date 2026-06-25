@@ -19,6 +19,7 @@ import type { AirstripCadence, AirstripResponsibility } from '@/lib/airstrips/wa
 import { EmptyState } from '@/components/ui/EmptyState';
 import { exportToCsv } from '@/lib/export-csv';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
+import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import AddEditAirstripModal from '@/components/airstrips/AddEditAirstripModal';
 import BulkUploadAirstripsModal from '@/components/airstrips/BulkUploadAirstripsModal';
 import CadenceSettingsModal from '@/components/airstrips/CadenceSettingsModal';
@@ -757,6 +758,8 @@ export default function AirstripsPage() {
   const searchParams = useSearchParams();
   const { canEdit: canEditModule } = useModuleAccess();
   const canEditAirstrips = canEditModule('airstrips');
+  const { effectiveUser } = useEffectiveUser();
+  const isSuperadmin = effectiveUser.role === 'superadmin';
 
   // ── State ──
   const [data, setData] = useState<AirstripResponse | null>(null);
@@ -1122,11 +1125,13 @@ export default function AirstripsPage() {
                 <span className="ml-0.5 px-1.5 rounded-full bg-orange-500/30 text-orange-300 text-[10px]">{summary.needs_attention}</span>
               )}
             </button>
+            {isSuperadmin && (
+              <button onClick={() => setSettingsOpen(true)} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1.5">
+                <RefreshCw className="h-3.5 w-3.5" /> Cadence
+              </button>
+            )}
             {canEditAirstrips && (
               <>
-                <button onClick={() => setSettingsOpen(true)} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1.5">
-                  <RefreshCw className="h-3.5 w-3.5" /> Cadence
-                </button>
                 <button onClick={() => setBulkUploadOpen(true)} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1.5">
                   <Upload className="h-3.5 w-3.5" /> Bulk Upload
                 </button>
