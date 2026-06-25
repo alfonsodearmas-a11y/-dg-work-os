@@ -35,7 +35,10 @@ tool; revisit if photo sizes hurt the list view.
 - `134` `airstrip_change_status()` — atomic status UPDATE + log INSERT (eliminates **B9**).
 - `136` `airstrip_overview` view — derived last-maintenance / last-verified + current contractor/manager.
 - `137` `airstrip_assign_contractor()` — atomic close-open reassignment.
-- `135` `DROP POLICY airstrip_option_types_write` (**B10**) — **written, NOT applied; awaiting confirm**.
+- `135` `DROP POLICY airstrip_option_types_write` (**B10**) — ✅ **APPLIED** (Part B). Code-gated: verified
+  zero client-context writes to `airstrip_option_types` (only a service-role read route exists), so the
+  retired-role policy was dead. Post-drop: only `airstrip_option_types_read` remains; reads work (34 rows),
+  service-role writes still work (verified in a rolled-back transaction).
 
 **Warning engine** `lib/airstrips/warnings.ts` (pure, client-safe, serializable for a future cron digest):
 `computeAirstripWarnings` → overdue / upcoming / verification_stale, each naming contractor + manager (or
@@ -55,3 +58,11 @@ Maintenance Health + Responsibility cards on detail. `CadenceSettingsModal` (edi
 
 ## Phase 2 — Per-airstrip PDF report — pending
 ## Phase 3 — clean hooks only — pending
+
+## ⚠️ Deploy checklist (MUST hold at deploy time)
+- **Migration `131` (bucket → private) and the Phase 0 proxy route MUST ship in the SAME deploy.** The proxy
+  code works whether the bucket is public or private, but flipping the bucket private *before* the proxy code
+  is live would break photo display in the running app; flipping it *after* leaves photos briefly world-readable.
+  Apply `131` as part of the deploy that ships this branch, not before. (131 is intentionally NOT applied yet.)
+- All other airstrip migrations (132–137) are already applied to prod (additive; invisible to the deployed app).
+  `135` (B10 policy drop) is applied.

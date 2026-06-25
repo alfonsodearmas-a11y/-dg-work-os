@@ -44,6 +44,16 @@ rolled-back transaction** — prod is never mutated.
   **one** open assignment. Terminal `RAISE EXCEPTION 'ROLLBACK_OK'` reached (all asserts passed) → rolled back;
   confirmed 0 leftover rows.
 
+## Part B — Migration 135 (B10) code-gated drop
+- **Precondition (static search, repo-wide):** zero `insert/update/delete/upsert/rpc` on
+  `airstrip_option_types` anywhere; the only DB touchpoint is the read-only options route via `supabaseAdmin`;
+  the client hook reads through that API route; no anon/browser client touches the table. → service-role-only,
+  policy is dead. Applied 135 alone.
+- **Post-drop (live, rolled-back DO block):** `airstrip_option_types_write` gone (only `_read` remains); read
+  works (34 rows); service-role write still works (insert landed, rolled back). 0 leftover rows.
+- Residual risk noted: a dynamic writepath would require the literal table name, which appears only in the read
+  route + a type comment + migrations — none is a write.
+
 ## Coverage honesty
 - **True browser E2E:** none (no harness in repo; not stood up per instruction).
 - **Integration-level (stands in for E2E):** all route/auth/RPC/proxy checks above. The *rendered* UI (Needs
