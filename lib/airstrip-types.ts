@@ -45,6 +45,26 @@ export function currentQuarter(now: Date = new Date()): string {
   return quarterFromISODate(guyanaToday(now))!;
 }
 
+/** Add (or subtract, if negative) whole days to a `YYYY-MM-DD` string, returning
+ *  `YYYY-MM-DD`. UTC-based — exact for date-only values, no local/DST drift. */
+export function addDays(date: string, days: number): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(date);
+  if (!m) return date;
+  const base = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return new Date(base + days * 86400000).toISOString().slice(0, 10);
+}
+
+/** Whole days from `fromDate` to `toDate` (positive when `toDate` is later).
+ *  UTC-based; returns 0 if either string is malformed. */
+export function daysBetween(fromDate: string, toDate: string): number {
+  const a = /^(\d{4})-(\d{2})-(\d{2})/.exec(fromDate);
+  const b = /^(\d{4})-(\d{2})-(\d{2})/.exec(toDate);
+  if (!a || !b) return 0;
+  const ua = Date.UTC(Number(a[1]), Number(a[2]) - 1, Number(a[3]));
+  const ub = Date.UTC(Number(b[1]), Number(b[2]) - 1, Number(b[3]));
+  return Math.round((ub - ua) / 86400000);
+}
+
 // -- Union types from constants -----------------------------------------------
 
 export type AirstripStatus = (typeof AIRSTRIP_STATUSES)[number];

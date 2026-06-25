@@ -26,34 +26,22 @@ export async function PATCH(
       return NextResponse.json({ error: 'Reason is required' }, { status: 400 });
     }
 
-    // Get current status
-    const { data: airstrip, error: fetchError } = await supabaseAdmin
-      .from('airstrips')
-      .select('status')
-      .eq('id', id)
-      .single();
+    // Atomic status change + log (single transaction — no update/log desync).
+    const { data: result, error: rpcError } = await supabaseAdmin.rpc('airstrip_change_status', {
+      p_airstrip_id: id,
+      p_new_status: new_status,
+      p_reason: reason.trim(),
+      p_user_id: session.user.id,
+    });
 
-    if (fetchError || !airstrip) {
-      return NextResponse.json({ error: 'Airstrip not found' }, { status: 404 });
+    if (rpcError) {
+      if (rpcError.code === 'P0002' || /not found/i.test(rpcError.message)) {
+        return NextResponse.json({ error: 'Airstrip not found' }, { status: 404 });
+      }
+      throw rpcError;
     }
 
-    const previous_status = airstrip.status;
-
-    // Update status and log in parallel
-    const [updateRes, logRes] = await Promise.all([
-      supabaseAdmin.from('airstrips').update({ status: new_status, updated_by: session.user.id }).eq('id', id),
-      supabaseAdmin.from('airstrip_status_log').insert({
-        airstrip_id: id,
-        previous_status,
-        new_status,
-        changed_by: session.user.id,
-        reason: reason.trim(),
-      }),
-    ]);
-
-    if (updateRes.error) throw updateRes.error;
-    if (logRes.error) throw logRes.error;
-
+    const previous_status = (result as { previous_status?: string } | null)?.previous_status ?? null;
     return NextResponse.json({ success: true, previous_status, new_status });
   } catch (error) {
     logger.error({ err: error }, 'Airstrip status change error');

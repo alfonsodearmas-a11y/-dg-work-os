@@ -164,68 +164,41 @@ export async function PATCH(request: NextRequest) {
       return apiError('VALIDATION_ERROR', 'Reason is required when changing status', 400);
     }
 
-    // If status is changing, fetch current statuses for the log
-    let currentStatuses: Record<string, string> = {};
-    if (statusChanged) {
-      const { data: current, error: fetchErr } = await supabaseAdmin
+    // Non-status fields → one bulk update.
+    const fieldUpdates: Record<string, unknown> = { updated_by: session.user.id };
+    if (updates.surface_condition !== undefined) fieldUpdates.surface_condition = updates.surface_condition;
+    if (updates.flight_frequency !== undefined) fieldUpdates.flight_frequency = updates.flight_frequency;
+
+    if (Object.keys(fieldUpdates).length > 1) {
+      const { error: updErr } = await supabaseAdmin
         .from('airstrips')
-        .select('id, status')
+        .update(fieldUpdates)
         .in('id', airstripIds);
-
-      if (fetchErr) {
-        logger.error({ err: fetchErr }, 'Bulk update: failed to fetch current statuses');
-        return apiError('DB_ERROR', 'Failed to fetch current airstrip data', 500);
+      if (updErr) {
+        logger.error({ err: updErr }, 'Airstrip bulk update failed');
+        return apiError('DB_ERROR', 'Bulk update failed', 500);
       }
-
-      currentStatuses = Object.fromEntries(
-        (current ?? []).map(a => [a.id, a.status]),
-      );
     }
 
-    // Build update payload
-    const updatePayload: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
-      updated_by: session.user.id,
-    };
-
-    if (updates.status !== undefined) updatePayload.status = updates.status;
-    if (updates.surface_condition !== undefined) updatePayload.surface_condition = updates.surface_condition;
-    if (updates.flight_frequency !== undefined) updatePayload.flight_frequency = updates.flight_frequency;
-
-    // Build status log rows before updating (need previous_status)
-    let logRows: { airstrip_id: string; previous_status: string; new_status: string; changed_by: string; reason: string | null }[] = [];
+    // Status change → atomic per-airstrip RPC (UPDATE + status_log INSERT in one
+    // transaction, logging only when the status actually changes). Replaces the
+    // parallel update/log writes that could desync (B9).
     if (statusChanged && updates.status) {
-      logRows = airstripIds
-        .filter(id => currentStatuses[id] && currentStatuses[id] !== updates.status)
-        .map(id => ({
-          airstrip_id: id,
-          previous_status: currentStatuses[id],
-          new_status: updates.status!,
-          changed_by: session.user.id,
-          reason: reason?.trim() || null,
-        }));
-    }
-
-    // Run update + status log insert in parallel
-    const updatePromise = supabaseAdmin
-      .from('airstrips')
-      .update(updatePayload)
-      .in('id', airstripIds);
-
-    const logPromise = logRows.length > 0
-      ? supabaseAdmin.from('airstrip_status_log').insert(logRows)
-      : Promise.resolve(null);
-
-    const [updateResult, logResult] = await Promise.all([updatePromise, logPromise]);
-
-    if (updateResult.error) {
-      logger.error({ err: updateResult.error }, 'Airstrip bulk update failed');
-      return apiError('DB_ERROR', 'Bulk update failed', 500);
-    }
-
-    if (logResult && 'error' in logResult && logResult.error) {
-      logger.error({ err: logResult.error }, 'Airstrip bulk status log insert failed');
-      // Non-fatal: update succeeded, log failed
+      const results = await Promise.all(
+        airstripIds.map(aid =>
+          supabaseAdmin.rpc('airstrip_change_status', {
+            p_airstrip_id: aid,
+            p_new_status: updates.status,
+            p_reason: reason?.trim() ?? null,
+            p_user_id: session.user.id,
+          }),
+        ),
+      );
+      const failed = results.find(r => r.error)?.error;
+      if (failed) {
+        logger.error({ err: failed }, 'Airstrip bulk status change failed');
+        return apiError('DB_ERROR', 'Bulk status change failed', 500);
+      }
     }
 
     return NextResponse.json({

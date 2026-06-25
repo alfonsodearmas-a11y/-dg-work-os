@@ -3,7 +3,8 @@ import { requireAirstripAccess } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import type { AirstripStatus, SurfaceCondition } from '@/lib/airstrip-types';
-import { AIRSTRIP_STATUSES, SURFACE_CONDITIONS, FLIGHT_FREQUENCIES } from '@/lib/airstrip-types';
+import { AIRSTRIP_STATUSES, SURFACE_CONDITIONS, FLIGHT_FREQUENCIES, guyanaToday } from '@/lib/airstrip-types';
+import { getAirstripSettings, augmentAirstrip, type AirstripOverviewRow } from '@/lib/airstrips/queries';
 import { z } from 'zod';
 import { parseBody } from '@/lib/api-utils';
 
@@ -26,9 +27,9 @@ export async function GET(request: NextRequest) {
     const sortField = p.get('sort') || 'name';
     const sortDir = p.get('dir') === 'desc' ? false : true; // ascending by default
 
-    // ── Build query ──
+    // ── Build query ── (airstrip_overview adds derived cadence inputs + responsibility)
     let query = supabaseAdmin
-      .from('airstrips')
+      .from('airstrip_overview')
       .select('*');
 
     if (search) {
@@ -59,9 +60,10 @@ export async function GET(request: NextRequest) {
     const resolvedSort = validSortFields.includes(sortField) ? sortField : 'name';
     query = query.order(resolvedSort, { ascending: sortDir, nullsFirst: false });
 
-    // Run both queries in parallel
-    const [airstripResult, verificationResult] = await Promise.all([
+    // Run the list query, the settings load, and the pending-verification count in parallel
+    const [airstripResult, settings, verificationResult] = await Promise.all([
       query,
+      getAirstripSettings(),
       supabaseAdmin
         .from('airstrip_maintenance_log')
         .select('*', { count: 'exact', head: true })
@@ -70,31 +72,36 @@ export async function GET(request: NextRequest) {
 
     if (airstripResult.error) throw airstripResult.error;
 
-    const all = airstripResult.data || [];
+    const today = guyanaToday();
+    const airstrips = (airstripResult.data as AirstripOverviewRow[] | null ?? []).map(
+      row => augmentAirstrip(row, settings, today),
+    );
 
-    // Single-pass summary stats
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    const sixMonthsStr = sixMonthsAgo.toISOString().slice(0, 10);
+    // Single-pass summary stats — overdue derives from cadence (replaces the old
+    // 6-month inspection heuristic). Counts use each strip's primary attention level.
     const regions = new Set<number>();
-
-    const summary = all.reduce(
+    const summary = airstrips.reduce(
       (acc, a) => {
         acc.total++;
         if (a.status === 'operational') acc.operational++;
         else if (a.status === 'limited' || a.status === 'under_rehabilitation') acc.limited_or_rehab++;
         else if (a.status === 'closed') acc.closed++;
-        if (!a.last_inspection_date || a.last_inspection_date < sixMonthsStr) acc.overdue_inspection++;
-        regions.add(a.region);
+        const lvl = a.cadence.attentionLevel;
+        if (lvl !== 'ok') acc.needs_attention++;
+        if (lvl === 'overdue') acc.overdue++;
+        else if (lvl === 'upcoming') acc.upcoming++;
+        else if (lvl === 'stale') acc.verification_stale++;
+        regions.add(a.region as number);
         return acc;
       },
-      { total: 0, operational: 0, limited_or_rehab: 0, closed: 0, overdue_inspection: 0 },
+      { total: 0, operational: 0, limited_or_rehab: 0, closed: 0,
+        needs_attention: 0, overdue: 0, upcoming: 0, verification_stale: 0 },
     );
 
     const distinctRegions = [...regions].sort((a, b) => a - b);
 
     return NextResponse.json({
-      airstrips: all,
+      airstrips,
       summary: { ...summary, pending_verification: verificationResult.count ?? 0 },
       filters: { regions: distinctRegions },
     });

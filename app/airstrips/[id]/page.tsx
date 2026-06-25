@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   PlaneLanding, ArrowLeft, RefreshCw, Edit3, MapPin,
   Wrench, Camera, ClipboardCheck, History, Info,
-  Check, X, Loader2, AlertTriangle, ChevronDown, ChevronRight,
+  Check, X, Loader2, ChevronDown, ChevronRight,
   Trash2, Upload, Signal, SignalZero, ExternalLink, ImageIcon,
 } from 'lucide-react';
 import { Tabs, type Tab } from '@/components/ui/Tabs';
@@ -22,6 +22,9 @@ import type {
   AirstripInspection, AirstripStatusLog,
 } from '@/lib/airstrip-types';
 import AddEditAirstripModal from '@/components/airstrips/AddEditAirstripModal';
+import { WarningBadges } from '@/components/airstrips/WarningBadges';
+import ResponsibilityModal from '@/components/airstrips/ResponsibilityModal';
+import type { AirstripCadence, AirstripResponsibility } from '@/lib/airstrips/warnings';
 import { useAirstripOptions } from '@/hooks/useAirstripOptions';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -33,8 +36,19 @@ interface QuickStats {
   unverifiedThisQuarter: number;
 }
 
+// Airstrip augmented by the detail API (airstrip_overview + warning engine).
+export type DetailAirstrip = Airstrip & {
+  last_maintenance_on?: string | null;
+  last_verified_on?: string | null;
+  target_maintenance_interval_days?: number | null;
+  responsible_manager_id?: string | null;
+  intervalDays?: number;
+  cadence?: AirstripCadence;
+  responsibility?: AirstripResponsibility;
+};
+
 interface DetailData {
-  airstrip: Airstrip;
+  airstrip: DetailAirstrip;
   maintenance: AirstripMaintenanceLog[];
   photos: AirstripPhoto[];
   inspections: AirstripInspection[];
@@ -75,12 +89,6 @@ function relativeTime(date: string | null): string {
   return `${Math.floor(months / 12)}y ago`;
 }
 
-function isOverdue(date: string | null): boolean {
-  if (!date) return true;
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-  return new Date(date) < sixMonthsAgo;
-}
 
 function getQuarter(date: string): string {
   return quarterFromISODate(date) ?? '';
@@ -153,6 +161,7 @@ export default function AirstripDetailPage() {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
 
   // Modal states
+  const [responsibilityOpen, setResponsibilityOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [maintenanceModalOpen, setMaintenanceModalOpen] = useState(false);
@@ -260,7 +269,7 @@ export default function AirstripDetailPage() {
       {/* ── Tabs ── */}
       <Tabs tabs={tabs} activeTab={activeTab} onChange={t => setActiveTab(t as TabId)} compactOnMobile>
         <div className="mt-6">
-          {activeTab === 'overview' && <OverviewTab airstrip={a} quickStats={quickStats} />}
+          {activeTab === 'overview' && <OverviewTab airstrip={a} quickStats={quickStats} onEditResponsibility={() => setResponsibilityOpen(true)} />}
           {activeTab === 'maintenance' && (
             <MaintenanceTab
               maintenance={maintenance}
@@ -310,6 +319,14 @@ export default function AirstripDetailPage() {
       </Tabs>
 
       {/* ── Modals ── */}
+      <ResponsibilityModal
+        open={responsibilityOpen}
+        onClose={() => setResponsibilityOpen(false)}
+        airstripId={a.id}
+        currentContractorId={a.responsibility?.contractorId ?? null}
+        currentManagerId={a.responsibility?.managerId ?? null}
+        onSaved={fetchData}
+      />
       <AddEditAirstripModal
         open={editModalOpen}
         onClose={() => setEditModalOpen(false)}
@@ -375,8 +392,11 @@ export default function AirstripDetailPage() {
 // TAB: OVERVIEW
 // ════════════════════════════════════════════════════════════════════════════
 
-function OverviewTab({ airstrip: a, quickStats }: { airstrip: Airstrip; quickStats: QuickStats }) {
-  const overdue = isOverdue(a.last_inspection_date);
+function OverviewTab({ airstrip: a, quickStats, onEditResponsibility }: {
+  airstrip: DetailAirstrip;
+  quickStats: QuickStats;
+  onEditResponsibility: () => void;
+}) {
   const { labelFor: surfaceLabel } = useAirstripOptions('surface_type');
 
   return (
@@ -426,19 +446,52 @@ function OverviewTab({ airstrip: a, quickStats }: { airstrip: Airstrip; quickSta
         </div>
       </div>
 
-      {/* Right — Quick Stats */}
+      {/* Right — Health, Responsibility & Quick Stats */}
       <div className="space-y-3">
-        <div className={`glass-card p-4 ${overdue ? 'border-orange-500/40' : ''}`}>
+        {/* Maintenance health (cadence-derived) */}
+        <div className={`glass-card p-4 space-y-2 ${a.cadence?.attentionLevel === 'overdue' ? 'border-red-500/40' : ''}`}>
+          <span className="text-xs text-navy-600 uppercase tracking-wide">Maintenance Health</span>
+          {a.cadence && a.cadence.warnings.length > 0
+            ? <WarningBadges cadence={a.cadence} />
+            : <p className="text-sm text-emerald-400">On cadence</p>}
+          <div className="flex items-center justify-between text-xs pt-1">
+            <span className="text-navy-600">Next due</span>
+            <span className="text-slate-300">{a.cadence?.nextDueOn ? formatDate(a.cadence.nextDueOn) : '—'}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-navy-600">Interval</span>
+            <span className="text-slate-300">{a.intervalDays ?? '—'} days{a.target_maintenance_interval_days ? ' (override)' : ''}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-navy-600">Last maintenance</span>
+            <span className="text-slate-300">{formatDate(a.last_maintenance_on ?? null)}</span>
+          </div>
+        </div>
+
+        {/* Responsibility */}
+        <div className="glass-card p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-navy-600 uppercase tracking-wide">Responsibility</span>
+            <button onClick={onEditResponsibility} className="text-xs text-gold-500 hover:text-gold-400">Edit</button>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-navy-600 text-xs">Contractor</span>
+            <span className={a.responsibility?.contractorName ? 'text-white' : 'text-red-400'}>
+              {a.responsibility?.contractorName || 'Unassigned'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-navy-600 text-xs">Manager</span>
+            <span className={a.responsibility?.managerName ? 'text-white' : 'text-red-400'}>
+              {a.responsibility?.managerName || 'Unassigned'}
+            </span>
+          </div>
+        </div>
+
+        <div className="glass-card p-4">
           <span className="text-xs text-navy-600 uppercase tracking-wide">Last Inspection</span>
-          <p className={`text-lg font-semibold ${overdue ? 'text-orange-400' : 'text-white'}`}>
-            {overdue && <AlertTriangle className="inline h-4 w-4 mr-1 -mt-0.5" />}
-            {formatDate(a.last_inspection_date)}
-          </p>
-          {a.last_inspection_date && (
-            <p className={`text-xs ${overdue ? 'text-orange-400/70' : 'text-navy-600'}`}>
-              {relativeTime(a.last_inspection_date)}
-            </p>
-          )}
+          <p className="text-lg font-semibold text-white">{formatDate(a.last_inspection_date)}</p>
+          {a.last_inspection_date && <p className="text-xs text-navy-600">{relativeTime(a.last_inspection_date)}</p>}
         </div>
         <div className="glass-card p-4">
           <span className="text-xs text-navy-600 uppercase tracking-wide">Maintenance ({quickStats.currentQuarter})</span>

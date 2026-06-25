@@ -15,11 +15,14 @@ import {
   quarterFromISODate,
 } from '@/lib/airstrip-types';
 import type { Airstrip, AirstripMaintenanceLog } from '@/lib/airstrip-types';
+import type { AirstripCadence, AirstripResponsibility } from '@/lib/airstrips/warnings';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { exportToCsv } from '@/lib/export-csv';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
 import AddEditAirstripModal from '@/components/airstrips/AddEditAirstripModal';
 import BulkUploadAirstripsModal from '@/components/airstrips/BulkUploadAirstripsModal';
+import CadenceSettingsModal from '@/components/airstrips/CadenceSettingsModal';
+import { WarningBadges } from '@/components/airstrips/WarningBadges';
 import { AirstripBulkActionBar } from '@/components/airstrips/AirstripBulkActionBar';
 import { SlidePanel } from '@/components/layout/SlidePanel';
 import { useAirstripOptions, prefetchAirstripOptions } from '@/hooks/useAirstripOptions';
@@ -31,12 +34,26 @@ interface AirstripListSummary {
   operational: number;
   limited_or_rehab: number;
   closed: number;
-  overdue_inspection: number;
+  needs_attention: number;
+  overdue: number;
+  upcoming: number;
+  verification_stale: number;
   pending_verification: number;
 }
 
+// Airstrip augmented by the list/detail API (airstrip_overview + warning engine).
+export type AirstripRow = Airstrip & {
+  last_maintenance_on?: string | null;
+  last_verified_on?: string | null;
+  target_maintenance_interval_days?: number | null;
+  responsible_manager_id?: string | null;
+  intervalDays?: number;
+  cadence?: AirstripCadence;
+  responsibility?: AirstripResponsibility;
+};
+
 interface AirstripResponse {
-  airstrips: Airstrip[];
+  airstrips: AirstripRow[];
   summary: AirstripListSummary;
   filters: { regions: number[] };
 }
@@ -44,14 +61,12 @@ interface AirstripResponse {
 type SortField = 'name' | 'region' | 'runway_length_m' | 'surface_condition' | 'last_inspection_date' | 'flight_frequency' | 'status';
 type ViewMode = 'table' | 'grid';
 
+// Attention ranking for the "Needs Attention" queue: overdue → due-soon → stale → ok.
+const ATTENTION_RANK: Record<string, number> = { overdue: 0, upcoming: 1, stale: 2, ok: 3 };
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function isOverdue(date: string | null): boolean {
-  if (!date) return true;
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-  return new Date(date) < sixMonthsAgo;
-}
+// (WarningBadges moved to components/airstrips/WarningBadges.tsx — shared with detail page.)
 
 function formatRunway(length: number | null, width: number | null): string {
   if (!length && !width) return '—';
@@ -393,7 +408,7 @@ function AirstripDrawerContent({
   airstrip,
   onFieldSaved,
 }: {
-  airstrip: Airstrip;
+  airstrip: AirstripRow;
   onFieldSaved: (updated: Partial<Airstrip>) => void;
 }) {
   const { options: conditionOpts } = useAirstripOptions('condition');
@@ -503,14 +518,9 @@ function AirstripDrawerContent({
         </div>
       </div>
 
-      {/* Overdue inspection alert */}
-      {isOverdue(airstrip.last_inspection_date) && (
-        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-orange-500/10 border border-orange-500/30">
-          <AlertTriangle className="h-4 w-4 text-orange-400 shrink-0" />
-          <span className="text-xs text-orange-400">
-            Inspection overdue — last inspected {formatDate(airstrip.last_inspection_date)}
-          </span>
-        </div>
+      {/* Maintenance warnings (overdue / due soon / verification stale) */}
+      {airstrip.cadence && airstrip.cadence.warnings.length > 0 && (
+        <div className="px-1"><WarningBadges cadence={airstrip.cadence} /></div>
       )}
 
       {/* ── Infrastructure ── */}
@@ -569,10 +579,7 @@ function AirstripDrawerContent({
           </button>
         </div>
         <DetailField label="Last Inspection" flash={savedFlash === 'last_inspection_date'}>
-          <span className={`text-sm ${isOverdue(airstrip.last_inspection_date) ? 'text-orange-400' : 'text-white'}`}>
-            {isOverdue(airstrip.last_inspection_date) && <AlertTriangle className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />}
-            {formatDate(airstrip.last_inspection_date)}
-          </span>
+          <span className="text-sm text-white">{formatDate(airstrip.last_inspection_date)}</span>
         </DetailField>
 
         {/* Maintenance timeline */}
@@ -768,6 +775,8 @@ export default function AirstripsPage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [selectedAirstripId, setSelectedAirstripId] = useState<string | null>(null);
+  const [attentionOnly, setAttentionOnly] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // ── Multi-select state ──
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -913,6 +922,21 @@ export default function AirstripsPage() {
   const airstrips = data?.airstrips || [];
   const summary = data?.summary;
   const availableRegions = data?.filters?.regions || [];
+
+  // Strips needing attention, ranked overdue → due-soon → stale, then by days overdue.
+  const attentionItems = React.useMemo(
+    () =>
+      airstrips
+        .filter(a => a.cadence && a.cadence.attentionLevel !== 'ok')
+        .sort((x, y) => {
+          const r = ATTENTION_RANK[x.cadence!.attentionLevel] - ATTENTION_RANK[y.cadence!.attentionLevel];
+          if (r !== 0) return r;
+          return (y.cadence!.daysOverdue ?? -Infinity) - (x.cadence!.daysOverdue ?? -Infinity);
+        }),
+    [airstrips],
+  );
+  const displayedAirstrips = attentionOnly ? attentionItems : airstrips;
+
   const selectedAirstrip = airstrips.find(a => a.id === selectedAirstripId) ?? null;
   const allSelected = React.useMemo(
     () => airstrips.length > 0 && airstrips.every(a => selectedIds.has(a.id)),
@@ -946,13 +970,47 @@ export default function AirstripsPage() {
 
       {/* Summary Bar */}
       {summary && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
           <StatCard label="Total Airstrips" value={summary.total} color="#94a3b8" />
           <StatCard label="Operational" value={summary.operational} color="#10b981" />
           <StatCard label="Limited / Rehab" value={summary.limited_or_rehab} color="#d4af37" />
           <StatCard label="Closed" value={summary.closed} color="#dc2626" />
-          <StatCard label="Overdue Inspection" value={summary.overdue_inspection} color="#f97316" pulse={summary.overdue_inspection > 0} />
+          <StatCard label="Needs Attention" value={summary.needs_attention} color="#f97316" pulse={summary.needs_attention > 0} />
+          <StatCard label="Overdue" value={summary.overdue} color="#dc2626" pulse={summary.overdue > 0} />
           <StatCard label="Pending Verification" value={summary.pending_verification} color="#60a5fa" />
+        </div>
+      )}
+
+      {/* Needs Attention — pinned queue of strips off their maintenance cadence */}
+      {!loading && !error && attentionItems.length > 0 && (
+        <div className="card-premium p-4 border-orange-500/30">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle className="h-4 w-4 text-orange-400" />
+            <h2 className="text-sm font-semibold text-white">Needs Attention</h2>
+            <span className="text-xs text-navy-600">{attentionItems.length} airstrip{attentionItems.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="space-y-2">
+            {attentionItems.slice(0, 8).map(a => (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => setSelectedAirstripId(a.id)}
+                className="w-full flex items-start justify-between gap-3 text-left px-3 py-2 rounded-lg bg-navy-900/50 hover:bg-navy-900 border border-navy-800 transition-colors"
+              >
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-white">{a.name}</span>
+                  <span className="text-xs text-navy-600 ml-2">Region {a.region}</span>
+                  <div className="mt-1"><WarningBadges cadence={a.cadence} /></div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-navy-600 shrink-0 mt-0.5" />
+              </button>
+            ))}
+            {attentionItems.length > 8 && (
+              <button onClick={() => setAttentionOnly(true)} className="text-xs text-gold-500 hover:text-gold-400 pt-1">
+                View all {attentionItems.length} →
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -1053,8 +1111,22 @@ export default function AirstripsPage() {
             >
               <Download className="h-3.5 w-3.5" /> Export CSV
             </button>
+            <button
+              onClick={() => setAttentionOnly(v => !v)}
+              className={`px-3 py-1.5 text-xs flex items-center gap-1.5 rounded-lg border transition-colors ${
+                attentionOnly ? 'bg-orange-500/15 border-orange-500/40 text-orange-400' : 'btn-navy'
+              }`}
+            >
+              <AlertTriangle className="h-3.5 w-3.5" /> Needs Attention
+              {summary && summary.needs_attention > 0 && (
+                <span className="ml-0.5 px-1.5 rounded-full bg-orange-500/30 text-orange-300 text-[10px]">{summary.needs_attention}</span>
+              )}
+            </button>
             {canEditAirstrips && (
               <>
+                <button onClick={() => setSettingsOpen(true)} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1.5">
+                  <RefreshCw className="h-3.5 w-3.5" /> Cadence
+                </button>
                 <button onClick={() => setBulkUploadOpen(true)} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1.5">
                   <Upload className="h-3.5 w-3.5" /> Bulk Upload
                 </button>
@@ -1103,17 +1175,25 @@ export default function AirstripsPage() {
       )}
 
       {/* Empty state */}
-      {!loading && !error && airstrips.length === 0 && (
+      {!loading && !error && displayedAirstrips.length === 0 && (
         <EmptyState
           icon={<PlaneLanding className="h-12 w-12" />}
-          title="No airstrips found"
-          description={hasActiveFilters ? 'Try adjusting your filters.' : 'Airstrip data has not been loaded yet.'}
-          action={hasActiveFilters ? <button onClick={clearFilters} className="btn-navy px-4 py-2 text-sm">Clear Filters</button> : undefined}
+          title={attentionOnly ? 'Nothing needs attention' : 'No airstrips found'}
+          description={
+            attentionOnly ? 'All airstrips are within their maintenance cadence.'
+            : hasActiveFilters ? 'Try adjusting your filters.'
+            : 'Airstrip data has not been loaded yet.'
+          }
+          action={
+            attentionOnly ? <button onClick={() => setAttentionOnly(false)} className="btn-navy px-4 py-2 text-sm">Show all</button>
+            : hasActiveFilters ? <button onClick={clearFilters} className="btn-navy px-4 py-2 text-sm">Clear Filters</button>
+            : undefined
+          }
         />
       )}
 
       {/* Table View */}
-      {!loading && !error && airstrips.length > 0 && viewMode === 'table' && (
+      {!loading && !error && displayedAirstrips.length > 0 && viewMode === 'table' && (
         <div className="overflow-x-auto rounded-xl border border-navy-800">
           <table className="table-premium min-w-full">
             <thead>
@@ -1145,8 +1225,7 @@ export default function AirstripsPage() {
               </tr>
             </thead>
             <tbody>
-              {airstrips.map((a) => {
-                const overdue = isOverdue(a.last_inspection_date);
+              {displayedAirstrips.map((a) => {
                 const isChecked = selectedIds.has(a.id);
                 return (
                   <tr
@@ -1166,17 +1245,17 @@ export default function AirstripsPage() {
                       />
                     </td>
                     <td className="px-3 py-2.5">
-                      <span className="text-sm font-medium text-white hover:text-gold-500 transition-colors">{a.name}</span>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-white hover:text-gold-500 transition-colors">{a.name}</span>
+                        <WarningBadges cadence={a.cadence} compact />
+                      </div>
                     </td>
                     <td className="px-3 py-2.5 hidden sm:table-cell">
                       <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-navy-800 text-xs font-medium text-white">{a.region}</span>
                     </td>
                     <td className="px-3 py-2.5"><ConfigBadge value={a.surface_condition} config={CONDITION_CONFIG} /></td>
                     <td className="px-3 py-2.5 hidden md:table-cell">
-                      <span className={`text-xs ${overdue ? 'text-orange-400' : 'text-slate-400'}`}>
-                        {overdue && <AlertTriangle className="inline h-3 w-3 mr-1 -mt-0.5" />}
-                        {formatDate(a.last_inspection_date)}
-                      </span>
+                      <span className="text-xs text-slate-400">{formatDate(a.last_inspection_date)}</span>
                     </td>
                     <td className="px-3 py-2.5"><ConfigBadge value={a.status} config={STATUS_CONFIG} /></td>
                   </tr>
@@ -1188,10 +1267,9 @@ export default function AirstripsPage() {
       )}
 
       {/* Card Grid View */}
-      {!loading && !error && airstrips.length > 0 && viewMode === 'grid' && (
+      {!loading && !error && displayedAirstrips.length > 0 && viewMode === 'grid' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {airstrips.map(a => {
-            const overdue = isOverdue(a.last_inspection_date);
+          {displayedAirstrips.map(a => {
             const isChecked = selectedIds.has(a.id);
             return (
               <div key={a.id} className="relative group">
@@ -1228,12 +1306,8 @@ export default function AirstripsPage() {
                       <ConfigBadge value={a.surface_condition} config={CONDITION_CONFIG} />
                     </div>
 
-                    <div className="text-xs text-slate-400">
-                      <span className={overdue ? 'text-orange-400' : ''}>
-                        {overdue && <AlertTriangle className="inline h-3 w-3 mr-1 -mt-0.5" />}
-                        Inspected: {formatDate(a.last_inspection_date)}
-                      </span>
-                    </div>
+                    <div className="text-xs text-slate-400">Inspected: {formatDate(a.last_inspection_date)}</div>
+                    <WarningBadges cadence={a.cadence} compact />
                   </div>
                 </button>
               </div>
@@ -1271,6 +1345,13 @@ export default function AirstripsPage() {
         open={bulkUploadOpen}
         onClose={() => setBulkUploadOpen(false)}
         onImported={fetchAirstrips}
+      />
+
+      {/* Cadence Settings Modal */}
+      <CadenceSettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onSaved={fetchAirstrips}
       />
 
       {/* Bulk Action Bar */}

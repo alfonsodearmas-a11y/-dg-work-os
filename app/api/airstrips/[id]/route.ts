@@ -3,7 +3,8 @@ import { requireAirstripAccess } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
-import { AIRSTRIP_STATUSES, SURFACE_CONDITIONS, FLIGHT_FREQUENCIES, currentQuarter } from '@/lib/airstrip-types';
+import { AIRSTRIP_STATUSES, SURFACE_CONDITIONS, FLIGHT_FREQUENCIES, currentQuarter, guyanaToday } from '@/lib/airstrip-types';
+import { getAirstripSettings, augmentAirstrip, type AirstripOverviewRow } from '@/lib/airstrips/queries';
 import { parseBody } from '@/lib/api-utils';
 
 // GET /api/airstrips/[id] — full detail with related data
@@ -17,9 +18,10 @@ export async function GET(
 
     const { id } = await params;
 
-    // Fetch airstrip + related data in parallel
-    const [airstripRes, maintenanceRes, photosRes, inspectionsRes, statusLogRes] = await Promise.all([
-      supabaseAdmin.from('airstrips').select('*').eq('id', id).single(),
+    // Fetch airstrip overview (derived cadence + responsibility) + related data in parallel
+    const [airstripRes, settings, maintenanceRes, photosRes, inspectionsRes, statusLogRes] = await Promise.all([
+      supabaseAdmin.from('airstrip_overview').select('*').eq('id', id).single(),
+      getAirstripSettings(),
       supabaseAdmin
         .from('airstrip_maintenance_log')
         .select('*, verified_by_user:users!airstrip_maintenance_log_verified_by_fkey(name)')
@@ -46,6 +48,8 @@ export async function GET(
       return NextResponse.json({ error: 'Airstrip not found' }, { status: 404 });
     }
 
+    const airstrip = augmentAirstrip(airstripRes.data as AirstripOverviewRow, settings, guyanaToday());
+
     // Compute quick stats — current quarter anchored to Guyana local time (UTC-4).
     const quarterStr = currentQuarter();
 
@@ -53,7 +57,7 @@ export async function GET(
     const quarterMaintenance = maintenance.filter(m => m.quarter === quarterStr);
 
     return NextResponse.json({
-      airstrip: airstripRes.data,
+      airstrip,
       maintenance,
       photos: photosRes.data || [],
       inspections: inspectionsRes.data || [],
@@ -93,6 +97,8 @@ const updateSchema = z.object({
   remarks: z.string().trim().nullable().optional(),
   coordinates_lat: z.number().min(-90).max(90).nullable().optional(),
   coordinates_lon: z.number().min(-180).max(180).nullable().optional(),
+  target_maintenance_interval_days: z.number().int().positive().nullable().optional(),
+  responsible_manager_id: z.string().uuid().nullable().optional(),
 });
 
 export async function PATCH(
@@ -139,29 +145,38 @@ export async function PATCH(
       }
     }
 
-    const { status_change_reason, ...updateFields } = data;
-    const updatePayload = { ...updateFields, updated_by: session.user.id };
+    // Split status out: the status change + its log are applied atomically by the
+    // airstrip_change_status RPC (eliminates the old parallel update/log desync).
+    // Non-status fields are updated normally.
+    const { status_change_reason, status, ...otherFields } = data;
 
-    // Parallelize the update and status log insert
-    const updatePromise = supabaseAdmin
-      .from('airstrips')
-      .update(updatePayload)
-      .eq('id', id)
-      .select('*')
-      .single();
+    if (Object.keys(otherFields).length > 0) {
+      const { error: updateErr } = await supabaseAdmin
+        .from('airstrips')
+        .update({ ...otherFields, updated_by: session.user.id })
+        .eq('id', id);
+      if (updateErr) throw updateErr;
+    }
 
-    const statusLogPromise = statusChanged
-      ? supabaseAdmin.from('airstrip_status_log').insert({
-          airstrip_id: id,
-          previous_status: current.status,
-          new_status: data.status!,
-          changed_by: session.user.id,
-          reason: status_change_reason || null,
-        })
-      : Promise.resolve(null);
+    if (statusChanged) {
+      const { error: statusErr } = await supabaseAdmin.rpc('airstrip_change_status', {
+        p_airstrip_id: id,
+        p_new_status: status,
+        p_reason: status_change_reason ?? null,
+        p_user_id: session.user.id,
+      });
+      if (statusErr) throw statusErr;
+    }
 
-    const [{ data: airstrip, error: updateErr }] = await Promise.all([updatePromise, statusLogPromise]);
-    if (updateErr) throw updateErr;
+    // Return the refreshed, cadence-augmented airstrip. The overview re-fetch must
+    // follow the writes; the settings load does not, so run them together.
+    const [{ data: refreshed }, settings] = await Promise.all([
+      supabaseAdmin.from('airstrip_overview').select('*').eq('id', id).single(),
+      getAirstripSettings(),
+    ]);
+    const airstrip = refreshed
+      ? augmentAirstrip(refreshed as AirstripOverviewRow, settings, guyanaToday())
+      : null;
 
     return NextResponse.json({ airstrip });
   } catch (error) {
