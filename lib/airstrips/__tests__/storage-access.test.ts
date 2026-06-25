@@ -19,7 +19,11 @@ function walk(dir: string, acc: string[] = []): string[] {
   return acc;
 }
 
-const files = ROOTS.flatMap(r => walk(path.join(process.cwd(), r)));
+const files = [
+  ...ROOTS.flatMap(r => walk(path.join(process.cwd(), r))),
+  // the PDF renderer embeds photos — it must also avoid public/signed URLs
+  path.join(process.cwd(), 'lib/pdf/airstrip-report-render.tsx'),
+];
 
 describe('airstrip storage access is proxy-only', () => {
   it('scans a non-trivial number of airstrip source files', () => {

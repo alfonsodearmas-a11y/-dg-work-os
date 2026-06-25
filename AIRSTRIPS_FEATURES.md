@@ -56,7 +56,21 @@ Maintenance Health + Responsibility cards on detail. `CadenceSettingsModal` (edi
 
 **Deferred:** payment model (report section stays conditional); B10 application (awaiting confirm).
 
-## Phase 2 — Per-airstrip PDF report — pending
+## Phase 2 — Per-airstrip PDF report — ✅ shipped (Part C)
+
+- `GET /api/airstrips/[id]/report.pdf?from=&to=` — `requireAirstripAccess`, `runtime=nodejs`, default last
+  12 months. Mirrors the intel `report.pdf` route.
+- `lib/airstrips/report/prepare-airstrip-report.ts` (data-gather, split from render so a future network rollup
+  reuses it) → `lib/pdf/airstrip-report-render.tsx` (`@react-pdf/renderer`, MPUA letterhead like nptab).
+  Sections: profile, maintenance health (cadence/warnings), maintenance timeline with **photos embedded as
+  bytes** (`storage.download()` → base64 data URI — no URL layer), inspection history, quarterly activity trend.
+- Payment section **conditional and omitted** (no payment model). Pure helpers `resolveReportRange` /
+  `buildTrend` / `photoFormat` are unit-tested.
+- "Report" button + date-range modal (`GenerateReportModal`) on the airstrip detail.
+- **Tests (10 files / 46 airstrip tests):** prepare returns correct structured data + embeds photo bytes;
+  no-maintenance strip → valid PDF (doesn't throw); photo embed proven by PDF-size delta (not just validity);
+  route auth-gated (401/403/404/200); static guard extended to the renderer.
+
 ## Phase 3 — clean hooks only — pending
 
 ## ⚠️ Deploy checklist (MUST hold at deploy time)

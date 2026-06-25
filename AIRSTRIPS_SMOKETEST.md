@@ -54,6 +54,17 @@ rolled-back transaction** — prod is never mutated.
 - Residual risk noted: a dynamic writepath would require the literal table name, which appears only in the read
   route + a type comment + migrations — none is a write.
 
+## Part C — Phase 2 PDF report (built with tests)
+- ✅ `prepareAirstripReport` returns correct structured data for a known strip + range; default range = last
+  12 months; `resolveReportRange`/`buildTrend`/`photoFormat` unit-tested (incl. chronological quarter sort).
+- ✅ **Never-maintained strip** → `prepare` returns empty timeline/trend without throwing; `render` produces a
+  valid PDF that says so.
+- ✅ **Photos embedded as bytes, no URL layer:** `prepare` downloads via `storage.download()` (asserted
+  `Buffer`, asserted `storage.download` called with the path); `render` proves real embedding by a PDF-size
+  delta (a distinct image inflates the PDF — a skipped/corrupt image would not).
+- ✅ Report route auth-gated: 403 non-HAS, 401 unauth, 404 missing strip, 200 `application/pdf` authorized.
+- ✅ Static guard extended to `lib/pdf/airstrip-report-render.tsx` — no public/signed URL in the PDF path.
+
 ## Coverage honesty
 - **True browser E2E:** none (no harness in repo; not stood up per instruction).
 - **Integration-level (stands in for E2E):** all route/auth/RPC/proxy checks above. The *rendered* UI (Needs

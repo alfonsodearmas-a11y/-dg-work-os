@@ -7,7 +7,7 @@ import {
   PlaneLanding, ArrowLeft, RefreshCw, Edit3, MapPin,
   Wrench, Camera, ClipboardCheck, History, Info,
   Check, X, Loader2, ChevronDown, ChevronRight,
-  Trash2, Upload, Signal, SignalZero, ExternalLink, ImageIcon,
+  Trash2, Upload, Signal, SignalZero, ExternalLink, ImageIcon, FileText,
 } from 'lucide-react';
 import { Tabs, type Tab } from '@/components/ui/Tabs';
 import {
@@ -24,6 +24,7 @@ import type {
 import AddEditAirstripModal from '@/components/airstrips/AddEditAirstripModal';
 import { WarningBadges } from '@/components/airstrips/WarningBadges';
 import ResponsibilityModal from '@/components/airstrips/ResponsibilityModal';
+import GenerateReportModal from '@/components/airstrips/GenerateReportModal';
 import type { AirstripCadence, AirstripResponsibility } from '@/lib/airstrips/warnings';
 import { useAirstripOptions } from '@/hooks/useAirstripOptions';
 
@@ -161,6 +162,7 @@ export default function AirstripDetailPage() {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
 
   // Modal states
+  const [reportOpen, setReportOpen] = useState(false);
   const [responsibilityOpen, setResponsibilityOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -253,6 +255,9 @@ export default function AirstripDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => setReportOpen(true)} className="btn-navy px-3 py-2 text-xs flex items-center gap-1.5">
+              <FileText className="h-3.5 w-3.5" /> Report
+            </button>
             <button onClick={() => setStatusModalOpen(true)} className="btn-navy px-3 py-2 text-xs flex items-center gap-1.5">
               Change Status
             </button>
@@ -319,6 +324,7 @@ export default function AirstripDetailPage() {
       </Tabs>
 
       {/* ── Modals ── */}
+      <GenerateReportModal open={reportOpen} onClose={() => setReportOpen(false)} airstripId={a.id} />
       <ResponsibilityModal
         open={responsibilityOpen}
         onClose={() => setResponsibilityOpen(false)}
