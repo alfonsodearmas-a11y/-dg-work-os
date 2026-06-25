@@ -86,10 +86,11 @@ function getQuarter(date: string): string {
   return quarterFromISODate(date) ?? '';
 }
 
-function getStorageUrl(path: string, thumbnail = false): string {
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const url = `${base}/storage/v1/object/public/airstrip-photos/${path}`;
-  return thumbnail ? `${url}?width=400&height=300` : url;
+// Photos are served through the auth-gated proxy route (bucket is private — no
+// public or signed URLs). Keyed off the photo itself so every call site works
+// without threading the airstrip id through props.
+function photoFileUrl(photo: AirstripPhoto): string {
+  return `/api/airstrips/${photo.airstrip_id}/photos/${photo.id}/file`;
 }
 
 // ── Modal Wrapper ────────────────────────────────────────────────────────────
@@ -580,7 +581,7 @@ function MaintenanceTab({ maintenance, photos, onLogMaintenance, onVerify, onEdi
                               className="h-10 w-10 rounded-md bg-navy-900 overflow-hidden border border-navy-800 hover:border-gold-500/60 transition-colors shrink-0"
                               title={p.caption || p.file_name || 'View photo'}
                             >
-                              <img src={getStorageUrl(p.storage_path, true)} alt="" className="h-full w-full object-cover" loading="lazy" />
+                              <img src={photoFileUrl(p)} alt="" className="h-full w-full object-cover" loading="lazy" />
                             </button>
                           ))}
                           {linkedPhotos.length > 3 && (
@@ -658,7 +659,7 @@ function PhotosTab({ photos, airstripId, onUpload, onViewPhoto, onDelete }: {
               <button onClick={() => onViewPhoto(p)} className="block w-full">
                 <div className="aspect-[4/3] bg-navy-900 overflow-hidden">
                   <img
-                    src={getStorageUrl(p.storage_path, true)}
+                    src={photoFileUrl(p)}
                     alt={p.caption || p.file_name || 'Airstrip photo'}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     loading="lazy"
@@ -702,7 +703,7 @@ function Lightbox({ photo, onClose }: { photo: AirstripPhoto; onClose: () => voi
       </button>
       <div className="max-w-4xl max-h-[85vh] flex flex-col items-center" onClick={e => e.stopPropagation()}>
         <img
-          src={getStorageUrl(photo.storage_path)}
+          src={photoFileUrl(photo)}
           alt={photo.caption || 'Airstrip photo'}
           className="max-h-[75vh] rounded-lg object-contain"
         />
@@ -1406,7 +1407,7 @@ function MaintenancePhotosModal({ log, photos, onClose, airstripId, onSaved, onV
             {photos.map(p => (
               <div key={p.id} className="relative group rounded-lg overflow-hidden bg-navy-900 border border-navy-800">
                 <button type="button" onClick={() => onViewPhoto(p)} className="block w-full aspect-square">
-                  <img src={getStorageUrl(p.storage_path, true)} alt={p.caption || ''} className="h-full w-full object-cover" loading="lazy" />
+                  <img src={photoFileUrl(p)} alt={p.caption || ''} className="h-full w-full object-cover" loading="lazy" />
                 </button>
                 <button
                   type="button"

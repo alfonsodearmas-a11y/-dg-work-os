@@ -1,0 +1,25 @@
+-- 131_airstrip_photos_private.sql
+--
+-- Phase 0 of the airstrips accountability build: lock down evidence photos.
+--
+-- The `airstrip-photos` bucket was public=true, so verification photos (the actual
+-- evidence of work done) were world-readable to anyone with the object URL even
+-- though the data routes are access-scoped. Make the bucket private. Photos are
+-- now served ONLY through the auth-gated proxy route
+--   GET /api/airstrips/[id]/photos/[photoId]/file
+-- which re-checks requireAirstripAccess on every request and streams the object
+-- via the service role. No public URLs, no signed URLs — one storage pattern,
+-- matching documents/procurement.
+--
+-- RLS note: there are NO storage.objects policies referencing this bucket
+-- (verified). With the bucket private and no permissive policy, anon/authenticated
+-- clients cannot read or write its objects directly — only the service role (our
+-- API) can. Effective access is therefore exactly: superadmin + the Hinterland
+-- Airstrips agency_manager, enforced by requireAirstripAccess on the proxy/upload
+-- routes. Direct object access is denied to all users (they must go through the API).
+--
+-- BEHAVIOUR CHANGE: existing public photo links stop resolving once this is applied.
+-- Intended. Apply at DEPLOY time, paired with the proxy-route code — applying it
+-- before the new code ships would break photo display in the currently-deployed app.
+
+update storage.buckets set public = false where id = 'airstrip-photos';
