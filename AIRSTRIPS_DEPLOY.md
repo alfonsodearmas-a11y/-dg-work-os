@@ -1,65 +1,85 @@
-# Hinterland Airstrips — Production Promotion Checklist
+# Hinterland Airstrips — Production Promotion Runbook
 
-Branch `feature/airstrips-accountability`. **Human-gated.** This document is the hand-back; the actual
-promotion (deploy + Migration 131) is performed by a human. Nothing here was run against prod by the agent.
+**Human-gated.** This release contains an authentication affordance (see `AUTH_BYPASS_REVIEW.md` — read it
+first) and flips a production storage bucket to private. The agent runs nothing against prod before an explicit
+in-session go. Branch: `feature/airstrips-accountability`.
 
-## State at hand-back
-- Migrations **132–137 and 135 are already applied to prod** (additive + the B10 policy drop; invisible to the
-  currently-deployed app).
-- Migration **131 (bucket → private) is written but NOT applied.** It is the only outstanding migration and is
-  **deploy-coupled** (below).
-- The superadmin `alfonso.dearmas@mpua.gov.gy` is untouched (verified).
-- `E2E_AUTH_BYPASS` is an E2E-only flag; it is **never set in production** and is additionally dead in any
-  production build (`NODE_ENV=production`). Confirm it is absent from the prod environment before deploying.
+## 0. Pre-flight status (all green as of this hand-back)
+- Production build: `npm run build` → exit 0.
+- **Auth bypass absent from prod build:** `npm run verify:no-bypass` → `E2E_AUTH_BYPASS` and `e2e_user` absent
+  from 1742 executable `.js` files. (Details + blast radius in `AUTH_BYPASS_REVIEW.md`.)
+- Unit/integration: 646 tests green (`npm test`). E2E: 7 green (`npm run test:e2e`). `tsc`: 8 pre-existing errors
+  in untouched test files (unchanged).
+- Migration 131 dry-run (read-only): bucket `airstrip-photos` is currently `public=true`; 0 photo rows store a
+  baked public URL → 131 is safe. Superadmin `alfonso.dearmas@mpua.gov.gy` intact.
 
-## Why 131 and the proxy code MUST ship together
+## 1. ⚠️ Release scope — DECIDE before merging
+This branch was cut off `feature/intel-report-redesign`, so `main..HEAD` carries **unrelated code** in addition
+to the airstrip work: the **delayed-projects** feature + intel/today changes (~15 commits before `6200398`).
+- The airstrip commits touched **none** of those files; they are inherited from the base branch.
+- **Migrations are clean:** the delayed-projects migration (130) is **already applied** to prod, and **131 is the
+  only unapplied migration**. So no surprise migration rides along — but the delayed-projects/intel **code** does.
+- **Decision required:** either (a) ship the whole branch (if delayed-projects is intended for this release), or
+  (b) isolate the airstrip work onto a clean branch off `main` first. This is a release-scoping call for the DG;
+  the agent did not decide it.
+
+## 2. Auth-bypass preconditions (must hold before deploy)
+- `AUTH_BYPASS_REVIEW.md` has been read and approved.
+- `E2E_AUTH_BYPASS` is **not** set in the production environment (and `NODE_ENV=production` there anyway, which
+  hard-disables the gate).
+- `npm run verify:no-bypass` is green on the build being shipped. **Add it to CI after `next build`.**
+
+## 3. Why 131 and the proxy code ship together
 The proxy route `GET /api/airstrips/[id]/photos/[photoId]/file` serves photos via the **service role**, which
-works whether the bucket is public or private. So:
-- Applying 131 **before** the proxy code is live → breaks photo display in the running app.
-- Deploying the proxy code but **never** applying 131 → photos remain world-readable by public URL.
-Therefore: deploy the code first, then apply 131 immediately after, in the **same release window**.
+works whether the bucket is public or private. Applying 131 before the proxy code is live breaks photo display;
+deploying the code but never applying 131 leaves photos world-readable. So: **deploy code first, then apply 131,
+same window.**
 
-## Promotion steps (ordered)
-1. **Pre-flight:** confirm `E2E_AUTH_BYPASS` is NOT in the prod env; confirm prod is healthy; confirm a recent backup/PITR window exists.
-2. **Merge & deploy** `feature/airstrips-accountability` to production. This ships the proxy route, the
-   private-bucket-safe `photoFileUrl`, warnings/accountability UI, and the PDF report. At this point the bucket
-   is still public, but the app already serves photos through the proxy — nothing breaks.
-3. **Smoke the deploy** (bucket still public): log in as the real HAS manager, open an airstrip with photos,
-   confirm thumbnails paint (they now flow through the proxy).
-4. **Apply Migration 131** to prod:
-   `update storage.buckets set public = false where id = 'airstrip-photos';`
-   (or apply `supabase/migrations/131_airstrip_photos_private.sql`). Old public links stop resolving; the app is
-   unaffected because it uses the proxy.
-5. **Post-deploy human checks** — see below. These are the eyeball pass that even green E2E does not replace.
+## 4. Promotion — exact ordered steps
+```bash
+# (run from the release commit; replace the merge step with your isolation choice from §1)
 
-## Rollback
-- **Photos break after 131:** revert the flip — `update storage.buckets set public = true where id =
-  'airstrip-photos';` — restores public serving immediately (the proxy keeps working too).
-- **App-level regression:** roll back the deployment to the previous release. 131 can be left applied or reverted
-  independently (the flip is fully reversible and decoupled from the code rollback).
-- Migrations 132–137/135 are additive/forward and need no rollback; if ever required, drops are destructive and
-  must be done by hand with sign-off.
+# 4.1  Final local gates
+npm ci
+npm run build
+npm run verify:no-bypass          # MUST print "absent ... OK"
+npm test                          # 646 green
+# (optional) npm run test:e2e against a preview with a seeded user
 
-## Post-deploy human checks (REQUIRED — the visual pass E2E can't replace)
-1. **Private-bucket photo round-trip (the item E2E could not verify):** open a real airstrip that has photos →
-   the thumbnails AND the lightbox actually paint, served through `/api/airstrips/.../file` from the now-private
-   bucket. Then confirm an **old public** `/object/public/airstrip-photos/...` URL **no longer resolves**.
-2. **Needs Attention is real:** the list's Needs-Attention queue shows the real overdue strips, each naming the
-   real responsible contractor + manager (or "responsibility unassigned").
-3. **Report:** generate a PDF for a strip with photos → it downloads with the photos embedded.
-4. **RBAC:** a non-HAS agency_manager is denied `/airstrips`; the HAS manager can manage contractors but the
-   **Cadence Settings** control is absent; a superadmin sees and can edit it.
-5. **Optional automated gate:** with a seeded preview/test user, run `npm run test:e2e` against the preview URL.
+# 4.2  Deploy the proxy-containing build to production (your normal deploy path), e.g.:
+#      merge feature/airstrips-accountability -> main, or vercel deploy --prod
+#      Confirm E2E_AUTH_BYPASS is NOT in the prod env.
 
-## Go / No-Go
-**CONDITIONAL-GO.**
-- ✅ Green: 641 unit/integration tests + 7 Playwright E2E pass against a real rendered build; 3 evidence
-  screenshots captured (`e2e/screenshots/`); live-DB invariants hold (0 baked photo URLs, 0 double-open
-  contractors, 0 orphans); superadmin intact; 135 applied & verified; 131 verified safe (no row stores a public URL).
-- ⏳ The **one** pending item: the real **private-bucket photo round-trip** (131 applied + a real storage object
-  served through the proxy in the deployed app) is **UNVERIFIED-PENDING-DEPLOY**. It was not provable in the
-  sandbox without provisioning paid Supabase-branch + preview-deploy infra and seeding storage — judged
-  disproportionate/fragile against the residual risk. E2E proved the UI uses the proxy URL and the image paints
-  (mocked bytes, bucket still public); the route+storage logic is unit-tested with mocked storage. Close it with
-  post-deploy check #1.
-- 🚫 No no-go conditions triggered.
+# 4.3  Smoke the deploy (bucket still public): log in as the real HAS manager,
+#      open an airstrip with photos, confirm thumbnails paint (now via the proxy).
+
+# 4.4  Apply Migration 131 (bucket -> private). Apply the file
+#      supabase/migrations/131_airstrip_photos_private.sql, i.e.:
+#         update storage.buckets set public = false where id = 'airstrip-photos';
+```
+
+## 5. Rollback (literal)
+```sql
+-- Revert 131 immediately if photos break — restores public serving (proxy keeps working too):
+update storage.buckets set public = true where id = 'airstrip-photos';
+```
+For an app-level regression, roll back the deployment to the previous release; 131 can be reverted independently
+(the flip is fully reversible and decoupled from the code rollback). Migrations 132–137/135 are additive/forward.
+
+## 6. Post-deploy verification (run on the LIVE app)
+1. **Private-bucket photo round-trip (the item E2E could only mock):** open a real airstrip with photos → the
+   thumbnails AND the lightbox paint through `/api/airstrips/.../file` from the now-private bucket; then confirm
+   an **old** `/object/public/airstrip-photos/...` URL **no longer resolves**.
+2. The Needs-Attention queue shows real overdue strips, each naming the real contractor + manager (or "unassigned").
+3. Generate a report for a strip with photos → PDF downloads with photos embedded.
+4. A non-HAS agency_manager is denied `/airstrips` and its photos; the HAS manager has no Cadence Settings
+   control; a superadmin can edit it.
+
+## 7. Go / No-Go
+**CONDITIONAL-GO**, contingent on §1 (release-scope decision) and §2 (auth-bypass preconditions).
+- ✅ Auth bypass proven absent from the prod build; fail-closed gate pinned by tests; review written.
+- ✅ 646 unit/integration + 7 E2E green; build green; 131 verified safe + reversible; superadmin intact; 131 is
+  the only unapplied migration.
+- ⏳ The real private-bucket photo round-trip is UNVERIFIED-PENDING-DEPLOY (close with §6.1).
+- 🧭 The delayed-projects/intel code riding along (§1) needs a DG release-scoping decision.
+- 🚫 No no-go conditions triggered on the airstrip dimension.
