@@ -13,7 +13,19 @@
 import { buildSession, type Session } from '@/lib/auth-session';
 
 export function e2eAuthEnabled(): boolean {
-  return process.env.NODE_ENV !== 'production' && process.env.E2E_AUTH_BYPASS === '1';
+  // DCE ANCHOR (must stay first): in a production build the bundler inlines
+  // process.env.NODE_ENV === 'production' → true, folds this to `return false`,
+  // and tree-shakes the whole affordance out of the bundle. Verified absent from
+  // the executable prod build (AUTH_BYPASS_REVIEW.md) and guarded by
+  // `npm run verify:no-bypass`.
+  if (process.env.NODE_ENV === 'production') return false;
+  // Belt: any production indicator forces OFF regardless of other flags.
+  if (process.env.VERCEL_ENV === 'production') return false;
+  // FAIL CLOSED: only the known dev/test environments may proceed. An unset or
+  // unexpected NODE_ENV resolves to OFF.
+  if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') return false;
+  // Exact opt-in required.
+  return process.env.E2E_AUTH_BYPASS === '1';
 }
 
 /** Parse a Playwright-set `e2e_user` cookie into a real Session, or null. */
