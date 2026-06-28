@@ -9,7 +9,10 @@ test('superadmin can open and edit Cadence Settings', async ({ context, page }) 
   await mockAirstripApi(page, mocks());
 
   await page.goto('/airstrips');
-  const cadence = page.getByRole('button', { name: 'Cadence' });
+
+  // Cadence Settings now lives in the toolbar "More" menu (secondary actions).
+  await page.getByRole('button', { name: 'More' }).click();
+  const cadence = page.getByRole('menuitem', { name: 'Cadence Settings' });
   await expect(cadence).toBeVisible();
 
   await cadence.click();
@@ -30,6 +33,7 @@ test('HAS agency_manager does NOT see the Cadence Settings control', async ({ co
   await page.goto('/airstrips');
   // The airstrips module IS available to the HAS manager (so the page renders)…
   await expect(page.getByRole('heading', { name: 'Hinterland Airstrips' })).toBeVisible();
-  // …but the cadence-settings control is superadmin-only and must be absent.
-  await expect(page.getByRole('button', { name: 'Cadence' })).toHaveCount(0);
+  // …but the cadence-settings control is superadmin-only and must be absent even in the More menu.
+  await page.getByRole('button', { name: 'More' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Cadence Settings' })).toHaveCount(0);
 });
