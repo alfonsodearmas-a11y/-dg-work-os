@@ -27,7 +27,8 @@ to the airstrip work: the **delayed-projects** feature + intel/today changes (~1
 - `AUTH_BYPASS_REVIEW.md` has been read and approved.
 - `E2E_AUTH_BYPASS` is **not** set in the production environment (and `NODE_ENV=production` there anyway, which
   hard-disables the gate).
-- `npm run verify:no-bypass` is green on the build being shipped. **Add it to CI after `next build`.**
+- The no-bypass check is **build-enforced**: `build` = `next build && npm run verify:no-bypass`, so the Vercel
+  production build fails if the bypass ever leaks (proven: a planted leak failed the build; reverting passed).
 
 ## 3. Why 131 and the proxy code ship together
 The proxy route `GET /api/airstrips/[id]/photos/[photoId]/file` serves photos via the **service role**, which

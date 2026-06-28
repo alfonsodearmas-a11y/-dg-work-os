@@ -54,18 +54,21 @@ OK: the E2E auth bypass is absent from the production build (1742 executable .js
 ```
 The strings remain only in 285 `*.map` source-map files, which **do not execute**. The check excludes `*.map`.
 
-**Durability:** `scripts/verify-no-bypass.sh` (npm `verify:no-bypass`) greps the executable `.js` of a build and
-exits non-zero if either symbol appears. **Wire it into CI after `next build`** so any future regression — a
-bundler change, or a refactor that defeats dead-code elimination — fails the build before it can ship.
+**Durability — BUILD-ENFORCED:** the `build` script is `next build && npm run verify:no-bypass`, so the check
+runs on every build (local **and** the Vercel production build) and a regression — a bundler change or a refactor
+that defeats dead-code elimination — **fails the build before it can ship**. Proven: injecting
+`_leakProbe: 'e2e_user'` into a shipped route made `npm run build` exit 1 ("AUTH BYPASS LEAK DETECTED");
+reverting returned it to green (both symbols absent from 1741 executable `.js`).
 
 ## 4. How absence is achieved (and its one caveat — stated plainly)
 Absence is achieved by **Turbopack dead-code elimination + tree-shaking**, driven by the `NODE_ENV ===
 'production'` anchor that must remain the first statement of `e2eAuthEnabled()`. It is **not** achieved by a
 separate production stub module — it relies on the bundler. This is a real dependency: if a future change
 imported the bypass in a way the bundler could not eliminate, it would ship. The `verify:no-bypass` CI gate
-exists precisely to catch that. If you want stronger-than-bundler assurance, the follow-up is a build-time
-module alias swapping `lib/e2e-auth.ts` for a constant-`false` stub; it was judged unnecessary given the
-proven absence + the CI gate, but it is the next lever.
+exists precisely to catch that, and is now **build-enforced** (§3) — it cannot be skipped, since the build fails.
+If you want stronger-than-bundler assurance still, the follow-up is a build-time module alias swapping
+`lib/e2e-auth.ts` for a constant-`false` stub (the "Cloud Run prod-stub"): **deferred, not built** — judged
+unnecessary given the proven absence + the build-enforced gate, but it remains the next lever.
 
 ## 5. Blast radius if it ever engaged in production (hypothetical)
 The `e2e_user` cookie is **not cryptographically signed**. So IF the gate ever returned `true` in production,
