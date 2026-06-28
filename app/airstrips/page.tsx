@@ -6,15 +6,17 @@ import Link from 'next/link';
 import {
   PlaneLanding, Search, Download, Plus, Upload,
   Check, Minus, ChevronUp, ChevronDown,
-  LayoutGrid, List, AlertTriangle, RefreshCw, X, MapPin,
+  AlertTriangle, RefreshCw, X, MapPin,
   Wrench, ClipboardCheck, Loader2, ChevronRight,
+  ListChecks, Table, MoreHorizontal, Settings2,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import {
   STATUS_CONFIG, CONDITION_CONFIG, FREQUENCY_CONFIG,
   AIRSTRIP_STATUSES, SURFACE_CONDITIONS, FLIGHT_FREQUENCIES,
   quarterFromISODate,
 } from '@/lib/airstrip-types';
-import type { Airstrip, AirstripMaintenanceLog } from '@/lib/airstrip-types';
+import type { Airstrip, AirstripMaintenanceLog, AirstripStatus } from '@/lib/airstrip-types';
 import type { AirstripCadence, AirstripResponsibility } from '@/lib/airstrips/warnings';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { exportToCsv } from '@/lib/export-csv';
@@ -59,22 +61,26 @@ interface AirstripResponse {
   filters: { regions: number[] };
 }
 
-type SortField = 'name' | 'region' | 'runway_length_m' | 'surface_condition' | 'last_inspection_date' | 'flight_frequency' | 'status';
-type ViewMode = 'table' | 'grid';
+type SortField = 'name' | 'region' | 'surface_condition' | 'last_inspection_date' | 'status' | 'urgency';
+type ViewMode = 'queue' | 'table';
 
-// Attention ranking for the "Needs Attention" queue: overdue → due-soon → stale → ok.
-const ATTENTION_RANK: Record<string, number> = { overdue: 0, upcoming: 1, stale: 2, ok: 3 };
+const PAGE_SIZE = 12;
+
+// Urgency weighting for the default sort + Action-queue ordering (higher = more urgent).
+const URGENCY_WEIGHT: Record<string, number> = { overdue: 3, upcoming: 2, stale: 1, ok: 0 };
+const CONDITION_RANK: Record<string, number> = { Good: 3, Satisfactory: 2, Poor: 1 };
+const STATUS_ORDER: Record<string, number> = Object.fromEntries(AIRSTRIP_STATUSES.map((s, i) => [s, i] as const));
+
+/** One comparable urgency score: attention bucket dominates, days-overdue breaks ties. */
+function urgencyScore(a: AirstripRow): number {
+  const lvl = a.cadence?.attentionLevel ?? 'ok';
+  const overdue = a.cadence?.daysOverdue ?? 0;
+  return (URGENCY_WEIGHT[lvl] ?? 0) * 1e7 + (overdue > 0 ? overdue : 0);
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 // (WarningBadges moved to components/airstrips/WarningBadges.tsx — shared with detail page.)
-
-function formatRunway(length: number | null, width: number | null): string {
-  if (!length && !width) return '—';
-  const l = length ? `${length}m` : '?';
-  const w = width ? `${width}m` : '?';
-  return `${l} × ${w}`;
-}
 
 function formatDate(date: string | null): string {
   if (!date) return 'Never';
@@ -721,13 +727,77 @@ function AirstripDrawerContent({
   );
 }
 
-// ── Summary Stat Card ────────────────────────────────────────────────────────
+// ── KPI Tile / Filter Chip / More Menu ───────────────────────────────────────
 
-function StatCard({ label, value, color, pulse }: { label: string; value: number; color: string; pulse?: boolean }) {
+function KpiTile({ label, value, sub, color, active, onClick }: {
+  label: string; value: number; sub?: string; color: string; active: boolean; onClick: () => void;
+}) {
   return (
-    <div className="glass-card p-4 flex flex-col gap-1 min-w-0">
-      <span className={`stat-number text-2xl ${pulse ? 'animate-pulse' : ''}`} style={{ color }}>{value}</span>
-      <span className="text-navy-600 text-xs font-medium truncate">{label}</span>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`glass-card p-4 flex flex-col gap-1 min-w-0 text-left transition-all ${active ? 'ring-2 ring-gold-500/60' : 'ring-1 ring-transparent hover:ring-navy-700'}`}
+    >
+      <span className="text-navy-600 text-[11px] font-medium uppercase tracking-wide truncate">{label}</span>
+      <span className="stat-number text-2xl" style={{ color }}>{value}</span>
+      {sub && <span className="text-navy-600 text-[11px] truncate">{sub}</span>}
+    </button>
+  );
+}
+
+function FilterChip({ label, onClear }: { label: string; onClear: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold-500/10 border border-gold-500/30 text-xs text-gold-500">
+      {label}
+      <button type="button" onClick={onClear} aria-label={`Clear ${label} filter`} className="text-gold-500/70 hover:text-gold-500">
+        <X className="h-3 w-3" />
+      </button>
+    </span>
+  );
+}
+
+function MoreMenu({ items }: { items: { label: string; icon: LucideIcon; onClick: () => void }[] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDocClick); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+  if (items.length === 0) return null;
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1.5"
+      >
+        <MoreHorizontal className="h-3.5 w-3.5" /> <span className="hidden sm:inline">More</span>
+      </button>
+      {open && (
+        <div role="menu" className="absolute right-0 top-full mt-1 z-30 min-w-[184px] bg-navy-900 border border-navy-800 rounded-xl shadow-xl py-1">
+          {items.map((it, i) => {
+            const Icon = it.icon;
+            return (
+              <button
+                key={i}
+                role="menuitem"
+                type="button"
+                onClick={() => { setOpen(false); it.onClick(); }}
+                className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs text-slate-300 hover:bg-navy-800 hover:text-white transition-colors"
+              >
+                <Icon className="h-3.5 w-3.5 text-navy-600" /> {it.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -766,19 +836,19 @@ export default function AirstripsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filters (URL-synced)
+  // Filters (URL-synced; applied client-side)
   const [search, setSearch] = useState(() => searchParams.get('search') || '');
   const [region, setRegion] = useState(() => searchParams.get('region') || '');
   const [status, setStatus] = useState(() => searchParams.get('status') || '');
   const [condition, setCondition] = useState(() => searchParams.get('condition') || '');
   const [frequency, setFrequency] = useState(() => searchParams.get('frequency') || '');
-  const [sort, setSort] = useState<SortField>(() => (searchParams.get('sort') as SortField) || 'name');
-  const [dir, setDir] = useState(() => searchParams.get('dir') || 'asc');
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [sort, setSort] = useState<SortField>(() => (searchParams.get('sort') as SortField) || 'urgency');
+  const [dir, setDir] = useState(() => searchParams.get('dir') || 'desc');
+  const [view, setView] = useState<ViewMode>('table');
+  const [page, setPage] = useState(1);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [selectedAirstripId, setSelectedAirstripId] = useState<string | null>(null);
-  const [attentionOnly, setAttentionOnly] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   // ── Multi-select state ──
@@ -794,14 +864,6 @@ export default function AirstripsPage() {
     });
   }, []);
 
-  const toggleSelectAll = useCallback((ids: string[]) => {
-    setSelectedIds(prev => {
-      const allSelected = ids.every(id => prev.has(id));
-      if (allSelected) return new Set();
-      return new Set(ids);
-    });
-  }, []);
-
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
   }, []);
@@ -814,8 +876,8 @@ export default function AirstripsPage() {
     if (status) p.set('status', status);
     if (condition) p.set('condition', condition);
     if (frequency) p.set('frequency', frequency);
-    if (sort !== 'name') p.set('sort', sort);
-    if (dir !== 'asc') p.set('dir', dir);
+    if (sort !== 'urgency') p.set('sort', sort);
+    if (dir !== 'desc') p.set('dir', dir);
     return p;
   }, [search, region, status, condition, frequency, sort, dir]);
 
@@ -827,12 +889,14 @@ export default function AirstripsPage() {
   }, [buildParams, router, searchParams]);
 
   // ── Fetch ──
+  // Fetch the COMPLETE estate once (verified: no server-side cap — 52 rows ≪ 1000).
+  // All filtering / sorting / pagination happen client-side so the KPI tiles and the
+  // attention band keep stable, estate-wide counts regardless of the active filters.
   const fetchAirstrips = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const params = buildParams();
-      const res = await fetch(`/api/airstrips?${params}`);
+      const res = await fetch('/api/airstrips');
       if (!res.ok) throw new Error('Failed to fetch');
       const json: AirstripResponse = await res.json();
       setData(json);
@@ -841,7 +905,7 @@ export default function AirstripsPage() {
     } finally {
       setLoading(false);
     }
-  }, [buildParams]);
+  }, []);
 
   useEffect(() => { fetchAirstrips(); }, [fetchAirstrips]);
 
@@ -901,7 +965,7 @@ export default function AirstripsPage() {
       setDir(prev => prev === 'asc' ? 'desc' : 'asc');
     } else {
       setSort(field);
-      setDir('asc');
+      setDir(field === 'urgency' ? 'desc' : 'asc');
     }
   }
 
@@ -917,35 +981,99 @@ export default function AirstripsPage() {
 
   function clearFilters() {
     setSearch(''); setRegion(''); setStatus(''); setCondition(''); setFrequency('');
-    setSort('name'); setDir('asc');
   }
 
   const hasActiveFilters = !!(search || region || status || condition || frequency);
 
-  const airstrips = data?.airstrips || [];
+  const fullAirstrips = React.useMemo<AirstripRow[]>(() => data?.airstrips ?? [], [data]);
   const summary = data?.summary;
-  const availableRegions = data?.filters?.regions || [];
+  const availableRegions = data?.filters?.regions ?? [];
 
-  // Strips needing attention, ranked overdue → due-soon → stale, then by days overdue.
-  const attentionItems = React.useMemo(
-    () =>
-      airstrips
-        .filter(a => a.cadence && a.cadence.attentionLevel !== 'ok')
-        .sort((x, y) => {
-          const r = ATTENTION_RANK[x.cadence!.attentionLevel] - ATTENTION_RANK[y.cadence!.attentionLevel];
-          if (r !== 0) return r;
-          return (y.cadence!.daysOverdue ?? -Infinity) - (x.cadence!.daysOverdue ?? -Infinity);
-        }),
-    [airstrips],
+  // Estate-wide attention counts for the "Needs attention" band — derived from the
+  // full (unfiltered) list so they stay stable regardless of the active filters.
+  const unassignedCount = React.useMemo(
+    () => fullAirstrips.filter(a => !a.responsibility?.managerId && !a.responsibility?.contractorId).length,
+    [fullAirstrips],
   );
-  const displayedAirstrips = attentionOnly ? attentionItems : airstrips;
+  const neverMaintainedCount = React.useMemo(
+    () => fullAirstrips.filter(a => !a.last_maintenance_on).length,
+    [fullAirstrips],
+  );
 
-  const selectedAirstrip = airstrips.find(a => a.id === selectedAirstripId) ?? null;
-  const allSelected = React.useMemo(
-    () => airstrips.length > 0 && airstrips.every(a => selectedIds.has(a.id)),
-    [airstrips, selectedIds],
-  );
-  const airstripIds = React.useMemo(() => airstrips.map(a => a.id), [airstrips]);
+  const matchesFilters = useCallback((a: AirstripRow) => {
+    if (search) {
+      const q = search.toLowerCase();
+      if (!`${a.name} ${a.surface_type ?? ''} ${a.remarks ?? ''}`.toLowerCase().includes(q)) return false;
+    }
+    if (region && a.region !== Number(region)) return false;
+    if (status) {
+      if (status === 'limited_or_rehab') {
+        if (a.status !== 'limited' && a.status !== 'under_rehabilitation') return false;
+      } else if (a.status !== status) return false;
+    }
+    if (condition && a.surface_condition !== condition) return false;
+    if (frequency && a.flight_frequency !== frequency) return false;
+    return true;
+  }, [search, region, status, condition, frequency]);
+
+  // Client-side: filter → (queue view: attention-only) → sort.
+  const visibleRows = React.useMemo(() => {
+    const base = fullAirstrips.filter(matchesFilters);
+    const scoped = view === 'queue'
+      ? base.filter(a => (a.cadence?.attentionLevel ?? 'ok') !== 'ok')
+      : base;
+    const dirMul = dir === 'asc' ? 1 : -1;
+    const val = (a: AirstripRow): string | number => {
+      switch (sort) {
+        case 'name': return a.name.toLowerCase();
+        case 'region': return a.region;
+        case 'surface_condition': return CONDITION_RANK[a.surface_condition ?? ''] ?? 0;
+        case 'last_inspection_date': return a.last_inspection_date ? new Date(a.last_inspection_date).getTime() : 0;
+        case 'status': return STATUS_ORDER[a.status] ?? 99;
+        case 'urgency':
+        default: return urgencyScore(a);
+      }
+    };
+    return [...scoped].sort((a, b) => {
+      const va = val(a), vb = val(b);
+      if (va < vb) return -1 * dirMul;
+      if (va > vb) return 1 * dirMul;
+      return a.name.localeCompare(b.name);
+    });
+  }, [fullAirstrips, matchesFilters, view, sort, dir]);
+
+  // Client-side pagination.
+  const pageCount = Math.max(1, Math.ceil(visibleRows.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pageRows = visibleRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const pageIds = React.useMemo(() => pageRows.map(r => r.id), [pageRows]);
+  const allPageSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.has(id));
+
+  const toggleSelectPage = useCallback(() => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      const all = pageIds.length > 0 && pageIds.every(id => next.has(id));
+      if (all) pageIds.forEach(id => next.delete(id));
+      else pageIds.forEach(id => next.add(id));
+      return next;
+    });
+  }, [pageIds]);
+
+  // Reset to first page when the result set or the view changes.
+  const resultKey = `${search}|${region}|${status}|${condition}|${frequency}|${sort}|${dir}|${view}`;
+  useEffect(() => { setPage(1); }, [resultKey]);
+
+  const selectedAirstrip = fullAirstrips.find(a => a.id === selectedAirstripId) ?? null;
+
+  const statusChipLabel = status === 'limited_or_rehab'
+    ? 'Limited / Rehab'
+    : status ? (STATUS_CONFIG[status as AirstripStatus]?.label ?? status) : '';
+
+  const moreItems = [
+    { label: 'Export CSV', icon: Download, onClick: () => handleExportCsv(visibleRows) },
+    ...(canEditAirstrips ? [{ label: 'Bulk Upload', icon: Upload, onClick: () => setBulkUploadOpen(true) }] : []),
+    ...(isSuperadmin ? [{ label: 'Cadence Settings', icon: Settings2, onClick: () => setSettingsOpen(true) }] : []),
+  ];
 
   // ── Render ──
   return (
@@ -958,7 +1086,9 @@ export default function AirstripsPage() {
           </div>
           <div className="min-w-0">
             <h1 className="text-xl md:text-2xl font-bold text-white">Hinterland Airstrips</h1>
-            <p className="text-navy-600 text-xs md:text-sm truncate">51 airstrips across 8 regions</p>
+            <p className="text-navy-600 text-xs md:text-sm truncate">
+              {summary ? `${summary.total} airstrips across ${availableRegions.length} region${availableRegions.length !== 1 ? 's' : ''}` : 'Loading…'}
+            </p>
           </div>
         </div>
         <button
@@ -971,55 +1101,63 @@ export default function AirstripsPage() {
         </button>
       </div>
 
-      {/* Summary Bar */}
+      {/* KPI status tiles — click to filter by status */}
       {summary && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
-          <StatCard label="Total Airstrips" value={summary.total} color="#94a3b8" />
-          <StatCard label="Operational" value={summary.operational} color="#10b981" />
-          <StatCard label="Limited / Rehab" value={summary.limited_or_rehab} color="#d4af37" />
-          <StatCard label="Closed" value={summary.closed} color="#dc2626" />
-          <StatCard label="Needs Attention" value={summary.needs_attention} color="#f97316" pulse={summary.needs_attention > 0} />
-          <StatCard label="Overdue" value={summary.overdue} color="#dc2626" pulse={summary.overdue > 0} />
-          <StatCard label="Pending Verification" value={summary.pending_verification} color="#60a5fa" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <KpiTile
+            label="Total" value={summary.total} sub="all airstrips" color="#94a3b8"
+            active={status === ''} onClick={() => setStatus('')}
+          />
+          <KpiTile
+            label="Operational" value={summary.operational} sub="in service" color="#10b981"
+            active={status === 'operational'} onClick={() => setStatus('operational')}
+          />
+          <KpiTile
+            label="Limited / Rehab" value={summary.limited_or_rehab} sub="reduced service" color="#d4af37"
+            active={status === 'limited_or_rehab' || status === 'limited' || status === 'under_rehabilitation'}
+            onClick={() => setStatus('limited_or_rehab')}
+          />
+          <KpiTile
+            label="Closed" value={summary.closed} sub="out of service" color="#dc2626"
+            active={status === 'closed'} onClick={() => setStatus('closed')}
+          />
         </div>
       )}
 
-      {/* Needs Attention — pinned queue of strips off their maintenance cadence */}
-      {!loading && !error && attentionItems.length > 0 && (
-        <div className="card-premium p-4 border-orange-500/30">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="h-4 w-4 text-orange-400" />
-            <h2 className="text-sm font-semibold text-white">Needs Attention</h2>
-            <span className="text-xs text-navy-600">{attentionItems.length} airstrip{attentionItems.length !== 1 ? 's' : ''}</span>
+      {/* Needs-attention band — the real problems, summarized; deep-dive via the queue */}
+      {!loading && !error && summary && summary.needs_attention > 0 && (
+        <div className="card-premium p-4 border-l-4 border-l-orange-500/70 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-5 md:gap-8 min-w-0">
+            <div className="shrink-0">
+              <div className="text-[10px] uppercase tracking-wider text-navy-600">Needs attention</div>
+              <div className="mt-1 text-2xl font-bold leading-none text-orange-400">{summary.needs_attention}</div>
+            </div>
+            <div className="space-y-1 text-sm text-slate-400 min-w-0">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                <span><span className="font-semibold text-white">{summary.overdue}</span> overdue</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-orange-400 shrink-0" />
+                <span><span className="font-semibold text-white">{unassignedCount}</span> with no responsible officer assigned</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
+                <span><span className="font-semibold text-white">{neverMaintainedCount}</span> with no maintenance ever recorded</span>
+              </div>
+            </div>
           </div>
-          <div className="space-y-2">
-            {attentionItems.slice(0, 8).map(a => (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => setSelectedAirstripId(a.id)}
-                className="w-full flex items-start justify-between gap-3 text-left px-3 py-2 rounded-lg bg-navy-900/50 hover:bg-navy-900 border border-navy-800 transition-colors"
-              >
-                <div className="min-w-0">
-                  <span className="text-sm font-medium text-white">{a.name}</span>
-                  <span className="text-xs text-navy-600 ml-2">Region {a.region}</span>
-                  <div className="mt-1"><WarningBadges cadence={a.cadence} /></div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-navy-600 shrink-0 mt-0.5" />
-              </button>
-            ))}
-            {attentionItems.length > 8 && (
-              <button onClick={() => setAttentionOnly(true)} className="text-xs text-gold-500 hover:text-gold-400 pt-1">
-                View all {attentionItems.length} →
-              </button>
-            )}
-          </div>
+          <button
+            onClick={() => setView('queue')}
+            className="btn-gold px-4 py-2 text-sm flex items-center justify-center gap-1.5 shrink-0"
+          >
+            Review action queue <ChevronRight className="h-4 w-4" />
+          </button>
         </div>
       )}
 
-      {/* Toolbar */}
-      <div className="flex flex-col gap-3">
-        {/* Search + Filters row */}
+      {/* Sticky toolbar — search + filters + view toggle + actions */}
+      <div className="sticky top-0 z-20 space-y-2 bg-navy-950/95 backdrop-blur-sm py-2">
         <div className="flex flex-wrap items-center gap-2">
           {/* Search */}
           <div className="relative flex-1 min-w-[200px] max-w-md">
@@ -1029,9 +1167,27 @@ export default function AirstripsPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search airstrips..."
+              aria-label="Search airstrips"
               className="input-premium w-full pl-9 pr-3 py-2 rounded-xl bg-navy-950 border border-navy-800 text-white text-sm placeholder:text-navy-600 focus:border-gold-500 focus:ring-1 focus:ring-gold-500/30 transition-colors"
             />
           </div>
+
+          {/* Status filter — atomic statuses only; the KPI "Limited / Rehab" tile owns the
+              grouped filter. When that tile is active we show "All Statuses" here (the active
+              chip + highlighted tile convey the grouping) rather than a blank native select. */}
+          <select
+            value={status === 'limited_or_rehab' ? '' : status}
+            onChange={e => setStatus(e.target.value)}
+            className="input-premium px-3 py-2 rounded-xl bg-navy-950 border border-navy-800 text-sm text-white focus:border-gold-500 transition-colors"
+            aria-label="Filter by status"
+          >
+            <option value="">All Statuses</option>
+            <option value="operational">Operational</option>
+            <option value="limited">Limited Operations</option>
+            <option value="under_rehabilitation">Under Rehabilitation</option>
+            <option value="closed">Closed</option>
+            <option value="unknown">Unknown</option>
+          </select>
 
           {/* Region filter */}
           <select
@@ -1043,19 +1199,6 @@ export default function AirstripsPage() {
             <option value="">All Regions</option>
             {availableRegions.map(r => (
               <option key={r} value={r}>Region {r}</option>
-            ))}
-          </select>
-
-          {/* Status filter */}
-          <select
-            value={status}
-            onChange={e => setStatus(e.target.value)}
-            className="input-premium px-3 py-2 rounded-xl bg-navy-950 border border-navy-800 text-sm text-white focus:border-gold-500 transition-colors"
-            aria-label="Filter by status"
-          >
-            <option value="">All Statuses</option>
-            {AIRSTRIP_STATUSES.map(s => (
-              <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
             ))}
           </select>
 
@@ -1085,81 +1228,60 @@ export default function AirstripsPage() {
             ))}
           </select>
 
-          {hasActiveFilters && (
-            <button onClick={clearFilters} className="text-navy-600 hover:text-white transition-colors" aria-label="Clear filters">
-              <X className="h-4 w-4" />
+          <div className="flex-1" />
+
+          {/* View toggle */}
+          <div className="flex items-center gap-0.5 bg-navy-950 border border-navy-800 rounded-lg p-0.5">
+            <button
+              onClick={() => setView('queue')}
+              aria-pressed={view === 'queue'}
+              className={`px-2.5 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors ${view === 'queue' ? 'bg-gold-500/20 text-gold-500' : 'text-navy-600 hover:text-white'}`}
+            >
+              <ListChecks className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Action queue</span>
+            </button>
+            <button
+              onClick={() => setView('table')}
+              aria-pressed={view === 'table'}
+              className={`px-2.5 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors ${view === 'table' ? 'bg-gold-500/20 text-gold-500' : 'text-navy-600 hover:text-white'}`}
+            >
+              <Table className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Full table</span>
+            </button>
+          </div>
+
+          {/* Primary CTA */}
+          {canEditAirstrips && (
+            <button onClick={() => setAddModalOpen(true)} className="btn-gold px-3 py-1.5 text-xs flex items-center gap-1.5">
+              <Plus className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Add Airstrip</span>
             </button>
           )}
+
+          {/* Secondary actions */}
+          <MoreMenu items={moreItems} />
         </div>
 
-        {/* Actions row */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            {hasActiveFilters && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gold-500/10 border border-gold-500/30 text-xs text-gold-500">
-                {airstrips.length} result{airstrips.length !== 1 ? 's' : ''}
-              </span>
-            )}
-            {selectionMode && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gold-500/20 border border-gold-500/40 text-xs text-gold-500 font-medium">
-                {selectedIds.size} of {airstrips.length} selected
-              </span>
-            )}
+        {/* Active filter chips */}
+        {hasActiveFilters && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-navy-600">Showing:</span>
+            {status && <FilterChip label={statusChipLabel} onClear={() => setStatus('')} />}
+            {region && <FilterChip label={`Region ${region}`} onClear={() => setRegion('')} />}
+            {condition && <FilterChip label={condition} onClear={() => setCondition('')} />}
+            {frequency && <FilterChip label={frequency} onClear={() => setFrequency('')} />}
+            {search && <FilterChip label={`“${search}”`} onClear={() => setSearch('')} />}
+            <span className="text-xs text-navy-600">·</span>
+            <span className="text-xs text-navy-600">{visibleRows.length} result{visibleRows.length !== 1 ? 's' : ''}</span>
+            <button onClick={clearFilters} className="text-xs text-navy-600 hover:text-white underline-offset-2 hover:underline">Clear all</button>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleExportCsv(airstrips)}
-              disabled={airstrips.length === 0}
-              className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1.5 disabled:opacity-40"
-            >
-              <Download className="h-3.5 w-3.5" /> Export CSV
-            </button>
-            <button
-              onClick={() => setAttentionOnly(v => !v)}
-              className={`px-3 py-1.5 text-xs flex items-center gap-1.5 rounded-lg border transition-colors ${
-                attentionOnly ? 'bg-orange-500/15 border-orange-500/40 text-orange-400' : 'btn-navy'
-              }`}
-            >
-              <AlertTriangle className="h-3.5 w-3.5" /> Needs Attention
-              {summary && summary.needs_attention > 0 && (
-                <span className="ml-0.5 px-1.5 rounded-full bg-orange-500/30 text-orange-300 text-[10px]">{summary.needs_attention}</span>
-              )}
-            </button>
-            {isSuperadmin && (
-              <button onClick={() => setSettingsOpen(true)} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1.5">
-                <RefreshCw className="h-3.5 w-3.5" /> Cadence
-              </button>
-            )}
-            {canEditAirstrips && (
-              <>
-                <button onClick={() => setBulkUploadOpen(true)} className="btn-navy px-3 py-1.5 text-xs flex items-center gap-1.5">
-                  <Upload className="h-3.5 w-3.5" /> Bulk Upload
-                </button>
-                <button onClick={() => setAddModalOpen(true)} className="btn-gold px-3 py-1.5 text-xs flex items-center gap-1.5">
-                  <Plus className="h-3.5 w-3.5" /> Add Airstrip
-                </button>
-              </>
-            )}
+        )}
 
-            {/* View toggle */}
-            <div className="flex items-center gap-0.5 bg-navy-950 border border-navy-800 rounded-lg p-0.5 ml-2">
-              <button
-                onClick={() => setViewMode('table')}
-                className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'table' ? 'bg-gold-500/20 text-gold-500' : 'text-navy-600 hover:text-white'}`}
-                aria-label="Table view"
-              >
-                <List className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'grid' ? 'bg-gold-500/20 text-gold-500' : 'text-navy-600 hover:text-white'}`}
-                aria-label="Grid view"
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-              </button>
-            </div>
+        {/* Selection summary */}
+        {selectionMode && (
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold-500/20 border border-gold-500/40 text-xs text-gold-500 font-medium">
+              {selectedIds.size} selected
+            </span>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Loading skeleton */}
@@ -1180,144 +1302,134 @@ export default function AirstripsPage() {
       )}
 
       {/* Empty state */}
-      {!loading && !error && displayedAirstrips.length === 0 && (
+      {!loading && !error && visibleRows.length === 0 && (
         <EmptyState
           icon={<PlaneLanding className="h-12 w-12" />}
-          title={attentionOnly ? 'Nothing needs attention' : 'No airstrips found'}
+          title={view === 'queue' ? 'Nothing needs attention' : 'No airstrips found'}
           description={
-            attentionOnly ? 'All airstrips are within their maintenance cadence.'
+            view === 'queue' ? 'All airstrips are within their maintenance cadence.'
             : hasActiveFilters ? 'Try adjusting your filters.'
             : 'Airstrip data has not been loaded yet.'
           }
           action={
-            attentionOnly ? <button onClick={() => setAttentionOnly(false)} className="btn-navy px-4 py-2 text-sm">Show all</button>
+            view === 'queue' ? <button onClick={() => setView('table')} className="btn-navy px-4 py-2 text-sm">Show full table</button>
             : hasActiveFilters ? <button onClick={clearFilters} className="btn-navy px-4 py-2 text-sm">Clear Filters</button>
             : undefined
           }
         />
       )}
 
-      {/* Table View */}
-      {!loading && !error && displayedAirstrips.length > 0 && viewMode === 'table' && (
-        <div className="overflow-x-auto rounded-xl border border-navy-800">
-          <table className="table-premium min-w-full">
-            <thead>
-              <tr>
-                <th className="w-10 px-3 py-3">
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={() => toggleSelectAll(airstripIds)}
-                    aria-label="Select all airstrips"
-                    className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer"
-                  />
-                </th>
-                <th className="px-3 py-3 text-left text-xs">
-                  <SortHeader label="Airstrip" field="name" currentSort={sort} currentDir={dir} onSort={handleSort} />
-                </th>
-                <th className="px-3 py-3 text-left text-xs hidden sm:table-cell">
-                  <SortHeader label="Region" field="region" currentSort={sort} currentDir={dir} onSort={handleSort} />
-                </th>
-                <th className="px-3 py-3 text-left text-xs">
-                  <SortHeader label="Condition" field="surface_condition" currentSort={sort} currentDir={dir} onSort={handleSort} />
-                </th>
-                <th className="px-3 py-3 text-left text-xs hidden md:table-cell">
-                  <SortHeader label="Last Inspection" field="last_inspection_date" currentSort={sort} currentDir={dir} onSort={handleSort} />
-                </th>
-                <th className="px-3 py-3 text-left text-xs">
-                  <SortHeader label="Status" field="status" currentSort={sort} currentDir={dir} onSort={handleSort} />
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayedAirstrips.map((a) => {
-                const isChecked = selectedIds.has(a.id);
-                return (
-                  <tr
-                    key={a.id}
-                    className={`hover:bg-navy-900/40 cursor-pointer transition-colors border-t border-navy-800/40 ${
-                      isChecked ? 'border-l-2 border-l-gold-500 !bg-[#1e2d4a]' : ''
-                    } ${selectedAirstrip?.id === a.id && !isChecked ? 'bg-gold-500/10' : ''}`}
-                    onClick={() => setSelectedAirstripId(a.id)}
-                  >
-                    <td className="w-10 px-3 py-2.5" onClick={e => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => toggleSelect(a.id)}
-                        aria-label={`Select ${a.name}`}
-                        className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-sm font-medium text-white hover:text-gold-500 transition-colors">{a.name}</span>
-                        <WarningBadges cadence={a.cadence} compact />
-                      </div>
-                    </td>
-                    <td className="px-3 py-2.5 hidden sm:table-cell">
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-navy-800 text-xs font-medium text-white">{a.region}</span>
-                    </td>
-                    <td className="px-3 py-2.5"><ConfigBadge value={a.surface_condition} config={CONDITION_CONFIG} /></td>
-                    <td className="px-3 py-2.5 hidden md:table-cell">
-                      <span className="text-xs text-slate-400">{formatDate(a.last_inspection_date)}</span>
-                    </td>
-                    <td className="px-3 py-2.5"><ConfigBadge value={a.status} config={STATUS_CONFIG} /></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* List — Action queue or Full table */}
+      {!loading && !error && visibleRows.length > 0 && (
+        <div className="overflow-hidden rounded-xl border border-navy-800">
+          <div className="overflow-x-auto">
+            <table className="table-premium min-w-full">
+              <thead>
+                <tr>
+                  <th className="w-10 px-3 py-3">
+                    <input
+                      type="checkbox"
+                      checked={allPageSelected}
+                      onChange={toggleSelectPage}
+                      aria-label="Select all airstrips on this page"
+                      className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer"
+                    />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs">
+                    <SortHeader label="Airstrip" field="name" currentSort={sort} currentDir={dir} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs hidden sm:table-cell">
+                    <SortHeader label="Region" field="region" currentSort={sort} currentDir={dir} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs">
+                    <SortHeader label="Condition" field="surface_condition" currentSort={sort} currentDir={dir} onSort={handleSort} />
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs hidden md:table-cell">
+                    <SortHeader label="Last Inspection" field="last_inspection_date" currentSort={sort} currentDir={dir} onSort={handleSort} />
+                  </th>
+                  {view === 'queue' && (
+                    <th className="px-3 py-3 text-left text-xs">
+                      <SortHeader label="Why flagged" field="urgency" currentSort={sort} currentDir={dir} onSort={handleSort} />
+                    </th>
+                  )}
+                  <th className="px-3 py-3 text-left text-xs">
+                    <SortHeader label="Status" field="status" currentSort={sort} currentDir={dir} onSort={handleSort} />
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {pageRows.map((a) => {
+                  const isChecked = selectedIds.has(a.id);
+                  return (
+                    <tr
+                      key={a.id}
+                      className={`hover:bg-navy-900/40 cursor-pointer transition-colors border-t border-navy-800/40 ${
+                        isChecked ? 'border-l-2 border-l-gold-500 !bg-[#1e2d4a]' : ''
+                      } ${selectedAirstrip?.id === a.id && !isChecked ? 'bg-gold-500/10' : ''}`}
+                      onClick={() => setSelectedAirstripId(a.id)}
+                    >
+                      <td className="w-10 px-3 py-2.5" onClick={e => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleSelect(a.id)}
+                          aria-label={`Select ${a.name}`}
+                          className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-medium text-white hover:text-gold-500 transition-colors">{a.name}</span>
+                          {view === 'table' && <WarningBadges cadence={a.cadence} compact topOnly />}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5 hidden sm:table-cell">
+                        <span className="text-sm text-slate-300">Region {a.region}</span>
+                      </td>
+                      <td className="px-3 py-2.5"><ConfigBadge value={a.surface_condition} config={CONDITION_CONFIG} /></td>
+                      <td className="px-3 py-2.5 hidden md:table-cell">
+                        <span className="text-xs text-slate-400">{formatDate(a.last_inspection_date)}</span>
+                      </td>
+                      {view === 'queue' && (
+                        <td className="px-3 py-2.5">
+                          {a.cadence && a.cadence.warnings.length > 0
+                            ? <WarningBadges cadence={a.cadence} topOnly />
+                            : <span className="text-navy-600 text-sm">—</span>}
+                        </td>
+                      )}
+                      <td className="px-3 py-2.5"><ConfigBadge value={a.status} config={STATUS_CONFIG} /></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-      {/* Card Grid View */}
-      {!loading && !error && displayedAirstrips.length > 0 && viewMode === 'grid' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {displayedAirstrips.map(a => {
-            const isChecked = selectedIds.has(a.id);
-            return (
-              <div key={a.id} className="relative group">
-                {/* Checkbox overlay */}
-                <div
-                  className={`absolute left-2 top-2 z-10 transition-opacity ${
-                    selectionMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => toggleSelect(a.id)}
-                    onClick={e => e.stopPropagation()}
-                    aria-label={`Select ${a.name}`}
-                    className="w-4 h-4 rounded border-navy-800 accent-gold-500 cursor-pointer"
-                  />
-                </div>
+          {/* Pagination footer */}
+          <div className="flex flex-wrap items-center justify-between gap-2 p-3 border-t border-navy-800/60">
+            <span className="text-xs text-navy-600">
+              Showing {pageRows.length} of {visibleRows.length}{view === 'queue' ? ' flagged' : ''}
+            </span>
+            {pageCount > 1 && (
+              <div className="flex items-center gap-2">
                 <button
-                  type="button"
-                  onClick={() => setSelectedAirstripId(a.id)}
-                  className={`card-premium p-0 overflow-hidden text-left w-full transition-all ${
-                    isChecked ? 'ring-1 ring-gold-500/40 border-l-2 border-l-gold-500 !bg-[#1e2d4a]' : ''
-                  } ${selectedAirstrip?.id === a.id && !isChecked ? 'ring-1 ring-gold-500/50' : ''}`}
+                  disabled={currentPage <= 1}
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  className="btn-navy px-3 py-1.5 text-xs disabled:opacity-40"
                 >
-                  <div className="p-4 space-y-2.5">
-                    <h3 className="font-semibold text-white text-sm group-hover:text-gold-500 transition-colors">{a.name}</h3>
-
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-navy-800 text-xs font-medium text-white">
-                        Region {a.region}
-                      </span>
-                      <ConfigBadge value={a.status} config={STATUS_CONFIG} />
-                      <ConfigBadge value={a.surface_condition} config={CONDITION_CONFIG} />
-                    </div>
-
-                    <div className="text-xs text-slate-400">Inspected: {formatDate(a.last_inspection_date)}</div>
-                    <WarningBadges cadence={a.cadence} compact />
-                  </div>
+                  ‹ Prev
+                </button>
+                <span className="text-xs text-navy-600">Page {currentPage} of {pageCount}</span>
+                <button
+                  disabled={currentPage >= pageCount}
+                  onClick={() => setPage(p => Math.min(pageCount, p + 1))}
+                  className="btn-navy px-3 py-1.5 text-xs disabled:opacity-40"
+                >
+                  Next ›
                 </button>
               </div>
-            );
-          })}
+            )}
+          </div>
         </div>
       )}
 

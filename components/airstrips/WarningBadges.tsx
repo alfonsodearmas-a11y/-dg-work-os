@@ -13,11 +13,14 @@ function warningKey(type: string): 'overdue' | 'upcoming' | 'stale' {
 
 // Inline maintenance-warning chips. `compact` shows just the label; the full form
 // shows the message plus the responsible contractor/manager (or an unassigned flag).
-export function WarningBadges({ cadence, compact = false }: { cadence?: AirstripCadence | null; compact?: boolean }) {
+export function WarningBadges({ cadence, compact = false, topOnly = false }: { cadence?: AirstripCadence | null; compact?: boolean; topOnly?: boolean }) {
   if (!cadence || cadence.warnings.length === 0) return null;
+  // Warnings are ordered overdue/upcoming first, then verification_stale — so [0] is
+  // the single highest-priority "why flagged" reason.
+  const warnings = topOnly ? cadence.warnings.slice(0, 1) : cadence.warnings;
   return (
     <div className="flex flex-wrap gap-1.5">
-      {cadence.warnings.map((w, i) => {
+      {warnings.map((w, i) => {
         const s = ATTENTION_STYLE[warningKey(w.type)];
         const names = [
           w.contractorName && `contractor: ${w.contractorName}`,
