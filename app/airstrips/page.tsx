@@ -1172,16 +1172,17 @@ export default function AirstripsPage() {
             />
           </div>
 
-          {/* Status filter (also driven by the KPI tiles) */}
+          {/* Status filter — atomic statuses only; the KPI "Limited / Rehab" tile owns the
+              grouped filter. When that tile is active we show "All Statuses" here (the active
+              chip + highlighted tile convey the grouping) rather than a blank native select. */}
           <select
-            value={status}
+            value={status === 'limited_or_rehab' ? '' : status}
             onChange={e => setStatus(e.target.value)}
             className="input-premium px-3 py-2 rounded-xl bg-navy-950 border border-navy-800 text-sm text-white focus:border-gold-500 transition-colors"
             aria-label="Filter by status"
           >
             <option value="">All Statuses</option>
             <option value="operational">Operational</option>
-            <option value="limited_or_rehab">Limited / Rehab</option>
             <option value="limited">Limited Operations</option>
             <option value="under_rehabilitation">Under Rehabilitation</option>
             <option value="closed">Closed</option>
