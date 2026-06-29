@@ -50,6 +50,9 @@ export interface BoardState {
   dueDateFilter: DueDateFilter;
   showFilters: boolean;
   myTasksOnly: boolean;
+  // Hide-completed: client-side exclusion of terminal rows (done + superseded).
+  // Keeps awaiting_verification visible. URL param is ?hide_done=1.
+  hideDone: boolean;
 
   // Sort
   sortField: SortField;
@@ -139,6 +142,7 @@ export type BoardAction =
   | { type: 'SET_DUE_DATE_FILTER'; filter: DueDateFilter }
   | { type: 'SET_SHOW_FILTERS'; show: boolean }
   | { type: 'SET_MY_TASKS'; myOnly: boolean }
+  | { type: 'SET_HIDE_DONE'; hide: boolean }
   | { type: 'CLEAR_ALL_FILTERS' }
 
   // Sort
@@ -240,6 +244,7 @@ export function createInitialState(initialViewMode?: ViewMode): BoardState {
     dueDateFilter: 'any',
     showFilters: false,
     myTasksOnly: false,
+    hideDone: false,
 
     sortField: 'due_date',
     sortDir: 'asc',
@@ -364,14 +369,20 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
           ? state.priorityFilter.filter(p => p !== action.priority)
           : [...state.priorityFilter, action.priority],
       };
-    case 'TOGGLE_STATUS_FILTER':
-      return {
-        ...state,
-        ...PAGINATION_RESET,
-        statusFilter: state.statusFilter.includes(action.status)
-          ? state.statusFilter.filter(s => s !== action.status)
-          : [...state.statusFilter, action.status],
-      };
+    case 'TOGGLE_STATUS_FILTER': {
+      const willInclude = !state.statusFilter.includes(action.status);
+      const statusFilter = willInclude
+        ? [...state.statusFilter, action.status]
+        : state.statusFilter.filter(s => s !== action.status);
+      // Coordination: explicitly including a terminal status (done/superseded)
+      // clears Hide-completed so the two controls can never assert opposite
+      // things about completed work.
+      const hideDone =
+        willInclude && (action.status === 'done' || action.status === 'superseded')
+          ? false
+          : state.hideDone;
+      return { ...state, ...PAGINATION_RESET, statusFilter, hideDone };
+    }
     case 'SET_ASSIGNEE_FILTER':
       return { ...state, assigneeFilter: action.assignee, ...PAGINATION_RESET };
     case 'SET_DUE_DATE_FILTER':
@@ -380,6 +391,17 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
       return { ...state, showFilters: action.show };
     case 'SET_MY_TASKS':
       return { ...state, myTasksOnly: action.myOnly, ...PAGINATION_RESET };
+    case 'SET_HIDE_DONE':
+      return {
+        ...state,
+        ...PAGINATION_RESET,
+        hideDone: action.hide,
+        // Coordination: hiding completed work can't coexist with an explicit
+        // done/superseded inclusion filter, so strip those when enabling.
+        statusFilter: action.hide
+          ? state.statusFilter.filter(s => s !== 'done' && s !== 'superseded')
+          : state.statusFilter,
+      };
     case 'CLEAR_ALL_FILTERS':
       return {
         ...state,
@@ -391,6 +413,7 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
         assigneeFilter: null,
         dueDateFilter: 'any',
         myTasksOnly: false,
+        hideDone: false,
       };
 
     // --- Sort ---

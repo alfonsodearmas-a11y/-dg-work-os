@@ -2,7 +2,7 @@
 
 import {
   Search, X, User, SlidersHorizontal, ArrowUpDown,
-  LayoutGrid, List, Zap, Plus, RefreshCw, Maximize2, Minimize2,
+  LayoutGrid, List, Zap, Plus, RefreshCw, Maximize2, Minimize2, EyeOff,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -62,6 +62,12 @@ export function buildFilterPills(state: BoardState, dispatch: Dispatch<BoardActi
       onClear: () => dispatch({ type: 'SET_ASSIGNEE_FILTER', assignee: null }),
     });
   }
+  if (state.hideDone) {
+    pills.push({
+      label: 'Completed: hidden',
+      onClear: () => dispatch({ type: 'SET_HIDE_DONE', hide: false }),
+    });
+  }
   return pills;
 }
 
@@ -73,7 +79,8 @@ export function hasActiveFilters(state: BoardState): boolean {
     state.myTasksOnly ||
     state.assigneeFilter ||
     state.dueDateFilter !== 'any' ||
-    state.statusFilter.length > 0
+    state.statusFilter.length > 0 ||
+    state.hideDone
   );
 }
 
@@ -163,6 +170,22 @@ export function KanbanToolbar({
       >
         <User className="h-4 w-4" />
         {!isMobile && 'My Tasks'}
+      </button>
+
+      {/* Hide Completed Toggle — exclusion of done + superseded (client-side). */}
+      <button
+        onClick={() => dispatch({ type: 'SET_HIDE_DONE', hide: !state.hideDone })}
+        className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border transition-colors ${
+          state.hideDone
+            ? 'bg-gold-500/20 border-gold-500/50 text-gold-500'
+            : 'bg-navy-900 border-navy-800 text-slate-400 hover:border-[#3d4a62]'
+        }`}
+        style={{ minHeight: isMobile ? 44 : undefined, touchAction: 'manipulation' }}
+        aria-pressed={state.hideDone}
+        title="Hide completed (done and superseded) tasks"
+      >
+        <EyeOff className="h-4 w-4" />
+        {!isMobile && 'Hide completed'}
       </button>
 
       {/* Filter Toggle */}

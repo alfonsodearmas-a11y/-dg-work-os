@@ -557,9 +557,14 @@ function KanbanBoardInner() {
         matchesStatus = state.statusFilter.includes(task.status);
       }
 
-      return matchesSearch && matchesAgency && matchesPriority && matchesMy && matchesAssignee && matchesDueDate && matchesStatus;
+      // Hide-completed (client-side): drop terminal rows (done + superseded),
+      // keep awaiting_verification visible. Single choke point so board and
+      // list both honor it.
+      const matchesHideCompleted = !state.hideDone || (task.status !== 'done' && task.status !== 'superseded');
+
+      return matchesSearch && matchesAgency && matchesPriority && matchesMy && matchesAssignee && matchesDueDate && matchesStatus && matchesHideCompleted;
     });
-  }, [state.searchQuery, state.agencyFilter, state.priorityFilter, state.myTasksOnly, state.assigneeFilter, state.dueDateFilter, state.statusFilter, effectiveUser.id]);
+  }, [state.searchQuery, state.agencyFilter, state.priorityFilter, state.myTasksOnly, state.assigneeFilter, state.dueDateFilter, state.statusFilter, state.hideDone, effectiveUser.id]);
 
   // All tasks flat — walks every bucket the API returns (incl. awaiting_verification
   // and superseded), so list view, count, and bulk-status detection don't drop rows
@@ -703,6 +708,7 @@ function KanbanBoardInner() {
           tasks={state.tasks}
           totalTasks={totalTasks}
           lastSync={state.lastSync}
+          hideDone={state.hideDone}
         />
       )}
 
@@ -721,8 +727,10 @@ function KanbanBoardInner() {
         onClearAll={() => dispatch({ type: 'CLEAR_ALL_FILTERS' })}
       />
 
-      {/* Recently-completed reveal pill (D1) */}
-      {state.olderCompletedCount > 0 && !state.showCompleted && (
+      {/* Older-completed reveal pill (server refetch via show_completed). Suppressed
+          while Hide-completed is active — offering "show more completed" while
+          hiding completed is contradictory. */}
+      {state.olderCompletedCount > 0 && !state.showCompleted && !state.hideDone && (
         <button
           onClick={() => dispatch({ type: 'SET_SHOW_COMPLETED', show: true })}
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-navy-900 border border-gold-500/30 text-gold-500 hover:bg-gold-500/10 hover:border-gold-500/50 transition-colors"
@@ -731,10 +739,10 @@ function KanbanBoardInner() {
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Show recently completed ({state.olderCompletedCount})
+          Show older completed ({state.olderCompletedCount})
         </button>
       )}
-      {state.showCompleted && (
+      {state.showCompleted && !state.hideDone && (
         <button
           onClick={() => dispatch({ type: 'SET_SHOW_COMPLETED', show: false })}
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-navy-900 border border-navy-800 text-navy-600 hover:text-white hover:border-gold-500/30 transition-colors"

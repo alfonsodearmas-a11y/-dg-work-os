@@ -57,6 +57,13 @@ export function useBoardUrlSync(state: BoardState, dispatch: (a: BoardAction) =>
       dispatch({ type: 'SET_MY_TASKS', myOnly: true });
     }
 
+    // Hydrate after the status loop above so that a hand-crafted
+    // ?status=done&hide_done=1 resolves deterministically: status adds 'done',
+    // then SET_HIDE_DONE strips it and wins.
+    if (searchParams.get('hide_done') === '1') {
+      dispatch({ type: 'SET_HIDE_DONE', hide: true });
+    }
+
     const sort = searchParams.get('sort') as SortField | null;
     if (sort) {
       // TOGGLE_SORT initializes to 'asc' on first set; we then apply explicit dir.
@@ -94,6 +101,7 @@ export function useBoardUrlSync(state: BoardState, dispatch: (a: BoardAction) =>
     if (state.searchQuery) params.set('q', state.searchQuery);
     if (state.showCompleted) params.set('completed', '1');
     if (state.myTasksOnly) params.set('mine', '1');
+    if (state.hideDone) params.set('hide_done', '1');
     if (state.sortField !== 'due_date') params.set('sort', state.sortField);
     if (state.sortDir !== 'asc') params.set('dir', state.sortDir);
     if (state.viewMode !== 'board') params.set('view', state.viewMode);
@@ -117,6 +125,7 @@ export function useBoardUrlSync(state: BoardState, dispatch: (a: BoardAction) =>
     state.searchQuery,
     state.showCompleted,
     state.myTasksOnly,
+    state.hideDone,
     state.sortField,
     state.sortDir,
     state.viewMode,

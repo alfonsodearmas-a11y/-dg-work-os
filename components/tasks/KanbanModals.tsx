@@ -192,9 +192,10 @@ interface SummaryStatsBarProps {
   tasks: BoardState['tasks'];
   totalTasks: number;
   lastSync: string | null;
+  hideDone?: boolean;
 }
 
-export function SummaryStatsBar({ tasks, totalTasks, lastSync }: SummaryStatsBarProps) {
+export function SummaryStatsBar({ tasks, totalTasks, lastSync, hideDone }: SummaryStatsBarProps) {
   if (totalTasks <= 0) return null;
 
   return (
@@ -217,7 +218,7 @@ export function SummaryStatsBar({ tasks, totalTasks, lastSync }: SummaryStatsBar
       )}
       {tasks.done.length > 0 && (
         <span className="flex items-center gap-1 text-emerald-400">
-          <CheckSquare className="h-3.5 w-3.5" /> {tasks.done.length} done
+          <CheckSquare className="h-3.5 w-3.5" /> {tasks.done.length} done{hideDone ? ' (hidden)' : ''}
         </span>
       )}
       {lastSync && (
