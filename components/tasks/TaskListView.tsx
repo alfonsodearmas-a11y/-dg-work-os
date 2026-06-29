@@ -30,12 +30,15 @@ const PRIORITY_ORDER: Record<string, number> = {
   low: 3,
 };
 
-// Lifecycle order, not alphabetical. Drives the new "status" sort option (D2).
+// Attention order, not alphabetical or strict lifecycle. Everything needing a
+// human decision (in-flight, stuck, claimed-done-pending-check) clusters at the
+// top, then queued, then terminal. For the three visible statuses this still
+// renders Active / New / Done. Drives the "status" sort option.
 const STATUS_ORDER: Record<TaskStatus, number> = {
-  new: 0,
-  active: 1,
-  blocked: 2,
-  awaiting_verification: 3,
+  active: 0,
+  blocked: 1,
+  awaiting_verification: 2,
+  new: 3,
   done: 4,
   superseded: 5,
 };
@@ -172,8 +175,10 @@ export function TaskListView({
             Due <SortIcon field="due_date" currentField={sortField} dir={sortDir} />
           </div>
         </div>
-        <div className={headerClass}>
-          Status
+        <div className={headerClass} onClick={() => handleHeaderSort('status')}>
+          <div className="flex items-center gap-1">
+            Status <SortIcon field="status" currentField={sortField} dir={sortDir} />
+          </div>
         </div>
       </div>
 
