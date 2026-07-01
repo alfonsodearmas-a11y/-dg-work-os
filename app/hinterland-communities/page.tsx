@@ -11,6 +11,7 @@ import {
 } from '@/lib/hinterland-types';
 import type { CommunityListRow, CommunitySummary } from '@/lib/hinterland-types';
 import { StatusBadge, CoverageBar, StackedStatusBar } from '@/components/hinterland/ui';
+import { CommunityMap } from '@/components/hinterland/CommunityMap';
 
 interface ListResponse {
   communities: CommunityListRow[];
@@ -200,8 +201,13 @@ export default function HinterlandCommunitiesPage() {
         </div>
       )}
 
-      {/* Region-aggregation panel — stands in for the map until geocoding */}
-      {/* TODO: point map after geocoding (latitude/longitude are NULL in the register) */}
+      {/* Point map of geocoded communities. Coordinates come from the geocoding
+          pass; un-geocoded communities are honestly excluded (shown in the note)
+          and remain reachable via the region rollup + table below. */}
+      {summary && <CommunityMap communities={all} total={summary.total} />}
+
+      {/* Region-aggregation panel — the summary / fallback so every community
+          (including un-geocoded ones the map can't plot) stays reachable. */}
       {summary && summary.regions.length > 0 && (
         <div className="card-premium p-4 md:p-5">
           <div className="flex items-center gap-2 mb-4">
@@ -245,7 +251,10 @@ export default function HinterlandCommunitiesPage() {
             onChange={e => setSearch(e.target.value)}
             placeholder="Search communities..."
             aria-label="Search communities"
-            className="input-premium w-full pl-9 pr-3 py-2 rounded-xl bg-navy-950 border border-navy-800 text-white text-sm placeholder:text-navy-600 focus:border-gold-500 focus:ring-1 focus:ring-gold-500/30 transition-colors"
+            // .input-premium sets `padding: .75rem 1rem` (unlayered, wins over Tailwind pl-*),
+            // so the left padding is forced inline to clear the magnifier icon.
+            style={{ paddingLeft: '2.25rem' }}
+            className="input-premium w-full pr-3 py-2 rounded-xl bg-navy-950 border border-navy-800 text-white text-sm placeholder:text-navy-600 focus:border-gold-500 focus:ring-1 focus:ring-gold-500/30 transition-colors"
           />
         </div>
         <select
