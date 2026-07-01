@@ -60,6 +60,13 @@ export async function requireModuleAccess(moduleSlug: string) {
  */
 export const requireAirstripAccess = () => requireModuleAccess('airstrips');
 
+/**
+ * Hinterland Communities module gate — superadmin (phase 1). Reads the same
+ * canAccessModule map as the sidebar/ModuleGate so the server can never be more
+ * permissive than the UI that exposes it.
+ */
+export const requireHinterlandAccess = () => requireModuleAccess('hinterland-communities');
+
 export async function requirePsipSyncAccess() {
   const result = await requireRole(['superadmin']);
   if (result instanceof NextResponse) return { error: result };

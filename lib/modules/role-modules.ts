@@ -34,6 +34,7 @@ const SUPERADMIN_MODULES = [
   'nptab-reports',
   'minister-attention',
   'projects', // PSIP tracker (/projects) — superadmin-only today (no modules row; only the role bypass admitted it)
+  'hinterland-communities', // phase 1 superadmin-only; move/add to AGENCY_MODULES.GWI to expose to a GWI manager
   'people',
   'settings',
 ] as const;

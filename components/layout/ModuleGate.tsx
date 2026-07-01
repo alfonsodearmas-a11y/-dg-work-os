@@ -27,6 +27,7 @@ const ROUTE_MODULE_MAP: [string, string][] = [
   ['/procurement', 'procurement'],
   ['/projects', 'projects'],
   ['/airstrips', 'airstrips'],
+  ['/hinterland-communities', 'hinterland-communities'],
   ['/pulse/gpl/grid-health', 'grid-health'],
   ['/admin/people', 'people'],
   ['/admin', 'settings'],
