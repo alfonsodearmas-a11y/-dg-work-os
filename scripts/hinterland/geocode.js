@@ -2,11 +2,11 @@
 // Geocode the hinterland communities against region context via Nominatim
 // (OpenStreetMap). Writes latitude/longitude + provenance (geocode_source,
 // geocode_confidence, geocoded_at) back to Supabase. Un-geocoded stays NULL —
-// we never drop an approximate/region-centroid pin.
+// we never drop an approximate / region-centroid pin.
 //
-//   node scripts/hinterland/geocode.js                  # only never-attempted rows (geocoded_at IS NULL)
-//   node scripts/hinterland/geocode.js --retry-unresolved  # + previously unresolved (latitude IS NULL)
-//   node scripts/hinterland/geocode.js --force          # re-geocode everything
+//   node scripts/hinterland/geocode.js                     # never-attempted rows (geocoded_at IS NULL), original name only
+//   node scripts/hinterland/geocode.js --retry-unresolved  # unresolved rows (latitude IS NULL), with RELAXED name forms
+//   node scripts/hinterland/geocode.js --force             # every row, original + relaxed forms
 //
 // Idempotent + re-runnable. Rate-limited to ~1 request/sec (Nominatim policy).
 
@@ -30,7 +30,6 @@ const REGION_NAMES = {
   10: 'Upper Demerara-Berbice',
 };
 
-// Guyana bounding box (with a small margin) — reject anything outside it.
 const BBOX = { minLon: -61.6, maxLon: -56.3, minLat: 1.0, maxLat: 8.8 };
 
 const SETTLEMENT = new Set([
@@ -70,56 +69,111 @@ async function nominatim(q) {
 const RANK = { high: 3, medium: 2, low: 1 };
 const downgrade = (c) => (c === 'high' ? 'medium' : c === 'medium' ? 'low' : 'low');
 
-// Classify a Nominatim hit into {lat, lon, confidence} or null (reject).
-function classify(hit, communityName, viaRegion) {
+// Transforms that change the *meaning* of the name (not just formatting) cap the
+// confidence so a relaxed match can never read as a precise, exact hit.
+const CAPPED = new Set(['paren', 'drop-qualifier', 'slash', 'alias']);
+function capConfidence(conf, transform) {
+  if (transform === 'mile-marker') return 'low';          // road mile-marker → base town is approximate
+  if (CAPPED.has(transform) && conf === 'high') return 'medium';
+  return conf;
+}
+
+// Alternate name forms for the relaxed pass. Each carries the transform that
+// produced it (drives the confidence cap). Identity is added by the caller.
+function altForms(name) {
+  const out = [];
+  const seen = new Set([name.toLowerCase()]);
+  const push = (form, transform) => {
+    const f = String(form).replace(/\s+/g, ' ').trim();
+    if (f && f.length > 1 && !seen.has(f.toLowerCase())) { seen.add(f.toLowerCase()); out.push({ form: f, transform }); }
+  };
+  const normalize = (s) => s
+    .replace(/[’]/g, "'")
+    .replace(/\bSt\.?\s+/gi, 'Saint ')   // St. Ignatius → Saint Ignatius
+    .replace(/'s\b/g, 's')               // Matthew's → Matthews
+    .replace(/'/g, '');
+
+  // 1. Pure normalization (possessive / St. / punctuation) — no meaning change.
+  const nn = normalize(name);
+  if (nn.toLowerCase() !== name.toLowerCase()) push(nn, 'normalize');
+
+  // 2. Mile-marker prefix ("47 Miles Mabura" → "Mabura", "4 Mile kaituma" → "kaituma").
+  const mm = name.match(/^\d+\s*miles?\b\s*(.+)$/i);
+  if (mm && mm[1]) push(normalize(mm[1]), 'mile-marker');
+
+  // 3. Parenthetical strip ("Arakaka (Central station)" → "Arakaka").
+  const paren = name.replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+  if (paren && paren.toLowerCase() !== name.toLowerCase()) push(normalize(paren), 'paren');
+
+  // 4. Slash alternatives ("Kamarang/Warawatta" → "Kamarang", "Warawatta").
+  if (name.includes('/')) name.split('/').map(s => s.trim()).filter(Boolean).forEach(p => push(normalize(p), 'slash'));
+
+  // 5. Drop administrative qualifiers + trailing dash/comma modifiers.
+  const dq = name
+    .replace(/\([^)]*\)/g, '')
+    .replace(/\b(central|settlement|scheme)\b/gi, '')
+    .replace(/\b(old|new)\s+well\b/gi, '')
+    .replace(/\bwell\s*\d*\b/gi, '')
+    .replace(/\s*[-,].*$/, '')            // "Abrams Creek - Warapana" → "Abrams Creek"; "Jacklow, Pomeroon" → "Jacklow"
+    .replace(/\s+/g, ' ').trim();
+  if (dq && dq.toLowerCase() !== name.toLowerCase()) push(normalize(dq), 'drop-qualifier');
+
+  return out.slice(0, 4);                 // bound the request budget per community
+}
+
+// Classify a Nominatim hit for a given FORM into {lat, lon, confidence} or null.
+function classify(hit, formName, viaRegion, transform) {
   const lat = parseFloat(hit.lat), lon = parseFloat(hit.lon);
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
   if (lon < BBOX.minLon || lon > BBOX.maxLon || lat < BBOX.minLat || lat > BBOX.maxLat) return null;
 
   const category = hit.category || hit.class;
   const addrtype = hit.addresstype || hit.type;
-  // Region/admin centroids are approximate pins — reject outright.
-  if (category === 'boundary' || ADMIN.has(addrtype)) return null;
+  if (category === 'boundary' || ADMIN.has(addrtype)) return null;   // region/admin centroid — reject
 
   const resName = norm(hit.name || (hit.display_name || '').split(',')[0]);
-  const cName = norm(communityName);
+  const cName = norm(formName);
   const exact = resName === cName;
   const close = exact || (cName.length > 2 && (resName.startsWith(cName) || cName.startsWith(resName)));
   const importance = Number(hit.importance) || 0;
   const isPlace = category === 'place' && SETTLEMENT.has(addrtype);
 
   let confidence = null;
-  if (isPlace && exact) {
-    confidence = (importance >= 0.30 || ['city', 'town', 'village'].includes(addrtype)) ? 'high' : 'medium';
-  } else if (isPlace && close) {
-    confidence = 'medium';
-  } else if (isPlace && !close) {
-    confidence = 'low';                       // a place, but the name doesn't match — flag for review
-  } else if (category === 'highway' && close) {
-    confidence = 'low';                       // road named after the village, near it
-  } else {
-    return null;                              // unrelated result
-  }
-  // Resolved without region context is less certain.
+  if (isPlace && exact) confidence = (importance >= 0.30 || ['city', 'town', 'village'].includes(addrtype)) ? 'high' : 'medium';
+  else if (isPlace && close) confidence = 'medium';
+  else if (isPlace && !close) confidence = 'low';
+  else if (category === 'highway' && close) confidence = 'low';
+  else return null;
+
+  // Name-only (no region context) must match the form EXACTLY — otherwise a
+  // common name could pin to the wrong same-named village. Reject fuzzy name-only.
+  if (!viaRegion && !exact) return null;
   if (!viaRegion) confidence = downgrade(confidence);
-  return { lat, lon, confidence };
+  return { lat, lon, confidence: capConfidence(confidence, transform) };
 }
 
-// Best geocode for a community: try with region context, then name-only.
-async function geocode(name, region) {
-  const regionName = REGION_NAMES[region];
-  const attempts = [
-    { q: `${name}, ${regionName}, Guyana`, viaRegion: true, label: 'nominatim:with-region' },
-    { q: `${name}, Guyana`, viaRegion: false, label: 'nominatim:name-only' },
-  ];
+// Best geocode for a community across its forms. Stops early on a medium+ hit.
+async function geocode(name, region, mode) {
+  const forms = [];
+  if (mode === 'new' || mode === 'full') forms.push({ form: name, transform: 'identity' });
+  if (mode === 'relaxed' || mode === 'full') forms.push(...altForms(name));
+
   let best = null;
-  for (const a of attempts) {
-    const hit = await nominatim(a.q);
-    if (!hit) continue;
-    const c = classify(hit, name, a.viaRegion);
-    if (c && (!best || RANK[c.confidence] > RANK[best.confidence])) {
-      best = { ...c, source: a.label };
-      if (c.confidence === 'high') break;     // good enough, stop early (saves a call)
+  for (const f of forms) {
+    for (const via of [true, false]) {            // with-region first, then name-only
+      const q = via ? `${f.form}, ${REGION_NAMES[region]}, Guyana` : `${f.form}, Guyana`;
+      const hit = await nominatim(q);
+      if (!hit) continue;
+      const c = classify(hit, f.form, via, f.transform);
+      if (!c) continue;
+      if (!best || RANK[c.confidence] > RANK[best.confidence]) {
+        best = {
+          ...c,
+          source: `nominatim:${via ? 'with-region' : 'name-only'}${f.transform !== 'identity' ? `:${f.transform}` : ''}`,
+          form: f.form,
+        };
+      }
+      if (best && RANK[best.confidence] >= RANK.medium) return best;   // good enough — save requests
     }
   }
   return best;
@@ -128,25 +182,26 @@ async function geocode(name, region) {
 (async () => {
   const force = process.argv.includes('--force');
   const retry = process.argv.includes('--retry-unresolved');
+  const mode = force ? 'full' : retry ? 'relaxed' : 'new';
 
   let query = db.from('communities').select('id, name, region').order('name');
-  if (force) { /* all */ }
-  else if (retry) query = query.is('latitude', null);
-  else query = query.is('geocoded_at', null);
+  if (retry) query = query.is('latitude', null);
+  else if (!force) query = query.is('geocoded_at', null);
 
   const { data: communities, error } = await query;
   if (error) { console.error('Fetch failed:', error.message); process.exit(1); }
 
-  console.log(`Geocoding ${communities.length} communities (mode: ${force ? 'force' : retry ? 'retry-unresolved' : 'new-only'})\n`);
+  console.log(`Geocoding ${communities.length} communities (mode: ${mode})\n`);
 
   const tally = { high: 0, medium: 0, low: 0, unresolved: 0 };
   const lowList = [];
   const unresolvedList = [];
+  const resolvedNow = [];
   let done = 0;
 
   for (const c of communities) {
     let result = null;
-    try { result = await geocode(c.name, c.region); }
+    try { result = await geocode(c.name, c.region, mode); }
     catch (e) { console.error(`  ! error on ${c.name}: ${e.message}`); }
 
     const nowIso = new Date().toISOString();
@@ -157,6 +212,7 @@ async function geocode(name, region) {
       }).eq('id', c.id);
       if (uErr) console.error(`  ! update failed ${c.name}: ${uErr.message}`);
       tally[result.confidence]++;
+      resolvedNow.push(`R${c.region}  ${c.name}  [${result.confidence}]  via ${result.form}  (${result.lat.toFixed(4)}, ${result.lon.toFixed(4)})`);
       if (result.confidence === 'low') lowList.push(`R${c.region}  ${c.name}  (${result.lat.toFixed(4)}, ${result.lon.toFixed(4)})  ${result.source}`);
     } else {
       const { error: uErr } = await db.from('communities').update({
@@ -172,19 +228,16 @@ async function geocode(name, region) {
     if (done % 25 === 0) console.log(`  ...${done}/${communities.length}  (high ${tally.high} / med ${tally.medium} / low ${tally.low} / unresolved ${tally.unresolved})`);
   }
 
-  // Persist a report artifact for review + print a summary.
-  const report = { generatedAt: new Date().toISOString(), processed: communities.length, tally, low: lowList, unresolved: unresolvedList };
-  const reportPath = path.join(__dirname, 'geocode-report.json');
-  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
+  const report = { generatedAt: new Date().toISOString(), mode, processed: communities.length, tally, resolvedThisRun: resolvedNow, low: lowList, unresolved: unresolvedList };
+  fs.writeFileSync(path.join(__dirname, 'geocode-report.json'), JSON.stringify(report, null, 2));
 
-  console.log(`\n=== GEOCODE SUMMARY (processed ${communities.length}) ===`);
+  console.log(`\n=== GEOCODE SUMMARY (mode ${mode}, processed ${communities.length}) ===`);
   console.log(`  high:       ${tally.high}`);
   console.log(`  medium:     ${tally.medium}`);
   console.log(`  low:        ${tally.low}`);
   console.log(`  unresolved: ${tally.unresolved}`);
-  console.log(`\n--- LOW CONFIDENCE (${lowList.length}) — review ---`);
-  lowList.forEach(l => console.log('  ' + l));
-  console.log(`\n--- UNRESOLVED (${unresolvedList.length}) — review / leave NULL ---`);
+  console.log(`\n--- RESOLVED THIS RUN (${resolvedNow.length}) ---`);
+  resolvedNow.forEach(l => console.log('  ' + l));
+  console.log(`\n--- STILL UNRESOLVED (${unresolvedList.length}) ---`);
   unresolvedList.forEach(l => console.log('  ' + l));
-  console.log(`\nReport written to ${reportPath}`);
 })();

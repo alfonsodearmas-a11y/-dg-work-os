@@ -1,0 +1,21 @@
+{
+  "_readme": "Authoritative manual coordinate overrides for hinterland communities. Keyed by region + lower(name) (must match a communities row). Each entry either pins a coordinate (applied as geocode_source='manual', geocode_confidence='high', winning over any geocoded value) or excludes a pin (\"exclude\": true -> latitude/longitude forced NULL, an honest un-geocoded state). Only add coordinates confirmed from an authoritative source (cite it in \"source\"). Applied idempotently by scripts/hinterland/apply-manual-coords.js. Extensible: add entries here and re-run the applier. Seeded 2026-07-01 from a two-stage research+cross-verify pass (each coordinate agreed by >=2 independent gazetteers within ~5km).",
+  "entries": [
+    { "region": 3, "name": "Santa Mission", "latitude": 6.5618, "longitude": -58.3304, "source": "Wikipedia + Wikidata + GeoNames (agree ~250m); OSM Nominatim verify", "note": "Arawak/Lokono village on Kamuni Creek. Upgraded from low; confirmed the existing pin was correct." },
+    { "region": 1, "name": "Mabaruma Central", "latitude": 8.2038, "longitude": -59.7812, "source": "geodatos.net + OSM Nominatim", "note": "Barima-Waini regional capital; central sub-area pinned at Mabaruma town." },
+    { "region": 1, "name": "Mabaruma Settlement", "latitude": 8.2016, "longitude": -59.7867, "source": "OSM Nominatim (relation 11215234) + geodatos.net", "note": "Mabaruma town settlement." },
+    { "region": 1, "name": "Matthew's Ridge", "latitude": 7.4914, "longitude": -60.1518, "source": "Wikipedia + GeoNames", "note": "Confirms the OSM geocode; recorded as manual for provenance." },
+    { "region": 9, "name": "St. Ignatius", "latitude": 3.3549, "longitude": -59.7995, "source": "Wikipedia + OSM Nominatim", "note": "Village just south of Lethem." },
+    { "region": 5, "name": "Moraikobai", "latitude": 6.0955, "longitude": -57.9547, "source": "Wikipedia/GeoNames + Esri World Geocoder", "note": "Only Amerindian village in Mahaica-Berbice." },
+    { "region": 8, "name": "Kopinang", "latitude": 4.9333, "longitude": -59.8, "source": "GeoNames + fallingrain", "note": "Kopinang (Patamona) mission, Potaro-Siparuni." },
+    { "region": 8, "name": "Campbelltown", "latitude": 5.2895, "longitude": -59.1557, "source": "latitude.to + latitudelongitude.org", "note": "Amerindian village adjoining Mahdia." },
+    { "region": 8, "name": "Monkey Mountain", "latitude": 4.4522, "longitude": -59.6028, "source": "Wikipedia + PeakVisor", "note": "Patamona village, Potaro-Siparuni." },
+    { "region": 9, "name": "Karaudarnau", "latitude": 2.4068, "longitude": -59.4589, "source": "GeoNames + world-airport-codes", "note": "Deep south Rupununi (Karaudarnau/Karodarnau)." },
+    { "region": 9, "name": "Katoonarib", "latitude": 2.7676, "longitude": -59.5756, "source": "Gazetteer of Guyana + GeoNames", "note": "South-central Rupununi." },
+    { "region": 7, "name": "Paruima", "latitude": 5.8065, "longitude": -61.0632, "source": "Wikipedia/GeoNames + OSM Nominatim", "note": "Akawaio village near the Venezuela border (Kamarang area)." },
+    { "region": 7, "name": "Phillipai", "latitude": 5.35247, "longitude": -60.37918, "source": "GeoNames + OurAirports", "note": "Upper Mazaruni Akawaio village." },
+
+    { "region": 1, "name": "8 mile", "exclude": true, "source": "GeoNames/OSM/Wikipedia/Wikidata all empty for '8 mile'", "note": "Existing pin 8.31,-59.82 was ~130 km off (Mabaruma/Kamwatta sub-district). The real hamlet is a mile-marker settlement on the Seven-Mile Branch Road tied to Waramuri (Moruca/Santa Rosa, ~7.6,-58.87), but no gazetteer publishes a point coordinate, so it stays honestly un-geocoded." },
+    { "region": 1, "name": "Mora", "exclude": true, "source": "OSM: the resolved 'Mora' (6.836,-58.449) is a Region-3 Essequibo Islands hamlet, not Region 1", "note": "Existing pin 6.84,-58.45 is a different Mora (Region 3). The Region-1 Mora is only a sub-settlement of Santa Rosa (Moruca) with no published coordinate; left un-geocoded rather than mis-pinned." }
+  ]
+}

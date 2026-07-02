@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { STATUS_CONFIG, WATER_STATUSES } from '@/lib/hinterland-types';
+import { STATUS_CONFIG, WATER_STATUSES, isApproximate } from '@/lib/hinterland-types';
 import type { CommunityListRow, WaterStatusValue } from '@/lib/hinterland-types';
 import outline from '@/lib/hinterland/guyana-outline.json';
 
@@ -38,6 +38,7 @@ interface Plotted {
   name: string;
   region: number;
   status: WaterStatusValue;
+  approximate: boolean; // low geocode confidence — shown hollow, never as a precise point
   x: number;
   y: number;
 }
@@ -51,7 +52,11 @@ export function CommunityMap({ communities, total }: { communities: CommunityLis
       const lat = c.latitude != null ? Number(c.latitude) : NaN;
       const lon = c.longitude != null ? Number(c.longitude) : NaN;
       if (!Number.isFinite(lat) || !Number.isFinite(lon)) return [];
-      return [{ id: c.id, name: c.name, region: c.region, status: c.water_status, x: projectX(lon), y: projectY(lat) }];
+      return [{
+        id: c.id, name: c.name, region: c.region, status: c.water_status,
+        approximate: isApproximate(c.geocode_confidence),
+        x: projectX(lon), y: projectY(lat),
+      }];
     });
   }, [communities]);
 
@@ -62,6 +67,7 @@ export function CommunityMap({ communities, total }: { communities: CommunityLis
   }, [points]);
 
   const mapped = points.length;
+  const approximate = useMemo(() => points.filter(p => p.approximate).length, [points]);
 
   return (
     <div className="card-premium p-4 md:p-5">
@@ -71,7 +77,7 @@ export function CommunityMap({ communities, total }: { communities: CommunityLis
           <span className="text-xs text-navy-600 hidden sm:inline">water status by location</span>
         </div>
         <span className="text-xs text-navy-600 font-mono tabular-nums">
-          {mapped} of {total} mapped
+          {mapped} of {total} mapped{approximate > 0 ? ` · ${approximate} approximate` : ''}
         </span>
       </div>
 
@@ -80,19 +86,23 @@ export function CommunityMap({ communities, total }: { communities: CommunityLis
         <div className="relative mx-auto w-full" style={{ maxWidth: 520 }}>
           <svg viewBox={`0 0 ${VB_W} ${VB_H}`} className="w-full h-auto" role="img" aria-label={`Map of ${mapped} geocoded communities`}>
             <path d={OUTLINE_PATH} fill="rgba(45,58,82,0.18)" stroke="#2d3a52" strokeWidth={2} />
-            {points.map(p => {
+            {/* Draw approximate (hollow) pins first so precise pins sit on top. */}
+            {[...points].sort((a, b) => Number(b.approximate) - Number(a.approximate)).map(p => {
               const color = STATUS_CONFIG[p.status].color;
               const active = hover?.id === p.id;
+              // Approximate (low-confidence) pins render hollow — an outline, never a
+              // solid precise point. Precise pins are filled.
               return (
                 <circle
                   key={p.id}
                   cx={p.x}
                   cy={p.y}
-                  r={active ? 9 : 5}
-                  fill={color}
-                  fillOpacity={active ? 1 : 0.85}
-                  stroke={active ? '#f8fafc' : 'rgba(10,22,40,0.7)'}
-                  strokeWidth={active ? 2 : 1}
+                  r={active ? 9 : p.approximate ? 5.5 : 5}
+                  fill={p.approximate ? 'rgba(10,22,40,0.55)' : color}
+                  fillOpacity={p.approximate ? 1 : (active ? 1 : 0.85)}
+                  stroke={active ? '#f8fafc' : p.approximate ? color : 'rgba(10,22,40,0.7)'}
+                  strokeWidth={p.approximate ? 2 : active ? 2 : 1}
+                  strokeDasharray={p.approximate ? '2 1.5' : undefined}
                   className="cursor-pointer transition-all"
                   onMouseEnter={() => setHover(p)}
                   onMouseLeave={() => setHover(h => (h?.id === p.id ? null : h))}
@@ -113,6 +123,9 @@ export function CommunityMap({ communities, total }: { communities: CommunityLis
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: STATUS_CONFIG[hover.status].color }} />
                 <span className="text-[10px] text-navy-500">R{hover.region} · {STATUS_CONFIG[hover.status].label}</span>
               </div>
+              {hover.approximate && (
+                <div className="text-[10px] text-amber-400/90 mt-0.5">approximate location</div>
+              )}
             </div>
           )}
         </div>
@@ -126,12 +139,20 @@ export function CommunityMap({ communities, total }: { communities: CommunityLis
               <span className="text-xs text-navy-600 font-mono tabular-nums ml-auto">{byStatus[s]}</span>
             </div>
           ))}
+          {approximate > 0 && (
+            <div className="flex items-center gap-2 pt-1 mt-1 border-t border-navy-800/60">
+              <span className="h-2.5 w-2.5 rounded-full shrink-0 border-2 border-navy-500 bg-transparent" />
+              <span className="text-xs text-slate-400">Approximate</span>
+              <span className="text-xs text-navy-600 font-mono tabular-nums ml-auto">{approximate}</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {mapped < total && (
+      {(mapped < total || approximate > 0) && (
         <p className="text-[11px] text-navy-600 mt-3">
-          {total - mapped} communities are not yet geocoded and are not plotted. They remain in the region rollup and the table below.
+          {total - mapped} of {total} communities are not yet geocoded and are not plotted; they remain in the region rollup and the table below.
+          {approximate > 0 && ` ${approximate} plotted pin${approximate === 1 ? ' is' : 's are'} approximate (hollow) and not a precise location.`}
         </p>
       )}
     </div>

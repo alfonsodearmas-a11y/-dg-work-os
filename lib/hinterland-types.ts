@@ -13,10 +13,18 @@
 export const WATER_STATUSES = ['adequate', 'partial', 'no_system', 'unfunded', 'unknown'] as const;
 export const WATER_SOURCE_STATUSES = ['active', 'inactive', 'pending_activation'] as const;
 export const ELECTRICITY_STATUSES = ['adequate', 'partial', 'none', 'unknown'] as const;
+export const GEOCODE_CONFIDENCES = ['high', 'medium', 'low'] as const;
 
 export type WaterStatusValue = (typeof WATER_STATUSES)[number];
 export type WaterSourceStatus = (typeof WATER_SOURCE_STATUSES)[number];
 export type ElectricityStatusValue = (typeof ELECTRICITY_STATUSES)[number];
+export type GeocodeConfidence = (typeof GEOCODE_CONFIDENCES)[number];
+
+// A coordinate is treated as "approximate" (shown hollow, never as a precise
+// point) when its geocode confidence is low.
+export function isApproximate(confidence: string | null | undefined): boolean {
+  return confidence === 'low';
+}
 
 // -- UI config maps -----------------------------------------------------------
 // Semantic, matching the app (green = good). STATUS_CONFIG is the primary
@@ -72,8 +80,11 @@ export interface Community {
   community_type: string | null;
   population: number | null;
   population_source: string | null;
-  latitude: number | null;   // NULL until geocoded — no point map yet
+  latitude: number | null;   // NULL until geocoded (honest un-geocoded state)
   longitude: number | null;
+  geocode_source: string | null;              // e.g. 'nominatim:with-region', 'manual'
+  geocode_confidence: GeocodeConfidence | null;
+  geocoded_at: string | null;
   nearest_airstrip_id: string | null;
   source_sheet: string | null;
   remarks: string | null;
