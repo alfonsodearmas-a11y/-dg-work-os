@@ -15,6 +15,7 @@ const COMMON_MODULES = [
   'documents',
   'procurement',
   'applications',
+  'direct-outreach',
 ] as const;
 
 /** Agency-specific modules (deep dives + agency tools). */
