@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/components/providers/SupabaseSessionProvider';
-import { createClient } from '@supabase/supabase-js';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 import type { Notification } from '@/lib/notifications';
 
 interface NotificationContextValue {
@@ -103,11 +103,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Supabase Realtime subscription
   useEffect(() => {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!url || !key || !userId) return;
+    if (!userId) return;
 
-    const client = createClient(url, key);
+    // Shared SSR browser client — a second raw createClient here caused the
+    // "Multiple GoTrueClient instances" warning and subscribed the realtime
+    // socket with the bare anon key instead of the user's session token.
+    const client = getBrowserSupabase();
     // Track scheduled delivery timers so we can cancel on unmount
     const scheduledTimers: NodeJS.Timeout[] = [];
 
@@ -121,8 +122,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           table: 'notifications',
           filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
-          const newNotif = payload.new as Notification;
+        (payload: { new: Notification }) => {
+          const newNotif = payload.new;
           const scheduledFor = new Date(newNotif.scheduled_for);
           const now = new Date();
 
