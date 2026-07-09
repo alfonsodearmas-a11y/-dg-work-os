@@ -59,3 +59,19 @@ Action: grep for `.storage.from(...).upload(` and audit each callsite. Apply the
   - the supabase-js client could not even issue the GET request (the parens bug fixed in commit `fd18e6b` looked exactly like this, and the misleading message made it look like a TTL / cleanup race for hours)
 
 Action: include `dlError.message` (or a sanitized version of it) in the response body so the UI can show "Could not read uploaded file: <reason>". Cuts the next debugging session of this class from hours to minutes.
+
+# Follow-ups from the Direct Outreach module (2026-07-09)
+
+Flagged during the pre-commit audit of the Direct Outreach module (commit with migrations 144-146) and kept out of that commit's scope. Each is independently actionable.
+
+## 1. Provision OPDIRECT_API_TOKEN in Vercel before relying on the cron
+
+The weekday sync cron (`/api/cron/direct-outreach-sync`, vercel.json `0 10 * * 1-5`) and the superadmin "Refresh from OP Direct" button both no-op cleanly until `OPDIRECT_API_TOKEN` is set in the Vercel environment: the cron logs a warn and returns `{skipped: true}`, the manual sync returns 503. The module ships empty until then.
+
+Action: obtain a read-only service token from the OP Direct admins, add `OPDIRECT_API_TOKEN` (and optionally `OPDIRECT_BASE_URL`, default `https://opdirect.dakeung.com`) to Vercel production env, then run one manual sync from `/direct-outreach` as superadmin and verify the agency scorecards populate.
+
+## 2. Two pre-existing SECURITY DEFINER views still flagged at ERROR
+
+The Supabase security advisor flags `public.v_metrics_by_agency` and `public.pending_applications_with_wait` with the same `security_definer_view` ERROR that migration 146 fixed for `direct_outreach_open_v`: the views execute with their owner's (postgres) privileges, so client-role grants on them bypass base-table RLS via PostgREST. They pre-date the Direct Outreach module and were deliberately not bundled into 146 because their consumers may rely on the definer semantics (migration 111 explicitly GRANTed `pending_applications_with_wait` to anon/authenticated, so something may read it client-side).
+
+Action: for each view, trace the consumers first (client-side supabase reads vs server-only), then either `ALTER VIEW ... SET (security_invoker = on)` + revoke client grants (the 146 pattern) or document why definer semantics are required and constrain the grants instead. Verify with `get_advisors` that both ERRORs clear.
