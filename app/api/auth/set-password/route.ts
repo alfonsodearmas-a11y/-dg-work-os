@@ -50,10 +50,18 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }
 
   // Consume the token only after the password is set (token-match condition so
-  // a concurrently re-issued invite token isn't clobbered).
+  // a concurrently re-issued invite token isn't clobbered). Setting a password
+  // completes onboarding, so promote the profile out of 'pending' here too —
+  // is_active=true matters because assignee pickers and every notification
+  // fan-out filter on it (auth() has a safety-net promotion on first request).
   await supabaseAdmin
     .from('users')
-    .update({ invite_token: null, invite_token_expires_at: null })
+    .update({
+      invite_token: null,
+      invite_token_expires_at: null,
+      is_active: true,
+      status: 'active',
+    })
     .eq('id', result.user.id)
     .eq('invite_token', token);
 

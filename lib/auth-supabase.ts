@@ -4,6 +4,7 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/db';
 import { buildSession, type Session, type ProfileRow } from '@/lib/auth-session';
 import { e2eAuthEnabled, e2eSessionFromCookie } from '@/lib/e2e-auth';
+import { logger } from '@/lib/logger';
 
 // P3 — reimplemented auth() over Supabase Auth: the cutover replacement for the
 // NextAuth auth() in lib/auth.ts.
@@ -51,6 +52,28 @@ export async function auth(): Promise<Session | null> {
     .select('email, name, avatar_url, role, agency, is_active, status, formal_title')
     .eq('id', uid)
     .single();
+
+  // First-authenticated-request promotion: a 'pending' profile that reaches this
+  // point has a live Supabase session, so onboarding is complete — promote to
+  // active. Idempotent (`status='pending'` guard), fire-and-forget so the request
+  // never blocks; failures are logged with the user id and retried naturally on
+  // the next request. The superadmin owner account is never touched (it is never
+  // 'pending'; the email guard makes that a hard guarantee).
+  if (profile && profile.status === 'pending' && profile.email !== 'alfonso.dearmas@mpua.gov.gy') {
+    void supabaseAdmin
+      .from('users')
+      .update({ status: 'active', is_active: true, last_login: new Date().toISOString() })
+      .eq('id', uid)
+      .eq('status', 'pending')
+      .then(({ error }) => {
+        if (error) {
+          logger.error({ err: error, userId: uid }, '[auth] pending→active promotion failed');
+        }
+      });
+    // Reflect the promotion in this request's session immediately.
+    profile.status = 'active';
+    profile.is_active = true;
+  }
 
   return buildSession(uid, (profile as ProfileRow | null) ?? null);
 }
