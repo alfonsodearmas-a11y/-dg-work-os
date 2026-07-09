@@ -1,9 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireModuleAccess } from '@/lib/auth-helpers';
-import { getCase } from '@/lib/direct-outreach/queries';
+import {
+  clearAssignee,
+  getCase,
+  getUserForAssignment,
+  setAssignee,
+} from '@/lib/direct-outreach/queries';
+import { canAssignOutreachCase, isValidAssignmentTarget } from '@/lib/direct-outreach/permissions';
+import { createNotification } from '@/lib/notifications/notification-service';
+import { truncate } from '@/lib/format';
 import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
+
+const INT4_MAX = 2147483647;
+
+function agencyScopeFor(session: { user: { role: string; agency?: string | null } }): string | undefined {
+  if (session.user.role !== 'agency_manager') return undefined;
+  return (session.user.agency || 'NONE').toUpperCase();
+}
+
+/** Shared param guard. 404 (not 400) for impossible IDs so nonexistent and
+ *  out-of-range stay indistinguishable. */
+function parseCaseId(caseId: string): number | NextResponse {
+  if (!/^\d+$/.test(caseId)) {
+    return NextResponse.json({ error: 'Invalid case ID' }, { status: 400 });
+  }
+  const n = Number(caseId);
+  if (!Number.isSafeInteger(n) || n > INT4_MAX) {
+    return NextResponse.json({ error: 'Case not found' }, { status: 404 });
+  }
+  return n;
+}
 
 export async function GET(
   _request: NextRequest,
@@ -14,25 +43,11 @@ export async function GET(
   const { session } = authResult;
 
   const { caseId } = await params;
-  if (!/^\d+$/.test(caseId)) {
-    return NextResponse.json({ error: 'Invalid case ID' }, { status: 400 });
-  }
-  // case_id is int4; an oversized numeric ID would fail at Bind with a 500.
-  // 404 (not 400) keeps nonexistent and impossible IDs indistinguishable.
-  const caseIdNum = Number(caseId);
-  if (!Number.isSafeInteger(caseIdNum) || caseIdNum > 2147483647) {
-    return NextResponse.json({ error: 'Case not found' }, { status: 404 });
-  }
-
-  // agency_manager sees only their own agency's cases (404, not 403, so the
-  // scoped route doesn't leak which case IDs exist for other agencies).
-  const agencyScope =
-    session.user.role === 'agency_manager'
-      ? (session.user.agency || 'NONE').toUpperCase()
-      : undefined;
+  const caseIdNum = parseCaseId(caseId);
+  if (caseIdNum instanceof NextResponse) return caseIdNum;
 
   try {
-    const detail = await getCase(caseIdNum, agencyScope);
+    const detail = await getCase(caseIdNum, agencyScopeFor(session));
     if (!detail) {
       return NextResponse.json({ error: 'Case not found' }, { status: 404 });
     }
@@ -40,5 +55,95 @@ export async function GET(
   } catch (err) {
     logger.error({ err, caseId }, '[direct-outreach] case detail failed');
     return NextResponse.json({ error: 'Failed to load case' }, { status: 500 });
+  }
+}
+
+// ── PATCH: set/clear the responsible officer ─────────────────────────────────
+
+const patchSchema = z.object({
+  assignee_user_id: z.string().uuid().nullable(),
+});
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ caseId: string }> },
+) {
+  const authResult = await requireModuleAccess('direct-outreach');
+  if (authResult instanceof NextResponse) return authResult;
+  const { session } = authResult;
+
+  const { caseId } = await params;
+  const caseIdNum = parseCaseId(caseId);
+  if (caseIdNum instanceof NextResponse) return caseIdNum;
+
+  const parsed = patchSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+  const assigneeUserId = parsed.data.assignee_user_id;
+
+  try {
+    // Scoped fetch: an agency_manager can only see (and therefore assign) cases
+    // whose EFFECTIVE agency is theirs — out-of-scope stays an opaque 404.
+    const detail = await getCase(caseIdNum, agencyScopeFor(session));
+    if (!detail) {
+      return NextResponse.json({ error: 'Case not found' }, { status: 404 });
+    }
+    const effectiveAgency = detail.case.effective_agency;
+
+    if (!canAssignOutreachCase(session.user.role, session.user.agency, effectiveAgency)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
+
+    if (assigneeUserId === null) {
+      await clearAssignee(caseIdNum);
+      return NextResponse.json({ assignee: null });
+    }
+
+    const target = await getUserForAssignment(assigneeUserId);
+    if (!target || !target.is_active) {
+      return NextResponse.json({ error: 'Assignee not found or inactive' }, { status: 400 });
+    }
+    if (!isValidAssignmentTarget(target, effectiveAgency)) {
+      return NextResponse.json(
+        { error: 'Assignee must belong to the case agency or be a superadmin' },
+        { status: 403 },
+      );
+    }
+
+    // Guarded write: no-ops (→409) if a concurrent transfer changed the
+    // case's effective agency after the permission check above.
+    const applied = await setAssignee(caseIdNum, assigneeUserId, session.user.id, effectiveAgency);
+    if (!applied) {
+      return NextResponse.json(
+        { error: 'Case ownership changed — reload and try again' },
+        { status: 409 },
+      );
+    }
+
+    // Fire-and-forget (createNotification throws on failure; self-assignment
+    // is dropped by the service's actor===recipient suppression).
+    createNotification({
+      recipientId: assigneeUserId,
+      actorId: session.user.id,
+      eventType: 'outreach_assigned',
+      entityType: 'outreach_case',
+      entityId: String(caseIdNum),
+      title: `Outreach case #${caseIdNum} assigned to you`,
+      body: detail.case.description ? truncate(detail.case.description, 140) : undefined,
+      referenceUrl: `/direct-outreach?case=${caseIdNum}`,
+    }).catch((err) => logger.warn({ err, caseId: caseIdNum }, '[direct-outreach] assignment notification failed'));
+
+    return NextResponse.json({
+      assignee: {
+        user_id: target.id,
+        name: target.name,
+        agency: target.agency,
+        assigned_at: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    logger.error({ err, caseId }, '[direct-outreach] assignment failed');
+    return NextResponse.json({ error: 'Failed to update assignment' }, { status: 500 });
   }
 }

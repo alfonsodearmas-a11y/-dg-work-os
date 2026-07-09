@@ -34,6 +34,9 @@ export interface ParsedCase {
   client_address: string | null;
   outreach_location: string | null;
   outreach_date: string | null;
+  /** Optional workbook columns — null when the uploaded workbook lacks them. */
+  region: string | null;
+  point_person: string | null;
   created_at: string | null;
   // Rollups (computed from the parsed comment log)
   latest_update: string | null;
@@ -288,6 +291,10 @@ export function parseOutreachWorkbook(buffer: Buffer): ParsedWorkbook {
       client_address: text(d(row, 'Locality / Address')),
       outreach_location: text(d(row, 'Outreach Location')),
       outreach_date: toDateOnly(d(row, 'Outreach Date')),
+      // Optional headers (newer workbooks) — reader() yields null when absent,
+      // so an older workbook without these columns still uploads cleanly.
+      region: text(d(row, 'Region')),
+      point_person: text(d(row, 'Point Person')),
       created_at: toTimestamp(d(row, 'Date Logged')),
       // Rollups filled by applyRollups; defaults for cases with no comments
       latest_update: null,
@@ -356,7 +363,8 @@ export function parseOutreachWorkbook(buffer: Buffer): ParsedWorkbook {
 const CASE_COLUMNS = [
   'case_id', 'agency', 'status', 'priority', 'priority_flag', 'theme', 'category_name',
   'description', 'client_name', 'client_phone', 'client_address', 'outreach_location',
-  'outreach_date', 'created_at', 'latest_update', 'latest_update_date', 'latest_update_by',
+  'outreach_date', 'region', 'point_person', 'created_at',
+  'latest_update', 'latest_update_date', 'latest_update_by',
   'comment_count', 'last_activity_at', 'committed_date', 'committed_source', 'committed_by',
 ] as const;
 
@@ -364,7 +372,7 @@ const UPDATE_COLUMNS = [
   'entry_ref', 'case_id', 'agency', 'creator_agency', 'status', 'comment', 'username', 'created_at',
 ] as const;
 
-const CASE_CHUNK = 400; // 22 params/row → 8.8k params/statement, well under pg's 65k cap
+const CASE_CHUNK = 400; // 24 params/row → 9.6k params/statement, well under pg's 65k cap
 const UPDATE_CHUNK = 800; // 8 params/row
 
 function valuesClause(rowCount: number, colCount: number): string {
@@ -402,7 +410,8 @@ export async function importOutreachWorkbook(buffer: Buffer): Promise<OutreachUp
         `INSERT INTO direct_outreach_cases (
            case_id, agency, status, priority, priority_flag, theme, category_name,
            description, client_name, client_phone, client_address, outreach_location,
-           outreach_date, created_at, latest_update, latest_update_date, latest_update_by,
+           outreach_date, region, point_person, created_at,
+           latest_update, latest_update_date, latest_update_by,
            comment_count, last_activity_at, committed_date, committed_source, committed_by
          ) VALUES ${valuesClause(chunk.length, CASE_COLUMNS.length)}`,
         params,

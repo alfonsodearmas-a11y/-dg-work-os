@@ -51,7 +51,12 @@ export interface OutreachCaseRow {
   case_id: number;
   client_name: string | null;
   client_address: string | null;
+  /** Workbook (original) agency. Display and scoping use effective_agency. */
   agency: string | null;
+  /** COALESCE(transfer override, workbook agency) — the owning agency. */
+  effective_agency: string | null;
+  /** True while a transfer override differs from the workbook agency. */
+  transferred: boolean;
   status: string | null;
   priority_flag: PriorityFlag | null;
   theme: OutreachTheme | null;
@@ -59,7 +64,14 @@ export interface OutreachCaseRow {
   category_name: string | null;
   outreach_location: string | null;
   outreach_date: string | null;
+  /** Workbook-owned optional columns (null when the uploaded workbook lacks them). */
+  region: string | null;
+  point_person: string | null;
   created_at: string | null;
+  /** Responsible officer (direct_outreach_assignments LEFT JOIN — survives uploads). */
+  assignee_user_id: string | null;
+  assignee_name: string | null;
+  assigned_at: string | null;
   latest_update: string | null;
   latest_update_date: string | null;
   latest_update_by: string | null;
@@ -81,6 +93,20 @@ export interface OutreachCaseDetail extends OutreachCaseRow {
   unclassified_category: string | null;
   creator: string | null;
   synced_at: string | null;
+  assignee_agency: string | null;
+}
+
+/** One row of the append-only agency-transfer audit. */
+export interface OutreachTransfer {
+  id: number;
+  case_id: number;
+  from_agency: string | null;
+  to_agency: string;
+  cleared_assignee_user_id: string | null;
+  reason: string;
+  transferred_by: string | null;
+  transferred_by_name: string | null;
+  transferred_at: string;
 }
 
 export interface OutreachUpdate {
@@ -107,6 +133,8 @@ export interface OutreachAgencySummary {
   stalled_90: number;
   overdue_commitments: number;
   with_target: number;
+  /** Open cases owned via a transfer override (amendment B legibility count). */
+  transferred_in: number;
 }
 
 export interface OutreachSummary {
@@ -119,16 +147,22 @@ export interface OutreachSummary {
     stalled_90: number;
     overdue_commitments: number;
     with_target: number;
+    transferred_in: number;
+    unassigned_open: number;
   };
   agencies: OutreachAgencySummary[];
+  /** Scoped option sources for the filter dropdowns. */
+  filter_options: {
+    regions: string[];
+    outreach_locations: string[];
+    officers: { id: string; name: string | null }[];
+  };
   last_synced_at: string | null;
   cases_seen: number | null;
   updates_seen: number | null;
 }
 
 // ── List filters ─────────────────────────────────────────────────────────────
-
-export type BacklogFilter = 'all' | 'stalled60' | 'stalled90' | 'target' | 'overdue';
 
 export type OutreachSortField =
   | 'case_id'
@@ -138,13 +172,29 @@ export type OutreachSortField =
   | 'days_idle'
   | 'days_open'
   | 'latest_update_date'
-  | 'committed_date';
+  | 'committed_date'
+  | 'assignee';
+
+/** Sentinel accepted in `officers` alongside user uuids. */
+export const UNASSIGNED_OFFICER = 'unassigned';
 
 export interface OutreachListFilters {
-  agency?: string;
-  status?: string;
-  theme?: string;
-  backlog?: BacklogFilter;
+  /** Multi-selects — all AND-combined; agency values compare against effective_agency. */
+  agencies?: string[];
+  statuses?: string[];
+  themes?: string[];
+  outreaches?: string[];
+  regions?: string[];
+  /** Officer uuids; may include the UNASSIGNED_OFFICER sentinel. */
+  officers?: string[];
+  /** Session user id, resolved by the route from the "Assigned to me" toggle. */
+  assignedToMe?: string;
+  /** Independent toggles (replace the old single-select backlog view). */
+  highPriority?: boolean;
+  stalled60?: boolean;
+  stalled90?: boolean;
+  hasTarget?: boolean;
+  overdue?: boolean;
   search?: string;
   sort?: OutreachSortField;
   sort_dir?: 'asc' | 'desc';
