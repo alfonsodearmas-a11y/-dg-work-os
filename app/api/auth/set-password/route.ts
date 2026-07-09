@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db';
+import { getServerSupabase } from '@/lib/supabase/server';
 import { withErrorHandler } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 
@@ -65,7 +66,34 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     .eq('id', result.user.id)
     .eq('invite_token', token);
 
-  return NextResponse.json({ success: true, email: result.user.email });
+  // Establish a real session server-side so the invitee lands signed in instead
+  // of being bounced to /login. getServerSupabase() is the @supabase/ssr client
+  // bound to next/headers cookies — writable in route handlers, so the session
+  // cookies ride out on this response. Any failure falls back to the manual
+  // /login flow: onboarding never breaks on this step.
+  let signedIn = false;
+  try {
+    const supabase = await getServerSupabase();
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: result.user.email,
+      password,
+    });
+    if (signInError) {
+      logger.warn(
+        { err: signInError, userId: result.user.id },
+        'set-password: auto sign-in failed — falling back to /login',
+      );
+    } else {
+      signedIn = true;
+    }
+  } catch (err) {
+    logger.warn(
+      { err, userId: result.user.id },
+      'set-password: auto sign-in threw — falling back to /login',
+    );
+  }
+
+  return NextResponse.json({ success: true, signedIn, email: result.user.email });
 });
 
 // GET /api/auth/set-password?token=xxx — Validate token before showing the form
