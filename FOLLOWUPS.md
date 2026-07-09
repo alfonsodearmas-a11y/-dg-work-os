@@ -75,3 +75,9 @@ Remaining action: after each new OP Direct export, open `/direct-outreach` as su
 The Supabase security advisor flags `public.v_metrics_by_agency` and `public.pending_applications_with_wait` with the same `security_definer_view` ERROR that migration 146 fixed for `direct_outreach_open_v`: the views execute with their owner's (postgres) privileges, so client-role grants on them bypass base-table RLS via PostgREST. They pre-date the Direct Outreach module and were deliberately not bundled into 146 because their consumers may rely on the definer semantics (migration 111 explicitly GRANTed `pending_applications_with_wait` to anon/authenticated, so something may read it client-side).
 
 Action: for each view, trace the consumers first (client-side supabase reads vs server-only), then either `ALTER VIEW ... SET (security_invoker = on)` + revoke client grants (the 146 pattern) or document why definer semantics are required and constrain the grants instead. Verify with `get_advisors` that both ERRORs clear.
+
+## 3. Populate the Vercel Preview environment so PR checks become meaningful
+
+Every Git-integration PR preview build fails at module evaluation because the Preview environment has no `NEXT_PUBLIC_SUPABASE_URL` (`lib/supabase/client.ts` / `server.ts` call `.trim()` on it unguarded). The repo has always shipped via `vercel --prod` (Production env), so the gap never showed until PR #17's checks went red.
+
+Action: populate the Preview environment with `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and the `PG_*` set so preview builds pass and the Vercel PR check means something. **Enable Deployment Protection on previews first** — this puts the service_role key on preview URLs, so previews must not be publicly reachable.
