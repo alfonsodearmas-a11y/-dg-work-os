@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
     .order('name');
 
   if (agency) {
-    // Show users from that agency + ministry-level users
-    query = query.or(`agency.eq.${agency},role.in.(dg,minister,ps)`);
+    // Show users from that agency + ministry-level users (superadmin)
+    query = query.or(`agency.eq.${agency},role.eq.superadmin`);
   }
 
   const { data, error } = await query;

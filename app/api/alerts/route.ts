@@ -11,7 +11,7 @@ export async function GET() {
 
     const scope = getAgencyScope(session);
 
-    let sql = `SELECT id, agency, severity, metric_name, current_value, threshold_value, message, is_active, created_at, acknowledged_at, acknowledged_by, resolved_at, resolved_by
+    let sql = `SELECT id, agency, severity, metric_name, current_value, threshold_value, message, is_active, created_at, acknowledged_at, acknowledged_by, resolved_at
        FROM alerts WHERE is_active = true AND resolved_at IS NULL`;
     const params: string[] = [];
 

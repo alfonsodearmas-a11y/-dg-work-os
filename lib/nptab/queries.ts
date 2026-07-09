@@ -27,22 +27,39 @@ export async function listActiveQueue(): Promise<NptabQueueRowWithTender[]> {
   const { data, error } = await supabaseAdmin
     .from('nptab_report_queue')
     .select(
-      'id, tender_id, queued_at, queued_by, reason, queued_by_user:queued_by ( name ), tender:tender_id ( description, agency, contractor )',
+      'id, tender_id, queued_at, queued_by, reason, queued_by_user:queued_by ( name )',
     )
     .is('dequeued_at', null)
     .is('included_in_report_id', null)
     .order('queued_at', { ascending: false });
   if (error) throw error;
-  return (data ?? []).map((row) => {
-    const r = row as unknown as {
-      id: string;
-      tender_id: string;
-      queued_at: string;
-      queued_by: string;
-      reason: string | null;
-      queued_by_user: { name: string | null } | null;
-      tender: { description: string | null; agency: string | null; contractor: string | null } | null;
-    };
+  const rows = (data ?? []).map((row) => row as unknown as {
+    id: string;
+    tender_id: string;
+    queued_at: string;
+    queued_by: string;
+    reason: string | null;
+    queued_by_user: { name: string | null } | null;
+  });
+
+  // nptab_report_queue.tender_id (text) has no FK to tender(id) (uuid), so the
+  // relationship cannot be embedded via PostgREST. Fetch tenders separately and
+  // stitch by id (mirrors the LEFT JOIN t.id::text = q.tender_id in submitReport).
+  const tenderIds = Array.from(new Set(rows.map((r) => r.tender_id).filter(Boolean)));
+  const tenderById = new Map<string, { description: string | null; agency: string | null; contractor: string | null }>();
+  if (tenderIds.length > 0) {
+    const { data: tenders, error: tenderError } = await supabaseAdmin
+      .from('tender')
+      .select('id, description, agency, contractor')
+      .in('id', tenderIds);
+    if (tenderError) throw tenderError;
+    for (const t of (tenders ?? []) as Array<{ id: string; description: string | null; agency: string | null; contractor: string | null }>) {
+      tenderById.set(String(t.id), { description: t.description, agency: t.agency, contractor: t.contractor });
+    }
+  }
+
+  return rows.map((r) => {
+    const tender = tenderById.get(r.tender_id) ?? null;
     return {
       id: r.id,
       tender_id: r.tender_id,
@@ -50,11 +67,11 @@ export async function listActiveQueue(): Promise<NptabQueueRowWithTender[]> {
       queued_by: r.queued_by,
       queued_by_name: r.queued_by_user?.name ?? null,
       reason: r.reason,
-      tender_title: r.tender?.description ?? null,
-      tender_agency: r.tender?.agency ?? null,
+      tender_title: tender?.description ?? null,
+      tender_agency: tender?.agency ?? null,
       contract_value: null,
       days_past_sla: null,
-      contractor: r.tender?.contractor ?? null,
+      contractor: tender?.contractor ?? null,
     };
   });
 }
@@ -146,34 +163,60 @@ export async function getReportAuditLog(reportId: string): Promise<NptabAuditEnt
 export async function getReportTenderSnapshots(reportId: string): Promise<NptabReportTenderSnapshot[]> {
   const { data, error } = await supabaseAdmin
     .from('nptab_report_queue')
-    .select(
-      'tender_id, tender:tender_id ( description, agency, contractor, stage, date_advertised )',
-    )
+    .select('tender_id')
     .eq('included_in_report_id', reportId);
   if (error) throw error;
+  const rows = (data ?? []).map((row) => row as unknown as { tender_id: string });
+
+  // No FK from nptab_report_queue.tender_id (text) to tender(id) (uuid), so the
+  // tender cannot be embedded. Fetch tenders separately and stitch by id
+  // (mirrors the LEFT JOIN t.id::text = q.tender_id in submitReport).
+  const tenderIds = Array.from(new Set(rows.map((r) => r.tender_id).filter(Boolean)));
+  const tenderById = new Map<string, {
+    description: string | null;
+    agency: string | null;
+    contractor: string | null;
+    stage: string | null;
+    date_advertised: string | null;
+  }>();
+  if (tenderIds.length > 0) {
+    const { data: tenders, error: tenderError } = await supabaseAdmin
+      .from('tender')
+      .select('id, description, agency, contractor, stage, date_advertised')
+      .in('id', tenderIds);
+    if (tenderError) throw tenderError;
+    for (const t of (tenders ?? []) as Array<{
+      id: string;
+      description: string | null;
+      agency: string | null;
+      contractor: string | null;
+      stage: string | null;
+      date_advertised: string | null;
+    }>) {
+      tenderById.set(String(t.id), {
+        description: t.description,
+        agency: t.agency,
+        contractor: t.contractor,
+        stage: t.stage,
+        date_advertised: t.date_advertised,
+      });
+    }
+  }
+
   const now = Date.now();
-  return (data ?? []).map((row) => {
-    const r = row as unknown as {
-      tender_id: string;
-      tender: {
-        description: string | null;
-        agency: string | null;
-        contractor: string | null;
-        stage: string;
-        date_advertised: string | null;
-      } | null;
-    };
-    const days = r.tender?.date_advertised
-      ? Math.floor((now - new Date(r.tender.date_advertised).getTime()) / 86_400_000)
+  return rows.map((r) => {
+    const tender = tenderById.get(r.tender_id) ?? null;
+    const days = tender?.date_advertised
+      ? Math.floor((now - new Date(tender.date_advertised).getTime()) / 86_400_000)
       : null;
     return {
       tender_id: r.tender_id,
-      title: r.tender?.description ?? '',
-      agency: r.tender?.agency ?? '',
+      title: tender?.description ?? '',
+      agency: tender?.agency ?? '',
       contract_value: null,
       days_past_sla: days,
-      contractor: r.tender?.contractor ?? null,
-      status: r.tender?.stage ?? '',
+      contractor: tender?.contractor ?? null,
+      status: tender?.stage ?? '',
     };
   });
 }

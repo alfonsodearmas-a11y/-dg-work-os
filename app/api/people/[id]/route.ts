@@ -61,7 +61,7 @@ async function _PUT(
     return NextResponse.json({ error: 'Cannot assign a role at or above your level' }, { status: 403 });
   }
 
-  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  const updates: Record<string, unknown> = {};
   const changes: Record<string, unknown> = {};
 
   if (role && role !== targetUser.role) {

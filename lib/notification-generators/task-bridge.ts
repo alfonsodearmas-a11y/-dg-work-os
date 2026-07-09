@@ -27,7 +27,7 @@ export async function generateTaskBridgeNotifications(ctx: GenerateContext): Pro
 
     const result = await query(
       `SELECT tn.id, tn.type, tn.task_id, tn.title, tn.message, tn.created_at,
-              t.title as task_title, u.full_name as assignee_name, t.agency
+              t.title as task_title, u.name as assignee_name, t.agency
        FROM task_notifications tn
        LEFT JOIN tasks t ON t.id = tn.task_id
        LEFT JOIN users u ON u.id = tn.user_id

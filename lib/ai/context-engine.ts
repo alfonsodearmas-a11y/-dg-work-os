@@ -434,14 +434,14 @@ async function fetchRecentDocuments(): Promise<RawContextData['documents']> {
   try {
     const { data } = await supabaseAdmin
       .from('documents')
-      .select('id, title, category, agency, created_at')
+      .select('id, title, document_type, agency, created_at')
       .order('created_at', { ascending: false })
       .limit(30);
 
     return (data || []).map(d => ({
       id: d.id,
       title: d.title,
-      category: d.category,
+      category: d.document_type,
       agency: d.agency,
       uploaded_at: d.created_at,
     }));
@@ -544,7 +544,7 @@ export async function assembleRawData(): Promise<RawContextData> {
     getPortfolioSummary(),
     getDelayedProjects(),
     supabaseAdmin.from('tasks')
-      .select('id, title, status, priority, due_date, agency, assigned_to')
+      .select('id, title, status, priority, due_date, agency, owner_user_id')
       .neq('status', 'done')
       .order('due_date', { ascending: true, nullsFirst: false })
       .limit(200)
@@ -617,8 +617,8 @@ export async function assembleRawData(): Promise<RawContextData> {
       priority: t.priority,
       due_date: t.due_date,
       agency: t.agency,
-      assigned_to: t.assigned_to,
-      assigned_to_name: t.assigned_to ? peopleLookup.get(t.assigned_to) || null : null,
+      assigned_to: t.owner_user_id,
+      assigned_to_name: t.owner_user_id ? peopleLookup.get(t.owner_user_id) || null : null,
     })),
     todayEvents: todayEvents.map((ev: CalendarEvent) => ({
       title: ev.title,

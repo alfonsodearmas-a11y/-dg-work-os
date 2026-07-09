@@ -12,9 +12,9 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0');
 
     const result = await query(
-      `SELECT u.*, usr.full_name as uploaded_by_name
+      `SELECT u.*, usr.name as uploaded_by_name
        FROM daily_uploads u LEFT JOIN users usr ON u.uploaded_by = usr.id
-       ORDER BY u.report_date DESC LIMIT $1 OFFSET $2`,
+       ORDER BY u.data_date DESC LIMIT $1 OFFSET $2`,
       [limit, offset]
     );
 

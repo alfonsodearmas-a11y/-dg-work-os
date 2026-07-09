@@ -24,7 +24,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!table) return NextResponse.json({ success: false, error: 'Invalid agency' }, { status: 400 });
 
     const result = await query(
-      `SELECT m.*, s.full_name as submitted_by_name, a.full_name as approved_by_name
+      `SELECT m.*, s.name as submitted_by_name, a.name as approved_by_name
        FROM ${table} m LEFT JOIN users s ON m.submitted_by = s.id LEFT JOIN users a ON m.approved_by = a.id
        ORDER BY m.report_date DESC LIMIT $1 OFFSET $2`,
       [limit, offset]

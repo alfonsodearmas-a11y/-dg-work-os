@@ -8,9 +8,9 @@ export async function GET() {
 
   try {
     const uploadResult = await query(
-      `SELECT u.*, usr.full_name as uploaded_by_name
+      `SELECT u.*, usr.name as uploaded_by_name
        FROM daily_uploads u LEFT JOIN users usr ON u.uploaded_by = usr.id
-       ORDER BY u.report_date DESC LIMIT 1`
+       ORDER BY u.data_date DESC LIMIT 1`
     );
 
     if (uploadResult.rows.length === 0) {
@@ -19,12 +19,12 @@ export async function GET() {
 
     const upload = uploadResult.rows[0];
     const valuesResult = await query(
-      'SELECT * FROM daily_metric_values WHERE upload_id = $1 ORDER BY row_number',
+      'SELECT * FROM daily_metrics WHERE upload_id = $1 ORDER BY row_number',
       [upload.id]
     );
 
     const analysisResult = await query(
-      'SELECT * FROM daily_upload_analysis WHERE upload_id = $1',
+      'SELECT * FROM daily_analysis WHERE upload_id = $1',
       [upload.id]
     );
 

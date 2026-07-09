@@ -6,7 +6,7 @@ import { logger } from '@/lib/logger';
 // UUID v4 format validation
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const DOC_DETAIL_COLUMNS = 'id, filename, original_filename, file_path, title, summary, document_type, agency, tags, file_size, mime_type, processing_status, key_entities, analysis, uploaded_at, created_at';
+const DOC_DETAIL_COLUMNS = 'id, filename, original_filename, file_path, title, summary, document_type, document_date, agency, tags, file_size, mime_type, processing_status, extracted_data, uploaded_at, created_at';
 const DOC_QUERY_COLUMNS = 'id, document_id, question, answer, created_at';
 
 function validateId(id: string): NextResponse | null {
