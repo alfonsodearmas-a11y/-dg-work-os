@@ -1,9 +1,21 @@
 import { Pool, PoolClient, QueryResult } from 'pg';
 import { logger } from '@/lib/logger';
+import { SUPABASE_DB_CA_PEM } from '@/lib/db-ca';
 
 if (!process.env.PG_HOST && process.env.NEXT_PHASE !== 'phase-production-build') {
   throw new Error('[db-pg] PG_HOST environment variable is required');
 }
+
+// Supabase's pooler presents a chain rooted at the self-signed "Supabase Root
+// 2021 CA", which Node's default trust store rejects (SELF_SIGNED_CERT_IN_CHAIN).
+// Trust that CA explicitly so we keep rejectUnauthorized:true (verify the chain,
+// not disable validation). Env var is primary; the committed cert is the fallback.
+// .trim() guards against a trailing newline in the env value (same class of bug
+// that broke the realtime anon key). The env var is used ONLY if it looks like a
+// real PEM, so a mangled multi-line env value can't silently break TLS — it
+// falls back to the committed cert instead.
+const envCa = process.env.SUPABASE_DB_CA?.trim();
+const SUPABASE_CA = envCa && envCa.includes('BEGIN CERTIFICATE') ? envCa : SUPABASE_DB_CA_PEM;
 
 const pool = new Pool({
   host: process.env.PG_HOST || '',
@@ -15,8 +27,9 @@ const pool = new Pool({
   max: 5,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
-  // Enforce TLS certificate validation in production to prevent MITM attacks
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false,
+  // Enforce TLS certificate validation in production to prevent MITM attacks,
+  // trusting the Supabase pooler CA (see SUPABASE_CA above).
+  ssl: process.env.NODE_ENV === 'production' ? { ca: SUPABASE_CA, rejectUnauthorized: true } : false,
 });
 
 pool.on('error', (err) => {
