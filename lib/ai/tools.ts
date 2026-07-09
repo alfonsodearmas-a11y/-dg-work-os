@@ -568,14 +568,19 @@ async function executeUpdateTaskStatus(input: Record<string, unknown>) {
 }
 
 async function executeSaveDocument(input: Record<string, unknown>, userId: string) {
+  // AI-generated documents have no uploaded file, but documents.filename,
+  // original_filename and file_path are NOT NULL — synthesize them from the
+  // title. Body -> summary, kind -> document_type (documents has no
+  // content/uploaded_by/source columns).
+  const safeName = (String(input.title || 'ai-document').replace(/[^\w.-]+/g, '_').slice(0, 80)) || 'ai-document';
+  const fileName = `${safeName}.md`;
   const { data, error } = await supabaseAdmin
     .from('documents')
     .insert({
       title: input.title,
-      // `documents` has no content/uploaded_by/source columns — the AI-generated
-      // body lives in `summary`, the kind in `document_type`; uploader/source
-      // aren't modeled on documents. (Aligns to the real schema; was a total
-      // insert failure before.)
+      filename: fileName,
+      original_filename: fileName,
+      file_path: `ai-generated/${fileName}`,
       summary: input.content ? String(input.content) : null,
       document_type: input.category ? String(input.category) : 'briefing',
       agency: input.agency || null,

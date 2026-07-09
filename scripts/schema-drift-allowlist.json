@@ -2,16 +2,6 @@
   "_comment": "Entries the schema-drift guard should ignore. Each: {file (endsWith match), ref? (table.col; omit to match the whole file), reason}. Prefer FIXING drift over allowlisting; use this only for guard false-positives and explicitly-deferred work.",
   "allow": [
     {
-      "file": "app/api/gpl/sc-staff/route.ts",
-      "ref": "gpl_snapshots.snapshot_id",
-      "reason": "FALSE POSITIVE: the .eq('snapshot_id') applies to the gpl_snapshot_metrics query (built in a `query` variable), not gpl_snapshots. The guard's linear .from()-tracking mis-attributes filters on variable-built queries."
-    },
-    {
-      "file": "app/api/action-items/review/[extractionId]/route.ts",
-      "ref": "users.extraction_item_idx",
-      "reason": "FALSE POSITIVE: the upsert targets `tasks` (built in a variable); extraction_item_idx is a real tasks column. Same variable-built-query attribution limitation."
-    },
-    {
       "file": "app/api/tm/cron/reminders/route.ts",
       "reason": "DEFERRED (legacy TM module): raw SQL queries the current `tasks` table using the pre-role-simplification schema (t.assignee_id, u.full_name, status 'delayed') which no longer exists. Fixing requires migrating/removing the whole legacy task-management module (owner_user_id, name, real status set), a refactor out of scope for a drift-repair run. Pre-existing breakage; see final report."
     },
@@ -26,6 +16,14 @@
     {
       "file": "lib/task-queries.ts",
       "reason": "DEFERRED (legacy TM module): every query assumes the pre-simplification tasks schema (t.assignee_id, t.created_by, users.full_name). The module (app/api/tm/**) needs a migration or removal decision, not a column rename. Pre-existing breakage; see final report."
+    },
+    {
+      "file": "lib/direct-outreach/opdirect.ts",
+      "reason": "DEFERRED (unapplied migration): direct_outreach_cases/updates/sync_state/open_v are defined by supabase/migrations/144_direct_outreach.sql but that migration was never applied to prod (0 rows in information_schema). Code is correct; fix is to APPLY migration 144. Not auto-applied here because 144 includes ALTER ... ENABLE RLS + a seed INSERT (outside this run's CREATE-TABLE/ADD-COLUMN-only pre-approval). See final report."
+    },
+    {
+      "file": "lib/direct-outreach/queries.ts",
+      "reason": "DEFERRED (unapplied migration 144) — same as opdirect.ts; apply migration 144 to prod to enable."
     }
   ]
 }

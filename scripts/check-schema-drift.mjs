@@ -34,6 +34,7 @@ const OPTION_KEYS = new Set([
 ]);
 
 const DYN = 'DYNTBL'; // placeholder for ${...} interpolations in raw SQL
+const SQL_NONTABLE = new Set(['set', 'select', 'values', 'distinct', 'only', 'lateral']);
 
 // UPPER_CASE string constants that hold column lists (e.g. MEETING_COLUMNS,
 // DOC_DETAIL_COLUMNS, TENDER_COLUMNS). Resolved FILE-LOCALLY first; the global
@@ -42,11 +43,24 @@ const DYN = 'DYNTBL'; // placeholder for ${...} interpolations in raw SQL
 const CONSTS = {};
 const COLLISION = Symbol('collision');
 const CONST_RE = /\bconst\s+([A-Z][A-Z0-9_]*)\s*=\s*(`[^`]*`|'[^']*'|"[^"]*")/g;
-function collectConsts(src, into) {
-  let cm; CONST_RE.lastIndex = 0;
-  while ((cm = CONST_RE.exec(src))) { const v = cm[2].slice(1, -1); if (!v.includes('${')) into[cm[1]] = v; }
-  return into;
+const ARR_JOIN_RE = /\bconst\s+([A-Z][A-Z0-9_]*)\s*=\s*\[([\s\S]*?)\]\s*\.join\s*\(/g;
+const STR_LIT_RE = /(['"`])((?:\\.|(?!\1).)*)\1/g;
+// Extract UPPER_CASE column-list constants: both string-literal RHS and
+// `[ 'a', 'b', ... ].join(', ')` array RHS (e.g. TENDER_COLUMNS).
+function extractConsts(src) {
+  const out = {};
+  let cm;
+  CONST_RE.lastIndex = 0;
+  while ((cm = CONST_RE.exec(src))) { const v = cm[2].slice(1, -1); if (!v.includes('${')) out[cm[1]] = v; }
+  ARR_JOIN_RE.lastIndex = 0;
+  while ((cm = ARR_JOIN_RE.exec(src))) {
+    const parts = []; let sm; STR_LIT_RE.lastIndex = 0;
+    while ((sm = STR_LIT_RE.exec(cm[2]))) { if (!sm[2].includes('${')) parts.push(sm[2]); }
+    if (parts.length) out[cm[1]] = parts.join(', ');
+  }
+  return out;
 }
+function collectConsts(src, into) { return Object.assign(into, extractConsts(src)); }
 // Resolve an UPPER const name to its column-list string, file-local first.
 function resolveConst(id, fileConsts) {
   if (fileConsts[id] != null) return fileConsts[id];
@@ -71,6 +85,13 @@ function walk(dir, out = []) {
     else if (/\.(ts|tsx)$/.test(p) && !SKIP.test(p)) out.push(p);
   }
   return out;
+}
+
+// Strip block + line comments so method calls quoted in comments (e.g. an
+// "earlier attempt: .upsert({...})" note) aren't parsed as real queries. The
+// line-comment regex preserves `://` so URLs in string literals survive.
+function stripComments(src) {
+  return src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
 }
 
 const findings = [];
@@ -148,7 +169,13 @@ function captureParen(src, openIdx) {
 
 function checkPostgrest(file, src) {
   const fileConsts = collectConsts(src, {});
-  const tokenRe = /\.(from|select|insert|update|upsert|eq|neq|gt|gte|lt|lte|like|ilike|is|order)\s*\(/g;
+  // Only from/select/insert/update/upsert are checked. Single-column filters
+  // (.eq/.order/…) are intentionally NOT validated: on queries built up in a
+  // variable across interleaved .from() calls the linear table-tracking below
+  // mis-attributes them (false positives), and no real backlog bug was a
+  // filter-column drift. Not checked either: .or()/.filter() strings, .rpc(),
+  // embedded-relation inner columns, .select(<non-UPPER variable>).
+  const tokenRe = /\.(from|select|insert|update|upsert)\s*\(/g;
   let m, current = null;
   while ((m = tokenRe.exec(src))) {
     const method = m[1];
@@ -173,9 +200,6 @@ function checkPostgrest(file, src) {
         if (OPTION_KEYS.has(k)) continue;
         if (!hasCol(current, k)) add(file, method, `${current}.${k}`, `column not in ${method}-table`);
       }
-    } else {
-      const c = argStr.match(/^\s*['"](\w+)['"]/);
-      if (c && !hasCol(current, c[1])) add(file, method, `${current}.${c[1]}`, 'filter column not found');
     }
   }
 }
@@ -198,6 +222,9 @@ function checkRawSql(file, src) {
       if (tbl === DYN) { if (alias) aliasMap[alias] = null; continue; }
       const t = tbl.toLowerCase();
       if (t === DYN.toLowerCase()) continue;
+      // SQL keywords that follow FROM/UPDATE/INTO but are not tables
+      // (e.g. `... DO UPDATE SET ...`, `INSERT INTO ... SELECT`).
+      if (SQL_NONTABLE.has(t)) continue;
       if (!hasTable(t)) add(file, 'sql-table', t, 'raw-SQL table not found');
       if (alias && !/^(as|on|where|set|values|left|right|inner|outer|join|order|group|limit|returning|using)$/i.test(alias)) {
         aliasMap[alias] = hasTable(t) ? t : null;
@@ -233,21 +260,19 @@ for (const d of SCAN_DIRS) {
   walk(abs, allFiles);
 }
 
-// Pass 1: collect UPPER_CASE string-constant column lists globally, marking any
-// name defined with conflicting values in >1 file as a COLLISION (skip on lookup).
+// Pass 1: collect UPPER_CASE column-list constants globally, marking any name
+// defined with conflicting values in >1 file as a COLLISION (skip on lookup).
 for (const file of allFiles) {
-  const s = readFileSync(file, 'utf8');
-  let cm; CONST_RE.lastIndex = 0;
-  while ((cm = CONST_RE.exec(s))) {
-    const v = cm[2].slice(1, -1); if (v.includes('${')) continue;
-    if (cm[1] in CONSTS && CONSTS[cm[1]] !== v) CONSTS[cm[1]] = COLLISION;
-    else if (!(cm[1] in CONSTS)) CONSTS[cm[1]] = v;
+  const local = extractConsts(readFileSync(file, 'utf8'));
+  for (const [name, v] of Object.entries(local)) {
+    if (name in CONSTS && CONSTS[name] !== v) CONSTS[name] = COLLISION;
+    else if (!(name in CONSTS)) CONSTS[name] = v;
   }
 }
 
-// Pass 2: check.
+// Pass 2: check (comments stripped so quoted method calls aren't parsed).
 for (const file of allFiles) {
-  const s = readFileSync(file, 'utf8');
+  const s = stripComments(readFileSync(file, 'utf8'));
   if (/supabaseAdmin|\.from\(/.test(s)) checkPostgrest(file, s);
   if (/pgQuery|\bquery\(|client\.query\(/.test(s)) checkRawSql(file, s);
 }
