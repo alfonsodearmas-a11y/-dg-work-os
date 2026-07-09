@@ -121,6 +121,8 @@ function deriveIcon(eventType: NotificationEventType): string {
     case 'task_due_soon':
     case 'task_completed':
     case 'subtask_completed':
+    case 'outreach_assigned':
+    case 'outreach_transferred':
       return 'task';
     default:
       return 'bell';

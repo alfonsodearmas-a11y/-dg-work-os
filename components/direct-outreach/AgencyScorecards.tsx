@@ -54,6 +54,11 @@ export function AgencyScorecards({ agencies }: AgencyScorecardsProps) {
                 <p className="text-[11px] uppercase tracking-wider text-navy-600 mt-1">Open</p>
               </div>
             </div>
+            {a.transferred_in > 0 && (
+              <p className="text-[11px] text-amber-400/90 mt-2">
+                ▸ {a.transferred_in} transferred in
+              </p>
+            )}
           </article>
         );
       })}

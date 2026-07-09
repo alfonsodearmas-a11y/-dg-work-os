@@ -9,6 +9,7 @@ interface OutreachStatCardProps {
   iconBg: string;
   iconColor: string;
   sub?: string;
+  /** Toggle state — omit for action cards that aren't toggles (no aria-pressed). */
   active?: boolean;
   onClick?: () => void;
 }
@@ -21,7 +22,7 @@ export function OutreachStatCard({
   iconBg,
   iconColor,
   sub,
-  active = false,
+  active,
   onClick,
 }: OutreachStatCardProps) {
   const body = (
@@ -57,7 +58,7 @@ export function OutreachStatCard({
     <button
       type="button"
       onClick={onClick}
-      aria-pressed={active}
+      {...(active !== undefined ? { 'aria-pressed': active } : {})}
       aria-label={`${label}: ${value}`}
       className={`card-premium block w-full text-left p-4 lg:p-5 transition-colors ${
         active ? 'ring-1 ring-gold-500/40' : ''

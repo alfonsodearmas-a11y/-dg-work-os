@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import * as XLSX from 'xlsx';
 import { OutreachImportError, parseOutreachWorkbook } from './import-xlsx';
@@ -113,6 +115,22 @@ describe('parseOutreachWorkbook — Data sheet mapping', () => {
     expect(parsed.invalid_case_rows).toBe(0);
   });
 
+  test('maps optional Region and Point Person headers when present', () => {
+    const headers = [...DATA_HEADERS, 'Region', 'Point Person'];
+    const row = [...CASE_101, 'Region 2', 'S. Persaud'];
+    const { cases } = parseOutreachWorkbook(
+      buildWorkbook({ sheets: { Data: [headers, row], 'Comments Log': [COMMENT_HEADERS] } }),
+    );
+    expect(cases[0].region).toBe('Region 2');
+    expect(cases[0].point_person).toBe('S. Persaud');
+  });
+
+  test('older workbooks without Region / Point Person still upload (nulls)', () => {
+    const { cases } = parseOutreachWorkbook(buildWorkbook({ dataRows: [CASE_101] }));
+    expect(cases[0].region).toBeNull();
+    expect(cases[0].point_person).toBeNull();
+  });
+
   test('rejects malformed Case ID cells instead of mis-parsing them', () => {
     const bad1 = [...CASE_101]; bad1[0] = '1,234'; // parseInt would read this as 1
     const bad2 = [...CASE_101]; bad2[0] = '12abc';
@@ -201,6 +219,18 @@ describe('parseOutreachWorkbook — Comments Log + rollups', () => {
     const c101 = parsed.cases.find((c) => c.case_id === 101)!;
     expect(c101.latest_update).toBe('Crew completed works, resolved');
     expect(c101.latest_update_by).toBe('GWI/bjones');
+  });
+});
+
+describe('snapshot-survival tripwire', () => {
+  test('the importer never references the human-entered tables', () => {
+    // Officer assignments, agency overrides, and the transfer audit MUST
+    // survive the full snapshot-replace upload. The structural guarantee is
+    // that import-xlsx.ts simply never names those tables — trip if it does.
+    const source = readFileSync(join(process.cwd(), 'lib/direct-outreach/import-xlsx.ts'), 'utf8');
+    expect(source).not.toMatch(/direct_outreach_assignments/);
+    expect(source).not.toMatch(/direct_outreach_agency_overrides/);
+    expect(source).not.toMatch(/direct_outreach_transfers/);
   });
 });
 

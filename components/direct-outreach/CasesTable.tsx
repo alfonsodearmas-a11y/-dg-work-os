@@ -1,12 +1,12 @@
 'use client';
 
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, Radio } from 'lucide-react';
+import { ArrowDown, ArrowRightLeft, ArrowUp, ArrowUpDown, ChevronRight, Radio } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
 import { fmtDate, truncate } from '@/lib/format';
 import type { OutreachCaseRow, OutreachSortField } from '@/lib/direct-outreach/types';
-import { OUTREACH_STATUS_VARIANTS, idleColorClass, outreachAgencyColor } from './shared';
+import { OUTREACH_STATUS_VARIANTS, idleColorClass, initials, outreachAgencyColor } from './shared';
 
 interface CasesTableProps {
   cases: OutreachCaseRow[];
@@ -84,6 +84,7 @@ export function CasesTable({ cases, loading, sort, sortDir, onSort, onSelect, ca
               <SortableTh field="agency" sort={sort} sortDir={sortDir} onSort={onSort}>Agency</SortableTh>
               <SortableTh field="status" sort={sort} sortDir={sortDir} onSort={onSort}>Status</SortableTh>
               <SortableTh field="theme" sort={sort} sortDir={sortDir} onSort={onSort}>Theme / Issue</SortableTh>
+              <SortableTh field="assignee" sort={sort} sortDir={sortDir} onSort={onSort}>Officer</SortableTh>
               <SortableTh field="latest_update_date" sort={sort} sortDir={sortDir} onSort={onSort}>Latest Update</SortableTh>
               <SortableTh field="days_idle" sort={sort} sortDir={sortDir} onSort={onSort}>Idle</SortableTh>
               <SortableTh field="committed_date" sort={sort} sortDir={sortDir} onSort={onSort}>Target Date</SortableTh>
@@ -112,11 +113,21 @@ export function CasesTable({ cases, loading, sort, sortDir, onSort, onSelect, ca
                   )}
                 </td>
                 <td>
-                  <span
-                    className="font-mono font-semibold text-xs tracking-wider"
-                    style={{ color: outreachAgencyColor(c.agency) }}
-                  >
-                    {c.agency ?? '—'}
+                  <span className="inline-flex items-center gap-1.5">
+                    <span
+                      className="font-mono font-semibold text-xs tracking-wider"
+                      style={{ color: outreachAgencyColor(c.effective_agency) }}
+                    >
+                      {c.effective_agency ?? '—'}
+                    </span>
+                    {c.transferred && (
+                      <span title={`Transferred from ${c.agency ?? 'unknown'}`} className="inline-flex">
+                        <ArrowRightLeft
+                          className="h-3 w-3 text-amber-400"
+                          aria-label={`Transferred from ${c.agency ?? 'unknown'}`}
+                        />
+                      </span>
+                    )}
                   </span>
                 </td>
                 <td>
@@ -131,6 +142,20 @@ export function CasesTable({ cases, loading, sort, sortDir, onSort, onSelect, ca
                   <p className="text-sm text-slate-200">{c.theme ?? 'Other'}</p>
                   {c.description && (
                     <p className="text-xs text-navy-600 max-w-[240px] truncate">{c.description}</p>
+                  )}
+                </td>
+                <td>
+                  {c.assignee_user_id ? (
+                    <span className="flex items-center gap-2" title={c.assignee_name ?? undefined}>
+                      <span className="w-6 h-6 rounded-full bg-navy-800 flex items-center justify-center text-xs font-bold text-slate-400 shrink-0">
+                        {initials(c.assignee_name)}
+                      </span>
+                      <span className="text-xs text-slate-400 truncate max-w-[110px]">
+                        {c.assignee_name ?? 'Unknown'}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="text-xs text-navy-600">—</span>
                   )}
                 </td>
                 <td>

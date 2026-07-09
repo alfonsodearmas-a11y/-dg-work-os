@@ -27,6 +27,12 @@ export const OUTREACH_STATUS_VARIANTS: Record<string, BadgeVariant> = {
   Resolved: 'success',
 };
 
+/** Initials for the officer avatar circle — the app-wide inline idiom. */
+export function initials(name: string | null | undefined): string {
+  if (!name) return '?';
+  return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
 /** Idle-day traffic light: green <30, amber 30-90, red >90; muted when unknown. */
 export function idleColorClass(daysIdle: number | null | undefined): string {
   if (daysIdle == null) return 'text-navy-600';

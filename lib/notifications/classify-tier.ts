@@ -14,7 +14,9 @@ export type NotificationEventType =
   | 'task_watcher_notification'
   | 'task_daily_reminder'
   | 'task_agency_head_notice'
-  | 'task_referred_to_minister';
+  | 'task_referred_to_minister'
+  | 'outreach_assigned'
+  | 'outreach_transferred';
 
 export interface TierContext {
   taskPriority?: string;   // 'low' | 'medium' | 'high' | 'critical'
@@ -107,6 +109,13 @@ export function classifyNotificationTier(
 
     // ── DG flagged a task for the Minister: always important ─────────
     case 'task_referred_to_minister':
+      return 'important';
+
+    // ── Direct Outreach: officer assignment / agency transfer — both
+    //     actionable "this is now yours" events, mirroring task_assigned's
+    //     base tier (no priority context exists on outreach cases).
+    case 'outreach_assigned':
+    case 'outreach_transferred':
       return 'important';
   }
 }

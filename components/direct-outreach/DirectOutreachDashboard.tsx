@@ -1,34 +1,49 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CalendarX, CheckCircle2, Clock, Inbox, Radio, Search, Upload } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { CalendarX, CheckCircle2, Clock, Inbox, Radio, Search, Upload, X } from 'lucide-react';
+import { MultiSelect } from '@/components/oversight/shared';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import { fmtGuyanaDateTime } from '@/lib/format';
 import type {
-  BacklogFilter,
   OutreachCaseRow,
   OutreachSortField,
   OutreachSummary,
   OutreachUploadSummary,
 } from '@/lib/direct-outreach/types';
-import { OUTREACH_STATUSES, OUTREACH_THEMES } from '@/lib/direct-outreach/types';
+import { OUTREACH_AGENCIES, OUTREACH_STATUSES, OUTREACH_THEMES, UNASSIGNED_OFFICER } from '@/lib/direct-outreach/types';
 import { OutreachStatCard } from './OutreachStatCard';
 import { AgencyScorecards } from './AgencyScorecards';
 import { CasesTable } from './CasesTable';
 import { CaseDetailPanel } from './CaseDetailPanel';
 
-const BACKLOG_PILLS: { value: BacklogFilter; label: string }[] = [
-  { value: 'all', label: 'All open' },
-  { value: 'stalled60', label: 'Stalled >60d' },
-  { value: 'stalled90', label: 'Stalled >90d' },
-  { value: 'target', label: 'Has target date' },
-  { value: 'overdue', label: 'Overdue' },
-];
-
 // Resolved is synced but excluded from the open backlog list.
 const LIST_STATUSES = OUTREACH_STATUSES.filter((s) => s !== 'Resolved');
 
-function FilterPill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+interface Toggles {
+  high: boolean;
+  stalled60: boolean;
+  stalled90: boolean;
+  target: boolean;
+  overdue: boolean;
+  mine: boolean;
+}
+
+const NO_TOGGLES: Toggles = {
+  high: false, stalled60: false, stalled90: false, target: false, overdue: false, mine: false,
+};
+
+const TOGGLE_PILLS: { key: keyof Toggles; label: string }[] = [
+  { key: 'high', label: 'High priority' },
+  { key: 'stalled60', label: 'Stalled >60d' },
+  { key: 'stalled90', label: 'Stalled >90d' },
+  { key: 'target', label: 'Has target date' },
+  { key: 'overdue', label: 'Overdue' },
+  { key: 'mine', label: 'Assigned to me' },
+];
+
+function TogglePill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
@@ -45,9 +60,21 @@ function FilterPill({ label, active, onClick }: { label: string; active: boolean
   );
 }
 
+function FilterChip({ label, onClear }: { label: string; onClear: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-gold-500/15 text-gold-500 border border-gold-500/30">
+      {label}
+      <button type="button" onClick={onClear} aria-label={`Clear ${label}`} className="hover:text-white transition-colors">
+        <X className="h-3 w-3" />
+      </button>
+    </span>
+  );
+}
+
 export function DirectOutreachDashboard() {
   const { effectiveUser } = useEffectiveUser();
   const isSuperadmin = effectiveUser.role === 'superadmin';
+  const searchParams = useSearchParams();
 
   const [summary, setSummary] = useState<OutreachSummary | null>(null);
   const [summaryError, setSummaryError] = useState<string | null>(null);
@@ -56,15 +83,35 @@ export function DirectOutreachDashboard() {
   const [casesTruncated, setCasesTruncated] = useState(false);
   const [casesError, setCasesError] = useState<string | null>(null);
 
-  const [backlog, setBacklog] = useState<BacklogFilter>('all');
-  const [status, setStatus] = useState('');
-  const [theme, setTheme] = useState('');
+  // Multi-select filters (all AND-combined server-side).
+  const [agencies, setAgencies] = useState<string[]>([]);
+  const [statuses, setStatuses] = useState<string[]>([]);
+  const [themes, setThemes] = useState<string[]>([]);
+  const [outreaches, setOutreaches] = useState<string[]>([]);
+  const [regions, setRegions] = useState<string[]>([]);
+  const [officers, setOfficers] = useState<string[]>([]);
+  const [toggles, setToggles] = useState<Toggles>(NO_TOGGLES);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sort, setSort] = useState<OutreachSortField>('days_idle');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
-  const [selectedCase, setSelectedCase] = useState<number | null>(null);
+  // ?case= deep link (notification links land here). Fully DERIVED selection:
+  // user actions record an override relative to the current URL param, so a
+  // NEW ?case= value (second notification click while already on the page)
+  // re-opens the panel without any effect/setState-in-effect.
+  const caseParam = searchParams.get('case');
+  const validCaseParam = caseParam && /^\d+$/.test(caseParam) ? caseParam : null;
+  const [manualSelection, setManualSelection] = useState<{ param: string | null; case: number | null } | null>(null);
+  const selectedCase =
+    manualSelection && manualSelection.param === validCaseParam
+      ? manualSelection.case
+      : validCaseParam
+        ? Number(validCaseParam)
+        : null;
+  const setSelectedCase = (id: number | null) =>
+    setManualSelection({ param: validCaseParam, case: id });
+
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSummary, setUploadSummary] = useState<OutreachUploadSummary | null>(null);
@@ -94,9 +141,18 @@ export function DirectOutreachDashboard() {
     const seq = ++casesRequestSeq.current;
     setCasesLoading(true);
     const params = new URLSearchParams({ view: 'list', sort, sort_dir: sortDir });
-    if (backlog !== 'all') params.set('backlog', backlog);
-    if (status) params.set('status', status);
-    if (theme) params.set('theme', theme);
+    if (agencies.length) params.set('agencies', agencies.join(','));
+    if (statuses.length) params.set('statuses', statuses.join(','));
+    if (themes.length) params.set('themes', themes.join(','));
+    if (outreaches.length) params.set('outreaches', outreaches.join(','));
+    if (regions.length) params.set('regions', regions.join(','));
+    if (officers.length) params.set('officers', officers.join(','));
+    if (toggles.high) params.set('high', '1');
+    if (toggles.stalled60) params.set('stalled60', '1');
+    if (toggles.stalled90) params.set('stalled90', '1');
+    if (toggles.target) params.set('target', '1');
+    if (toggles.overdue) params.set('overdue', '1');
+    if (toggles.mine) params.set('mine', '1');
     if (debouncedSearch) params.set('search', debouncedSearch);
     try {
       const res = await fetch(`/api/direct-outreach?${params.toString()}`);
@@ -112,7 +168,7 @@ export function DirectOutreachDashboard() {
     } finally {
       if (seq === casesRequestSeq.current) setCasesLoading(false);
     }
-  }, [backlog, status, theme, debouncedSearch, sort, sortDir]);
+  }, [agencies, statuses, themes, outreaches, regions, officers, toggles, debouncedSearch, sort, sortDir]);
 
   useEffect(() => {
     loadSummary();
@@ -122,18 +178,28 @@ export function DirectOutreachDashboard() {
     loadCases();
   }, [loadCases]);
 
+  const refreshAll = useCallback(() => {
+    loadSummary();
+    loadCases();
+  }, [loadSummary, loadCases]);
+
   const handleSort = (field: OutreachSortField) => {
     if (field === sort) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     } else {
       setSort(field);
-      setSortDir(field === 'case_id' || field === 'agency' || field === 'status' || field === 'theme' ? 'asc' : 'desc');
+      setSortDir(
+        field === 'case_id' || field === 'agency' || field === 'status' || field === 'theme' || field === 'assignee'
+          ? 'asc'
+          : 'desc',
+      );
     }
   };
 
+  const setToggle = (key: keyof Toggles, value?: boolean) =>
+    setToggles((t) => ({ ...t, [key]: value ?? !t[key] }));
+
   const handleUpload = async (file: File) => {
-    // Pre-check so an oversized workbook fails instantly instead of uploading
-    // fully (or dying as an opaque platform 413 above ~4.5 MB on Vercel).
     if (file.size > 4 * 1024 * 1024) {
       setUploadSummary(null);
       setUploadError('Workbook exceeds the 4 MB upload limit');
@@ -147,7 +213,6 @@ export function DirectOutreachDashboard() {
       formData.append('file', file);
       const res = await fetch('/api/direct-outreach/upload', { method: 'POST', body: formData });
       if (!res.ok) {
-        // Error bodies may not be JSON (e.g. a platform 413 or gateway page).
         const message = await res
           .json()
           .then((body) => body?.error as string | undefined)
@@ -155,8 +220,6 @@ export function DirectOutreachDashboard() {
         if (res.status === 413) throw new Error(message || 'Workbook exceeds the 4 MB upload limit');
         throw new Error(message || `Upload failed (${res.status})`);
       }
-      // An ok non-JSON body means the session expired and the POST was
-      // redirected to the login page — don't surface a raw JSON parse error.
       const body = await res.json().catch(() => null);
       if (!body) throw new Error('Session expired — sign in again and retry the upload');
       setUploadSummary(body);
@@ -170,6 +233,39 @@ export function DirectOutreachDashboard() {
 
   const totals = summary?.totals;
   const resolutionRate = totals?.resolution_rate;
+  const options = summary?.filter_options;
+
+  // Union the currently-selected officers into the options so a selection
+  // doesn't vanish (and become unclearable) when its last open case drops out.
+  const knownOfficerIds = new Set((options?.officers ?? []).map((o) => o.id));
+  const officerOptions = [
+    { value: UNASSIGNED_OFFICER, label: 'Unassigned' },
+    ...(options?.officers ?? []).map((o) => ({ value: o.id, label: o.name ?? 'Unknown' })),
+    ...officers
+      .filter((id) => id !== UNASSIGNED_OFFICER && !knownOfficerIds.has(id))
+      .map((id) => ({ value: id, label: 'Selected officer' })),
+  ];
+
+  // Active-filter chips (multi-selects summarized per group; toggles individually).
+  const chips: { label: string; onClear: () => void }[] = [
+    ...(agencies.length ? [{ label: `Agency: ${agencies.join(', ')}`, onClear: () => setAgencies([]) }] : []),
+    ...(statuses.length ? [{ label: `Status: ${statuses.join(', ')}`, onClear: () => setStatuses([]) }] : []),
+    ...(themes.length ? [{ label: `Theme (${themes.length})`, onClear: () => setThemes([]) }] : []),
+    ...(outreaches.length ? [{ label: `Outreach (${outreaches.length})`, onClear: () => setOutreaches([]) }] : []),
+    ...(regions.length ? [{ label: `Region (${regions.length})`, onClear: () => setRegions([]) }] : []),
+    ...(officers.length ? [{ label: `Officer (${officers.length})`, onClear: () => setOfficers([]) }] : []),
+    ...TOGGLE_PILLS.filter((p) => toggles[p.key]).map((p) => ({
+      label: p.label,
+      onClear: () => setToggle(p.key, false),
+    })),
+    ...(debouncedSearch ? [{ label: `“${debouncedSearch}”`, onClear: () => setSearch('') }] : []),
+  ];
+
+  const clearAllFilters = () => {
+    setAgencies([]); setStatuses([]); setThemes([]);
+    setOutreaches([]); setRegions([]); setOfficers([]);
+    setToggles(NO_TOGGLES); setSearch('');
+  };
 
   return (
     <div className="space-y-8">
@@ -208,7 +304,7 @@ export function DirectOutreachDashboard() {
               aria-hidden="true"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                e.target.value = ''; // allow re-selecting the same file
+                e.target.value = '';
                 if (file) handleUpload(file);
               }}
             />
@@ -239,8 +335,8 @@ export function DirectOutreachDashboard() {
           icon={Inbox}
           iconBg="rgba(212,175,55,0.15)"
           iconColor="#f4d03f"
-          active={backlog === 'all'}
-          onClick={() => setBacklog('all')}
+          sub={totals && totals.unassigned_open > 0 ? `${totals.unassigned_open} unassigned` : undefined}
+          onClick={clearAllFilters}
         />
         <OutreachStatCard
           label="Stalled >90d"
@@ -248,8 +344,8 @@ export function DirectOutreachDashboard() {
           icon={Clock}
           iconBg="rgba(220,38,38,0.15)"
           iconColor="#f87171"
-          active={backlog === 'stalled90'}
-          onClick={() => setBacklog('stalled90')}
+          active={toggles.stalled90}
+          onClick={() => setToggle('stalled90')}
         />
         <OutreachStatCard
           label="Overdue Commitments"
@@ -257,8 +353,8 @@ export function DirectOutreachDashboard() {
           icon={CalendarX}
           iconBg="rgba(220,38,38,0.15)"
           iconColor="#f87171"
-          active={backlog === 'overdue'}
-          onClick={() => setBacklog('overdue')}
+          active={toggles.overdue}
+          onClick={() => setToggle('overdue')}
         />
         <OutreachStatCard
           label="Resolution Rate"
@@ -276,15 +372,57 @@ export function DirectOutreachDashboard() {
       {/* Controls */}
       <div className="card-premium p-4 space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          {BACKLOG_PILLS.map((pill) => (
-            <FilterPill
-              key={pill.value}
+          {isSuperadmin && (
+            <MultiSelect
+              label="Agency"
+              options={OUTREACH_AGENCIES.map((a) => ({ value: a, label: a }))}
+              selected={agencies}
+              onChange={setAgencies}
+            />
+          )}
+          <MultiSelect
+            label="Status"
+            options={LIST_STATUSES.map((s) => ({ value: s, label: s }))}
+            selected={statuses}
+            onChange={setStatuses}
+          />
+          <MultiSelect
+            label="Theme"
+            options={OUTREACH_THEMES.map((t) => ({ value: t, label: t }))}
+            selected={themes}
+            onChange={setThemes}
+          />
+          <MultiSelect
+            label="Outreach"
+            options={(options?.outreach_locations ?? []).map((o) => ({ value: o, label: o }))}
+            selected={outreaches}
+            onChange={setOutreaches}
+          />
+          <MultiSelect
+            label="Region"
+            options={(options?.regions ?? []).map((r) => ({ value: r, label: r }))}
+            selected={regions}
+            onChange={setRegions}
+          />
+          <MultiSelect
+            label="Officer"
+            options={officerOptions}
+            selected={officers}
+            onChange={setOfficers}
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {TOGGLE_PILLS.map((pill) => (
+            <TogglePill
+              key={pill.key}
               label={pill.label}
-              active={backlog === pill.value}
-              onClick={() => setBacklog(pill.value)}
+              active={toggles[pill.key]}
+              onClick={() => setToggle(pill.key)}
             />
           ))}
         </div>
+
         <div className="flex flex-col md:flex-row gap-3 md:items-center">
           <div className="relative flex-1">
             <Search
@@ -300,28 +438,6 @@ export function DirectOutreachDashboard() {
               aria-label="Search cases"
             />
           </div>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="input-premium text-sm"
-            aria-label="Filter by status"
-          >
-            <option value="">All statuses</option>
-            {LIST_STATUSES.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-          <select
-            value={theme}
-            onChange={(e) => setTheme(e.target.value)}
-            className="input-premium text-sm"
-            aria-label="Filter by theme"
-          >
-            <option value="">All themes</option>
-            {OUTREACH_THEMES.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
           <span className="text-xs text-navy-600 md:ml-auto shrink-0">
             {casesLoading
               ? 'Loading…'
@@ -330,6 +446,21 @@ export function DirectOutreachDashboard() {
                 : `${cases.length} case${cases.length === 1 ? '' : 's'}`}
           </span>
         </div>
+
+        {chips.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {chips.map((chip) => (
+              <FilterChip key={chip.label} label={chip.label} onClear={chip.onClear} />
+            ))}
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="text-xs text-navy-600 hover:text-gold-500 transition-colors"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Cases table */}
@@ -344,7 +475,11 @@ export function DirectOutreachDashboard() {
       />
 
       {/* Detail slide panel */}
-      <CaseDetailPanel caseId={selectedCase} onClose={() => setSelectedCase(null)} />
+      <CaseDetailPanel
+        caseId={selectedCase}
+        onClose={() => setSelectedCase(null)}
+        onChanged={refreshAll}
+      />
     </div>
   );
 }

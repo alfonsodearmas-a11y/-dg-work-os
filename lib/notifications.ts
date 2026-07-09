@@ -67,6 +67,8 @@ export type EventPreferencesMap = {
   task_watcher_notification: EventPrefEntry;
   task_daily_reminder: EventPrefEntry;
   task_referred_to_minister: EventPrefEntry;
+  outreach_assigned: EventPrefEntry;
+  outreach_transferred: EventPrefEntry;
 };
 
 export type DigestFrequency = 'daily' | 'weekly' | 'off';
@@ -637,6 +639,10 @@ export const DEFAULT_EVENT_PREFERENCES: EventPreferencesMap = {
   task_daily_reminder: { in_app: true, email: 'digest' },
   // DG flagged a task for the Minister: high-signal for the Minister.
   task_referred_to_minister: { in_app: true, email: 'instant' },
+  // Direct Outreach: "this case is now yours" events — same default as
+  // task_assigned. (Omitting an event here silently disables its email.)
+  outreach_assigned: { in_app: true, email: 'instant' },
+  outreach_transferred: { in_app: true, email: 'instant' },
 };
 
 export async function getPreferences(userId: string): Promise<NotificationPrefs> {

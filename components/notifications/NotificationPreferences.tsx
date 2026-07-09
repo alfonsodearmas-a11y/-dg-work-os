@@ -98,6 +98,8 @@ const EVENT_TYPES: EventTypeMeta[] = [
   { key: 'task_status_change', label: 'Status Changes', description: 'When task status changes', icon: ArrowRightLeft },
   { key: 'task_completed', label: 'Task Completed', description: 'When a task is marked done', icon: CheckCircle2 },
   { key: 'subtask_completed', label: 'Subtask Completed', description: 'When a subtask is finished', icon: ListChecks },
+  { key: 'outreach_assigned', label: 'Outreach Case Assigned', description: 'When a Direct Outreach case is assigned to you', icon: UserPlus },
+  { key: 'outreach_transferred', label: 'Outreach Case Transferred', description: 'When an outreach case is transferred to your agency', icon: ArrowRightLeft },
 ];
 
 // ---------------------------------------------------------------------------
