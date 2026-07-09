@@ -176,7 +176,14 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     agency: newUser.agency,
     inviterName: session.user.name || 'The Director General',
     inviteToken,
-  }).catch(() => ({ success: false, error: 'Email send failed' }));
+  }).catch(() => ({ success: false, sent: false, error: 'Email send failed' }));
+
+  if (!emailResult.sent) {
+    logger.error(
+      { email: newUser.email, err: emailResult.error },
+      '[admin-users] invite email failed to send',
+    );
+  }
 
   // Module access is pure role-based (lib/modules/role-modules.ts) — nothing to grant at invite time.
 
@@ -209,6 +216,6 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   return NextResponse.json({
     user: responseUser,
-    ...(!emailResult.success && { warning: 'User created but invite email failed to send' }),
+    ...(!emailResult.sent && { warning: 'User created but invite email failed to send' }),
   }, { status: 201 });
 });

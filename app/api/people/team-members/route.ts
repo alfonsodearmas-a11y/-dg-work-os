@@ -6,6 +6,7 @@ import { checkPermission, logActivity } from '@/lib/people-permissions';
 import { sendInviteEmail } from '@/lib/invite-email';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
 import { normalizeRole } from '@/lib/auth-session';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   const authResult = await requireRole(['superadmin', 'agency_manager']);
@@ -117,14 +118,21 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
 
-  await sendInviteEmail({
+  const emailResult = await sendInviteEmail({
     to: newUser.email,
     name: newUser.name,
     role: newUser.role,
     agency: newUser.agency,
     inviterName: session.user.name || 'The Director General',
     inviteToken: null,
-  }).catch(() => {});
+  }).catch(() => ({ success: false, sent: false, error: 'Email send failed' }));
+
+  if (!emailResult.sent) {
+    logger.error(
+      { email: newUser.email, err: emailResult.error },
+      '[team-members] invite email failed to send',
+    );
+  }
 
   await logActivity({
     userId: session.user.id,
@@ -136,5 +144,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     result: 'success',
   });
 
-  return NextResponse.json({ member: newUser }, { status: 201 });
+  return NextResponse.json({
+    member: newUser,
+    ...(!emailResult.sent && { warning: 'User created but invite email failed to send' }),
+  }, { status: 201 });
 });
