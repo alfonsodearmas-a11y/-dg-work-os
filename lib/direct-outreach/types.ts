@@ -44,43 +44,6 @@ export interface ExtractedTargetDate {
   matched: string;
 }
 
-// ── OP Direct API payloads ────────────────────────────────────────────────────
-
-export interface OpDirectCase {
-  case_id: number;
-  client_id: number | null;
-  client_name: string | null;
-  client_phone: string | null;
-  client_address: string | null;
-  public_servant: string | null;
-  agency_id: number | null;
-  agency: string | null;
-  status_id: number | null;
-  status_name: string | null;
-  description: string | null;
-  priority: number | null;
-  outreach_id: number | null;
-  outreach_location: string | null;
-  outreach_date: string | null;
-  category_name: string | null;
-  unclassified_category: string | null;
-  latitude: number | string | null;
-  longitude: number | string | null;
-  creator: string | null;
-  created_at: string | null;
-}
-
-export interface OpDirectHistoryEntry {
-  case_detail_id: number;
-  case_id: number;
-  agency: string | null;
-  creator_agency_name: string | null;
-  status_name: string | null;
-  comment: string | null;
-  username: string | null;
-  created_at: string | null;
-}
-
 // ── Rows served by our API ───────────────────────────────────────────────────
 
 /** A row from direct_outreach_open_v (open backlog with computed aging). */
@@ -187,9 +150,10 @@ export interface OutreachListFilters {
   sort_dir?: 'asc' | 'desc';
 }
 
-export interface OutreachSyncResult {
-  cases_seen: number;
-  updates_seen: number;
-  history_failures: number;
-  duration_ms: number;
+/** Returned by the workbook upload (full snapshot replace). */
+export interface OutreachUploadSummary {
+  cases: number;
+  updates: number;
+  open: number;
+  resolved: number;
 }

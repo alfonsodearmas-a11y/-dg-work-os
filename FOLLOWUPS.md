@@ -64,11 +64,11 @@ Action: include `dlError.message` (or a sanitized version of it) in the response
 
 Flagged during the pre-commit audit of the Direct Outreach module (commit with migrations 144-146) and kept out of that commit's scope. Each is independently actionable.
 
-## 1. Provision OPDIRECT_API_TOKEN in Vercel before relying on the cron
+## 1. ~~Provision OPDIRECT_API_TOKEN~~ — RESOLVED by the Excel-upload pivot (2026-07-09)
 
-The weekday sync cron (`/api/cron/direct-outreach-sync`, vercel.json `0 10 * * 1-5`) and the superadmin "Refresh from OP Direct" button both no-op cleanly until `OPDIRECT_API_TOKEN` is set in the Vercel environment: the cron logs a warn and returns `{skipped: true}`, the manual sync returns 503. The module ships empty until then.
+There is no OP Direct API access and there won't be, so the API-sync path (cron + token + "Refresh from OP Direct") was removed and ingestion is now a superadmin workbook upload (`POST /api/direct-outreach/upload`, full snapshot replace). No env var or cron is needed.
 
-Action: obtain a read-only service token from the OP Direct admins, add `OPDIRECT_API_TOKEN` (and optionally `OPDIRECT_BASE_URL`, default `https://opdirect.dakeung.com`) to Vercel production env, then run one manual sync from `/direct-outreach` as superadmin and verify the agency scorecards populate.
+Remaining action: after each new OP Direct export, open `/direct-outreach` as superadmin, click "Upload OP Direct workbook", and pick the latest `OPDirect_Issue_Tracker.xlsx`. The header shows the "last uploaded" timestamp.
 
 ## 2. Two pre-existing SECURITY DEFINER views still flagged at ERROR
 

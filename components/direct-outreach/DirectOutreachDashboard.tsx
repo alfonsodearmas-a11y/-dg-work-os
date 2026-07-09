@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CalendarX, CheckCircle2, Clock, Inbox, Radio, RefreshCw, Search } from 'lucide-react';
+import { CalendarX, CheckCircle2, Clock, Inbox, Radio, Search, Upload } from 'lucide-react';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import { fmtGuyanaDateTime } from '@/lib/format';
 import type {
@@ -9,6 +9,7 @@ import type {
   OutreachCaseRow,
   OutreachSortField,
   OutreachSummary,
+  OutreachUploadSummary,
 } from '@/lib/direct-outreach/types';
 import { OUTREACH_STATUSES, OUTREACH_THEMES } from '@/lib/direct-outreach/types';
 import { OutreachStatCard } from './OutreachStatCard';
@@ -64,8 +65,10 @@ export function DirectOutreachDashboard() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const [selectedCase, setSelectedCase] = useState<number | null>(null);
-  const [syncing, setSyncing] = useState(false);
-  const [syncError, setSyncError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSummary, setUploadSummary] = useState<OutreachUploadSummary | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Debounced search input
   useEffect(() => {
@@ -128,24 +131,40 @@ export function DirectOutreachDashboard() {
     }
   };
 
-  const handleSync = async () => {
-    setSyncing(true);
-    setSyncError(null);
+  const handleUpload = async (file: File) => {
+    // Pre-check so an oversized workbook fails instantly instead of uploading
+    // fully (or dying as an opaque platform 413 above ~4.5 MB on Vercel).
+    if (file.size > 4 * 1024 * 1024) {
+      setUploadSummary(null);
+      setUploadError('Workbook exceeds the 4 MB upload limit');
+      return;
+    }
+    setUploading(true);
+    setUploadError(null);
+    setUploadSummary(null);
     try {
-      const res = await fetch('/api/direct-outreach/sync', { method: 'POST' });
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/direct-outreach/upload', { method: 'POST', body: formData });
       if (!res.ok) {
-        // Error bodies may not be JSON (e.g. a gateway-timeout HTML page).
+        // Error bodies may not be JSON (e.g. a platform 413 or gateway page).
         const message = await res
           .json()
           .then((body) => body?.error as string | undefined)
           .catch(() => undefined);
-        throw new Error(message || `Sync failed (${res.status})`);
+        if (res.status === 413) throw new Error(message || 'Workbook exceeds the 4 MB upload limit');
+        throw new Error(message || `Upload failed (${res.status})`);
       }
+      // An ok non-JSON body means the session expired and the POST was
+      // redirected to the login page — don't surface a raw JSON parse error.
+      const body = await res.json().catch(() => null);
+      if (!body) throw new Error('Session expired — sign in again and retry the upload');
+      setUploadSummary(body);
       await Promise.all([loadSummary(), loadCases()]);
     } catch (err) {
-      setSyncError(err instanceof Error ? err.message : 'Sync failed');
+      setUploadError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
-      setSyncing(false);
+      setUploading(false);
     }
   };
 
@@ -164,21 +183,45 @@ export function DirectOutreachDashboard() {
           <p className="text-navy-600 mt-1">
             Works visibility over the Presidential Direct Outreach case load
             {summary?.last_synced_at
-              ? ` · last synced ${fmtGuyanaDateTime(summary.last_synced_at)}`
-              : ' · not yet synced'}
+              ? ` · last uploaded ${fmtGuyanaDateTime(summary.last_synced_at)}`
+              : ' · not yet uploaded'}
           </p>
-          {syncError && <p className="text-red-400 text-sm mt-2">{syncError}</p>}
+          {/* aria-live: announce async upload outcomes to screen readers */}
+          <div role="status" aria-live="polite">
+            {uploadError && <p className="text-red-400 text-sm mt-2">{uploadError}</p>}
+            {uploadSummary && (
+              <p className="text-emerald-400 text-sm mt-2">
+                Imported {uploadSummary.cases} case{uploadSummary.cases === 1 ? '' : 's'} ·{' '}
+                {uploadSummary.updates} comment{uploadSummary.updates === 1 ? '' : 's'}{' '}
+                ({uploadSummary.open} open / {uploadSummary.resolved} resolved)
+              </p>
+            )}
+          </div>
         </div>
         {isSuperadmin && (
-          <button
-            type="button"
-            onClick={handleSync}
-            disabled={syncing}
-            className="btn-navy flex items-center gap-2 shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} aria-hidden="true" />
-            {syncing ? 'Syncing…' : 'Refresh from OP Direct'}
-          </button>
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx"
+              className="hidden"
+              aria-hidden="true"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = ''; // allow re-selecting the same file
+                if (file) handleUpload(file);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="btn-gold flex items-center gap-2 shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <Upload className="h-4 w-4" aria-hidden="true" />
+              {uploading ? 'Uploading…' : 'Upload OP Direct workbook'}
+            </button>
+          </>
         )}
       </div>
 
@@ -297,6 +340,7 @@ export function DirectOutreachDashboard() {
         sortDir={sortDir}
         onSort={handleSort}
         onSelect={setSelectedCase}
+        canUpload={isSuperadmin}
       />
 
       {/* Detail slide panel */}

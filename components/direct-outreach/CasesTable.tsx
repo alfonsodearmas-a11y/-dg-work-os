@@ -15,6 +15,8 @@ interface CasesTableProps {
   sortDir: 'asc' | 'desc';
   onSort: (field: OutreachSortField) => void;
   onSelect: (caseId: number) => void;
+  /** Only superadmins can upload — don't tell agency managers to. */
+  canUpload?: boolean;
 }
 
 function SortableTh({
@@ -47,7 +49,7 @@ function SortableTh({
   );
 }
 
-export function CasesTable({ cases, loading, sort, sortDir, onSort, onSelect }: CasesTableProps) {
+export function CasesTable({ cases, loading, sort, sortDir, onSort, onSelect, canUpload = false }: CasesTableProps) {
   if (loading) {
     return (
       <div className="card-premium flex items-center justify-center py-24">
@@ -62,7 +64,11 @@ export function CasesTable({ cases, loading, sort, sortDir, onSort, onSelect }: 
         <EmptyState
           icon={<Radio className="h-10 w-10" />}
           title="No cases match"
-          description="Adjust the filters, or run a sync from OP Direct to pull the latest case load."
+          description={
+            canUpload
+              ? 'Adjust the filters, or upload the OP Direct workbook to populate this view.'
+              : 'Adjust the filters, or check back after the next OP Direct workbook upload.'
+          }
         />
       </div>
     );

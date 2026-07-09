@@ -128,7 +128,9 @@ export function CaseDetailPanel({ caseId, onClose }: CaseDetailPanelProps) {
             <MetaField label="Outreach">{c.outreach_location || '—'}</MetaField>
             <MetaField label="Outreach date">{c.outreach_date || '—'}</MetaField>
             <MetaField label="Logged">{fmtGuyanaDate(c.created_at)}</MetaField>
-            <MetaField label="Logged by">{c.creator || '—'}</MetaField>
+            <MetaField label="Comments">
+              <span className="tabular-nums">{c.comment_count}</span>
+            </MetaField>
             <MetaField label="Days open">
               <span className="tabular-nums">{c.days_open == null ? '—' : `${c.days_open}d`}</span>
             </MetaField>
