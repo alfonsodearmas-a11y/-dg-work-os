@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger';
 async function validateToken(token: string) {
   const { data: user, error } = await supabaseAdmin
     .from('users')
-    .select('id, email, name, invite_token_expires_at')
+    .select('id, email, name, status, invite_token_expires_at')
     .eq('invite_token', token)
     .single();
 
@@ -16,6 +16,16 @@ async function validateToken(token: string) {
 
   if (user.invite_token_expires_at && new Date(user.invite_token_expires_at) < new Date()) {
     return { valid: false as const, error: 'This invite link has expired. Please contact your administrator for a new invite.' };
+  }
+
+  // A token is only valid while the profile is mid-onboarding. suspend/archive/
+  // deactivate set is_active=false WITHOUT clearing invite_token, so a token
+  // held past deactivation must not silently reactivate the account (the POST
+  // below both flips status→active and auto-signs-in). Reject anything but
+  // 'pending'. (resend_invite is itself gated to pending users, so a fresh
+  // token can never point at a non-pending profile.)
+  if (user.status !== 'pending') {
+    return { valid: false as const, error: 'This invite is no longer valid. Please contact your administrator.' };
   }
 
   return { valid: true as const, user };
@@ -50,12 +60,13 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     return NextResponse.json({ error: 'Could not set password. Please contact your administrator.' }, { status: 500 });
   }
 
-  // Consume the token only after the password is set (token-match condition so
-  // a concurrently re-issued invite token isn't clobbered). Setting a password
-  // completes onboarding, so promote the profile out of 'pending' here too —
-  // is_active=true matters because assignee pickers and every notification
-  // fan-out filter on it (auth() has a safety-net promotion on first request).
-  await supabaseAdmin
+  // Consume the token and complete onboarding — but ONLY while the profile is
+  // still 'pending' (defense-in-depth over validateToken's status check: closes
+  // the suspend-between-validate-and-write race). Promoting out of 'pending'
+  // matters because is_active=true is what assignee pickers and every
+  // notification fan-out filter on (auth() has a safety-net promotion too).
+  // token-match keeps a concurrently re-issued invite token from being clobbered.
+  const { data: promoted } = await supabaseAdmin
     .from('users')
     .update({
       invite_token: null,
@@ -64,7 +75,20 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       status: 'active',
     })
     .eq('id', result.user.id)
-    .eq('invite_token', token);
+    .eq('invite_token', token)
+    .eq('status', 'pending')
+    .select('id');
+
+  if (!promoted || promoted.length === 0) {
+    // Profile was suspended/archived/deactivated between validation and now:
+    // the password was set, but do NOT reactivate the account or hand it a
+    // session. It stays gated by buildSession (!is_active && status!=='pending').
+    logger.warn(
+      { userId: result.user.id },
+      'set-password: profile no longer pending at consume — skipping activation and auto sign-in',
+    );
+    return NextResponse.json({ success: true, signedIn: false, email: result.user.email });
+  }
 
   // Establish a real session server-side so the invitee lands signed in instead
   // of being bounced to /login. getServerSupabase() is the @supabase/ssr client
