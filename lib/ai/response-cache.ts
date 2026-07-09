@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { logger } from '@/lib/logger';
 import { ModelTier, CachedResponse } from './types';
 

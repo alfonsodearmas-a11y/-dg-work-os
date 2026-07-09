@@ -8,6 +8,11 @@ export default defineConfig({
     setupFiles: ['tests/setup.ts'],
   },
   resolve: {
-    alias: { '@': path.resolve(__dirname, './') }
+    alias: {
+      // Real 'server-only' throws under vitest's node env; stub it so modules
+      // guarded for the client bundle (e.g. lib/db-admin) stay testable.
+      'server-only': path.resolve(__dirname, 'tests/stubs/server-only.ts'),
+      '@': path.resolve(__dirname, './'),
+    }
   }
 })

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { checkPermission, logActivity, canManageUser } from '@/lib/people-permissions';
 import type { Role } from '@/lib/people-types';
 import { withErrorHandler } from '@/lib/api-utils';

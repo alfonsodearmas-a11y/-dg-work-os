@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { sendEmail } from '@/lib/email';
 import { logger } from '@/lib/logger';
 import { isCronAuthorized } from '@/lib/notifications/email-utils';

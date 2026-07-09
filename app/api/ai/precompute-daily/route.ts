@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { assembleRawData } from '@/lib/ai/context-engine';
 import { cleanupExpiredCache } from '@/lib/ai/response-cache';
 import { MetricSnapshot, RawContextData } from '@/lib/ai/types';

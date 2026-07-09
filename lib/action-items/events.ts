@@ -1,5 +1,5 @@
 import 'server-only';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import type { EventType } from './constants';
 import { logger } from '@/lib/logger';
 

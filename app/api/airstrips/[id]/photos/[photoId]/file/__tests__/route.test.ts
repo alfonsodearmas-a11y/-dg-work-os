@@ -8,7 +8,7 @@ const { mockAuth, mockFrom, mockDownload } = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/auth', () => ({ auth: mockAuth }));
-vi.mock('@/lib/db', () => ({
+vi.mock('@/lib/db-admin', () => ({
   supabaseAdmin: {
     from: (...a: unknown[]) => mockFrom(...a),
     storage: { from: () => ({ download: (...a: unknown[]) => mockDownload(...a) }) },

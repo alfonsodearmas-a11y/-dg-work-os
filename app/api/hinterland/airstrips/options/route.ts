@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireHinterlandAccess } from '@/lib/auth-helpers';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { logger } from '@/lib/logger';
 import type { AirstripOption } from '@/lib/hinterland-types';
 

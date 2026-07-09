@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { createNotification } from '@/lib/notifications/notification-service';
 import { NotificationDeliveryError } from '@/lib/notifications/errors';
 import { cleanMentionBody } from '@/lib/notifications/mention-utils';

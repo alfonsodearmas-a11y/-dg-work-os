@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { apiError } from '@/lib/api-utils';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '@/lib/logger';
 import { AI_MODEL } from '@/lib/constants/ai-config';

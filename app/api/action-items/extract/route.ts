@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { runExtraction } from '@/lib/action-items/extraction/extract';
 import { ModalityZ } from '@/lib/action-items/types';
 

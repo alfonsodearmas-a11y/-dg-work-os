@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { logger } from '@/lib/logger';
 
 // Resolves the active DG. Used by prepareReport to label the report

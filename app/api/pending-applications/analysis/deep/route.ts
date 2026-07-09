@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { requireRole } from '@/lib/auth-helpers';
 import { computeGPLAnalysis, computeGWIAnalysis } from '@/lib/pending-applications-analysis';
 import { generateGPLDeepAnalysis, generateGWIDeepAnalysis } from '@/lib/pending-applications-ai';

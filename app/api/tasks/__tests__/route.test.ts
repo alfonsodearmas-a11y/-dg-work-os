@@ -12,7 +12,7 @@ vi.mock('@/lib/auth', () => ({
   auth: mockAuth,
 }));
 
-vi.mock('@/lib/db', () => ({
+vi.mock('@/lib/db-admin', () => ({
   supabaseAdmin: {
     from: (...args: any[]) => mockFrom(...args),
   },

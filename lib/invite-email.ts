@@ -13,9 +13,14 @@ interface SendInviteParams {
 }
 
 export async function sendInviteEmail({ to, name, role, agency, inviterName, inviteToken }: SendInviteParams) {
-  const baseUrl = process.env.NEXTAUTH_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
+  // Canonical origin for emailed links: NEXT_PUBLIC_SITE_URL. The legacy chain
+  // stays as fallback so invites keep working until the env var lands in Vercel
+  // (NEXTAUTH_URL predates the Supabase Auth cutover and should be retired).
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
+    || process.env.NEXTAUTH_URL
+    || (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
   const loginUrl = `${baseUrl}/login`;
   // `role` may be a raw stored value (legacy names until Phase 3) — normalize for the label.
   const normalized = normalizeRole(role);
@@ -24,24 +29,21 @@ export async function sendInviteEmail({ to, name, role, agency, inviterName, inv
 
   const setPasswordUrl = inviteToken ? `${baseUrl}/set-password?token=${inviteToken}` : null;
 
+  // Google sign-in is disabled in production (password-only) — the email must
+  // not advertise it.
   const ctaSection = setPasswordUrl
     ? `
         <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
-          Set up your password to get started. You can also sign in with Google.
+          Set up your password to get started.
         </p>
-        <div style="text-align: center; margin: 0 0 16px;">
+        <div style="text-align: center; margin: 0 0 24px;">
           <a href="${setPasswordUrl}" style="display: inline-block; padding: 12px 32px; background: #d4af37; color: #0a1628; font-weight: 600; font-size: 14px; text-decoration: none; border-radius: 8px;">
             Set Your Password
-          </a>
-        </div>
-        <div style="text-align: center; margin: 0 0 24px;">
-          <a href="${loginUrl}" style="color: #64748b; font-size: 12px; text-decoration: underline;">
-            Or sign in with Google
           </a>
         </div>`
     : `
         <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
-          Sign in with your Google Workspace account to get started.
+          Sign in to get started.
         </p>
         <div style="text-align: center; margin: 0 0 24px;">
           <a href="${loginUrl}" style="display: inline-block; padding: 12px 32px; background: #d4af37; color: #0a1628; font-weight: 600; font-size: 14px; text-decoration: none; border-radius: 8px;">
@@ -70,8 +72,8 @@ export async function sendInviteEmail({ to, name, role, agency, inviterName, inv
   `;
 
   const textCta = setPasswordUrl
-    ? `Set your password at: ${setPasswordUrl}\n\nOr sign in with Google at: ${loginUrl}`
-    : `Sign in at: ${loginUrl}\n\nUse your Google Workspace account (${to}).`;
+    ? `Set your password at: ${setPasswordUrl}`
+    : `Sign in at: ${loginUrl}`;
 
   const text = `Hello ${name},\n\n${inviterName} has invited you to DG Work OS as ${roleLabel}${agencyLabel}.\n\n${textCta}`;
 

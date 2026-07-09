@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { extractText } from '@/lib/document-parser';
 import { analyzeDocument } from '@/lib/document-analyzer';
 import { requireRole } from '@/lib/auth-helpers';

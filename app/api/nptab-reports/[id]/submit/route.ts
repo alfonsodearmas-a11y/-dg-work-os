@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { submitReport } from '@/lib/nptab/queries';
 import { renderNptabReportPDF } from '@/lib/pdf/nptab-report-render';
 import { NPTAB_DELIVERY_METHODS, type NptabDeliveryMethod } from '@/lib/nptab/types';

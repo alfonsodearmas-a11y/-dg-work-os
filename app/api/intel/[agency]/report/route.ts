@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { sendEmail } from '@/lib/email';
 import { validateEmailList, parseEmailList } from '@/lib/email-validation';
 import { isIntelAgency } from '@/lib/agencies';

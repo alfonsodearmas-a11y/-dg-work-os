@@ -6,7 +6,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import { supabaseAdmin } from './db';
+import { supabaseAdmin } from './db-admin';
 import { createHash } from 'crypto';
 import { logger } from '@/lib/logger';
 import { safeParseFloat } from '@/lib/parse-utils';

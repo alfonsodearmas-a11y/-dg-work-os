@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { sendInstantEmailForNotification } from '@/lib/notifications/send-instant-email';
 import { isCronAuthorized } from '@/lib/notifications/email-utils';
 import { logger } from '@/lib/logger';

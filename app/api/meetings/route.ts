@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
 
 export const dynamic = 'force-dynamic';
 
-const MEETING_COLUMNS = 'id, title, date, attendees, status, summary, key_decisions, transcript, created_at, updated_at';
+// Mirrors the Meeting interface (lib/meetings-utils.ts) and the REAL prod schema.
+// `key_decisions`/`transcript` never existed — the live columns are `decisions`,
+// `transcript_raw`/`transcript_text` (see 000_baseline_prod_schema.sql).
+const MEETING_COLUMNS = 'id, title, date, duration_secs, status, audio_path, attendees, transcript_raw, transcript_text, summary, decisions, notes, created_at, updated_at';
 
 export async function GET(request: NextRequest) {
   const result = await requireRole(['superadmin', 'agency_manager']);

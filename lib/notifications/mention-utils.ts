@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 
 const MENTION_REGEX = /@\[([0-9a-f-]{36})\]/g;
 

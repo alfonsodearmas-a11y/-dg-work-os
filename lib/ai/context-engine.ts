@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { fetchTodayEvents, fetchWeekEvents } from '@/lib/google-calendar';
 import { getPortfolioSummary, getDelayedProjects, PortfolioSummary, Project } from '@/lib/project-queries';
 import { CalendarEvent } from '@/lib/calendar-types';

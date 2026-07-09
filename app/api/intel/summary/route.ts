@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { logger } from '@/lib/logger';
 import { INTEL_AGENCIES, type IntelAgency } from '@/lib/agencies';
 import { computeRiskTier } from '@/lib/delayed-projects/types';

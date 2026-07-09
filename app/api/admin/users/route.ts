@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import crypto from 'crypto';
 import { requireRole } from '@/lib/auth-helpers';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { insertNotification } from '@/lib/notifications';
 import { NotificationDeliveryError } from '@/lib/notifications/errors';
 import { sendInviteEmail } from '@/lib/invite-email';
@@ -24,9 +24,45 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Last-active truth lives in auth.users.last_sign_in_at (GoTrue writes it on
+  // every sign-in); public.users.status/last_login can lag — invitees stayed
+  // 'pending' forever before the first-login promotion existed. Derive the
+  // effective values server-side so anyone who has actually signed in never
+  // displays as "Pending / Never signed in". Non-fatal: on listUsers failure
+  // the directory falls back to profile fields alone.
+  let lastSignInById = new Map<string, string>();
+  try {
+    const { data: authList, error: authErr } = await supabaseAdmin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+    if (authErr) throw authErr;
+    lastSignInById = new Map(
+      (authList?.users || [])
+        .filter((au) => au.last_sign_in_at)
+        .map((au) => [au.id, au.last_sign_in_at as string]),
+    );
+  } catch (err) {
+    logger.warn({ err }, '[admin-users] auth.admin.listUsers failed — serving profile-only directory');
+  }
+
   // The 'system' row keeps its raw value in the list (display-only there);
   // human rows already store two-level values (migration 128).
-  const users = (data || []).map((u) => ({ ...u, role: normalizeRole(u.role) ?? u.role }));
+  const users = (data || []).map((u) => {
+    const lastSignIn = lastSignInById.get(u.id) ?? null;
+    const candidates = [u.last_login, lastSignIn].filter(Boolean) as string[];
+    const lastLogin = candidates.length
+      ? candidates.reduce((a, b) => (new Date(a) >= new Date(b) ? a : b))
+      : null;
+    const hasSignedIn = candidates.length > 0;
+    return {
+      ...u,
+      role: normalizeRole(u.role) ?? u.role,
+      last_login: lastLogin,
+      status: u.status === 'pending' && hasSignedIn ? 'active' : u.status,
+      is_active: u.is_active || (u.status === 'pending' && hasSignedIn),
+    };
+  });
 
   return NextResponse.json({ users });
 }
@@ -140,7 +176,14 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     agency: newUser.agency,
     inviterName: session.user.name || 'The Director General',
     inviteToken,
-  }).catch(() => ({ success: false, error: 'Email send failed' }));
+  }).catch(() => ({ success: false, sent: false, error: 'Email send failed' }));
+
+  if (!emailResult.sent) {
+    logger.error(
+      { email: newUser.email, err: emailResult.error },
+      '[admin-users] invite email failed to send',
+    );
+  }
 
   // Module access is pure role-based (lib/modules/role-modules.ts) — nothing to grant at invite time.
 
@@ -173,6 +216,6 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   return NextResponse.json({
     user: responseUser,
-    ...(!emailResult.success && { warning: 'User created but invite email failed to send' }),
+    ...(!emailResult.sent && { warning: 'User created but invite email failed to send' }),
   }, { status: 201 });
 });

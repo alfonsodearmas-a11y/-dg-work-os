@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
 import { getTenderById, addTenderDocument } from '@/lib/tender/queries';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { logger } from '@/lib/logger';
 
 const MAX_BYTES = 10 * 1024 * 1024;

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { requireRole } from '@/lib/auth-helpers';
 import { GWI_REPORT_COLUMNS, groupAndMerge } from '@/lib/gwi-report-merge';
 import { logger } from '@/lib/logger';

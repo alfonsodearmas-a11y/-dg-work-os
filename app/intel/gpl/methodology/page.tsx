@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { TODAY_THRESHOLDS } from '@/lib/today/thresholds';
 
 export const dynamic = 'force-dynamic';

@@ -713,7 +713,12 @@ export default function PeoplePage() {
       {showInvite && (
         <InviteModal
           onClose={() => setShowInvite(false)}
-          onSuccess={() => { showToast('User invited'); fetchUsers(); }}
+          onSuccess={(warning) => {
+            // Server returns 201 with a `warning` when the user row was created
+            // but the invite email failed — surface that instead of a false "invited".
+            showToast(warning || 'User invited', warning ? 'error' : 'success');
+            fetchUsers();
+          }}
           onError={(msg) => showToast(msg, 'error')}
         />
       )}
@@ -775,7 +780,7 @@ function InviteModal({
   onError,
 }: {
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (warning?: string) => void;
   onError: (msg: string) => void;
 }) {
   const { realUser } = useEffectiveUser();
@@ -829,7 +834,7 @@ function InviteModal({
       });
       const data = await res.json();
       if (res.ok) {
-        onSuccess();
+        onSuccess(data.warning);
         onClose();
       } else {
         onError(data.error || 'Failed to invite user');

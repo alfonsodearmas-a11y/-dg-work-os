@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { generateCJIAInsights } from '@/lib/cjia-insights';
 import { requireRole } from '@/lib/auth-helpers';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';

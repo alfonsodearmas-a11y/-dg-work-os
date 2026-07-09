@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './db';
+import { supabaseAdmin } from './db-admin';
 
 export async function searchDocuments(query: string, filters?: {
   agency?: string;

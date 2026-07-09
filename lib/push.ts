@@ -1,5 +1,5 @@
 import webpush from 'web-push';
-import { supabaseAdmin } from './db';
+import { supabaseAdmin } from './db-admin';
 import type { Notification } from './notifications';
 import { getPreferences, TYPE_TO_PREFERENCE, CATEGORY_TO_PREFERENCE } from './notifications';
 import { logger } from '@/lib/logger';

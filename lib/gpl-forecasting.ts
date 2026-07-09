@@ -5,7 +5,7 @@
  * unit risk scores, and load shedding trends from historical data.
  */
 
-import { supabaseAdmin } from './db';
+import { supabaseAdmin } from './db-admin';
 import { logger } from '@/lib/logger';
 import { GPL_EXCLUDED_STATIONS } from './gpl-constants';
 

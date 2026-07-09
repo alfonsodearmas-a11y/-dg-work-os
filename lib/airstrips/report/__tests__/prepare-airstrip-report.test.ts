@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { mockFrom, mockDownload } = vi.hoisted(() => ({ mockFrom: vi.fn(), mockDownload: vi.fn() }));
-vi.mock('@/lib/db', () => ({
+vi.mock('@/lib/db-admin', () => ({
   supabaseAdmin: {
     from: (...a: unknown[]) => mockFrom(...a),
     storage: { from: () => ({ download: (...a: unknown[]) => mockDownload(...a) }) },

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { logger } from '@/lib/logger';
 import type { TrelloWebhookPayload, TenderStage } from '@/lib/trello';
 import { resolveStage } from '@/lib/trello';

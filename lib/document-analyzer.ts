@@ -83,7 +83,7 @@ Return ONLY valid JSON, no markdown formatting.`
  * Fetches text from chunks, runs analysis, and updates the document record.
  */
 export async function reanalyzeDocument(documentId: string): Promise<DocumentAnalysis> {
-  const { supabaseAdmin } = await import('./db');
+  const { supabaseAdmin } = await import('./db-admin');
 
   // Get document metadata
   const { data: doc, error: docError } = await supabaseAdmin

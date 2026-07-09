@@ -19,7 +19,7 @@ vi.mock('@/lib/project-queries', () => ({
   deescalateProject: (...args: any[]) => mockDeescalateProject(...args),
 }));
 
-vi.mock('@/lib/db', () => ({
+vi.mock('@/lib/db-admin', () => ({
   supabaseAdmin: {
     from: (...args: any[]) => mockFrom(...args),
   },

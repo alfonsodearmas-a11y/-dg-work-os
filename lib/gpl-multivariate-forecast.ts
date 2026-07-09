@@ -5,7 +5,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import { supabaseAdmin } from './db';
+import { supabaseAdmin } from './db-admin';
 import { logger } from '@/lib/logger';
 import { AI_MODEL } from '@/lib/constants/ai-config';
 

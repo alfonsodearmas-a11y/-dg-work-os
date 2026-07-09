@@ -1,5 +1,5 @@
 import 'server-only';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import type { MeetingType, Modality } from '@/lib/action-items/constants';
 
 export interface CounterInput {

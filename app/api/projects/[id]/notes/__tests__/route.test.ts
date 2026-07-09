@@ -18,7 +18,7 @@ vi.mock('@/lib/project-queries', () => ({
   addProjectNote: (...args: any[]) => mockAddProjectNote(...args),
 }));
 
-vi.mock('@/lib/db', () => ({
+vi.mock('@/lib/db-admin', () => ({
   supabaseAdmin: {
     from: vi.fn().mockReturnValue({
       select: vi.fn().mockReturnThis(),

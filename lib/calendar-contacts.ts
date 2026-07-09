@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './db';
+import { supabaseAdmin } from './db-admin';
 import { CalendarAttendee } from './google-calendar';
 
 export interface CalendarContact {

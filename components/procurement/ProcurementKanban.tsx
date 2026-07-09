@@ -22,7 +22,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SELECTABLE_AGENCIES } from '@/lib/constants/agencies';
-import { supabase } from '@/lib/db';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 import type { Role } from '@/lib/auth';
 
 const LS_VIEW_KEY = 'dg-procurement-view';
@@ -137,11 +137,15 @@ export function ProcurementKanban({
   }, [optimisticTender]);
 
   useEffect(() => {
-    const channel = supabase
+    // Shared SSR browser client (not a second raw createClient) — avoids the
+    // "Multiple GoTrueClient instances" warning and authenticates the realtime
+    // socket with the session token instead of the bare anon key.
+    const sb = getBrowserSupabase();
+    const channel = sb
       .channel('tender_kanban')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tender' }, () => fetchData())
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { sb.removeChannel(channel); };
   }, [fetchData]);
 
   useEffect(() => {

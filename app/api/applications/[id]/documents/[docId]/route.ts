@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { canAccessModule } from '@/lib/modules/role-modules';
 
 // DELETE /api/applications/[id]/documents/[docId] — delete own upload

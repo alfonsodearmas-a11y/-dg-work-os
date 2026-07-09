@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { generateAll } from '@/lib/notifications';
 import { sendPushForNotifications } from '@/lib/push';
 import { logger } from '@/lib/logger';

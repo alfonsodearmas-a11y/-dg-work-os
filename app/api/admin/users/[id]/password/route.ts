@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 
 // PUT /api/admin/users/[id]/password — DG sets/resets a user's Supabase Auth
 // password. Supabase owns credentials post-cutover, so this updates

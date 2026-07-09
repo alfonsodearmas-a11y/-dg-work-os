@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './db';
+import { supabaseAdmin } from './db-admin';
 import { PROJECT_CONTRACT_CAP } from '@/lib/constants/config';
 import { logger } from '@/lib/logger';
 import type { RawProjectRow } from '@/lib/types/project';

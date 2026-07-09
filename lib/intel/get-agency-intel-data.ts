@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { logger } from '@/lib/logger';
 import { getProjects } from '@/lib/delayed-projects/queries';
 import type { DelayedProjectWithComputed } from '@/lib/delayed-projects/types';

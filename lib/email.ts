@@ -30,6 +30,17 @@ interface SendEmailParams {
   replyTo?: string;
 }
 
+/**
+ * Structured, non-throwing result: `sent` is the delivery-attempt truth callers
+ * MUST consume (invite routes surface it as a warning to the operator instead
+ * of silently reporting success).
+ */
+export interface SendEmailResult {
+  success: boolean;
+  sent: boolean;
+  error?: string;
+}
+
 export async function sendEmail({
   to,
   subject,
@@ -37,10 +48,10 @@ export async function sendEmail({
   text,
   attachments,
   replyTo,
-}: SendEmailParams): Promise<{ success: boolean; error?: string }> {
+}: SendEmailParams): Promise<SendEmailResult> {
   if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
     logger.error({}, 'sendEmail: GMAIL_USER or GMAIL_APP_PASSWORD is not set');
-    return { success: false, error: 'Mailer not configured' };
+    return { success: false, sent: false, error: 'Mailer not configured' };
   }
 
   try {
@@ -54,9 +65,9 @@ export async function sendEmail({
       attachments: attachments ?? undefined,
       replyTo: replyTo ?? undefined,
     });
-    return { success: true };
+    return { success: true, sent: true };
   } catch (err: any) {
     logger.error({ err }, 'sendEmail: failed');
-    return { success: false, error: err.message };
+    return { success: false, sent: false, error: err.message };
   }
 }

@@ -5,7 +5,7 @@
 // counted as rejected (telemetry only; nothing is auto-accepted).
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 
 export const dynamic = 'force-dynamic';
 

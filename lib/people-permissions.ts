@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './db';
+import { supabaseAdmin } from './db-admin';
 import type { Role, AccessLevel, ActionResult, ActivityLog, ObjectAccessGrant } from './people-types';
 import { normalizeRole } from './auth-session';
 

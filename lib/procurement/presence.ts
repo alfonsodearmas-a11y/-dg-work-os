@@ -7,7 +7,7 @@
 // Schema: tender_presence_event (migration 097). Either upload_id or
 // actor_id must be set so every row has provenance.
 
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 
 export type TenderPresenceEventType = 'disappeared' | 'reappeared';
 

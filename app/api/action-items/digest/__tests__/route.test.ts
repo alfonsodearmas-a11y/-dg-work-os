@@ -14,7 +14,7 @@ const { mockAuth, mockFrom, mockInsertNotification, mockBuildDigest } = vi.hoist
 
 vi.mock('server-only', () => ({}));
 vi.mock('@/lib/auth', () => ({ auth: mockAuth }));
-vi.mock('@/lib/db', () => ({
+vi.mock('@/lib/db-admin', () => ({
   supabaseAdmin: { from: (...args: unknown[]) => mockFrom(...args) },
 }));
 vi.mock('@/lib/notifications', () => ({ insertNotification: mockInsertNotification }));

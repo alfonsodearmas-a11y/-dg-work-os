@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { MetricSnapshot } from '@/lib/ai/types';
 import { assembleRawData, computeGPLHealth, computeGWIHealth, computeCJIAHealth, computeGCAAHealth } from '@/lib/ai/context-engine';
 import { isPast, isToday } from 'date-fns';

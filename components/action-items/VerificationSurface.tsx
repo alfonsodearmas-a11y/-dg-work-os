@@ -1,6 +1,6 @@
 import 'server-only';
 import { auth } from '@/lib/auth';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { VerificationQueueList, type AwaitingItem } from './VerificationQueueList';
 import { PushbackQueueList, type PushbackEntry } from './PushbackQueueList';
 

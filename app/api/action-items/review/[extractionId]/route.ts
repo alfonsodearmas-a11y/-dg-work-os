@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireRole } from '@/lib/auth-helpers';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { ExtractionToolInputZ } from '@/lib/action-items/extraction/types';
 import { findUndecidedIndices } from '@/lib/action-items/extraction/decisions';
 import { logEvent } from '@/lib/action-items/events';

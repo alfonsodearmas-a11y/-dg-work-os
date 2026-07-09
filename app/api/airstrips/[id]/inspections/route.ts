@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAirstripAccess } from '@/lib/auth-helpers';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { logger } from '@/lib/logger';
 import { SURFACE_CONDITIONS, VEGETATION_STATUSES } from '@/lib/airstrip-types';
 import type { SurfaceCondition, VegetationStatus } from '@/lib/airstrip-types';

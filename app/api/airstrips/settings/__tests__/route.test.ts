@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 
 const { mockAuth, mockFrom } = vi.hoisted(() => ({ mockAuth: vi.fn(), mockFrom: vi.fn() }));
 vi.mock('@/lib/auth', () => ({ auth: mockAuth }));
-vi.mock('@/lib/db', () => ({ supabaseAdmin: { from: (...a: unknown[]) => mockFrom(...a) } }));
+vi.mock('@/lib/db-admin', () => ({ supabaseAdmin: { from: (...a: unknown[]) => mockFrom(...a) } }));
 import { supabaseChain as chain } from '@/tests/supabase-mock';
 
 import { GET, PATCH } from '@/app/api/airstrips/settings/route';

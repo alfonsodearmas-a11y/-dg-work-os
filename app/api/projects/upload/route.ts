@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { parseProjectsExcelWithDebug, ProjectRow, FundingRow } from '@/lib/excel-parser';
 import { detectChanges } from '@/lib/change-detector';
 import { requireRole } from '@/lib/auth-helpers';

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { logger } from '@/lib/logger';
 import { calculatePulseScore } from '@/lib/gpl/scoring';
 import { isCacheStale, syncGplData, mapOutageRow, mapFeederRow } from '@/lib/gpl/sync';

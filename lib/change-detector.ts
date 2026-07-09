@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './db';
+import { supabaseAdmin } from './db-admin';
 import { ProjectRow } from './excel-parser';
 
 export interface Changes {
