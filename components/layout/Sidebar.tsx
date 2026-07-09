@@ -32,6 +32,7 @@ import {
   Inbox,
   FileBarChart,
   Building2,
+  Radio,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useState, useRef, useCallback, useEffect, Fragment } from 'react';
@@ -104,6 +105,7 @@ const mainNavItems: NavItem[] = [
   { href: '/meetings', label: 'Meetings', icon: Mic, moduleSlug: 'meetings' },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays, moduleSlug: 'calendar' },
   { href: '/documents', label: 'Documents', icon: FileText, moduleSlug: 'documents' },
+  { href: '/direct-outreach', label: 'Direct Outreach', icon: Radio, moduleSlug: 'direct-outreach' },
   { href: '/hinterland-communities', label: 'Hinterland Communities', icon: Building2, moduleSlug: 'hinterland-communities', requireRole: ['superadmin'] },
   { href: '/nptab-reports', label: 'NPTAB Reports', icon: FileBarChart, moduleSlug: 'nptab-reports', requireRole: ['superadmin'] },
   { href: '/minister/attention', label: 'Minister Attention', icon: Inbox, moduleSlug: 'minister-attention', requireRole: ['superadmin'] },

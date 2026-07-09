@@ -25,6 +25,7 @@ const ROUTE_MODULE_MAP: [string, string][] = [
   ['/documents', 'documents'],
   ['/applications', 'applications'],
   ['/procurement', 'procurement'],
+  ['/direct-outreach', 'direct-outreach'],
   ['/projects', 'projects'],
   ['/airstrips', 'airstrips'],
   ['/hinterland-communities', 'hinterland-communities'],
