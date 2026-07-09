@@ -1,0 +1,3121 @@
+{
+ "fks": [
+  {
+   "col": "user_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "user_settings"
+  },
+  {
+   "col": "application_id",
+   "ref": "customer_applications",
+   "refcol": "id",
+   "src": "customer_application_notes"
+  },
+  {
+   "col": "document_id",
+   "ref": "documents",
+   "refcol": "id",
+   "src": "document_chunks"
+  },
+  {
+   "col": "document_id",
+   "ref": "documents",
+   "refcol": "id",
+   "src": "document_queries"
+  },
+  {
+   "col": "upload_id",
+   "ref": "gpl_uploads",
+   "refcol": "id",
+   "src": "gpl_daily_summary"
+  },
+  {
+   "col": "upload_id",
+   "ref": "gpl_uploads",
+   "refcol": "id",
+   "src": "gpl_daily_stations"
+  },
+  {
+   "col": "upload_id",
+   "ref": "gpl_uploads",
+   "refcol": "id",
+   "src": "gpl_daily_units"
+  },
+  {
+   "col": "upload_id",
+   "ref": "gpl_uploads",
+   "refcol": "id",
+   "src": "gpl_analysis"
+  },
+  {
+   "col": "task_id",
+   "ref": "tasks",
+   "refcol": "id",
+   "src": "meeting_actions"
+  },
+  {
+   "col": "actor_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "admin_audit_log"
+  },
+  {
+   "col": "target_user_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "admin_audit_log"
+  },
+  {
+   "col": "replaced_by",
+   "ref": "daily_uploads",
+   "refcol": "id",
+   "src": "daily_uploads"
+  },
+  {
+   "col": "user_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "ai_metric_snapshot"
+  },
+  {
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "customer_applications"
+  },
+  {
+   "col": "nearest_airstrip_id",
+   "ref": "airstrips",
+   "refcol": "id",
+   "src": "communities"
+  },
+  {
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "communities"
+  },
+  {
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "communities"
+  },
+  {
+   "col": "project_id",
+   "ref": "projects",
+   "refcol": "id",
+   "src": "project_notes"
+  },
+  {
+   "col": "project_id",
+   "ref": "projects",
+   "refcol": "id",
+   "src": "project_summaries"
+  },
+  {
+   "col": "user_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "saved_filters"
+  },
+  {
+   "col": "project_id",
+   "ref": "projects",
+   "refcol": "project_id",
+   "src": "funding_distributions"
+  },
+  {
+   "col": "project_id",
+   "ref": "projects",
+   "refcol": "project_id",
+   "src": "project_progress_details"
+  },
+  {
+   "col": "upload_id",
+   "ref": "gpl_kpi_uploads",
+   "refcol": "id",
+   "src": "gpl_kpi_ai_analysis"
+  },
+  {
+   "col": "community_id",
+   "ref": "communities",
+   "refcol": "id",
+   "src": "water_status"
+  },
+  {
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "water_status"
+  },
+  {
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "water_status"
+  },
+  {
+   "col": "community_id",
+   "ref": "communities",
+   "refcol": "id",
+   "src": "water_sources"
+  },
+  {
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "water_sources"
+  },
+  {
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "water_sources"
+  },
+  {
+   "col": "community_id",
+   "ref": "communities",
+   "refcol": "id",
+   "src": "water_status_log"
+  },
+  {
+   "col": "upload_id",
+   "ref": "daily_uploads",
+   "refcol": "id",
+   "src": "daily_metrics"
+  },
+  {
+   "col": "upload_id",
+   "ref": "daily_uploads",
+   "refcol": "id",
+   "src": "daily_analysis"
+  },
+  {
+   "col": "changed_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "water_status_log"
+  },
+  {
+   "col": "snapshot_id",
+   "ref": "gpl_snapshots",
+   "refcol": "id",
+   "src": "gpl_outstanding"
+  },
+  {
+   "col": "snapshot_id",
+   "ref": "gpl_snapshots",
+   "refcol": "id",
+   "src": "gpl_completed"
+  },
+  {
+   "col": "snapshot_id",
+   "ref": "gpl_snapshots",
+   "refcol": "id",
+   "src": "gpl_snapshot_metrics"
+  },
+  {
+   "col": "first_seen_snapshot_id",
+   "ref": "gpl_snapshots",
+   "refcol": "id",
+   "src": "gpl_chronic_outliers"
+  },
+  {
+   "col": "latest_snapshot_id",
+   "ref": "gpl_snapshots",
+   "refcol": "id",
+   "src": "gpl_chronic_outliers"
+  },
+  {
+   "col": "community_id",
+   "ref": "communities",
+   "refcol": "id",
+   "src": "electricity_status"
+  },
+  {
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "electricity_status"
+  },
+  {
+   "col": "parent_id",
+   "ref": "task_comments",
+   "refcol": "id",
+   "src": "task_comments"
+  },
+  {
+   "col": "application_id",
+   "ref": "customer_applications",
+   "refcol": "id",
+   "src": "customer_application_documents"
+  },
+  {
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "electricity_status"
+  },
+  {
+   "col": "application_id",
+   "ref": "customer_applications",
+   "refcol": "id",
+   "src": "customer_application_activity_log"
+  },
+  {
+   "col": "community_id",
+   "ref": "communities",
+   "refcol": "id",
+   "src": "electricity_sources"
+  },
+  {
+   "col": "assigned_to",
+   "ref": "users",
+   "refcol": "id",
+   "src": "projects"
+  },
+  {
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "electricity_sources"
+  },
+  {
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "electricity_sources"
+  },
+  {
+   "col": "community_id",
+   "ref": "communities",
+   "refcol": "id",
+   "src": "electricity_status_log"
+  },
+  {
+   "col": "changed_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "electricity_status_log"
+  },
+  {
+   "col": "meeting_id",
+   "ref": "meetings",
+   "refcol": "id",
+   "src": "meeting_actions"
+  },
+  {
+   "col": "owner_user_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "object_ownership"
+  },
+  {
+   "col": "user_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "object_access_grants"
+  },
+  {
+   "col": "granted_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "object_access_grants"
+  },
+  {
+   "col": "user_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "activity_logs"
+  },
+  {
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "subtasks"
+  },
+  {
+   "col": "user_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "task_activity"
+  },
+  {
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "task_templates"
+  },
+  {
+   "col": "recurrence_assignee_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "task_templates"
+  },
+  {
+   "col": "assigned_by_user_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "tasks"
+  },
+  {
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "users"
+  },
+  {
+   "col": "invited_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "users"
+  },
+  {
+   "col": "owner_user_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "tasks"
+  },
+  {
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "customer_applications"
+  },
+  {
+   "col": "uploaded_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "customer_application_documents"
+  },
+  {
+   "col": "performed_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "customer_application_activity_log"
+  },
+  {
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "customer_application_notes"
+  },
+  {
+   "col": "user_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "task_comments"
+  },
+  {
+   "col": "user_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "project_notes"
+  },
+  {
+   "col": "task_id",
+   "ref": "tasks",
+   "refcol": "id",
+   "src": "task_activity"
+  },
+  {
+   "col": "task_id",
+   "ref": "tasks",
+   "refcol": "id",
+   "src": "task_comments"
+  },
+  {
+   "col": "task_id",
+   "ref": "tasks",
+   "refcol": "id",
+   "src": "subtasks"
+  },
+  {
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "airstrips"
+  },
+  {
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "airstrips"
+  },
+  {
+   "col": "airstrip_id",
+   "ref": "airstrips",
+   "refcol": "id",
+   "src": "airstrip_maintenance_log"
+  },
+  {
+   "col": "verified_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "airstrip_maintenance_log"
+  },
+  {
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "airstrip_maintenance_log"
+  },
+  {
+   "col": "airstrip_id",
+   "ref": "airstrips",
+   "refcol": "id",
+   "src": "airstrip_photos"
+  },
+  {
+   "col": "maintenance_log_id",
+   "ref": "airstrip_maintenance_log",
+   "refcol": "id",
+   "src": "airstrip_photos"
+  },
+  {
+   "col": "uploaded_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "airstrip_photos"
+  },
+  {
+   "col": "airstrip_id",
+   "ref": "airstrips",
+   "refcol": "id",
+   "src": "airstrip_inspections"
+  },
+  {
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "airstrip_inspections"
+  },
+  {
+   "col": "airstrip_id",
+   "ref": "airstrips",
+   "refcol": "id",
+   "src": "airstrip_status_log"
+  },
+  {
+   "col": "changed_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "airstrip_status_log"
+  },
+  {
+   "col": "sub_programme_code",
+   "ref": "sub_programme",
+   "refcol": "code",
+   "src": "tender"
+  },
+  {
+   "col": "project_id",
+   "ref": "delayed_projects",
+   "refcol": "id",
+   "src": "delayed_project_snapshots"
+  },
+  {
+   "col": "project_id",
+   "ref": "delayed_projects",
+   "refcol": "id",
+   "src": "interventions"
+  },
+  {
+   "col": "programme_code",
+   "ref": "programme",
+   "refcol": "code",
+   "src": "sub_programme"
+  },
+  {
+   "col": "uploaded_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "upload"
+  },
+  {
+   "col": "programme_code",
+   "ref": "programme",
+   "refcol": "code",
+   "src": "tender"
+  },
+  {
+   "col": "first_seen_upload_id",
+   "ref": "upload",
+   "refcol": "id",
+   "src": "tender"
+  },
+  {
+   "col": "last_seen_upload_id",
+   "ref": "upload",
+   "refcol": "id",
+   "src": "tender"
+  },
+  {
+   "col": "tender_id",
+   "ref": "tender",
+   "refcol": "id",
+   "src": "tender_field_change"
+  },
+  {
+   "col": "upload_id",
+   "ref": "upload",
+   "refcol": "id",
+   "src": "tender_field_change"
+  },
+  {
+   "col": "changed_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "tender_field_change"
+  },
+  {
+   "col": "upload_id",
+   "ref": "upload",
+   "refcol": "id",
+   "src": "tender_match_review"
+  },
+  {
+   "col": "resolution_tender_id",
+   "ref": "tender",
+   "refcol": "id",
+   "src": "tender_match_review"
+  },
+  {
+   "col": "resolved_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "tender_match_review"
+  },
+  {
+   "col": "tender_id",
+   "ref": "tender",
+   "refcol": "id",
+   "src": "tender_document"
+  },
+  {
+   "col": "uploaded_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "tender_document"
+  },
+  {
+   "col": "tender_id",
+   "ref": "tender",
+   "refcol": "id",
+   "src": "tender_note"
+  },
+  {
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "tender_note"
+  },
+  {
+   "col": "upload_id",
+   "ref": "upload",
+   "refcol": "id",
+   "src": "tender_upload_snapshot"
+  },
+  {
+   "col": "tender_id",
+   "ref": "tender",
+   "refcol": "id",
+   "src": "tender_upload_snapshot"
+  },
+  {
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "agency_psip_focal_point"
+  },
+  {
+   "col": "changed_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "agency_psip_focal_point_history"
+  },
+  {
+   "col": "tender_id",
+   "ref": "tender",
+   "refcol": "id",
+   "src": "psip_nag_record"
+  },
+  {
+   "col": "decided_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "procurement_excluded_fingerprint"
+  },
+  {
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "psip_nag_settings"
+  },
+  {
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "tender"
+  },
+  {
+   "col": "resolution_tender_id",
+   "ref": "tender",
+   "refcol": "id",
+   "src": "procurement_match_decision"
+  },
+  {
+   "col": "decided_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "procurement_match_decision"
+  },
+  {
+   "col": "reviewed_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "action_item_extractions"
+  },
+  {
+   "col": "extraction_id",
+   "ref": "action_item_extractions",
+   "refcol": "id",
+   "src": "tasks"
+  },
+  {
+   "col": "delegated_to_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "tasks"
+  },
+  {
+   "col": "completed_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "tasks"
+  },
+  {
+   "col": "verified_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "tasks"
+  },
+  {
+   "col": "supersedes_id",
+   "ref": "tasks",
+   "refcol": "id",
+   "src": "tasks"
+  },
+  {
+   "col": "actor_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "procurement_decision"
+  },
+  {
+   "col": "approved_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "procurement_decision"
+  },
+  {
+   "col": "archived_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "tender"
+  },
+  {
+   "col": "tender_id",
+   "ref": "tender",
+   "refcol": "id",
+   "src": "tender_presence_event"
+  },
+  {
+   "col": "upload_id",
+   "ref": "upload",
+   "refcol": "id",
+   "src": "tender_presence_event"
+  },
+  {
+   "col": "actor_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "tender_presence_event"
+  },
+  {
+   "col": "task_id",
+   "ref": "tasks",
+   "refcol": "id",
+   "src": "task_watchers"
+  },
+  {
+   "col": "user_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "task_watchers"
+  },
+  {
+   "col": "added_by_user_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "task_watchers"
+  },
+  {
+   "col": "tender_id",
+   "ref": "tender",
+   "refcol": "id",
+   "src": "tender_status_decision"
+  },
+  {
+   "col": "decision_id",
+   "ref": "procurement_decision",
+   "refcol": "id",
+   "src": "tender_status_decision"
+  },
+  {
+   "col": "decided_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "tender_status_decision"
+  },
+  {
+   "col": "task_id",
+   "ref": "tasks",
+   "refcol": "id",
+   "src": "action_item_events"
+  },
+  {
+   "col": "actor_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "action_item_events"
+  },
+  {
+   "col": "sent_by_user_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "agency_intel_reports"
+  },
+  {
+   "col": "last_seen_batch_id",
+   "ref": "upload_batches",
+   "refcol": "id",
+   "src": "delayed_projects"
+  },
+  {
+   "col": "resolved_by_batch_id",
+   "ref": "upload_batches",
+   "refcol": "id",
+   "src": "delayed_projects"
+  },
+  {
+   "col": "extraction_id",
+   "ref": "action_item_extractions",
+   "refcol": "id",
+   "src": "meetings_seen"
+  },
+  {
+   "col": "task_id",
+   "ref": "tasks",
+   "refcol": "id",
+   "src": "agency_head_notification_log"
+  },
+  {
+   "col": "generated_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "nptab_reports"
+  },
+  {
+   "col": "queued_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "nptab_report_queue"
+  },
+  {
+   "col": "dequeued_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "nptab_report_queue"
+  },
+  {
+   "col": "included_in_report_id",
+   "ref": "nptab_reports",
+   "refcol": "id",
+   "src": "nptab_report_queue"
+  },
+  {
+   "col": "report_id",
+   "ref": "nptab_reports",
+   "refcol": "id",
+   "src": "nptab_report_audit_log"
+  },
+  {
+   "col": "changed_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "nptab_report_audit_log"
+  },
+  {
+   "col": "referred_to_minister_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "tasks"
+  },
+  {
+   "col": "created_by_user_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "agency_scheduled_reports"
+  },
+  {
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "airstrip_settings"
+  },
+  {
+   "col": "responsible_manager_id",
+   "ref": "users",
+   "refcol": "id",
+   "src": "airstrips"
+  },
+  {
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "contractors"
+  },
+  {
+   "col": "airstrip_id",
+   "ref": "airstrips",
+   "refcol": "id",
+   "src": "airstrip_contractors"
+  },
+  {
+   "col": "contractor_id",
+   "ref": "contractors",
+   "refcol": "id",
+   "src": "airstrip_contractors"
+  },
+  {
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id",
+   "src": "airstrip_contractors"
+  }
+ ],
+ "generated_note": "Committed prod schema snapshot for check:drift. Refresh via: npm run refresh:schema-snapshot.",
+ "schema": "public",
+ "tables": {
+  "_module_access_backup_129": [
+   "access_type",
+   "agency",
+   "can_edit",
+   "email",
+   "granted_at",
+   "slug"
+  ],
+  "_modules_backup_129": [
+   "created_at",
+   "default_roles",
+   "description",
+   "icon",
+   "id",
+   "is_active",
+   "name",
+   "slug",
+   "sort_order"
+  ],
+  "action_item_events": [
+   "actor_id",
+   "event_type",
+   "id",
+   "occurred_at",
+   "payload",
+   "task_id"
+  ],
+  "action_item_extractions": [
+   "created_at",
+   "extraction_duration_ms",
+   "id",
+   "items_accepted",
+   "items_added_manually",
+   "items_edited",
+   "items_extracted",
+   "items_rejected",
+   "meeting_date",
+   "meeting_id",
+   "meeting_title",
+   "meeting_type",
+   "meeting_type_overridden",
+   "modality",
+   "modality_overridden",
+   "model",
+   "prompt_version",
+   "raw_response",
+   "review_status",
+   "reviewed_at",
+   "reviewed_by",
+   "token_count_input",
+   "token_count_output",
+   "transcript_hash",
+   "transcript_url"
+  ],
+  "activity_logs": [
+   "action",
+   "changes",
+   "created_at",
+   "denial_reason",
+   "id",
+   "ip_address",
+   "object_id",
+   "object_name",
+   "object_type",
+   "reason",
+   "result",
+   "user_agent",
+   "user_id"
+  ],
+  "admin_audit_log": [
+   "action",
+   "actor_id",
+   "created_at",
+   "id",
+   "metadata",
+   "target_user_id"
+  ],
+  "agency_head_notification_log": [
+   "agency",
+   "error",
+   "event_type",
+   "id",
+   "recipient_email",
+   "recipient_name",
+   "sent_at",
+   "status",
+   "task_id"
+  ],
+  "agency_health_snapshots": [
+   "agency_slug",
+   "computed_at",
+   "health_score",
+   "id",
+   "kpi_snapshot",
+   "status"
+  ],
+  "agency_intel_reports": [
+   "agency",
+   "id",
+   "message",
+   "recipients",
+   "sent_at",
+   "sent_by_user_id",
+   "source",
+   "template"
+  ],
+  "agency_psip_focal_point": [
+   "agency",
+   "agency_head_email",
+   "agency_head_name",
+   "focal_point_email",
+   "focal_point_name",
+   "updated_at",
+   "updated_by"
+  ],
+  "agency_psip_focal_point_history": [
+   "agency",
+   "changed_at",
+   "changed_by",
+   "field",
+   "id",
+   "new_value",
+   "old_value"
+  ],
+  "agency_scheduled_reports": [
+   "active",
+   "agency",
+   "cover_message",
+   "created_at",
+   "created_by_user_id",
+   "day_of_month",
+   "day_of_week",
+   "frequency",
+   "id",
+   "last_error",
+   "last_error_at",
+   "last_run_at",
+   "next_run_at",
+   "recipients",
+   "send_hour",
+   "template",
+   "timezone",
+   "updated_at"
+  ],
+  "ai_chat_sessions": [
+   "created_at",
+   "current_page",
+   "id",
+   "messages",
+   "session_id",
+   "updated_at"
+  ],
+  "ai_metric_snapshot": [
+   "briefing_suggestions",
+   "created_at",
+   "id",
+   "precomputed_briefing",
+   "snapshot_data",
+   "snapshot_date",
+   "updated_at",
+   "user_id"
+  ],
+  "ai_response_cache": [
+   "actions",
+   "created_at",
+   "current_page",
+   "expires_at",
+   "id",
+   "model_tier",
+   "query_hash",
+   "query_text",
+   "response_text",
+   "suggestions",
+   "usage_input_tokens",
+   "usage_output_tokens"
+  ],
+  "ai_usage_log": [
+   "cached",
+   "created_at",
+   "current_page",
+   "id",
+   "input_tokens",
+   "local_answer",
+   "model_id",
+   "model_tier",
+   "output_tokens",
+   "query_type",
+   "session_id"
+  ],
+  "airstrip_contractors": [
+   "airstrip_id",
+   "contractor_id",
+   "created_at",
+   "created_by",
+   "effective_from",
+   "effective_to",
+   "id"
+  ],
+  "airstrip_inspections": [
+   "airstrip_id",
+   "buildings_condition",
+   "created_at",
+   "created_by",
+   "drainage_condition",
+   "findings",
+   "id",
+   "inspection_date",
+   "inspector_name",
+   "recommendations",
+   "remarks",
+   "runway_condition_notes",
+   "signal_available",
+   "surface_condition",
+   "vegetation_status"
+  ],
+  "airstrip_maintenance_log": [
+   "activity_description",
+   "activity_type",
+   "airstrip_id",
+   "contractor_name",
+   "created_at",
+   "created_by",
+   "id",
+   "notes",
+   "performed_date",
+   "quarter",
+   "verification_method",
+   "verified",
+   "verified_at",
+   "verified_by"
+  ],
+  "airstrip_option_types": [
+   "category",
+   "created_at",
+   "id",
+   "is_active",
+   "label",
+   "sort_order",
+   "value"
+  ],
+  "airstrip_overview": [
+   "airside_buildings",
+   "coordinates_lat",
+   "coordinates_lon",
+   "created_at",
+   "created_by",
+   "engineered_structure",
+   "flight_frequency",
+   "id",
+   "last_inspection_date",
+   "last_maintenance_on",
+   "last_verified_on",
+   "name",
+   "region",
+   "remarks",
+   "responsible_contractor_id",
+   "responsible_contractor_name",
+   "responsible_manager_id",
+   "responsible_manager_name",
+   "runway_length_m",
+   "runway_width_m",
+   "status",
+   "surface_condition",
+   "surface_type",
+   "target_maintenance_interval_days",
+   "updated_at",
+   "updated_by"
+  ],
+  "airstrip_photos": [
+   "airstrip_id",
+   "caption",
+   "file_name",
+   "id",
+   "maintenance_log_id",
+   "photo_type",
+   "storage_path",
+   "taken_at",
+   "uploaded_at",
+   "uploaded_by"
+  ],
+  "airstrip_settings": [
+   "default_interval_days",
+   "id",
+   "upcoming_window_days",
+   "updated_at",
+   "updated_by",
+   "verification_stale_after_days"
+  ],
+  "airstrip_status_log": [
+   "airstrip_id",
+   "changed_at",
+   "changed_by",
+   "id",
+   "new_status",
+   "previous_status",
+   "reason"
+  ],
+  "airstrips": [
+   "airside_buildings",
+   "coordinates_lat",
+   "coordinates_lon",
+   "created_at",
+   "created_by",
+   "engineered_structure",
+   "flight_frequency",
+   "id",
+   "last_inspection_date",
+   "name",
+   "region",
+   "remarks",
+   "responsible_manager_id",
+   "runway_length_m",
+   "runway_width_m",
+   "status",
+   "surface_condition",
+   "surface_type",
+   "target_maintenance_interval_days",
+   "updated_at",
+   "updated_by"
+  ],
+  "alerts": [
+   "acknowledged_at",
+   "acknowledged_by",
+   "agency",
+   "created_at",
+   "current_value",
+   "id",
+   "is_active",
+   "message",
+   "metric_name",
+   "resolved_at",
+   "severity",
+   "threshold_value"
+  ],
+  "audit_log": [
+   "action",
+   "created_at",
+   "entity_id",
+   "entity_type",
+   "id",
+   "ip_address",
+   "new_values",
+   "old_values",
+   "user_agent",
+   "user_id"
+  ],
+  "calendar_events": [
+   "description",
+   "end_time",
+   "google_id",
+   "id",
+   "last_synced",
+   "location",
+   "start_time",
+   "title"
+  ],
+  "cjia_ai_insights": [
+   "created_at",
+   "data_hash",
+   "id",
+   "insight_json",
+   "insight_type",
+   "model_used",
+   "report_month"
+  ],
+  "cjia_daily_metrics": [
+   "approved_by",
+   "arrivals",
+   "baggage_uptime_percent",
+   "created_at",
+   "departures",
+   "id",
+   "notes",
+   "on_time_departure_percent",
+   "power_uptime_percent",
+   "report_date",
+   "revenue_mtd",
+   "revenue_target",
+   "safety_incident_details",
+   "safety_incidents",
+   "security_uptime_percent",
+   "status",
+   "submitted_by",
+   "updated_at"
+  ],
+  "cjia_monthly_reports": [
+   "created_at",
+   "id",
+   "operations_data",
+   "passenger_data",
+   "project_data",
+   "report_month",
+   "revenue_data"
+  ],
+  "communities": [
+   "community_type",
+   "created_at",
+   "created_by",
+   "geocode_confidence",
+   "geocode_source",
+   "geocoded_at",
+   "id",
+   "latitude",
+   "longitude",
+   "name",
+   "nearest_airstrip_id",
+   "population",
+   "population_source",
+   "region",
+   "remarks",
+   "source_sheet",
+   "sub_district",
+   "updated_at",
+   "updated_by"
+  ],
+  "contractors": [
+   "active",
+   "contact",
+   "created_at",
+   "created_by",
+   "id",
+   "name",
+   "notes",
+   "whatsapp"
+  ],
+  "customer_application_activity_log": [
+   "action",
+   "application_id",
+   "details",
+   "id",
+   "new_value",
+   "old_value",
+   "performed_at",
+   "performed_by"
+  ],
+  "customer_application_documents": [
+   "application_id",
+   "file_name",
+   "file_size",
+   "file_type",
+   "file_url",
+   "id",
+   "uploaded_at",
+   "uploaded_by"
+  ],
+  "customer_application_notes": [
+   "application_id",
+   "created_at",
+   "created_by",
+   "id",
+   "new_status",
+   "note_text",
+   "status_at_time"
+  ],
+  "customer_applications": [
+   "agency",
+   "applicant_name",
+   "application_type",
+   "created_at",
+   "created_by",
+   "id",
+   "notes",
+   "priority",
+   "reference_number",
+   "status",
+   "submitted_at",
+   "updated_at",
+   "updated_by"
+  ],
+  "daily_analysis": [
+   "agency_summaries",
+   "analysis_model",
+   "analysis_status",
+   "anomalies",
+   "attention_items",
+   "completed_at",
+   "completion_tokens",
+   "created_at",
+   "data_date",
+   "error_message",
+   "executive_summary",
+   "id",
+   "processing_time_ms",
+   "prompt_tokens",
+   "raw_response",
+   "upload_id"
+  ],
+  "daily_metrics": [
+   "agency",
+   "category",
+   "created_at",
+   "data_date",
+   "error_detail",
+   "has_error",
+   "id",
+   "metadata",
+   "metric_name",
+   "numeric_value",
+   "raw_value",
+   "row_number",
+   "subcategory",
+   "unit",
+   "upload_id",
+   "value_type"
+  ],
+  "daily_uploads": [
+   "confirmed_at",
+   "confirmed_by",
+   "created_at",
+   "data_date",
+   "date_match_exact",
+   "detected_date",
+   "error_count",
+   "error_message",
+   "file_size_bytes",
+   "filename",
+   "id",
+   "replaced_by",
+   "row_count",
+   "status",
+   "updated_at",
+   "uploaded_by",
+   "warning_count",
+   "warnings"
+  ],
+  "deadline_extension_requests": [
+   "created_at",
+   "decided_at",
+   "decided_by",
+   "decision_note",
+   "id",
+   "original_due_date",
+   "reason",
+   "requested_by",
+   "requested_due_date",
+   "status",
+   "task_id"
+  ],
+  "delayed_project_snapshots": [
+   "completion_percent",
+   "contract_value",
+   "created_at",
+   "id",
+   "project_end_date",
+   "project_id",
+   "snapshot_date",
+   "status"
+  ],
+  "delayed_projects": [
+   "completion_percent",
+   "contract_value",
+   "contractors",
+   "created_at",
+   "executing_agency",
+   "has_images",
+   "id",
+   "last_seen_batch_id",
+   "project_end_date",
+   "project_name",
+   "project_reference",
+   "region",
+   "reopened_at",
+   "resolved_at",
+   "resolved_by_batch_id",
+   "source_id",
+   "status",
+   "sub_agency",
+   "tender_board_type",
+   "updated_at"
+  ],
+  "document_chunks": [
+   "chunk_index",
+   "content",
+   "created_at",
+   "document_id",
+   "id"
+  ],
+  "document_queries": [
+   "answer",
+   "created_at",
+   "document_id",
+   "id",
+   "question"
+  ],
+  "documents": [
+   "agency",
+   "created_at",
+   "document_date",
+   "document_type",
+   "extracted_data",
+   "file_path",
+   "file_size",
+   "filename",
+   "google_drive_file_id",
+   "id",
+   "mime_type",
+   "original_filename",
+   "processed_at",
+   "processing_status",
+   "project_reference",
+   "summary",
+   "sync_source",
+   "synced_at",
+   "tags",
+   "title",
+   "uploaded_at"
+  ],
+  "electricity_sources": [
+   "capacity_kw",
+   "capacity_raw",
+   "comments",
+   "community_id",
+   "created_at",
+   "created_by",
+   "id",
+   "source_name",
+   "source_status",
+   "source_type",
+   "updated_at",
+   "updated_by"
+  ],
+  "electricity_status": [
+   "community_id",
+   "coverage_percent",
+   "created_at",
+   "created_by",
+   "existing_infrastructure",
+   "id",
+   "last_updated",
+   "proposed_solutions",
+   "provider",
+   "remarks",
+   "source_sheet",
+   "status",
+   "system_type",
+   "updated_at",
+   "updated_by"
+  ],
+  "electricity_status_log": [
+   "changed_at",
+   "changed_by",
+   "community_id",
+   "id",
+   "new_status",
+   "previous_status",
+   "reason"
+  ],
+  "failed_extractions": [
+   "attempted_at",
+   "failure_detail",
+   "failure_reason",
+   "fireflies_meeting_id",
+   "id",
+   "resolved_at",
+   "resolved_by",
+   "retry_count"
+  ],
+  "funding_distributions": [
+   "amount_distributed",
+   "amount_expended",
+   "contract_ref",
+   "created_at",
+   "date_distributed",
+   "distributed_balance",
+   "funding_remarks",
+   "id",
+   "payment_type",
+   "project_id"
+  ],
+  "gcaa_ai_insights": [
+   "created_at",
+   "data_hash",
+   "id",
+   "insight_json",
+   "insight_type",
+   "model_used",
+   "report_month"
+  ],
+  "gcaa_daily_metrics": [
+   "active_aircraft_registrations",
+   "approved_by",
+   "compliance_rate_percent",
+   "created_at",
+   "id",
+   "incident_details",
+   "incident_reports",
+   "inspections_completed_mtd",
+   "inspections_target",
+   "notes",
+   "renewals_pending",
+   "report_date",
+   "status",
+   "submitted_by",
+   "updated_at"
+  ],
+  "gcaa_monthly_reports": [
+   "compliance_data",
+   "created_at",
+   "id",
+   "incident_data",
+   "inspection_data",
+   "registration_data",
+   "report_month"
+  ],
+  "gpl_analysis": [
+   "analysis_data",
+   "created_at",
+   "id",
+   "report_date",
+   "status",
+   "upload_id"
+  ],
+  "gpl_chronic_outliers": [
+   "account_number",
+   "consecutive_snapshots",
+   "customer_name",
+   "date_created",
+   "first_seen_date",
+   "first_seen_snapshot_id",
+   "id",
+   "latest_days_elapsed",
+   "latest_snapshot_id",
+   "resolved",
+   "resolved_date",
+   "service_order_number",
+   "stage",
+   "town_city",
+   "track"
+  ],
+  "gpl_completed": [
+   "account_number",
+   "account_status",
+   "account_type",
+   "created_by",
+   "customer_name",
+   "customer_number",
+   "cycle",
+   "data_quality_note",
+   "date_completed",
+   "date_created",
+   "days_taken",
+   "days_taken_calculated",
+   "id",
+   "is_data_quality_error",
+   "row_number",
+   "service_address",
+   "service_order_number",
+   "service_type",
+   "snapshot_id",
+   "stage",
+   "town_city",
+   "track"
+  ],
+  "gpl_daily_metrics": [
+   "active_outages",
+   "affected_customers",
+   "approved_by",
+   "avg_restoration_time_hours",
+   "capacity_mw",
+   "collection_rate_percent",
+   "created_at",
+   "current_load_mw",
+   "hfo_generation_percent",
+   "id",
+   "lfo_generation_percent",
+   "notes",
+   "other_generation_percent",
+   "report_date",
+   "solar_generation_percent",
+   "status",
+   "submitted_by",
+   "updated_at"
+  ],
+  "gpl_daily_stations": [
+   "created_at",
+   "id",
+   "report_date",
+   "station",
+   "total_available_mw",
+   "total_derated_capacity_mw",
+   "total_units",
+   "units_offline",
+   "units_online",
+   "upload_id"
+  ],
+  "gpl_daily_summary": [
+   "approx_suppressed_peak",
+   "average_for",
+   "created_at",
+   "day_peak_on_bars_mw",
+   "day_peak_suppressed_mw",
+   "evening_peak_on_bars_mw",
+   "evening_peak_suppressed_mw",
+   "expected_capacity_mw",
+   "expected_peak_demand_mw",
+   "expected_reserve_mw",
+   "gen_availability_at_suppressed_peak",
+   "hampshire_solar_mwp",
+   "id",
+   "prospect_solar_mwp",
+   "report_date",
+   "reserve_capacity_mw",
+   "reserve_margin_pct",
+   "system_utilization_pct",
+   "total_dbis_capacity_mw",
+   "total_fossil_capacity_mw",
+   "total_renewable_mwp",
+   "trafalgar_solar_mwp",
+   "upload_id"
+  ],
+  "gpl_daily_units": [
+   "available_mw",
+   "created_at",
+   "derated_capacity_mw",
+   "engine",
+   "id",
+   "installed_capacity_mva",
+   "report_date",
+   "station",
+   "status",
+   "unit_number",
+   "upload_id"
+  ],
+  "gpl_dbis_daily": [
+   "active_outages",
+   "affected_customers",
+   "approved_by",
+   "avg_restoration_time_hours",
+   "collection_rate_percent",
+   "created_at",
+   "day_peak_onbars_mw",
+   "day_peak_suppressed_mw",
+   "evening_peak_onbars_mw",
+   "evening_peak_suppressed_mw",
+   "fleet_availability_percent",
+   "generation_availability_mw",
+   "hampshire_solar_mwp",
+   "hfo_generation_percent",
+   "id",
+   "lfo_generation_percent",
+   "notes",
+   "other_generation_percent",
+   "prospect_solar_mwp",
+   "report_date",
+   "reserve_margin_percent",
+   "solar_generation_percent",
+   "station_data",
+   "status",
+   "submitted_by",
+   "total_dbis_capacity_mw",
+   "total_fossil_capacity_mw",
+   "total_renewable_capacity_mw",
+   "trafalgar_solar_mwp",
+   "updated_at"
+  ],
+  "gpl_feeder_cache": [
+   "area_served",
+   "code",
+   "customer_count",
+   "feeder_id",
+   "id",
+   "name",
+   "substation_code",
+   "synced_at"
+  ],
+  "gpl_forecast_ai_analysis": [
+   "analysis_type",
+   "capacity_risk",
+   "completion_tokens",
+   "customer_revenue_impact",
+   "daily_data_points",
+   "data_through_date",
+   "demand_outlook",
+   "essequibo_assessment",
+   "executive_briefing",
+   "generated_at",
+   "id",
+   "infrastructure_reliability",
+   "monthly_data_points",
+   "processing_time_ms",
+   "prompt_tokens",
+   "raw_response",
+   "recommendations"
+  ],
+  "gpl_forecast_cache": [
+   "completion_tokens",
+   "data_hash",
+   "forecast_json",
+   "generated_at",
+   "id",
+   "model_used",
+   "processing_time_ms",
+   "prompt_tokens"
+  ],
+  "gpl_forecast_capacity": [
+   "computed_at",
+   "current_capacity_mw",
+   "forecast_date",
+   "grid",
+   "id",
+   "months_until_shortfall",
+   "projected_capacity_mw",
+   "reserve_margin_pct",
+   "risk_level",
+   "shortfall_date"
+  ],
+  "gpl_forecast_demand": [
+   "computed_at",
+   "confidence_high_mw",
+   "confidence_low_mw",
+   "data_source",
+   "forecast_date",
+   "grid",
+   "growth_rate_pct",
+   "id",
+   "projected_month",
+   "projected_peak_mw"
+  ],
+  "gpl_forecast_kpi": [
+   "computed_at",
+   "confidence_high",
+   "confidence_low",
+   "forecast_date",
+   "id",
+   "kpi_name",
+   "projected_month",
+   "projected_value",
+   "trend"
+  ],
+  "gpl_forecast_load_shedding": [
+   "avg_shed_mw",
+   "computed_at",
+   "forecast_date",
+   "id",
+   "max_shed_mw",
+   "period_days",
+   "projected_avg_6mo",
+   "shed_days_count",
+   "trend"
+  ],
+  "gpl_forecast_reserve": [
+   "below_threshold",
+   "computed_at",
+   "forecast_date",
+   "id",
+   "projected_month",
+   "projected_reserve_mw",
+   "projected_reserve_pct",
+   "risk_level"
+  ],
+  "gpl_forecast_station_reliability": [
+   "avg_utilization_pct",
+   "computed_at",
+   "failure_count",
+   "forecast_date",
+   "id",
+   "mtbf_days",
+   "offline_units",
+   "online_units",
+   "period_days",
+   "risk_level",
+   "station",
+   "total_units",
+   "trend",
+   "uptime_pct"
+  ],
+  "gpl_forecast_unit_risk": [
+   "computed_at",
+   "days_since_last_failure",
+   "derated_mw",
+   "engine",
+   "failure_count_90d",
+   "forecast_date",
+   "id",
+   "mtbf_days",
+   "predicted_failure_days",
+   "risk_level",
+   "risk_score",
+   "station",
+   "unit_number",
+   "uptime_pct_90d"
+  ],
+  "gpl_kpi_ai_analysis": [
+   "analysis_date",
+   "analysis_model",
+   "analysis_status",
+   "completed_at",
+   "completion_tokens",
+   "concerning_trends",
+   "created_at",
+   "date_range_end",
+   "date_range_start",
+   "error_message",
+   "executive_briefing",
+   "id",
+   "key_findings",
+   "processing_time_ms",
+   "prompt_tokens",
+   "raw_response",
+   "upload_id"
+  ],
+  "gpl_kpi_uploads": [
+   "confirmed_at",
+   "created_at",
+   "date_range_end",
+   "date_range_start",
+   "error_message",
+   "file_size_bytes",
+   "filename",
+   "id",
+   "kpis_found",
+   "rows_inserted",
+   "rows_parsed",
+   "rows_updated",
+   "status",
+   "uploaded_by",
+   "warnings"
+  ],
+  "gpl_monthly_kpis": [
+   "created_at",
+   "id",
+   "kpi_name",
+   "report_month",
+   "value"
+  ],
+  "gpl_multivariate_forecasts": [
+   "aggressive_json",
+   "conservative_json",
+   "created_at",
+   "data_period",
+   "demand_drivers_json",
+   "executive_summary",
+   "generated_at",
+   "id",
+   "input_tokens",
+   "is_fallback",
+   "methodology_summary",
+   "model_used",
+   "output_tokens",
+   "processing_time_ms"
+  ],
+  "gpl_outage_cache": [
+   "areas_affected",
+   "cause_category",
+   "cause_detail",
+   "cause_subcategory",
+   "customers_affected",
+   "date",
+   "duration_minutes",
+   "ens_mwh",
+   "feeder_code",
+   "feeder_id",
+   "id",
+   "mw_lost",
+   "outage_id",
+   "root_cause",
+   "status",
+   "substation_code",
+   "synced_at",
+   "time_in",
+   "time_out"
+  ],
+  "gpl_outstanding": [
+   "account_number",
+   "account_status",
+   "account_type",
+   "current_date_ref",
+   "customer_name",
+   "customer_number",
+   "cycle",
+   "date_created",
+   "days_elapsed",
+   "days_elapsed_calculated",
+   "division_code",
+   "id",
+   "row_number",
+   "service_address",
+   "service_order_number",
+   "service_type",
+   "snapshot_id",
+   "stage",
+   "town_city",
+   "track"
+  ],
+  "gpl_power_stations": [
+   "created_at",
+   "display_order",
+   "id",
+   "installed_capacity_mw",
+   "is_active",
+   "location",
+   "station_code",
+   "station_name",
+   "station_type"
+  ],
+  "gpl_pulse_scores": [
+   "avg_restoration_min",
+   "cmi_per_1000",
+   "computed_at",
+   "frequency_score",
+   "id",
+   "impact_score",
+   "outage_count_30d",
+   "overall",
+   "restoration_score",
+   "score_breakdown"
+  ],
+  "gpl_snapshot_metrics": [
+   "ageing_buckets",
+   "category",
+   "error_count",
+   "id",
+   "max_days",
+   "mean_days",
+   "median_days",
+   "min_days",
+   "mode_days",
+   "p90",
+   "p95",
+   "q1",
+   "q3",
+   "sla_compliance_pct",
+   "sla_target_days",
+   "snapshot_id",
+   "staff_breakdown",
+   "stage",
+   "std_dev",
+   "total_count",
+   "track",
+   "trimmed_mean_days",
+   "valid_count",
+   "within_sla_count"
+  ],
+  "gpl_snapshots": [
+   "data_quality_warnings",
+   "file_name",
+   "id",
+   "snapshot_date",
+   "track_a_completed",
+   "track_a_outstanding",
+   "track_b_design_completed",
+   "track_b_design_outstanding",
+   "track_b_execution_completed",
+   "track_b_execution_outstanding",
+   "track_b_total_outstanding",
+   "uploaded_at",
+   "user_id",
+   "warning_count"
+  ],
+  "gpl_uploads": [
+   "created_at",
+   "file_size_bytes",
+   "filename",
+   "id",
+   "raw_data",
+   "report_date",
+   "status",
+   "uploaded_by"
+  ],
+  "gwi_ai_insights": [
+   "created_at",
+   "data_hash",
+   "id",
+   "insight_json",
+   "insight_type",
+   "model_used",
+   "report_month"
+  ],
+  "gwi_daily_metrics": [
+   "active_disruptions",
+   "approved_by",
+   "avg_repair_time_hours",
+   "avg_response_time_hours",
+   "created_at",
+   "customer_complaints",
+   "disruption_areas",
+   "id",
+   "notes",
+   "nrw_percent",
+   "report_date",
+   "status",
+   "submitted_by",
+   "updated_at",
+   "water_billed_cubic_meters",
+   "water_produced_cubic_meters"
+  ],
+  "gwi_monthly_reports": [
+   "collections_data",
+   "created_at",
+   "customer_service_data",
+   "financial_data",
+   "id",
+   "procurement_data",
+   "report_month",
+   "report_type"
+  ],
+  "gwi_uploaded_files": [
+   "filename",
+   "id",
+   "parsed_data",
+   "report_period",
+   "report_type",
+   "uploaded_at"
+  ],
+  "gwi_weekly_reports": [
+   "complaints_data",
+   "created_at",
+   "id",
+   "report_week"
+  ],
+  "hinterland_option_types": [
+   "category",
+   "created_at",
+   "id",
+   "is_active",
+   "label",
+   "sort_order",
+   "value"
+  ],
+  "integration_tokens": [
+   "access_token",
+   "account_email",
+   "calendar_id",
+   "connected_at",
+   "id",
+   "provider",
+   "refresh_token",
+   "scopes",
+   "token_expiry",
+   "updated_at",
+   "user_id"
+  ],
+  "interventions": [
+   "assigned_to",
+   "created_at",
+   "created_by",
+   "description",
+   "due_date",
+   "id",
+   "intervention_type",
+   "project_id",
+   "status"
+  ],
+  "invite_tokens": [
+   "consumed_at",
+   "created_at",
+   "expires_at",
+   "id",
+   "token_hash",
+   "type",
+   "user_id"
+  ],
+  "kpi_alerts": [
+   "agency_slug",
+   "body",
+   "created_at",
+   "id",
+   "resolved",
+   "resolved_at",
+   "severity",
+   "title"
+  ],
+  "meeting_actions": [
+   "confidence",
+   "created_at",
+   "done",
+   "due_date",
+   "id",
+   "meeting_id",
+   "owner",
+   "review_reason",
+   "skipped",
+   "task",
+   "task_id"
+  ],
+  "meetings": [
+   "attendees",
+   "audio_path",
+   "created_at",
+   "date",
+   "decisions",
+   "duration_secs",
+   "id",
+   "notes",
+   "status",
+   "summary",
+   "title",
+   "transcript_raw",
+   "transcript_text",
+   "updated_at"
+  ],
+  "meetings_seen": [
+   "attendee_emails",
+   "detected_modality",
+   "detected_type",
+   "extraction_id",
+   "fireflies_meeting_id",
+   "id",
+   "meeting_date",
+   "meeting_title",
+   "observed_at",
+   "pipeline_action",
+   "skip_reason",
+   "transcript_ready_at"
+  ],
+  "metric_definitions": [
+   "agency",
+   "category",
+   "created_at",
+   "description",
+   "expected_type",
+   "id",
+   "is_active",
+   "max_value",
+   "metric_name",
+   "min_value",
+   "row_number",
+   "subcategory",
+   "unit",
+   "updated_at"
+  ],
+  "notification_preferences": [
+   "digest_frequency",
+   "digest_time",
+   "do_not_disturb",
+   "event_preferences",
+   "kpi_enabled",
+   "meeting_minutes_ready",
+   "meeting_reminder_15m",
+   "meeting_reminder_1h",
+   "meeting_reminder_24h",
+   "oversight_enabled",
+   "projects_enabled",
+   "quiet_hours_end",
+   "quiet_hours_start",
+   "task_due_reminders",
+   "task_overdue_alerts",
+   "updated_at",
+   "user_id"
+  ],
+  "notifications": [
+   "action_required",
+   "action_type",
+   "actor_id",
+   "body",
+   "category",
+   "created_at",
+   "delivered_at",
+   "digest_batch_id",
+   "digest_eligible",
+   "dismissed_at",
+   "email_queued_at",
+   "email_sent_at",
+   "entity_id",
+   "entity_type",
+   "event_type",
+   "expires_at",
+   "icon",
+   "id",
+   "importance_tier",
+   "metadata",
+   "parent_entity_id",
+   "parent_entity_type",
+   "priority",
+   "push_sent",
+   "read_at",
+   "reference_id",
+   "reference_type",
+   "reference_url",
+   "scheduled_for",
+   "seen_at",
+   "source_module",
+   "title",
+   "type",
+   "updated_at",
+   "user_id"
+  ],
+  "nptab_report_audit_log": [
+   "changed_by",
+   "field_changed",
+   "id",
+   "new_value",
+   "old_value",
+   "report_id",
+   "timestamp"
+  ],
+  "nptab_report_queue": [
+   "dequeue_reason",
+   "dequeued_at",
+   "dequeued_by",
+   "id",
+   "included_in_report_id",
+   "queued_at",
+   "queued_by",
+   "reason",
+   "tender_id"
+  ],
+  "nptab_reports": [
+   "closed_at",
+   "closure_reason",
+   "delivered_to",
+   "delivery_method",
+   "generated_at",
+   "generated_by",
+   "id",
+   "narrative",
+   "period_end",
+   "period_start",
+   "reference_number",
+   "status",
+   "submitted_at",
+   "tender_count",
+   "total_value",
+   "updated_at"
+  ],
+  "object_access_grants": [
+   "access_level",
+   "expires_at",
+   "granted_at",
+   "granted_by",
+   "id",
+   "object_id",
+   "object_type",
+   "reason",
+   "user_id"
+  ],
+  "object_ownership": [
+   "created_at",
+   "id",
+   "object_id",
+   "object_type",
+   "owner_user_id"
+  ],
+  "pending_application_analyses": [
+   "agency",
+   "analysis_date",
+   "analysis_type",
+   "created_at",
+   "id",
+   "result",
+   "status"
+  ],
+  "pending_application_snapshots": [
+   "agency",
+   "created_at",
+   "id",
+   "snapshot_date",
+   "summary_data",
+   "total_count"
+  ],
+  "pending_applications": [
+   "account_status",
+   "account_type",
+   "agency",
+   "application_date",
+   "customer_reference",
+   "cycle",
+   "data_as_of",
+   "days_waiting",
+   "district",
+   "division_code",
+   "event_code",
+   "event_description",
+   "first_name",
+   "id",
+   "imported_at",
+   "last_name",
+   "lot",
+   "pipeline_stage",
+   "raw_data",
+   "region",
+   "service_order_number",
+   "service_order_type",
+   "street",
+   "telephone",
+   "village_ward"
+  ],
+  "pending_applications_with_wait": [
+   "account_status",
+   "account_type",
+   "agency",
+   "application_date",
+   "customer_reference",
+   "cycle",
+   "data_as_of",
+   "days_waiting",
+   "district",
+   "division_code",
+   "event_code",
+   "event_description",
+   "first_name",
+   "id",
+   "imported_at",
+   "last_name",
+   "lot",
+   "pipeline_stage",
+   "raw_data",
+   "region",
+   "service_order_number",
+   "service_order_type",
+   "street",
+   "telephone",
+   "village_ward"
+  ],
+  "polling_state": [
+   "id",
+   "last_poll_completed_at",
+   "locked_at",
+   "locked_by"
+  ],
+  "procurement_decision": [
+   "actor_id",
+   "actor_role",
+   "agency",
+   "approval_role",
+   "approval_state",
+   "approved_at",
+   "approved_by",
+   "decided_at",
+   "decision_type",
+   "id",
+   "reason_code",
+   "reason_text",
+   "target_id",
+   "target_kind"
+  ],
+  "procurement_documents_archive_20260417": [
+   "file_name",
+   "file_path",
+   "file_type",
+   "id",
+   "package_id",
+   "uploaded_at",
+   "uploaded_by"
+  ],
+  "procurement_excluded_fingerprint": [
+   "agency",
+   "decided_at",
+   "decided_by",
+   "decided_role",
+   "example_incoming",
+   "expires_at",
+   "fingerprint",
+   "reason_code"
+  ],
+  "procurement_import_batches_archive_20260417": [
+   "agency",
+   "created_at",
+   "file_name",
+   "id",
+   "row_count",
+   "status",
+   "uploaded_by"
+  ],
+  "procurement_match_decision": [
+   "agency",
+   "decided_at",
+   "decided_by",
+   "decided_role",
+   "fingerprint",
+   "id",
+   "reason_code",
+   "resolution_tender_id"
+  ],
+  "procurement_notes_archive_20260417": [
+   "content",
+   "created_at",
+   "created_by",
+   "id",
+   "package_id"
+  ],
+  "procurement_packages_archive_20260417": [
+   "agency",
+   "bid_reference",
+   "created_at",
+   "current_stage",
+   "date_eval_submitted_mtb",
+   "date_eval_submitted_nptab",
+   "date_first_advertised",
+   "date_of_award",
+   "description",
+   "estimated_value",
+   "expected_delivery_date",
+   "id",
+   "import_batch_id",
+   "nptab_number",
+   "opening_date",
+   "oversight_project_id",
+   "procurement_method",
+   "psip_last_synced_at",
+   "psip_ref",
+   "psip_remarks",
+   "submitted_by",
+   "tender_board",
+   "tender_closing_date",
+   "title",
+   "updated_at"
+  ],
+  "procurement_stage_history_archive_20260417": [
+   "changed_at",
+   "changed_by",
+   "from_stage",
+   "id",
+   "notes",
+   "package_id",
+   "to_stage"
+  ],
+  "programme": [
+   "code",
+   "created_at",
+   "name"
+  ],
+  "project_notes": [
+   "created_at",
+   "id",
+   "note_text",
+   "note_type",
+   "project_id",
+   "user_id"
+  ],
+  "project_progress_details": [
+   "actual_progress_description",
+   "actual_progress_value_pct",
+   "created_at",
+   "expected_progress_description",
+   "expected_progress_value_pct",
+   "id",
+   "project_id",
+   "record_date"
+  ],
+  "project_summaries": [
+   "generated_at",
+   "id",
+   "project_id",
+   "summary"
+  ],
+  "project_uploads": [
+   "changes_summary",
+   "filename",
+   "id",
+   "row_count",
+   "uploaded_at"
+  ],
+  "projects": [
+   "assigned_to",
+   "balance_remaining",
+   "completion_pct",
+   "contract_value",
+   "contractor",
+   "created_at",
+   "escalated",
+   "escalation_reason",
+   "executing_agency",
+   "extension_date",
+   "extension_reason",
+   "has_images",
+   "health",
+   "id",
+   "project_end_date",
+   "project_extended",
+   "project_id",
+   "project_name",
+   "project_status",
+   "region",
+   "remarks",
+   "revised_start_date",
+   "short_name",
+   "start_date",
+   "sub_agency",
+   "tender_board_type",
+   "total_distributed",
+   "total_expended",
+   "updated_at"
+  ],
+  "projects_oversight": [
+   "completion_percent",
+   "contract_lots",
+   "contract_value_total",
+   "contractors",
+   "created_at",
+   "executing_agency",
+   "has_images",
+   "id",
+   "is_resolved",
+   "last_synced_at",
+   "project_end_date",
+   "project_id",
+   "project_name",
+   "project_reference",
+   "project_status",
+   "region",
+   "resolved_at",
+   "sub_agency",
+   "tender_board_type",
+   "updated_at"
+  ],
+  "psip_nag_preview": [
+   "actually_sent",
+   "agency",
+   "body",
+   "id",
+   "recipient_bcc",
+   "recipient_to",
+   "sent_at",
+   "sent_error",
+   "subject",
+   "trigger_kind",
+   "would_have_sent_at"
+  ],
+  "psip_nag_record": [
+   "agency",
+   "consecutive_weekly_count",
+   "first_nagged_at",
+   "id",
+   "last_nagged_at",
+   "resolved_at",
+   "tender_id",
+   "trigger_kind"
+  ],
+  "psip_nag_settings": [
+   "bcc_to_dg",
+   "emails_enabled",
+   "id",
+   "updated_at",
+   "updated_by"
+  ],
+  "push_subscriptions": [
+   "active",
+   "created_at",
+   "device_info",
+   "endpoint",
+   "id",
+   "keys_auth",
+   "keys_p256dh",
+   "last_used_at",
+   "platform",
+   "user_id"
+  ],
+  "refresh_tokens": [
+   "created_at",
+   "expires_at",
+   "id",
+   "ip_address",
+   "revoked_at",
+   "token_hash",
+   "user_agent",
+   "user_id"
+  ],
+  "saved_filters": [
+   "created_at",
+   "filter_name",
+   "filter_params",
+   "id",
+   "user_id"
+  ],
+  "service_connection_ai_insights": [
+   "analysis_date",
+   "analysis_type",
+   "created_at",
+   "id",
+   "result",
+   "status"
+  ],
+  "service_connection_monthly_stats": [
+   "avg_days_to_complete",
+   "completed_count",
+   "complexity_breakdown",
+   "created_at",
+   "design_avg_days",
+   "design_completed",
+   "design_sla_pct",
+   "id",
+   "median_days_to_complete",
+   "opened_count",
+   "pct_within_sla",
+   "queue_depth",
+   "report_month",
+   "stage_breakdown",
+   "track_a_avg_days",
+   "track_a_completed",
+   "track_a_sla_pct",
+   "track_b_avg_days",
+   "track_b_completed",
+   "track_b_sla_pct"
+  ],
+  "service_connections": [
+   "account_type",
+   "application_date",
+   "created_at",
+   "current_stage",
+   "customer_reference",
+   "cycle",
+   "disappeared_date",
+   "district",
+   "division_code",
+   "energisation_date",
+   "first_name",
+   "first_seen_date",
+   "id",
+   "is_legacy",
+   "job_complexity",
+   "last_name",
+   "last_seen_date",
+   "linked_so_number",
+   "lot",
+   "raw_data",
+   "region",
+   "service_order_number",
+   "service_order_type",
+   "stage_history",
+   "status",
+   "street",
+   "telephone",
+   "total_days_to_complete",
+   "track",
+   "updated_at",
+   "village_ward"
+  ],
+  "sub_programme": [
+   "agency",
+   "code",
+   "created_at",
+   "is_excluded",
+   "name",
+   "programme_code"
+  ],
+  "subtasks": [
+   "created_at",
+   "created_by",
+   "done",
+   "id",
+   "position",
+   "task_id",
+   "title"
+  ],
+  "task_activities": [
+   "action",
+   "comment",
+   "created_at",
+   "from_value",
+   "id",
+   "metadata",
+   "task_id",
+   "to_value",
+   "user_id"
+  ],
+  "task_activity": [
+   "action",
+   "created_at",
+   "id",
+   "new_value",
+   "old_value",
+   "task_id",
+   "user_id"
+  ],
+  "task_comments": [
+   "attachments",
+   "body",
+   "created_at",
+   "id",
+   "parent_id",
+   "task_id",
+   "updated_at",
+   "user_id"
+  ],
+  "task_notifications": [
+   "created_at",
+   "id",
+   "is_read",
+   "message",
+   "task_id",
+   "title",
+   "type",
+   "user_id"
+  ],
+  "task_templates": [
+   "agency_slug",
+   "checklist",
+   "created_at",
+   "created_by",
+   "description",
+   "due_offset_days",
+   "id",
+   "name",
+   "next_occurrence",
+   "priority",
+   "recurrence_assignee_id",
+   "recurrence_enabled",
+   "recurrence_rule"
+  ],
+  "task_watchers": [
+   "added_at",
+   "added_by_user_id",
+   "id",
+   "task_id",
+   "user_id"
+  ],
+  "tasks": [
+   "agency",
+   "assigned_by_user_id",
+   "blocked_reason",
+   "completed_at",
+   "completed_by",
+   "completion_note",
+   "confidence_overall",
+   "confidence_reasons",
+   "created_at",
+   "delegated_to_id",
+   "description",
+   "dispute_note",
+   "disputed_at",
+   "due_date",
+   "due_trigger",
+   "extraction_id",
+   "extraction_item_idx",
+   "id",
+   "linked_source_id",
+   "linked_source_type",
+   "minister_closed_at",
+   "minister_seen_at",
+   "notion_id",
+   "owner_name_raw",
+   "owner_user_id",
+   "priority",
+   "referred_to_minister_at",
+   "referred_to_minister_by",
+   "requires_minister_attention",
+   "role",
+   "source",
+   "source_meeting_id",
+   "source_quote",
+   "source_timestamp",
+   "status",
+   "supersedes_id",
+   "task_embedding",
+   "title",
+   "updated_at",
+   "verb_category",
+   "verified_at",
+   "verified_by",
+   "visibility_scope"
+  ],
+  "tender": [
+   "agency",
+   "archive_reason_code",
+   "archive_reason_text",
+   "archived_at",
+   "archived_by",
+   "archived_role",
+   "awarded_at",
+   "contractor",
+   "created_at",
+   "created_by",
+   "date_advertised",
+   "date_closed",
+   "date_eval_sent_mtb_rtb",
+   "date_eval_sent_nptab",
+   "date_of_award",
+   "description",
+   "external_id",
+   "first_appearance_already_awarded",
+   "first_seen_upload_id",
+   "has_exception",
+   "id",
+   "implementation_end_date",
+   "implementation_start_date",
+   "implementation_status_pct",
+   "is_rollover",
+   "keep_tracking_despite_missing",
+   "last_raw_row",
+   "last_seen_upload_id",
+   "line_item_code",
+   "method",
+   "missing_from_last_upload",
+   "programme_activity",
+   "programme_code",
+   "remarks",
+   "source",
+   "stage",
+   "stage_source",
+   "stagnant_weeks",
+   "status",
+   "sub_programme_code",
+   "updated_at"
+  ],
+  "tender_cleanup_backup_20260417": [
+   "agency",
+   "awarded_at",
+   "contractor",
+   "created_at",
+   "date_advertised",
+   "date_closed",
+   "date_eval_sent_mtb_rtb",
+   "date_eval_sent_nptab",
+   "date_of_award",
+   "description",
+   "external_id",
+   "first_appearance_already_awarded",
+   "first_seen_upload_id",
+   "has_exception",
+   "id",
+   "implementation_end_date",
+   "implementation_start_date",
+   "implementation_status_pct",
+   "is_rollover",
+   "last_raw_row",
+   "last_seen_upload_id",
+   "line_item_code",
+   "method",
+   "missing_from_last_upload",
+   "programme_activity",
+   "programme_code",
+   "remarks",
+   "source",
+   "stage",
+   "stage_source",
+   "sub_programme_code",
+   "updated_at"
+  ],
+  "tender_document": [
+   "file_name",
+   "file_path",
+   "file_type",
+   "id",
+   "tender_id",
+   "uploaded_at",
+   "uploaded_by"
+  ],
+  "tender_field_change": [
+   "changed_at",
+   "changed_by",
+   "field_name",
+   "id",
+   "new_value",
+   "old_value",
+   "tender_id",
+   "upload_id"
+  ],
+  "tender_match_review": [
+   "candidate_tender_ids",
+   "created_at",
+   "id",
+   "incoming_row",
+   "parsed_row_fingerprint",
+   "resolution_tender_id",
+   "resolved_at",
+   "resolved_by",
+   "review_reason",
+   "scores",
+   "seen_in_uploads",
+   "status",
+   "upload_id"
+  ],
+  "tender_note": [
+   "content",
+   "created_at",
+   "created_by",
+   "id",
+   "tender_id"
+  ],
+  "tender_presence_event": [
+   "actor_id",
+   "actor_role",
+   "agency",
+   "at",
+   "event_type",
+   "id",
+   "tender_id",
+   "upload_id"
+  ],
+  "tender_status_decision": [
+   "decided_at",
+   "decided_by",
+   "decided_role",
+   "decision_id",
+   "id",
+   "reason_code",
+   "status_after",
+   "status_before",
+   "tender_id"
+  ],
+  "tender_upload_snapshot": [
+   "created_at",
+   "snapshot_fields",
+   "tender_id",
+   "upload_id"
+  ],
+  "trello_board": [
+   "agency",
+   "board_name",
+   "created_at",
+   "id",
+   "is_active",
+   "last_synced_at",
+   "list_mapping",
+   "trello_board_id",
+   "updated_at",
+   "webhook_id"
+  ],
+  "upload": [
+   "applied_at",
+   "cancelled_at",
+   "filename",
+   "id",
+   "stats",
+   "status",
+   "storage_path",
+   "uploaded_at",
+   "uploaded_by"
+  ],
+  "upload_batches": [
+   "created_at",
+   "file_name",
+   "id",
+   "new_count",
+   "reopened_count",
+   "resolved_count",
+   "row_count",
+   "updated_count",
+   "uploaded_at",
+   "uploaded_by"
+  ],
+  "user_settings": [
+   "created_at",
+   "id",
+   "key",
+   "updated_at",
+   "user_id",
+   "value"
+  ],
+  "users": [
+   "agency",
+   "aliases",
+   "archived_at",
+   "avatar_url",
+   "closure_mode",
+   "created_at",
+   "created_by",
+   "email",
+   "first_login_at",
+   "formal_title",
+   "google_sub",
+   "id",
+   "invite_token",
+   "invite_token_expires_at",
+   "invited_at",
+   "invited_by",
+   "is_active",
+   "is_agency_head",
+   "is_owner",
+   "last_login",
+   "last_seen_at",
+   "login_count",
+   "name",
+   "role",
+   "status"
+  ],
+  "v_metrics_by_agency": [
+   "agency",
+   "category",
+   "data_date",
+   "error_count",
+   "metric_count",
+   "numeric_count"
+  ],
+  "water_sources": [
+   "comments",
+   "community_id",
+   "created_at",
+   "created_by",
+   "id",
+   "pressure_psi",
+   "pressure_raw",
+   "production_m3hr",
+   "production_raw",
+   "source_name",
+   "source_status",
+   "source_type",
+   "updated_at",
+   "updated_by"
+  ],
+  "water_status": [
+   "action",
+   "community_id",
+   "coverage_percent",
+   "created_at",
+   "created_by",
+   "existing_infrastructure",
+   "id",
+   "last_updated",
+   "proposed_solutions",
+   "remarks",
+   "schools_access",
+   "source_sheet",
+   "status",
+   "updated_at",
+   "updated_by"
+  ],
+  "water_status_log": [
+   "changed_at",
+   "changed_by",
+   "community_id",
+   "id",
+   "new_status",
+   "previous_status",
+   "reason"
+  ]
+ }
+}

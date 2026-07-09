@@ -5,8 +5,9 @@ import { createServerClient } from '@supabase/ssr';
 // P1 — server-side Supabase client bound to Next.js request cookies (anon key).
 // Used by the reimplemented auth() (lib/auth-supabase.ts) and, at cutover, the
 // new middleware. NOT wired into the live request path in Part 1.
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// .trim() guards against trailing-newline env values (see lib/supabase/client.ts).
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!.trim();
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim();
 
 export async function getServerSupabase() {
   const cookieStore = await cookies();
