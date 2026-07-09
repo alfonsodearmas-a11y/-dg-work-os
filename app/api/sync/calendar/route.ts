@@ -11,14 +11,24 @@ export async function GET() {
   try {
     const events = await fetchWeekEvents();
 
-    // Upsert events
+    // Upsert events. The `calendar_events` table only has the columns below;
+    // the richer CalendarEvent shape (all_day, attendees, conference_data,
+    // color_id, organizer, html_link, status, recurring_event_id) is in-memory
+    // only and has no backing columns, so we must NOT spread the whole event
+    // (doing so triggers PGRST204 "column not found" on every upsert). Persist
+    // only the real columns.
     for (const event of events) {
       await supabaseAdmin
         .from('calendar_events')
         .upsert(
           {
-            ...event,
-            last_synced: new Date().toISOString()
+            google_id: event.google_id,
+            title: event.title,
+            start_time: event.start_time,
+            end_time: event.end_time,
+            location: event.location,
+            description: event.description,
+            last_synced: new Date().toISOString(),
           },
           { onConflict: 'google_id' }
         );

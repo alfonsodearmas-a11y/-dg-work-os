@@ -200,20 +200,25 @@ export async function assembleHistoricalData(): Promise<HistoricalData> {
 
     const { data: stationRows, error: stationError } = await supabaseAdmin
       .from('gpl_daily_stations')
-      .select('station, station_utilization_pct, units_offline, report_date')
+      .select('station, total_available_mw, total_derated_capacity_mw, units_offline, report_date')
       .gte('report_date', cutoffDate);
 
     if (stationError) throw stationError;
 
-    // Group by station and compute aggregates in JS
+    // Group by station and compute aggregates in JS.
+    // gpl_daily_stations has no stored utilization %; derive availability from
+    // the real MW columns (available / derated capacity). (The old query named
+    // a station_utilization_pct column that never existed and 500'd this route.)
     const stationGroups: Record<string, { utilizations: number[]; outages: number; total: number }> = {};
     (stationRows || []).forEach((row: any) => {
       if (!stationGroups[row.station]) {
         stationGroups[row.station] = { utilizations: [], outages: 0, total: 0 };
       }
       stationGroups[row.station].total++;
-      if (row.station_utilization_pct != null) {
-        stationGroups[row.station].utilizations.push(parseFloat(row.station_utilization_pct));
+      const derated = Number(row.total_derated_capacity_mw);
+      const available = Number(row.total_available_mw);
+      if (derated > 0 && Number.isFinite(available)) {
+        stationGroups[row.station].utilizations.push((available / derated) * 100);
       }
       if (row.units_offline > 0) {
         stationGroups[row.station].outages++;

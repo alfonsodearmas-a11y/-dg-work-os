@@ -16,7 +16,7 @@ export async function GET() {
     .select('id', { count: 'exact', head: true })
     .eq('owner_user_id', session.user.id)
     .lt('due_date', today)
-    .not('status', 'in', '("done","cancelled")');
+    .not('status', 'in', '("done","superseded")');
 
   if (error) {
     return NextResponse.json({ count: 0 }, { status: 500 });

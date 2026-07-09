@@ -40,7 +40,7 @@ export async function verifyToken(
 
   const result = await query(
     `SELECT t.id, t.user_id, t.type, t.expires_at, t.consumed_at,
-            u.full_name, u.email, u.role, u.agency, u.status
+            u.name AS full_name, u.email, u.role, u.agency, u.status
      FROM invite_tokens t
      JOIN users u ON u.id = t.user_id
      WHERE t.token_hash = $1`,

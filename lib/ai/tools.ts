@@ -343,7 +343,7 @@ async function queryTasks(input: Record<string, unknown>): Promise<string> {
 
   let query = supabaseAdmin
     .from('tasks')
-    .select('id, title, status, priority, due_date, agency, assigned_to, description, created_at');
+    .select('id, title, status, priority, due_date, agency, owner_user_id, description, created_at');
 
   if (input.status) query = query.eq('status', input.status);
   if (input.agency) query = query.eq('agency', input.agency);
@@ -361,9 +361,10 @@ async function queryTasks(input: Record<string, unknown>): Promise<string> {
 
   let tasks = data || [];
 
-  // Resolve assignee names
-  if (tasks.some(t => t.assigned_to)) {
-    const userIds = [...new Set(tasks.filter(t => t.assigned_to).map(t => t.assigned_to))];
+  // Resolve assignee names (owner_user_id is the real column; the AI-facing
+  // output field keeps its assigned_to_name name for prompt compatibility).
+  if (tasks.some(t => t.owner_user_id)) {
+    const userIds = [...new Set(tasks.filter(t => t.owner_user_id).map(t => t.owner_user_id))];
     const { data: users } = await supabaseAdmin
       .from('users')
       .select('id, name')
@@ -371,7 +372,7 @@ async function queryTasks(input: Record<string, unknown>): Promise<string> {
     const nameMap = new Map((users || []).map(u => [u.id, u.name]));
     tasks = tasks.map(t => ({
       ...t,
-      assigned_to_name: t.assigned_to ? nameMap.get(t.assigned_to) || null : null,
+      assigned_to_name: t.owner_user_id ? nameMap.get(t.owner_user_id) || null : null,
     }));
   }
 
@@ -532,8 +533,8 @@ async function executeCreateTask(input: Record<string, unknown>, userId: string)
       priority: input.priority || 'medium',
       due_date: input.due_date || null,
       agency: input.agency || null,
-      assigned_to: assigneeId,
-      created_by: userId,
+      owner_user_id: assigneeId,
+      assigned_by_user_id: userId,
     })
     .select('id, title')
     .single();
@@ -571,11 +572,13 @@ async function executeSaveDocument(input: Record<string, unknown>, userId: strin
     .from('documents')
     .insert({
       title: input.title,
-      content: input.content,
-      category: input.category || 'briefing',
+      // `documents` has no content/uploaded_by/source columns — the AI-generated
+      // body lives in `summary`, the kind in `document_type`; uploader/source
+      // aren't modeled on documents. (Aligns to the real schema; was a total
+      // insert failure before.)
+      summary: input.content ? String(input.content) : null,
+      document_type: input.category ? String(input.category) : 'briefing',
       agency: input.agency || null,
-      uploaded_by: userId,
-      source: 'ai_generated',
     })
     .select('id, title')
     .single();
@@ -612,7 +615,7 @@ async function executeCreateFlag(input: Record<string, unknown>, userId: string)
       status: 'new',
       priority: input.priority || 'critical',
       agency: input.agency || null,
-      created_by: userId,
+      assigned_by_user_id: userId,
     })
     .select('id, title')
     .single();
@@ -660,8 +663,8 @@ async function logAIAction(userId: string, actionType: string, metadata: Record<
   try {
     await supabaseAdmin.from('admin_audit_log').insert({
       actor_id: userId,
-      action_type: 'ai_action',
-      details: { ai_tool: actionType, ...metadata },
+      action: 'ai_action',
+      metadata: { ai_tool: actionType, ...metadata },
     });
   } catch (err) {
     logger.error({ err }, 'ai/tools: audit log error');

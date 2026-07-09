@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/db-admin';
 import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 
-const REPORT_COLUMNS = 'id, report_month, compliance_data, inspection_data, registration_data, incident_data, ai_insights, created_at, updated_at';
+const REPORT_COLUMNS = 'id, report_month, compliance_data, inspection_data, registration_data, incident_data, created_at';
 
 export async function GET() {
   const authResult = await requireRole(['superadmin', 'agency_manager']);

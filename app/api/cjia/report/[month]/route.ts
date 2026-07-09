@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/db-admin';
 import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 
-const REPORT_COLUMNS = 'id, report_month, operations_data, passenger_data, revenue_data, project_data, ai_insights, created_at, updated_at';
+const REPORT_COLUMNS = 'id, report_month, operations_data, passenger_data, revenue_data, project_data, created_at';
 
 export async function GET(
   _request: NextRequest,

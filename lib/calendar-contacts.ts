@@ -10,59 +10,26 @@ export interface CalendarContact {
   created_at: string;
 }
 
+// NOTE: The `calendar_contacts` table was never created — the Calendar Command
+// Center feature (commit 8918f16) shipped this code but no migration ever backed
+// it, so the table is absent from prod. Until a migration intentionally adds it,
+// these helpers degrade to a no-op / empty result rather than 500-ing the
+// /api/calendar/contacts endpoint. Preserves the existing contract (arrays of
+// CalendarContact) so callers keep working when the table is eventually added.
 export async function upsertCalendarContacts(attendees: CalendarAttendee[]): Promise<void> {
-  if (!attendees || attendees.length === 0) return;
-
-  for (const attendee of attendees) {
-    if (!attendee.email) continue;
-
-    const { data: existing } = await supabaseAdmin
-      .from('calendar_contacts')
-      .select('id, event_count')
-      .eq('email', attendee.email)
-      .single();
-
-    if (existing) {
-      await supabaseAdmin
-        .from('calendar_contacts')
-        .update({
-          display_name: attendee.display_name || undefined,
-          last_event_at: new Date().toISOString(),
-          event_count: (existing.event_count || 0) + 1,
-        })
-        .eq('id', existing.id);
-    } else {
-      await supabaseAdmin
-        .from('calendar_contacts')
-        .insert({
-          email: attendee.email,
-          display_name: attendee.display_name || null,
-          last_event_at: new Date().toISOString(),
-          event_count: 1,
-        });
-    }
-  }
+  // Unbacked feature: no `calendar_contacts` table exists to write to. No-op.
+  void attendees;
+  return;
 }
 
 export async function searchCalendarContacts(query: string): Promise<CalendarContact[]> {
-  const { data, error } = await supabaseAdmin
-    .from('calendar_contacts')
-    .select('*')
-    .or(`email.ilike.%${query}%,display_name.ilike.%${query}%`)
-    .order('event_count', { ascending: false })
-    .limit(10);
-
-  if (error) throw error;
-  return data || [];
+  // Unbacked feature: no `calendar_contacts` table exists to read from.
+  void query;
+  return [];
 }
 
 export async function getRecentContacts(limit: number = 10): Promise<CalendarContact[]> {
-  const { data, error } = await supabaseAdmin
-    .from('calendar_contacts')
-    .select('*')
-    .order('last_event_at', { ascending: false })
-    .limit(limit);
-
-  if (error) throw error;
-  return data || [];
+  // Unbacked feature: no `calendar_contacts` table exists to read from.
+  void limit;
+  return [];
 }

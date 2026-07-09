@@ -8,11 +8,16 @@ export async function GET() {
     const authResult = await requireRole(['superadmin', 'agency_manager']);
     if (authResult instanceof NextResponse) return authResult;
 
-    const { data } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('project_uploads')
-      .select('id, filename, uploaded_at, uploaded_by, record_count, status, summary')
+      .select('id, filename, uploaded_at, row_count, changes_summary')
       .order('uploaded_at', { ascending: false })
       .limit(10);
+
+    if (error) {
+      logger.error({ err: error }, 'Project changes select failed');
+      return NextResponse.json({ error: 'Failed to fetch changes' }, { status: 500 });
+    }
 
     return NextResponse.json(data || []);
   } catch (error) {

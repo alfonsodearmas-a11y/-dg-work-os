@@ -24,19 +24,19 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   const { date, records, filename } = data!;
 
   const result = await transaction(async (client) => {
-    const existing = await client.query('SELECT id FROM daily_uploads WHERE report_date = $1', [date]);
+    const existing = await client.query('SELECT id FROM daily_uploads WHERE data_date = $1', [date]);
     let duplicateWarning = false;
 
     if (existing.rows.length > 0) {
-      await client.query('DELETE FROM daily_metric_values WHERE upload_id = $1', [existing.rows[0].id]);
+      await client.query('DELETE FROM daily_metrics WHERE upload_id = $1', [existing.rows[0].id]);
       await client.query('DELETE FROM daily_uploads WHERE id = $1', [existing.rows[0].id]);
       duplicateWarning = true;
     }
 
     const uploadResult = await client.query(
-      `INSERT INTO daily_uploads (report_date, filename, uploaded_by, record_count, status)
-       VALUES ($1, $2, $3, $4, 'confirmed') RETURNING id`,
-      [date, filename, userId, records.length]
+      `INSERT INTO daily_uploads (data_date, filename, uploaded_by, row_count, status, file_size_bytes)
+       VALUES ($1, $2, $3, $4, 'confirmed', $5) RETURNING id`,
+      [date, filename, userId, records.length, 0]
     );
     const uploadId = uploadResult.rows[0].id;
 
@@ -44,7 +44,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       if ((record as Record<string, unknown>).value_type === 'empty') continue;
       const r = record as Record<string, unknown>;
       await client.query(
-        `INSERT INTO daily_metric_values (upload_id, report_date, row_number, metric_name, category, subcategory, agency, unit, raw_value, numeric_value, value_type)
+        `INSERT INTO daily_metrics (upload_id, data_date, row_number, metric_name, category, subcategory, agency, unit, raw_value, numeric_value, value_type)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
         [uploadId, date, r.row, r.metric_name, r.category, r.subcategory, r.agency, r.unit, r.raw_value?.toString(), r.numeric_value, r.value_type]
       );
@@ -59,7 +59,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     if (analysis.success) {
       try {
         await query(
-          `INSERT INTO daily_upload_analysis (upload_id, report_date, executive_summary, anomalies, attention_items, agency_summaries, model, processing_time_ms)
+          `INSERT INTO daily_analysis (upload_id, data_date, executive_summary, anomalies, attention_items, agency_summaries, analysis_model, processing_time_ms)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
           [result.uploadId, date, analysis.analysis?.executive_summary, JSON.stringify(analysis.analysis?.anomalies), JSON.stringify(analysis.analysis?.attention_items), JSON.stringify(analysis.analysis?.agency_summaries), analysis.meta?.model, analysis.meta?.processingTimeMs]
         );

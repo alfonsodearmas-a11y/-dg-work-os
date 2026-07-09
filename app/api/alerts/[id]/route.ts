@@ -31,8 +31,8 @@ export const PATCH = withErrorHandler(async (request: NextRequest, ctx?: unknown
   let result;
   if (data!.action === 'resolve') {
     result = await pgQuery(
-      'UPDATE alerts SET resolved_at = NOW(), resolved_by = $1, is_active = false WHERE id = $2 RETURNING *',
-      [userId, id]
+      'UPDATE alerts SET resolved_at = NOW(), is_active = false WHERE id = $1 RETURNING *',
+      [id]
     );
   } else {
     result = await pgQuery(

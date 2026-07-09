@@ -203,10 +203,13 @@ async function handleJsonUpload(body: z.infer<typeof jsonUploadSchema>) {
   const fundingCount = await upsertFundingRows(fundingRows, projectIdsWithFunding);
 
   // Record upload
-  await supabaseAdmin.from('project_uploads').insert({
+  const { error: uploadRecordError } = await supabaseAdmin.from('project_uploads').insert({
     filename: 'oversight-scraper-json',
-    project_count: projects.length,
+    row_count: projects.length,
   });
+  if (uploadRecordError) {
+    logger.error({ err: uploadRecordError }, 'JSON project_uploads insert failed');
+  }
 
   return NextResponse.json({
     success: true,
@@ -318,10 +321,13 @@ export async function POST(request: NextRequest) {
     const fundingCount = await upsertFundingRows(fundingRows, projectIdsWithFunding);
 
     // Record upload
-    await supabaseAdmin.from('project_uploads').insert({
+    const { error: uploadRecordError } = await supabaseAdmin.from('project_uploads').insert({
       filename: file.name,
-      project_count: projects.length,
+      row_count: projects.length,
     });
+    if (uploadRecordError) {
+      logger.error({ err: uploadRecordError }, 'Excel project_uploads insert failed');
+    }
 
     return NextResponse.json({
       success: true,

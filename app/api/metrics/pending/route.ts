@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
     for (const [agency, table] of Object.entries(ALL_TABLES)) {
       const result = await query(
-        `SELECT m.*, u.full_name as submitted_by_name FROM ${table} m LEFT JOIN users u ON m.submitted_by = u.id WHERE m.status = 'pending' ORDER BY m.report_date DESC`
+        `SELECT m.*, u.name as submitted_by_name FROM ${table} m LEFT JOIN users u ON m.submitted_by = u.id WHERE m.status = 'pending' ORDER BY m.report_date DESC`
       );
       pending[agency] = result.rows;
     }
