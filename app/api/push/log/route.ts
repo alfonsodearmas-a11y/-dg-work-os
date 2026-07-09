@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { auth } from '@/lib/auth';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
 

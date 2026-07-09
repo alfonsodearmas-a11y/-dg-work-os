@@ -1,7 +1,7 @@
 // GPL Grid Health — Sync Logic
 // Fetches data from GPL System Control Dashboard API, caches locally in Supabase.
 
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { logger } from '@/lib/logger';
 import { GPL_CONFIG } from './config';
 import type { GplOutage, GplFeeder, GplSubstation, GplCauseCode } from './types';

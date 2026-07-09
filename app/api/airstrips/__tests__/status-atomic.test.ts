@@ -10,7 +10,7 @@ const { mockAuth, mockFrom, mockRpc } = vi.hoisted(() => ({
   mockAuth: vi.fn(), mockFrom: vi.fn(), mockRpc: vi.fn(),
 }));
 vi.mock('@/lib/auth', () => ({ auth: mockAuth }));
-vi.mock('@/lib/db', () => ({
+vi.mock('@/lib/db-admin', () => ({
   supabaseAdmin: { from: (...a: unknown[]) => mockFrom(...a), rpc: (...a: unknown[]) => mockRpc(...a) },
 }));
 import { supabaseChain as chain } from '@/tests/supabase-mock';

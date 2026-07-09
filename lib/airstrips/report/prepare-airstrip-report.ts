@@ -3,7 +3,7 @@
 // can reuse the same data shape. Photos are embedded as raw bytes via
 // storage.download() — no URL layer (the bucket is private; see Phase 0).
 
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { guyanaToday, addDays, quarterFromISODate } from '@/lib/airstrip-types';
 import { getAirstripSettings, augmentAirstrip, type AirstripOverviewRow } from '@/lib/airstrips/queries';
 import type { AirstripCadence } from '@/lib/airstrips/warnings';

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { notFound } from 'next/navigation';
 import { requireRole } from '@/lib/auth-helpers';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { getReportAuditLog, getReportById, getReportTenderSnapshots } from '@/lib/nptab/queries';
 import { NptabReportDetailClient } from '../_components/NptabReportDetailClient';
 

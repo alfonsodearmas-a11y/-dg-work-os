@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { buildDailyDigest, formatDigestBody } from '@/lib/action-items/digest';
 import { insertNotification } from '@/lib/notifications';
 import { logger } from '@/lib/logger';

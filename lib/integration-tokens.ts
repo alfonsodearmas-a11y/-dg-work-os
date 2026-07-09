@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './db';
+import { supabaseAdmin } from './db-admin';
 import { logger } from '@/lib/logger';
 
 const TABLE = 'integration_tokens';

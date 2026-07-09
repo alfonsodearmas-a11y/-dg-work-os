@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock supabaseAdmin before importing project-queries
-vi.mock('@/lib/db', () => ({
+vi.mock('@/lib/db-admin', () => ({
   supabaseAdmin: {
     from: vi.fn().mockReturnValue({
       select: vi.fn().mockReturnThis(),

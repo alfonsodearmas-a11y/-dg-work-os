@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import type { Role } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 

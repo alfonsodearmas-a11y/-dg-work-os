@@ -11,7 +11,7 @@
 //     have no agency column (meetings table is ministry-wide), so agency
 //     users see zero meeting actions in v1 — documented at the fetcher.
 
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { logger } from '@/lib/logger';
 import type { Role } from '@/lib/auth';
 import { getProjects } from '@/lib/delayed-projects/queries';

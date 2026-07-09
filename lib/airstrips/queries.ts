@@ -2,7 +2,7 @@
 // into cadence-augmented airstrips. Shared by the list route, the detail route,
 // and the PDF report so warning logic never drifts between surfaces.
 
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { guyanaToday } from '@/lib/airstrip-types';
 import {
   computeAirstripWarnings,

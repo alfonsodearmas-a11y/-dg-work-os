@@ -1,6 +1,6 @@
 import { redirect, notFound } from 'next/navigation';
 import { auth } from '@/lib/auth';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { ExtractionToolInputZ } from '@/lib/action-items/extraction/types';
 import { resolveExtractedItem, type ReviewableItem } from '@/lib/action-items/resolution/resolve';
 import { requiresMandatoryReview } from '@/lib/action-items/gate';

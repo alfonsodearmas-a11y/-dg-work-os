@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { archiveTender, listMissingTenders } from '@/lib/tender/queries';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { recordDecision } from '@/lib/procurement/decisions';
 import { recordPresenceEvent } from '@/lib/procurement/presence';
 import { recordStatusTransition } from '@/lib/procurement/status';

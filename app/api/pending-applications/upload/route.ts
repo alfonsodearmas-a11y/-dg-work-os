@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { createHash, randomBytes } from 'crypto';
 import { detectAgency } from '@/lib/pending-applications-parser';
 import { auth } from '@/lib/auth';

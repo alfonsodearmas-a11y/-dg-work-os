@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { parseGWIDocx } from '@/lib/gwi-docx-parser';
 import { extractManagementReport, extractCSCRReport, extractProcurementReport } from '@/lib/gwi-report-extractor';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import type { GWIReportType } from '@/lib/gwi-docx-parser';
 import { requireRole } from '@/lib/auth-helpers';
 import { withErrorHandler } from '@/lib/api-utils';

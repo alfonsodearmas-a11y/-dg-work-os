@@ -5,7 +5,7 @@
 // compose step needs description, stage, and the specific missing field
 // name for each row.
 
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 
 export interface MissingTenderRow {
   id: string;

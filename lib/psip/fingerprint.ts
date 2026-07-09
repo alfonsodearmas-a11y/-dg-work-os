@@ -13,7 +13,7 @@
 // (1) no security need; (2) instantly inspectable in the DB; (3) trivial to
 // debug ("show me everything for fingerprint X" is a substring search away).
 
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { normalizeDescription } from './parser';
 import { fieldDiffs, type ExistingTenderSnapshot } from './matcher';
 import type { MatchResult, ParsedTender } from './types';

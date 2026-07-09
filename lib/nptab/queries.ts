@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { transaction } from '@/lib/db-pg';
 import { logger } from '@/lib/logger';
 import { rejectEmDash } from '@/lib/text/punctuation-guard';

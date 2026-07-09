@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { logger } from '@/lib/logger';
 import { checkAuthEmailRateLimit, getClientIp } from '@/lib/auth-rate-limit';
 import { getAppBaseUrl, sendPasswordResetEmail, sendMagicLinkEmail } from '@/lib/auth-emails';

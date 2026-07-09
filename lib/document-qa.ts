@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { supabaseAdmin } from './db';
+import { supabaseAdmin } from './db-admin';
 import { AI_MODEL_OPUS } from '@/lib/constants/ai-config';
 
 const anthropic = new Anthropic();

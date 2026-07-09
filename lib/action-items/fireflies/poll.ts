@@ -1,6 +1,6 @@
 import 'server-only';
 import { randomUUID } from 'node:crypto';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { listRecentTranscripts } from './client';
 import type { FirefliesTranscriptMeta } from './types';
 import { logger } from '@/lib/logger';

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAirstripAccess } from '@/lib/auth-helpers';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 
 // GET /api/airstrips/options?category=activity_type
 // or  /api/airstrips/options?categories=activity_type,verification_method

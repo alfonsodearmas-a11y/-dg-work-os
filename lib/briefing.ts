@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './db';
+import { supabaseAdmin } from './db-admin';
 import { logger } from '@/lib/logger';
 import { fetchTodayEvents, fetchWeekEvents, fetchTomorrowEvents, CalendarEvent, classifyCalendarError } from './google-calendar';
 import { calculateDayStats } from './calendar-utils';

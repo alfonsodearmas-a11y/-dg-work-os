@@ -1,7 +1,7 @@
 import 'server-only';
 import { cookies } from 'next/headers';
 import { getServerSupabase } from '@/lib/supabase/server';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { buildSession, type Session, type ProfileRow } from '@/lib/auth-session';
 import { e2eAuthEnabled, e2eSessionFromCookie } from '@/lib/e2e-auth';
 import { logger } from '@/lib/logger';

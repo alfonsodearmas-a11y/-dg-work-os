@@ -8,7 +8,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireRole } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { createNotification } from '@/lib/notifications/notification-service';
 
 export const runtime = 'nodejs';

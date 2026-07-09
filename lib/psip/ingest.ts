@@ -5,7 +5,7 @@
 // rows. Apply reads the preview and commits NEW / UPDATE / missing flips plus
 // `tender_field_change` log entries.
 
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { parsePsipWorkbook } from './parser';
 import { matchTenders, type ExistingTenderSnapshot, DIFFABLE_FIELDS } from './matcher';
 import type { MatchResult, ParseResult, ParsedTender, ReviewReason } from './types';

@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { sendEmail } from '@/lib/email';
 import { renderInstantEmail, type EmailNotification } from './email-templates';
 import { entityUrl } from './email-utils';

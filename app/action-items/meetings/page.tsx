@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { MeetingsList } from '@/components/action-items/MeetingsList';
 import { DailyDigestCard } from '@/components/action-items/DailyDigestCard';
 import { buildDailyDigest } from '@/lib/action-items/digest';

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireHinterlandAccess } from '@/lib/auth-helpers';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { logger } from '@/lib/logger';
 import { WATER_STATUSES } from '@/lib/hinterland-types';
 import type { CommunityListRow, WaterStatusValue } from '@/lib/hinterland-types';

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { requireRole, canAccessAgency } from '@/lib/auth-helpers';
 import { aggregateMonthly } from '@/lib/gpl/scoring';
 import type { GplOutage, GplFeeder } from '@/lib/gpl/types';

@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { nextQuarterEnd, periodLabel } from './period';
 
 export interface ActiveNptabQueueBrief {

@@ -1,6 +1,6 @@
 // ZDR posture: see anthropic-client.ts header. Direct Anthropic only.
 import 'server-only';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { anthropicClient, EXTRACTION_MODEL } from './anthropic-client';
 import { getTranscript } from '@/lib/action-items/fireflies/client';
 import { ExtractionToolInputZ, type ExtractedItem } from './types';

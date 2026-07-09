@@ -1,7 +1,7 @@
 // GPL Upload Processing Pipeline
 // Orchestrates: parse -> dedup -> metrics -> db upsert -> outlier update
 
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { logger } from '@/lib/logger';
 import { parseGPLExcel } from './parser';
 import { computeOutstandingMetrics, computeCompletedMetrics } from './metrics';

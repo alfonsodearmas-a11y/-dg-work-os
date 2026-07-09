@@ -27,7 +27,7 @@ function makeChain(result: ChainResult = { data: [], error: null }) {
 
 const fromMock = vi.fn<(table: string) => unknown>();
 
-vi.mock('@/lib/db', () => ({
+vi.mock('@/lib/db-admin', () => ({
   supabaseAdmin: {
     from: (table: string) => fromMock(table),
   },

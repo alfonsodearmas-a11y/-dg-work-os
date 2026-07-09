@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { createHash } from 'crypto';
 import { parseGPLBuffer, parseGWIBuffer } from '@/lib/pending-applications-parser';
 import { createSnapshot } from '@/lib/pending-applications-snapshots';

@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './db';
+import { supabaseAdmin } from './db-admin';
 import { fetchWeekEvents } from './google-calendar';
 import { logger } from '@/lib/logger';
 import { normalizeRole } from './auth-session';

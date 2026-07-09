@@ -5,7 +5,7 @@
 // aligned. decision_id links the ledger to the universal procurement_decision
 // audit log.
 
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 
 export const TENDER_STATUSES = [
   'active',

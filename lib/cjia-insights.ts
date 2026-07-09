@@ -6,7 +6,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import crypto from 'crypto';
-import { supabaseAdmin } from './db';
+import { supabaseAdmin } from './db-admin';
 import { logger } from '@/lib/logger';
 import { parseAIJson } from '@/lib/parse-utils';
 import { AI_MODEL } from '@/lib/constants/ai-config';

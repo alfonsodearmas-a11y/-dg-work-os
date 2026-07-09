@@ -8,7 +8,7 @@
 //   4. Upserts psip_nag_record entries for the weekly trigger only
 //      (event triggers are orthogonal and do not bump weekly streaks).
 
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { logger } from '@/lib/logger';
 import { sendEmail } from '@/lib/email';
 import { composeWeeklyNag } from './templates/weekly';

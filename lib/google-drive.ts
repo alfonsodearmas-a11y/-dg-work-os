@@ -1,5 +1,5 @@
 import { google, drive_v3 } from 'googleapis';
-import { supabaseAdmin } from './db';
+import { supabaseAdmin } from './db-admin';
 import { extractText } from './document-parser';
 import { analyzeDocument } from './document-analyzer';
 import { logger } from './logger';

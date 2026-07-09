@@ -10,7 +10,7 @@
 //
 // approval_state defaults to 'none' until the Phase 3 approval-gate flow lands.
 
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 
 export type ProcurementDecisionType =
   | 'archive'

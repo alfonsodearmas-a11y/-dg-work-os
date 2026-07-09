@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAirstripAccess } from '@/lib/auth-helpers';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db-admin';
 import { logger } from '@/lib/logger';
 
 // GET /api/airstrips/managers — users eligible to be a responsible manager for an
