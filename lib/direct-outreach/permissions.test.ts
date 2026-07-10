@@ -42,6 +42,21 @@ describe('isValidAssignmentTarget (locked decision Q3)', () => {
     expect(isValidAssignmentTarget({ role: 'superadmin', agency: null, is_active: false }, 'GWI')).toBe(false);
     expect(isValidAssignmentTarget({ role: 'system', agency: null, is_active: true }, 'GWI')).toBe(false);
   });
+
+  test('SUPERADMIN assigner may pick any active human — cross-agency, any role', () => {
+    expect(isValidAssignmentTarget({ role: 'agency_manager', agency: 'MARAD', is_active: true }, 'GPL', 'superadmin')).toBe(true);
+    expect(isValidAssignmentTarget({ role: 'agency_manager', agency: 'HECI', is_active: true }, 'PUA', 'superadmin')).toBe(true);
+    expect(isValidAssignmentTarget({ role: 'staff', agency: null, is_active: true }, 'GWI', 'superadmin')).toBe(true);
+    // …but never non-humans or deactivated accounts
+    expect(isValidAssignmentTarget({ role: 'system', agency: null, is_active: true }, 'GWI', 'superadmin')).toBe(false);
+    expect(isValidAssignmentTarget({ role: 'agency_manager', agency: 'MARAD', is_active: false }, 'GPL', 'superadmin')).toBe(false);
+  });
+
+  test('agency_manager assigner keeps the locked Q3 rule', () => {
+    expect(isValidAssignmentTarget({ role: 'agency_manager', agency: 'MARAD', is_active: true }, 'GPL', 'agency_manager')).toBe(false);
+    expect(isValidAssignmentTarget({ role: 'agency_manager', agency: 'GPL', is_active: true }, 'GPL', 'agency_manager')).toBe(true);
+    expect(isValidAssignmentTarget({ role: 'superadmin', agency: null, is_active: true }, 'GPL', 'agency_manager')).toBe(true);
+  });
 });
 
 describe('canPostOutreachUpdate (v3)', () => {

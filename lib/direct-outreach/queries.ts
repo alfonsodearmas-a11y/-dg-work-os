@@ -271,6 +271,7 @@ export async function getOpenCases(
 export async function getCase(
   caseId: number,
   agencyScope?: string,
+  requesterId?: string,
 ): Promise<{
   case: OutreachCaseDetail;
   updates: OutreachUpdate[];
@@ -283,7 +284,17 @@ export async function getCase(
   if (agencyScope) {
     params.push(agencyScope);
     // Ownership follows the transfer override — same COALESCE as the view.
-    scopeClause = 'AND upper(coalesce(o.agency, c.agency)) = $2';
+    // The requester-identity branch lets the ASSIGNED responsible officer open
+    // their own case even when its effective agency is not theirs (e.g. a
+    // superadmin assigned a cross-agency officer) — without it the assignee
+    // 404s on the very case they must work. Anyone else outside the agency
+    // still gets the opaque 404 (locked Q-spec).
+    if (requesterId) {
+      params.push(requesterId);
+      scopeClause = 'AND (upper(coalesce(o.agency, c.agency)) = $2 OR a.assignee_user_id = $3::uuid)';
+    } else {
+      scopeClause = 'AND upper(coalesce(o.agency, c.agency)) = $2';
+    }
   }
 
   // Same aging/state expressions as direct_outreach_open_v (Guyana calendar
@@ -411,6 +422,26 @@ export async function getUserForAssignment(
 }
 
 /**
+ * Every ACTIVE human user in the system — the superadmin assignment picker
+ * (a superadmin may assign ANY human as responsible officer, regardless of
+ * agency or role). Driven entirely off the users table: no agency allowlist,
+ * no OUTREACH_AGENCIES. The only exclusions are non-humans (role = 'system'
+ * is the users table's sole service-account marker — verified: no
+ * is_service/is_bot/type column exists) and deactivated accounts (they cannot
+ * log in to work a case, and setAssignee's validator rejects them anyway).
+ */
+export async function getAssignableOfficers(): Promise<
+  { id: string; name: string | null; role: string; agency: string | null }[]
+> {
+  const result = await query(
+    `SELECT id, name, role, agency FROM users
+      WHERE is_active AND role <> 'system'
+      ORDER BY name NULLS LAST, id`,
+  );
+  return result.rows as { id: string; name: string | null; role: string; agency: string | null }[];
+}
+
+/**
  * Guarded upsert: the INSERT..SELECT re-checks the case's CURRENT effective
  * agency in the same statement, so a transfer committing between the route's
  * permission check and this write makes it a no-op instead of stranding an
@@ -500,12 +531,14 @@ export async function insertOfficerUpdate(input: OfficerUpdateInput): Promise<Ou
 
 /**
  * Mention scope guard: of the @-mentioned user ids, keep only active users who
- * can actually SEE the case (superadmins, or managers of its effective agency)
- * — so nobody is notified into a case that 404s for them.
+ * can actually SEE the case (superadmins, managers of its effective agency, or
+ * the case's ASSIGNED officer — who can open it cross-agency via getCase's
+ * identity clause) — so nobody is notified into a case that 404s for them.
  */
 export async function filterMentionableUsers(
   userIds: string[],
   effectiveAgency: string | null,
+  assigneeUserId?: string | null,
 ): Promise<string[]> {
   if (userIds.length === 0) return [];
   const result = await query(
@@ -513,8 +546,9 @@ export async function filterMentionableUsers(
       WHERE id = ANY($1::uuid[])
         AND is_active
         AND (role = 'superadmin'
-             OR (role = 'agency_manager' AND upper(agency) = upper($2::text)))`,
-    [userIds, effectiveAgency],
+             OR (role = 'agency_manager' AND upper(agency) = upper($2::text))
+             OR id = $3::uuid)`,
+    [userIds, effectiveAgency, assigneeUserId ?? null],
   );
   return (result.rows as { id: string }[]).map((r) => r.id);
 }

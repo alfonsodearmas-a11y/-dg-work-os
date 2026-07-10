@@ -47,7 +47,9 @@ export async function GET(
   if (caseIdNum instanceof NextResponse) return caseIdNum;
 
   try {
-    const detail = await getCase(caseIdNum, agencyScopeFor(session));
+    // Scope OR requester-is-assignee: an assigned officer opens their case
+    // even cross-agency; everyone else out-of-scope stays an opaque 404.
+    const detail = await getCase(caseIdNum, agencyScopeFor(session), session.user.id);
     if (!detail) {
       return NextResponse.json({ error: 'Case not found' }, { status: 404 });
     }
@@ -83,9 +85,12 @@ export async function PATCH(
   const assigneeUserId = parsed.data.assignee_user_id;
 
   try {
-    // Scoped fetch: an agency_manager can only see (and therefore assign) cases
-    // whose EFFECTIVE agency is theirs — out-of-scope stays an opaque 404.
-    const detail = await getCase(caseIdNum, agencyScopeFor(session));
+    // Scoped fetch (OR requester-is-assignee): an agency_manager can only see
+    // cases whose EFFECTIVE agency is theirs, plus any case they are assigned
+    // to — out-of-scope non-assignees stay an opaque 404. Assignment rights
+    // are still gated by canAssignOutreachCase below (a cross-agency assignee
+    // can view, not reassign).
+    const detail = await getCase(caseIdNum, agencyScopeFor(session), session.user.id);
     if (!detail) {
       return NextResponse.json({ error: 'Case not found' }, { status: 404 });
     }
@@ -104,7 +109,7 @@ export async function PATCH(
     if (!target || !target.is_active) {
       return NextResponse.json({ error: 'Assignee not found or inactive' }, { status: 400 });
     }
-    if (!isValidAssignmentTarget(target, effectiveAgency)) {
+    if (!isValidAssignmentTarget(target, effectiveAgency, session.user.role)) {
       return NextResponse.json(
         { error: 'Assignee must belong to the case agency or be a superadmin' },
         { status: 403 },

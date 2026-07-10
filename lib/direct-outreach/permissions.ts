@@ -19,12 +19,11 @@ export function canAssignOutreachCase(
 /**
  * Who may post progress updates / set working status / set the officer target
  * date (v3): the ASSIGNED officer, the owning agency's manager, or a
- * superadmin. NOTE: the route's agency-scoped getCase runs FIRST, so an
- * agency_manager outside the case's effective agency gets an opaque 404
- * before this helper is consulted — including an assignee stranded by a
- * workbook agency change (locked decision: no cross-agency access; the owning
- * manager reassigns). The identity clause is defense-in-depth for callers
- * that can already see the case, not a scope override.
+ * superadmin. getCase's visibility clause admits the requester when they are
+ * the assignee (scope OR identity), so a cross-agency assignee — e.g. a
+ * Ministry or MARAD officer a superadmin assigned to a GWI case — reaches
+ * this helper and the identity clause grants them the write. Out-of-scope
+ * NON-assignees still 404 before this helper runs (locked Q-spec).
  */
 export function canPostOutreachUpdate(
   role: string | null | undefined,
@@ -37,12 +36,20 @@ export function canPostOutreachUpdate(
   return canAssignOutreachCase(role, userAgency, effectiveAgency);
 }
 
-/** Who may be assigned (locked decision Q3): the case agency's active users + superadmins. */
+/**
+ * Who may be assigned. A SUPERADMIN assigner may pick ANY active human user
+ * (any agency, any role — only role='system' service accounts are excluded);
+ * an agency_manager assigner keeps the locked Q3 rule: the case agency's
+ * active users + superadmins.
+ */
 export function isValidAssignmentTarget(
   target: { role: string | null; agency: string | null; is_active: boolean },
   effectiveAgency: string | null | undefined,
+  assignerRole?: string | null,
 ): boolean {
   if (!target.is_active) return false;
+  if (target.role === 'system') return false;
+  if (assignerRole === 'superadmin') return true;
   if (target.role === 'superadmin') return true;
   if (target.role !== 'agency_manager') return false;
   if (!target.agency || !effectiveAgency) return false;

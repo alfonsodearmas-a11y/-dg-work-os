@@ -76,9 +76,12 @@ export async function POST(
   const targetDate = parsed.data.target_date; // undefined | null | string
 
   try {
-    // Scoped fetch: an agency_manager can only see (and therefore update) cases
-    // whose EFFECTIVE agency is theirs — out-of-scope stays an opaque 404.
-    const detail = await getCase(caseIdNum, agencyScopeFor(session));
+    // Scoped fetch (OR requester-is-assignee): an agency_manager sees cases
+    // whose EFFECTIVE agency is theirs plus any case they are ASSIGNED to —
+    // the assigned officer must be able to work a cross-agency case. Other
+    // out-of-scope users stay an opaque 404, and canPostOutreachUpdate's
+    // identity clause below now actually fires for cross-agency assignees.
+    const detail = await getCase(caseIdNum, agencyScopeFor(session), session.user.id);
     if (!detail) {
       return NextResponse.json({ error: 'Case not found' }, { status: 404 });
     }
@@ -122,10 +125,12 @@ export async function POST(
         if (body) {
           const extracted = await cleanMentionBody(body);
           cleanBody = extracted.cleanBody;
-          // Scope guard: never notify a user into a case that 404s for them.
+          // Scope guard: never notify a user into a case that 404s for them
+          // (the assignee can always open it, so they are always mentionable).
           mentionedIds = await filterMentionableUsers(
             extracted.mentionedUserIds.filter((id) => UUID_RE.test(id)),
             effectiveAgency,
+            assigneeUserId,
           );
         }
         const summary = [cleanBody, ...parts].filter(Boolean).join(' · ');

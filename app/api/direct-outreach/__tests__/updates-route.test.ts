@@ -68,8 +68,11 @@ const flushAsync = () => new Promise((r) => setTimeout(r, 0));
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockGetCase.mockImplementation(async (id: number, scope?: string) =>
-    id === CASE_ID && (scope === undefined || scope === 'GPL') ? caseDetail() : null,
+  // Mirrors the live visibility contract: agency scope OR requester-is-assignee.
+  mockGetCase.mockImplementation(async (id: number, scope?: string, requesterId?: string) =>
+    id === CASE_ID && (scope === undefined || scope === 'GPL' || requesterId === ASSIGNEE)
+      ? caseDetail()
+      : null,
   );
   mockInsertOfficerUpdate.mockResolvedValue({
     id: 'update-1', case_id: CASE_ID, author_id: 'x', body: 'hello',
@@ -100,6 +103,19 @@ describe('POST /api/direct-outreach/[caseId]/updates — permission matrix', () 
     await flushAsync();
     expect(mockCreateNotification).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: 'outreach_case_update', recipientId: ASSIGNEE }),
+    );
+  });
+
+  it('CROSS-AGENCY assignee may post (201) — the identity clause now actually fires', async () => {
+    // A superadmin assigned a HECI manager to this GPL case: the scoped fetch
+    // admits them via requester-is-assignee, and canPostOutreachUpdate's
+    // identity clause grants the write.
+    sessionFor({ id: ASSIGNEE, role: 'agency_manager', agency: 'HECI', name: 'Cross Agency Officer' });
+    const res = await POST(...post(CASE_ID, { body: 'working it from HECI' }));
+    expect(res.status).toBe(201);
+    expect(mockGetCase).toHaveBeenCalledWith(CASE_ID, 'HECI', ASSIGNEE);
+    expect(mockInsertOfficerUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ caseId: CASE_ID, authorId: ASSIGNEE }),
     );
   });
 
