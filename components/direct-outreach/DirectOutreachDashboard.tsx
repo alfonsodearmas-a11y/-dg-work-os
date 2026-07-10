@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { CalendarX, CheckCircle2, Inbox, Radio, Search, Upload, UserX, X } from 'lucide-react';
+import { Radio, Search, Upload, X } from 'lucide-react';
 import { MultiSelect } from '@/components/oversight/shared';
+import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
+import { Spinner } from '@/components/ui/Spinner';
+import { Tabs } from '@/components/ui/Tabs';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import { fmtGuyanaDateTime } from '@/lib/format';
 import type {
@@ -22,7 +25,6 @@ import {
   OUTREACH_WORKING_STATUS_LABELS,
   UNASSIGNED_OFFICER,
 } from '@/lib/direct-outreach/types';
-import { OutreachStatCard } from './OutreachStatCard';
 import { AgencyScorecards } from './AgencyScorecards';
 import { OfficerLoadTable } from './OfficerLoadTable';
 import { CasesTable } from './CasesTable';
@@ -47,23 +49,44 @@ const NO_TOGGLES: Toggles = {
   stale: false, officerOverdue: false, mine: false,
 };
 
-const TOGGLE_PILLS: { key: keyof Toggles; label: string }[] = [
+// Default chips stay visible; everything else lives in the "More filters"
+// disclosure. Same toggle keys → same query params as before, only regrouped.
+const DEFAULT_PILLS: { key: keyof Toggles; label: string; title?: string }[] = [
+  { key: 'stale', label: 'Needs action', title: `No officer update >${OUTREACH_STALE_OFFICER_DAYS}d` },
+  { key: 'mine', label: 'Assigned to me' },
   { key: 'high', label: 'High priority' },
-  { key: 'stale', label: `No officer update >${OUTREACH_STALE_OFFICER_DAYS}d` },
+];
+
+const MORE_PILLS: { key: keyof Toggles; label: string; title?: string }[] = [
   { key: 'officerOverdue', label: 'Officer overdue' },
   { key: 'stalled60', label: 'OP stalled >60d' },
   { key: 'stalled90', label: 'OP stalled >90d' },
   { key: 'target', label: 'Has target date' },
   { key: 'overdue', label: 'Overdue' },
-  { key: 'mine', label: 'Assigned to me' },
 ];
 
-function TogglePill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+const ALL_PILLS = [...DEFAULT_PILLS, ...MORE_PILLS];
+
+/** Sort options — the same fields the table headers expose, one control. */
+const SORT_OPTIONS: { value: OutreachSortField; label: string }[] = [
+  { value: 'officer_update', label: 'Most neglected' },
+  { value: 'days_idle', label: 'OP idle' },
+  { value: 'latest_update_date', label: 'Latest update' },
+  { value: 'target_date', label: 'Target date' },
+  { value: 'case_id', label: 'Case #' },
+  { value: 'agency', label: 'Agency' },
+  { value: 'status', label: 'Status' },
+  { value: 'theme', label: 'Theme / Issue' },
+  { value: 'assignee', label: 'Officer' },
+];
+
+function TogglePill({ label, title, active, onClick }: { label: string; title?: string; active: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
+      title={title}
       className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
         active
           ? 'bg-gold-500/15 text-gold-500 border-gold-500/30'
@@ -71,6 +94,48 @@ function TogglePill({ label, active, onClick }: { label: string; active: boolean
       }`}
     >
       {label}
+    </button>
+  );
+}
+
+/** One cell of the compact stat strip. Clickable stats are toggles for an
+ *  existing filter param; stats with no backing filter render as plain text. */
+function StatCell({
+  label, value, sub, active, onClick,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  active?: boolean;
+  onClick?: () => void;
+}) {
+  const body = (
+    <>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-navy-600">{label}</p>
+      <p className="font-mono text-2xl font-bold text-white tabular-nums leading-none mt-1.5">{value}</p>
+      {sub && <p className="text-[11px] text-navy-600 mt-1.5">{sub}</p>}
+    </>
+  );
+
+  if (!onClick) {
+    return (
+      <div className="p-2" aria-label={`${label}: ${value}`}>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active ?? false}
+      aria-label={`${label}: ${value}`}
+      className={`block w-full text-left p-2 rounded-lg transition-colors ${
+        active ? 'ring-1 ring-gold-500/40 bg-gold-500/15' : 'hover:bg-navy-900/60'
+      }`}
+    >
+      {body}
     </button>
   );
 }
@@ -112,6 +177,9 @@ export function DirectOutreachDashboard() {
   // Q6 default: officer-action staleness, most neglected (never touched) first.
   const [sort, setSort] = useState<OutreachSortField>(OUTREACH_DEFAULT_SORT);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  // Cases | Overview tab — pure presentation state (no query param governs it
+  // today, so a reload lands back on the default Cases tab).
+  const [activeTab, setActiveTab] = useState<'cases' | 'overview'>('cases');
 
   // ?case= deep link (notification links land here). Fully DERIVED selection:
   // user actions record an override relative to the current URL param, so a
@@ -276,7 +344,7 @@ export function DirectOutreachDashboard() {
     ...(regions.length ? [{ label: `Region (${regions.length})`, onClear: () => setRegions([]) }] : []),
     ...(officers.length ? [{ label: `Officer (${officers.length})`, onClear: () => setOfficers([]) }] : []),
     ...(workingStatuses.length ? [{ label: `Progress (${workingStatuses.length})`, onClear: () => setWorkingStatuses([]) }] : []),
-    ...TOGGLE_PILLS.filter((p) => toggles[p.key]).map((p) => ({
+    ...ALL_PILLS.filter((p) => toggles[p.key]).map((p) => ({
       label: p.label,
       onClear: () => setToggle(p.key, false),
     })),
@@ -340,7 +408,7 @@ export function DirectOutreachDashboard() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="btn-gold flex items-center gap-2 shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="btn-navy text-sm flex items-center gap-2 shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <Upload className="h-4 w-4" aria-hidden="true" />
               {uploading ? 'Uploading…' : 'Upload OP Direct workbook'}
@@ -355,125 +423,139 @@ export function DirectOutreachDashboard() {
         </div>
       )}
 
-      {/* KPI row — officer accountability is the module's center of gravity (v3) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <OutreachStatCard
-          label="Open Backlog"
-          value={totals?.open ?? '—'}
-          icon={Inbox}
-          iconBg="rgba(212,175,55,0.15)"
-          iconColor="#f4d03f"
-          sub={totals && totals.unassigned_open > 0 ? `${totals.unassigned_open} unassigned — click to filter` : undefined}
-          active={officers.length === 1 && officers[0] === UNASSIGNED_OFFICER}
-          onClick={() =>
-            setOfficers((prev) =>
-              prev.length === 1 && prev[0] === UNASSIGNED_OFFICER ? [] : [UNASSIGNED_OFFICER],
-            )
-          }
-        />
-        <OutreachStatCard
-          label="Needs Officer Action"
-          value={totals?.stale_officer ?? '—'}
-          icon={UserX}
-          iconBg="rgba(220,38,38,0.15)"
-          iconColor="#f87171"
-          sub={`no officer update in >${OUTREACH_STALE_OFFICER_DAYS}d`}
-          active={toggles.stale}
-          onClick={() => setToggle('stale')}
-        />
-        <OutreachStatCard
-          label="Officer Overdue"
-          value={totals?.officer_overdue ?? '—'}
-          icon={CalendarX}
-          iconBg="rgba(220,38,38,0.15)"
-          iconColor="#f87171"
-          sub="officer-committed dates past due"
-          active={toggles.officerOverdue}
-          onClick={() => setToggle('officerOverdue')}
-        />
-        <OutreachStatCard
-          label="Resolution Rate"
-          value={resolutionRate == null ? '—' : `${resolutionRate}%`}
-          icon={CheckCircle2}
-          iconBg="rgba(5,150,105,0.15)"
-          iconColor="#34d399"
-          sub={totals ? `${totals.resolved} of ${totals.total} cases resolved` : undefined}
-        />
+      {/* Cases | Overview tab switcher */}
+      <Tabs
+        tabs={[{ id: 'cases', label: 'Cases' }, { id: 'overview', label: 'Overview' }]}
+        activeTab={activeTab}
+        onChange={(id) => setActiveTab(id as 'cases' | 'overview')}
+      />
+
+      {/* Compact stat strip — same numbers and same filter params as the old
+          KPI cards; clicking a stat while Overview is active jumps to Cases. */}
+      <div className="card-premium p-3">
+        {totals ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            <StatCell
+              label="Open backlog"
+              value={totals.open}
+              sub={totals.unassigned_open > 0 ? `${totals.unassigned_open} unassigned — click to filter` : undefined}
+              active={officers.length === 1 && officers[0] === UNASSIGNED_OFFICER}
+              onClick={() => {
+                setOfficers((prev) =>
+                  prev.length === 1 && prev[0] === UNASSIGNED_OFFICER ? [] : [UNASSIGNED_OFFICER],
+                );
+                setActiveTab('cases');
+              }}
+            />
+            <StatCell
+              label="Needs officer action"
+              value={totals.stale_officer}
+              sub={`no officer update in >${OUTREACH_STALE_OFFICER_DAYS}d`}
+              active={toggles.stale}
+              onClick={() => { setToggle('stale'); setActiveTab('cases'); }}
+            />
+            <StatCell
+              label="Officer overdue"
+              value={totals.officer_overdue}
+              sub="officer-committed dates past due"
+              active={toggles.officerOverdue}
+              onClick={() => { setToggle('officerOverdue'); setActiveTab('cases'); }}
+            />
+            {/* No list filter is backed by resolution rate — display-only. */}
+            <StatCell
+              label="Resolution rate"
+              value={resolutionRate == null ? '—' : `${resolutionRate}%`}
+              sub={`${totals.resolved} of ${totals.total} cases resolved`}
+            />
+          </div>
+        ) : !summaryError ? (
+          <div className="flex items-center justify-center py-4" role="status" aria-label="Loading summary">
+            <Spinner />
+          </div>
+        ) : null}
       </div>
 
-      {/* Agency scorecards */}
-      {summary && <AgencyScorecards agencies={summary.agencies} />}
-
-      {/* Per-officer workload (v3) — row click filters to that officer */}
-      {summary && (
-        <OfficerLoadTable
-          officers={summary.officer_load}
-          onSelect={(officerId) => setOfficers([officerId])}
-        />
-      )}
-
-      {/* Controls */}
+      {/* Controls — 3 default chips; every other filter keeps its exact params
+          inside the "More filters" disclosure. */}
       <div className="card-premium p-4 space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          {isSuperadmin && (
-            <MultiSelect
-              label="Agency"
-              options={OUTREACH_AGENCIES.map((a) => ({ value: a, label: a }))}
-              selected={agencies}
-              onChange={setAgencies}
-            />
-          )}
-          <MultiSelect
-            label="Status"
-            options={LIST_STATUSES.map((s) => ({ value: s, label: s }))}
-            selected={statuses}
-            onChange={setStatuses}
-          />
-          <MultiSelect
-            label="Theme"
-            options={OUTREACH_THEMES.map((t) => ({ value: t, label: t }))}
-            selected={themes}
-            onChange={setThemes}
-          />
-          <MultiSelect
-            label="Outreach"
-            options={(options?.outreach_locations ?? []).map((o) => ({ value: o, label: o }))}
-            selected={outreaches}
-            onChange={setOutreaches}
-          />
-          <MultiSelect
-            label="Region"
-            options={(options?.regions ?? []).map((r) => ({ value: r, label: r }))}
-            selected={regions}
-            onChange={setRegions}
-          />
-          <MultiSelect
-            label="Officer"
-            options={officerOptions}
-            selected={officers}
-            onChange={setOfficers}
-          />
-          <MultiSelect
-            label="Progress"
-            options={OUTREACH_WORKING_STATUSES.map((s) => ({
-              value: s,
-              label: OUTREACH_WORKING_STATUS_LABELS[s],
-            }))}
-            selected={workingStatuses}
-            onChange={setWorkingStatuses}
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {TOGGLE_PILLS.map((pill) => (
+          {DEFAULT_PILLS.map((pill) => (
             <TogglePill
               key={pill.key}
               label={pill.label}
+              title={pill.title}
               active={toggles[pill.key]}
-              onClick={() => setToggle(pill.key)}
+              onClick={() => { setToggle(pill.key); setActiveTab('cases'); }}
             />
           ))}
         </div>
+
+        {/* overflowVisible: the MultiSelect popovers must escape the collapse clip */}
+        <CollapsibleSection title="More filters" defaultOpen={false} overflowVisible>
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {isSuperadmin && (
+                <MultiSelect
+                  label="Agency"
+                  options={OUTREACH_AGENCIES.map((a) => ({ value: a, label: a }))}
+                  selected={agencies}
+                  onChange={setAgencies}
+                />
+              )}
+              <MultiSelect
+                label="Status"
+                options={LIST_STATUSES.map((s) => ({ value: s, label: s }))}
+                selected={statuses}
+                onChange={setStatuses}
+              />
+              <MultiSelect
+                label="Theme"
+                options={OUTREACH_THEMES.map((t) => ({ value: t, label: t }))}
+                selected={themes}
+                onChange={setThemes}
+              />
+              <MultiSelect
+                label="Outreach"
+                options={(options?.outreach_locations ?? []).map((o) => ({ value: o, label: o }))}
+                selected={outreaches}
+                onChange={setOutreaches}
+              />
+              <MultiSelect
+                label="Region"
+                options={(options?.regions ?? []).map((r) => ({ value: r, label: r }))}
+                selected={regions}
+                onChange={setRegions}
+              />
+              <MultiSelect
+                label="Officer"
+                options={officerOptions}
+                selected={officers}
+                onChange={setOfficers}
+              />
+              <MultiSelect
+                label="Progress"
+                options={OUTREACH_WORKING_STATUSES.map((s) => ({
+                  value: s,
+                  label: OUTREACH_WORKING_STATUS_LABELS[s],
+                }))}
+                selected={workingStatuses}
+                onChange={setWorkingStatuses}
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {MORE_PILLS.map((pill) => (
+                <TogglePill
+                  key={pill.key}
+                  label={pill.label}
+                  title={pill.title}
+                  active={toggles[pill.key]}
+                  onClick={() => { setToggle(pill.key); setActiveTab('cases'); }}
+                />
+              ))}
+            </div>
+          </div>
+        </CollapsibleSection>
 
         <div className="flex flex-col md:flex-row gap-3 md:items-center">
           <div className="relative flex-1">
@@ -490,7 +572,20 @@ export function DirectOutreachDashboard() {
               aria-label="Search cases"
             />
           </div>
-          <span className="text-xs text-navy-600 md:ml-auto shrink-0">
+          <label className="flex items-center gap-2 text-xs text-navy-600 shrink-0 md:ml-auto">
+            Sort
+            <select
+              value={sort}
+              onChange={(e) => handleSort(e.target.value as OutreachSortField)}
+              className="input-premium text-sm"
+              aria-label="Sort cases"
+            >
+              {SORT_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </label>
+          <span className="text-xs text-navy-600 shrink-0">
             {casesLoading
               ? 'Loading…'
               : casesTruncated
@@ -515,16 +610,42 @@ export function DirectOutreachDashboard() {
         )}
       </div>
 
-      {/* Cases table */}
-      <CasesTable
-        cases={cases}
-        loading={casesLoading}
-        sort={sort}
-        sortDir={sortDir}
-        onSort={handleSort}
-        onSelect={setSelectedCase}
-        canUpload={isSuperadmin}
-      />
+      {/* Tab panels — ids match the tab ids the Tabs primitive emits */}
+      {activeTab === 'cases' ? (
+        <div role="tabpanel" id="tabpanel-cases" aria-labelledby="tab-cases">
+          <CasesTable
+            cases={cases}
+            loading={casesLoading}
+            sort={sort}
+            sortDir={sortDir}
+            onSort={handleSort}
+            onSelect={setSelectedCase}
+            canUpload={isSuperadmin}
+            hasActiveFilters={chips.length > 0}
+            onClearFilters={clearAllFilters}
+          />
+        </div>
+      ) : (
+        <div role="tabpanel" id="tabpanel-overview" aria-labelledby="tab-overview" className="space-y-8">
+          {summary ? (
+            <>
+              <AgencyScorecards agencies={summary.agencies} />
+              {/* Per-officer workload (v3) — row click filters to that officer */}
+              <OfficerLoadTable
+                officers={summary.officer_load}
+                onSelect={(officerId) => {
+                  setOfficers([officerId]);
+                  setActiveTab('cases');
+                }}
+              />
+            </>
+          ) : !summaryError ? (
+            <div className="card-premium flex items-center justify-center py-24">
+              <Spinner />
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {/* Detail slide panel */}
       <CaseDetailPanel

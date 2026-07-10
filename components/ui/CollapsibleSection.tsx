@@ -14,6 +14,10 @@ interface CollapsibleSectionProps {
   onOpenChange?: (open: boolean) => void;
   children: ReactNode;
   className?: string;
+  /** Let open content escape the collapse clip (needed when children render
+   *  absolute-positioned popovers, e.g. MultiSelect dropdowns). The clip is
+   *  restored while closed so the collapse animation still works. */
+  overflowVisible?: boolean;
 }
 
 export function CollapsibleSection({
@@ -26,6 +30,7 @@ export function CollapsibleSection({
   onOpenChange,
   children,
   className = '',
+  overflowVisible = false,
 }: CollapsibleSectionProps) {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const isControlled = open !== undefined;
@@ -58,7 +63,7 @@ export function CollapsibleSection({
         />
       </button>
       <div className={`collapse-grid ${isOpen ? 'open' : ''}`}>
-        <div>
+        <div style={overflowVisible && isOpen ? { overflow: 'visible' } : undefined}>
           <div className="px-4 pb-4">
             {children}
           </div>

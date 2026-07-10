@@ -25,6 +25,11 @@ interface CasesTableProps {
   onSelect: (caseId: number) => void;
   /** Only superadmins can upload — don't tell agency managers to. */
   canUpload?: boolean;
+  /** True when any filter/chip/search narrows the list — switches the empty
+   *  state from "no cases at all" to "no matches". */
+  hasActiveFilters?: boolean;
+  /** Resets every filter to the default params (existing clear-all handler). */
+  onClearFilters?: () => void;
 }
 
 function SortableTh({
@@ -57,7 +62,10 @@ function SortableTh({
   );
 }
 
-export function CasesTable({ cases, loading, sort, sortDir, onSort, onSelect, canUpload = false }: CasesTableProps) {
+export function CasesTable({
+  cases, loading, sort, sortDir, onSort, onSelect,
+  canUpload = false, hasActiveFilters = false, onClearFilters,
+}: CasesTableProps) {
   if (loading) {
     return (
       <div className="card-premium flex items-center justify-center py-24">
@@ -69,15 +77,30 @@ export function CasesTable({ cases, loading, sort, sortDir, onSort, onSelect, ca
   if (cases.length === 0) {
     return (
       <div className="card-premium">
-        <EmptyState
-          icon={<Radio className="h-10 w-10" />}
-          title="No cases match"
-          description={
-            canUpload
-              ? 'Adjust the filters, or upload the OP Direct workbook to populate this view.'
-              : 'Adjust the filters, or check back after the next OP Direct workbook upload.'
-          }
-        />
+        {hasActiveFilters ? (
+          <EmptyState
+            icon={<Radio className="h-10 w-10" />}
+            title="No cases match the current filters"
+            description="Filters are narrowing the list — clear them to see the full backlog."
+            action={
+              onClearFilters ? (
+                <button type="button" onClick={onClearFilters} className="btn-navy text-sm">
+                  Clear filters
+                </button>
+              ) : undefined
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={<Radio className="h-10 w-10" />}
+            title="No cases yet"
+            description={
+              canUpload
+                ? 'Upload the OP Direct workbook to populate this view.'
+                : 'Check back after the next OP Direct workbook upload.'
+            }
+          />
+        )}
       </div>
     );
   }

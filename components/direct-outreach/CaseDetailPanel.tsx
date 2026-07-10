@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import { ArrowRightLeft, CalendarClock, ClipboardList, Pencil, Radio, UserCircle2, X } from 'lucide-react';
 import { SlidePanel } from '@/components/layout/SlidePanel';
+import { MultiSelect } from '@/components/oversight/shared';
 import { Badge } from '@/components/ui/Badge';
+import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { Spinner } from '@/components/ui/Spinner';
 import { fmtDate, fmtGuyanaDate, fmtGuyanaDateTime } from '@/lib/format';
 import { isSubstantive } from '@/lib/direct-outreach/compute';
@@ -80,6 +82,11 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
   // Superadmin picker: EVERY active human user (any agency/role), fetched once
   // per panel lifetime — a superadmin may assign anyone as responsible officer.
   const [allOfficers, setAllOfficers] = useState<AssignableUser[] | null>(null);
+  // Officer-list fetch failures disable the picker and offer a retry — a
+  // failed fetch must never present as an empty (assignable-to-nobody) picker.
+  const [allOfficersError, setAllOfficersError] = useState(false);
+  const [assignableError, setAssignableError] = useState(false);
+  const [officerRetry, setOfficerRetry] = useState(0);
   const [savingAssignee, setSavingAssignee] = useState(false);
   const [assignErrorState, setAssignErrorState] = useState<{ caseId: number; message: string } | null>(null);
 
@@ -186,6 +193,7 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
     if (!c || !c.effective_agency || (!canAssign && !canPost)) return;
     let cancelled = false;
     setAssignableUsers(null);
+    setAssignableError(false);
     fetch(`/api/tasks/users?agency=${encodeURIComponent(c.effective_agency ?? '')}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load users'))))
       .then((data: { users: AssignableUser[] }) => {
@@ -193,31 +201,40 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
         setAssignableUsers((data.users ?? []).filter((u) => u.role !== 'system'));
       })
       .catch(() => {
-        if (!cancelled) setAssignableUsers([]);
+        if (cancelled) return;
+        setAssignableUsers([]);
+        setAssignableError(true);
       });
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [c?.case_id, c?.effective_agency, canAssign, canPost]);
+  }, [c?.case_id, c?.effective_agency, canAssign, canPost, officerRetry]);
 
   // Superadmin assign picker: the full human user list (any agency, any role).
   // Case-independent, so one fetch serves every case this panel opens.
   useEffect(() => {
     if (!isSuperadmin || caseId === null || allOfficers !== null) return;
     let cancelled = false;
+    setAllOfficersError(false);
     fetch('/api/direct-outreach/officers')
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load officers'))))
       .then((data: { users: AssignableUser[] }) => {
         if (!cancelled) setAllOfficers(data.users ?? []);
       })
       .catch(() => {
-        if (!cancelled) setAllOfficers([]);
+        if (!cancelled) setAllOfficersError(true);
       });
     return () => {
       cancelled = true;
     };
-  }, [isSuperadmin, caseId, allOfficers]);
+  }, [isSuperadmin, caseId, allOfficers, officerRetry]);
+
+  const retryOfficerFetch = () => {
+    setAllOfficersError(false);
+    setAssignableError(false);
+    setOfficerRetry((n) => n + 1);
+  };
 
   const reload = () => setReloadSeq((s) => s + 1);
 
@@ -388,35 +405,24 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
 
       {c && current && !loading && (
         <div className="space-y-6">
-          {/* Status strip */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={OUTREACH_STATUS_VARIANTS[c.status ?? ''] ?? 'default'}>
-              {c.status ?? 'Unknown'}
-            </Badge>
-            {c.priority_flag === 'Elevated' && <Badge variant="danger">HIGH</Badge>}
-            {c.transferred && <Badge variant="warning">TRANSFERRED</Badge>}
-            <Badge variant="gold">{c.theme ?? 'Other'}</Badge>
-            <span
-              className="font-mono font-semibold text-xs tracking-wider ml-auto"
-              style={{ color: outreachAgencyColor(c.effective_agency) }}
-              title={c.transferred ? `Workbook agency: ${c.agency ?? 'unknown'}` : undefined}
-            >
-              {c.effective_agency ?? '—'}
-            </span>
-          </div>
-
-          {/* Issue description */}
-          {c.description && (
-            <div className="card-premium p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-navy-600 mb-2">
-                Reported issue
-              </p>
-              <p className="text-sm text-slate-200 whitespace-pre-wrap">{c.description}</p>
+          {/* Action region — working status, responsible officer, target date */}
+          <div className={`card-premium p-4 ${canPost || canAssign ? 'border-l-2 border-l-gold-500/40' : ''}`}>
+            {/* OP status / priority display */}
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <Badge variant={OUTREACH_STATUS_VARIANTS[c.status ?? ''] ?? 'default'}>
+                {c.status ?? 'Unknown'}
+              </Badge>
+              {c.priority_flag === 'Elevated' && <Badge variant="danger">HIGH</Badge>}
+              {c.transferred && <Badge variant="warning">TRANSFERRED</Badge>}
+              <Badge variant="gold">{c.theme ?? 'Other'}</Badge>
+              <span
+                className="font-mono font-semibold text-xs tracking-wider ml-auto"
+                style={{ color: outreachAgencyColor(c.effective_agency) }}
+                title={c.transferred ? `Workbook agency: ${c.agency ?? 'unknown'}` : undefined}
+              >
+                {c.effective_agency ?? '—'}
+              </span>
             </div>
-          )}
-
-          {/* Progress & commitment (v3) — the case's action center */}
-          <div className={`card-premium p-4 ${canPost ? 'border-l-2 border-l-gold-500/40' : ''}`}>
             <div className="flex items-center gap-2 mb-3">
               <ClipboardList size={14} className={canPost ? 'text-gold-500' : 'text-navy-600'} aria-hidden="true" />
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-navy-600">
@@ -463,8 +469,96 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
               </p>
             )}
 
-            {/* Officer target date — the explicit commitment (outranks the heuristic) */}
-            <div className="mt-4 pt-3 border-t border-navy-800/40">
+            {/* Officer + target date — stacked below sm, side-by-side from sm up */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-3 border-t border-navy-800/40">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <UserCircle2 size={14} className={canAssign ? 'text-gold-500' : 'text-navy-600'} aria-hidden="true" />
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-navy-600">
+                    Responsible officer
+                  </p>
+                </div>
+                {c.assignee_user_id ? (
+                  <div className="flex items-center gap-3">
+                    <span className="w-9 h-9 rounded-full bg-navy-800 flex items-center justify-center text-xs font-bold text-slate-400 shrink-0">
+                      {initials(c.assignee_name)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-white truncate">{c.assignee_name ?? 'Unknown'}</p>
+                      <p className="text-[11px] text-navy-600">
+                        {c.assignee_agency ? `${c.assignee_agency} · ` : ''}assigned {fmtGuyanaDate(c.assigned_at)}
+                      </p>
+                    </div>
+                    {canAssign && (
+                      <button
+                        type="button"
+                        onClick={() => handleAssign(null)}
+                        disabled={savingAssignee}
+                        className="p-1.5 rounded-lg text-navy-600 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-60"
+                        aria-label="Unassign officer"
+                        title="Unassign"
+                      >
+                        <X className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-navy-600 italic">Unassigned</p>
+                )}
+
+                {canAssign && (() => {
+                  // Superadmins pick from EVERY human user; managers keep the
+                  // case-agency list (locked Q3). Both label "Name (Agency)" with
+                  // a Ministry fallback for agency-less superadmins.
+                  const pickerUsers = isSuperadmin ? allOfficers : assignableUsers;
+                  const pickerFailed = isSuperadmin ? allOfficersError : assignableError;
+                  return (
+                    <div className="mt-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-500/80 mb-1.5">
+                        Assign
+                      </p>
+                      <MultiSelect
+                        label={
+                          pickerUsers === null && !pickerFailed
+                            ? 'Loading officers…'
+                            : c.assignee_user_id
+                              ? 'Reassign to…'
+                              : 'Assign an officer…'
+                        }
+                        options={(pickerUsers ?? [])
+                          .filter((u) => u.id !== c.assignee_user_id)
+                          .map((u) => ({
+                            value: u.id,
+                            label: `${u.name ?? u.id}${u.agency ? ` (${u.agency})` : u.role === 'superadmin' ? ' (Ministry)' : ''}`,
+                          }))}
+                        selected={[]}
+                        onChange={(vals) => {
+                          // Single-select adapter: hand the picked id to the existing
+                          // assignment handler unchanged (same PATCH payload as before).
+                          const picked = vals[vals.length - 1];
+                          if (picked) handleAssign(picked);
+                        }}
+                        disabled={savingAssignee || pickerFailed || pickerUsers === null}
+                      />
+                      {pickerFailed && (
+                        <p className="text-red-400 text-xs mt-2" role="alert">
+                          Failed to load the officer list.{' '}
+                          <button
+                            type="button"
+                            onClick={retryOfficerFetch}
+                            className="underline hover:text-white transition-colors"
+                          >
+                            Retry
+                          </button>
+                        </p>
+                      )}
+                      {assignError && <p className="text-red-400 text-xs mt-2">{assignError}</p>}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-navy-600 mb-2">
                 Officer target date
               </p>
@@ -534,85 +628,20 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
               ) : (
                 <p className="text-xs text-navy-600 italic">No officer commitment yet.</p>
               )}
+              </div>
             </div>
             {postError && <p className="text-red-400 text-xs mt-2">{postError}</p>}
           </div>
 
-          {/* Responsible officer */}
-          <div className={`card-premium p-4 ${canAssign ? 'border-l-2 border-l-gold-500/40' : ''}`}>
-            <div className="flex items-center gap-2 mb-3">
-              <UserCircle2 size={14} className={canAssign ? 'text-gold-500' : 'text-navy-600'} aria-hidden="true" />
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-navy-600">
-                Responsible officer
+          {/* Issue description */}
+          {c.description && (
+            <div className="card-premium p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-navy-600 mb-2">
+                Reported issue
               </p>
+              <p className="text-sm text-slate-200 whitespace-pre-wrap">{c.description}</p>
             </div>
-            {c.assignee_user_id ? (
-              <div className="flex items-center gap-3">
-                <span className="w-9 h-9 rounded-full bg-navy-800 flex items-center justify-center text-xs font-bold text-slate-400 shrink-0">
-                  {initials(c.assignee_name)}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-white truncate">{c.assignee_name ?? 'Unknown'}</p>
-                  <p className="text-[11px] text-navy-600">
-                    {c.assignee_agency ? `${c.assignee_agency} · ` : ''}assigned {fmtGuyanaDate(c.assigned_at)}
-                  </p>
-                </div>
-                {canAssign && (
-                  <button
-                    type="button"
-                    onClick={() => handleAssign(null)}
-                    disabled={savingAssignee}
-                    className="p-1.5 rounded-lg text-navy-600 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-60"
-                    aria-label="Unassign officer"
-                    title="Unassign"
-                  >
-                    <X className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                )}
-              </div>
-            ) : (
-              <p className="text-xs text-navy-600 italic">Unassigned</p>
-            )}
-
-            {canAssign && (() => {
-              // Superadmins pick from EVERY human user; managers keep the
-              // case-agency list (locked Q3). Both label "Name (Agency)" with
-              // a Ministry fallback for agency-less superadmins.
-              const pickerUsers = isSuperadmin ? allOfficers : assignableUsers;
-              return (
-                <div className="mt-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-500/80 mb-1.5">
-                    Assign
-                  </p>
-                  <select
-                    value=""
-                    onChange={(e) => {
-                      if (e.target.value) handleAssign(e.target.value);
-                    }}
-                    disabled={savingAssignee || pickerUsers === null}
-                    className="input-premium w-full text-sm disabled:opacity-60"
-                    aria-label="Assign officer"
-                  >
-                    <option value="">
-                      {pickerUsers === null
-                        ? 'Loading officers…'
-                        : c.assignee_user_id
-                          ? 'Reassign to…'
-                          : 'Assign an officer…'}
-                    </option>
-                    {(pickerUsers ?? [])
-                      .filter((u) => u.id !== c.assignee_user_id)
-                      .map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name ?? u.id}{u.agency ? ` (${u.agency})` : u.role === 'superadmin' ? ' (Ministry)' : ''}
-                        </option>
-                      ))}
-                  </select>
-                  {assignError && <p className="text-red-400 text-xs mt-2">{assignError}</p>}
-                </div>
-              );
-            })()}
-          </div>
+          )}
 
           {/* Agency transfer (superadmin) */}
           {(isSuperadmin || current.transfers.length > 0) && (
@@ -683,68 +712,6 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
             </div>
           )}
 
-          {/* Metadata */}
-          <div className="card-premium p-4 grid grid-cols-2 gap-4">
-            <MetaField label="Client">{c.client_name || '—'}</MetaField>
-            <MetaField label="Phone">{c.client_phone || '—'}</MetaField>
-            <MetaField label="Address">{c.client_address || '—'}</MetaField>
-            <MetaField label="Category">{c.category_name || c.unclassified_category || '—'}</MetaField>
-            <MetaField label="Outreach">{c.outreach_location || '—'}</MetaField>
-            <MetaField label="Outreach date">{c.outreach_date || '—'}</MetaField>
-            <MetaField label="Region">{c.region || '—'}</MetaField>
-            <MetaField label="Workbook point person">{c.point_person || '—'}</MetaField>
-            <MetaField label="Logged">{fmtGuyanaDate(c.created_at)}</MetaField>
-            <MetaField label="Comments">
-              <span className="tabular-nums">{c.comment_count}</span>
-            </MetaField>
-            <MetaField label="Days open">
-              <span className="tabular-nums">{c.days_open == null ? '—' : `${c.days_open}d`}</span>
-            </MetaField>
-            <MetaField label="Days idle">
-              <span className={`tabular-nums font-semibold ${idleColorClass(c.days_idle)}`}>
-                {c.days_idle == null ? '—' : `${c.days_idle}d`}
-              </span>
-            </MetaField>
-          </div>
-
-          {/* Auto-detected target date */}
-          <div className="card-premium p-4 border border-amber-500/30">
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2">
-                <CalendarClock size={14} className="text-amber-400" aria-hidden="true" />
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-navy-600">
-                  Auto-detected target date
-                </p>
-              </div>
-              <Badge variant="warning">verify</Badge>
-            </div>
-            {c.committed_date ? (
-              <>
-                <div className="flex items-center gap-2">
-                  <p className="text-2xl font-bold text-white tabular-nums">{fmtDate(c.committed_date)}</p>
-                  {c.committed_overdue && <Badge variant="danger">OVERDUE</Badge>}
-                </div>
-                {c.committed_source && (
-                  <blockquote className="text-xs text-slate-400 italic mt-3 border-l-2 border-navy-800 pl-3">
-                    “{c.committed_source}”
-                  </blockquote>
-                )}
-                {c.committed_by && (
-                  <p className="text-[11px] text-navy-600 mt-1.5">— {c.committed_by}</p>
-                )}
-                {displayedTarget && (
-                  <p className="text-[11px] text-navy-600 mt-2">
-                    The officer commitment above supersedes this detection.
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="text-xs text-navy-600 italic">
-                No completion or target date detected in the comment history.
-              </p>
-            )}
-          </div>
-
           {/* Officer progress updates (v3 — the writable log) */}
           <OfficerUpdates
             updates={current.officer_updates}
@@ -797,6 +764,77 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
               </ol>
             )}
           </div>
+
+          {/* Read-only OP Direct metadata — collapsed by default */}
+          <CollapsibleSection title="Case details" defaultOpen={false}>
+            <div className="space-y-4 pt-1">
+              <div className="grid grid-cols-2 gap-4">
+                <MetaField label="OP status">
+                  <Badge variant={OUTREACH_STATUS_VARIANTS[c.status ?? ''] ?? 'default'}>
+                    {c.status ?? 'Unknown'}
+                  </Badge>
+                </MetaField>
+                <MetaField label="Client">{c.client_name || '—'}</MetaField>
+                <MetaField label="Phone">{c.client_phone || '—'}</MetaField>
+                <MetaField label="Address">{c.client_address || '—'}</MetaField>
+                <MetaField label="Category">{c.category_name || c.unclassified_category || '—'}</MetaField>
+                <MetaField label="Outreach">{c.outreach_location || '—'}</MetaField>
+                <MetaField label="Outreach date">{c.outreach_date || '—'}</MetaField>
+                <MetaField label="Region">{c.region || '—'}</MetaField>
+                <MetaField label="Workbook point person">{c.point_person || '—'}</MetaField>
+                <MetaField label="Logged">{fmtGuyanaDate(c.created_at)}</MetaField>
+                <MetaField label="Comments">
+                  <span className="font-mono tabular-nums">{c.comment_count}</span>
+                </MetaField>
+                <MetaField label="Days open">
+                  <span className="font-mono tabular-nums">{c.days_open == null ? '—' : `${c.days_open}d`}</span>
+                </MetaField>
+                <MetaField label="Days idle">
+                  <span className={`font-mono tabular-nums font-semibold ${idleColorClass(c.days_idle)}`}>
+                    {c.days_idle == null ? '—' : `${c.days_idle}d`}
+                  </span>
+                </MetaField>
+              </div>
+
+              {/* Auto-detected target date (heuristic — display-only) */}
+              <div className="card-premium p-4 border border-amber-500/30">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <CalendarClock size={14} className="text-amber-400" aria-hidden="true" />
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-navy-600">
+                      Auto-detected target date
+                    </p>
+                  </div>
+                  <Badge variant="warning">verify</Badge>
+                </div>
+                {c.committed_date ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <p className="font-mono text-2xl font-bold text-white tabular-nums">{fmtDate(c.committed_date)}</p>
+                      {c.committed_overdue && <Badge variant="danger">OVERDUE</Badge>}
+                    </div>
+                    {c.committed_source && (
+                      <blockquote className="text-xs text-slate-400 italic mt-3 border-l-2 border-navy-800 pl-3">
+                        “{c.committed_source}”
+                      </blockquote>
+                    )}
+                    {c.committed_by && (
+                      <p className="text-[11px] text-navy-600 mt-1.5">— {c.committed_by}</p>
+                    )}
+                    {displayedTarget && (
+                      <p className="text-[11px] text-navy-600 mt-2">
+                        The officer commitment above supersedes this detection.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-xs text-navy-600 italic">
+                    No completion or target date detected in the comment history.
+                  </p>
+                )}
+              </div>
+            </div>
+          </CollapsibleSection>
         </div>
       )}
     </SlidePanel>

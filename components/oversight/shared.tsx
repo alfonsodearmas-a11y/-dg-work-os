@@ -72,13 +72,15 @@ export function OversightKpiCard({ label, value, sub }: { label: string; value: 
 }
 
 export function MultiSelect({
-  label, options, selected, onChange, renderOption,
+  label, options, selected, onChange, renderOption, disabled = false,
 }: {
   label: string;
   options: { value: string; label: string }[];
   selected: string[];
   onChange: (val: string[]) => void;
   renderOption?: (opt: { value: string; label: string }) => React.ReactNode;
+  /** Disables the trigger (e.g. while the option source is loading or saving). */
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -90,11 +92,11 @@ export function MultiSelect({
   function toggle(val: string) { onChange(selected.includes(val) ? selected.filter(v => v !== val) : [...selected, val]); }
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(!open)} className="bg-navy-950 border border-navy-800 rounded-lg px-3 py-2 text-sm text-white focus:border-gold-500 focus:outline-none flex items-center gap-2 w-full md:min-w-[130px] md:w-auto">
+      <button type="button" disabled={disabled} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen(!open)} className="bg-navy-950 border border-navy-800 rounded-lg px-3 py-2 text-sm text-white focus:border-gold-500 focus:outline-none flex items-center gap-2 w-full md:min-w-[130px] md:w-auto disabled:opacity-60 disabled:cursor-not-allowed">
         <span className="truncate">{selected.length ? `${label} (${selected.length})` : label}</span>
         <ChevronDown className={`h-3.5 w-3.5 text-navy-600 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
-      {open && (
+      {open && !disabled && (
         <div className="absolute top-full left-0 mt-1 bg-navy-900 border border-navy-800 rounded-lg shadow-xl z-50 min-w-[200px] max-h-[300px] overflow-y-auto">
           {options.map(opt => (
             <label key={opt.value} className="flex items-center gap-2 px-3 py-2 hover:bg-navy-950/60 cursor-pointer text-sm">
