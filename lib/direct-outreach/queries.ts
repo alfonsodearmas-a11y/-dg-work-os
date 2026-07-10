@@ -224,8 +224,9 @@ export async function getSummary(agencyScope?: string): Promise<OutreachSummary>
 export async function getOpenCases(
   filters: OutreachListFilters,
   agencyScope?: string,
+  requesterId?: string,
 ): Promise<OutreachCaseRow[]> {
-  const { where, params } = buildListFilterSql(filters, agencyScope);
+  const { where, params } = buildListFilterSql(filters, agencyScope, requesterId);
 
   const sortKey = filters.sort ?? OUTREACH_DEFAULT_SORT;
   const sortCol = Object.hasOwn(SORT_COLUMNS, sortKey)

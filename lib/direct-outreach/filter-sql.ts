@@ -23,6 +23,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export function buildListFilterSql(
   filters: OutreachListFilters,
   agencyScope?: string,
+  requesterId?: string,
 ): FilterSql {
   const conditions: string[] = [];
   const params: unknown[] = [];
@@ -31,9 +32,21 @@ export function buildListFilterSql(
     return `$${params.length}`;
   };
 
-  // Scope first — the security boundary (session-derived, never user input).
+  // Scope first — the security boundary (both values session-derived, never
+  // user input). The requester-is-assignee branch mirrors getCase: an ASSIGNED
+  // officer sees their own cross-agency case in the list (and via the
+  // "Assigned to me" toggle). PERSONAL visibility only — the id compared is
+  // the requester's own, so same-agency peers gain nothing, and getSummary
+  // (scorecards/KPIs/rollups) deliberately has no such branch: a GPL case
+  // never inflates the assignee's-agency aggregates.
   if (agencyScope) {
-    conditions.push(`upper(v.effective_agency) = ${p(agencyScope.toUpperCase())}`);
+    if (requesterId) {
+      conditions.push(
+        `(upper(v.effective_agency) = ${p(agencyScope.toUpperCase())} OR v.assignee_user_id = ${p(requesterId)}::uuid)`,
+      );
+    } else {
+      conditions.push(`upper(v.effective_agency) = ${p(agencyScope.toUpperCase())}`);
+    }
   }
 
   if (filters.agencies?.length) {

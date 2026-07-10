@@ -26,6 +26,35 @@ describe('buildListFilterSql — scope', () => {
     expect(where.indexOf('$1')).toBeLessThan(where.indexOf('ANY($2'));
     expect(params).toEqual(['GPL', ['GWI', 'PUA']]); // values uppercased
   });
+
+  test('scope + requesterId → (agency OR requester-is-assignee) group, still the FIRST condition', () => {
+    const { where, params } = buildListFilterSql({}, 'HECI', U1);
+    expect(where).toBe('WHERE (upper(v.effective_agency) = $1 OR v.assignee_user_id = $2::uuid)');
+    expect(params).toEqual(['HECI', U1]);
+  });
+
+  test('"Assigned to me" for a cross-agency assignee: scope-or-me AND assignee=me', () => {
+    // An HECI officer assigned to a GPL case: the OR branch admits the case
+    // into their list; assignedToMe then narrows to exactly their caseload.
+    const { where, params } = buildListFilterSql({ assignedToMe: U1 }, 'HECI', U1);
+    expect(where).toBe(
+      'WHERE (upper(v.effective_agency) = $1 OR v.assignee_user_id = $2::uuid) AND v.assignee_user_id = $3::uuid',
+    );
+    expect(params).toEqual(['HECI', U1, U1]);
+  });
+
+  test('personal, not agency-wide: the OR branch binds the REQUESTER\'s own id — a peer gets their own', () => {
+    const assignee = buildListFilterSql({}, 'HECI', U1);
+    const peer = buildListFilterSql({}, 'HECI', U2);
+    expect(assignee.params).toEqual(['HECI', U1]);
+    expect(peer.params).toEqual(['HECI', U2]); // U2 is not the assignee → the GPL case never matches
+  });
+
+  test('no requesterId → legacy scope shape unchanged', () => {
+    const { where, params } = buildListFilterSql({}, 'HECI');
+    expect(where).toBe('WHERE upper(v.effective_agency) = $1');
+    expect(params).toEqual(['HECI']);
+  });
 });
 
 describe('buildListFilterSql — multi-selects', () => {

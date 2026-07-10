@@ -48,7 +48,10 @@ export async function GET(request: NextRequest) {
         sort: (sp.get('sort') as OutreachSortField) || undefined,
         sort_dir: sp.get('sort_dir') === 'asc' ? 'asc' : sp.get('sort_dir') === 'desc' ? 'desc' : undefined,
       };
-      const cases = await getOpenCases(filters, agencyScope);
+      // requesterId extends LIST visibility to the caller's own assigned
+      // cross-agency cases (mirrors getCase). getSummary deliberately does NOT
+      // take it — aggregates stay strictly agency-scoped.
+      const cases = await getOpenCases(filters, agencyScope, session.user.id);
       return NextResponse.json({ cases, total: cases.length, truncated: cases.length >= LIST_LIMIT });
     }
 
