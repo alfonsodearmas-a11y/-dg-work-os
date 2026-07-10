@@ -51,19 +51,19 @@ describe('buildListFilterSql — multi-selects', () => {
 describe('buildListFilterSql — officers', () => {
   test('uuids only → uuid[] ANY', () => {
     const { where, params } = buildListFilterSql({ officers: [U1, U2] });
-    expect(where).toBe(`WHERE doa.assignee_user_id = ANY($1::uuid[])`);
+    expect(where).toBe(`WHERE v.assignee_user_id = ANY($1::uuid[])`);
     expect(params).toEqual([[U1, U2]]);
   });
 
   test('unassigned sentinel only → IS NULL, no param', () => {
     const { where, params } = buildListFilterSql({ officers: [UNASSIGNED_OFFICER] });
-    expect(where).toBe('WHERE doa.case_id IS NULL');
+    expect(where).toBe('WHERE v.assignee_user_id IS NULL');
     expect(params).toEqual([]);
   });
 
   test('uuids + unassigned → OR-combined group', () => {
     const { where } = buildListFilterSql({ officers: [U1, UNASSIGNED_OFFICER] });
-    expect(where).toBe('WHERE (doa.assignee_user_id = ANY($1::uuid[]) OR doa.case_id IS NULL)');
+    expect(where).toBe('WHERE (v.assignee_user_id = ANY($1::uuid[]) OR v.assignee_user_id IS NULL)');
   });
 
   test('non-uuid officer values are dropped (no 500 from the ::uuid[] cast)', () => {
@@ -71,26 +71,40 @@ describe('buildListFilterSql — officers', () => {
     expect(junkOnly).toEqual({ where: '', params: [] });
 
     const mixed = buildListFilterSql({ officers: ['abc', U1, UNASSIGNED_OFFICER] });
-    expect(mixed.where).toBe('WHERE (doa.assignee_user_id = ANY($1::uuid[]) OR doa.case_id IS NULL)');
+    expect(mixed.where).toBe('WHERE (v.assignee_user_id = ANY($1::uuid[]) OR v.assignee_user_id IS NULL)');
     expect(mixed.params).toEqual([[U1]]);
   });
 
   test('assignedToMe adds a scalar uuid condition', () => {
     const { where, params } = buildListFilterSql({ assignedToMe: U1 });
-    expect(where).toBe('WHERE doa.assignee_user_id = $1::uuid');
+    expect(where).toBe('WHERE v.assignee_user_id = $1::uuid');
     expect(params).toEqual([U1]);
   });
 });
 
 describe('buildListFilterSql — toggles + search combine', () => {
-  test('all toggles AND together', () => {
+  test('all toggles AND together (target/overdue follow the EFFECTIVE target — Q4)', () => {
     const { where, params } = buildListFilterSql({
       highPriority: true, stalled60: true, stalled90: true, hasTarget: true, overdue: true,
     });
     expect(where).toBe(
-      `WHERE v.priority_flag = 'Elevated' AND v.days_idle > 60 AND v.days_idle > 90 AND v.committed_date IS NOT NULL AND v.committed_overdue`,
+      `WHERE v.priority_flag = 'Elevated' AND v.days_idle > 60 AND v.days_idle > 90 AND v.effective_target_date IS NOT NULL AND v.effective_target_overdue`,
     );
     expect(params).toEqual([]);
+  });
+
+  test('v3 accountability toggles: stale officer excludes NULLs; officer overdue is strict', () => {
+    const { where, params } = buildListFilterSql({ staleOfficer: true, officerOverdue: true });
+    // > N excludes NULL days_since_officer_action by SQL semantics — those are
+    // the unassigned-and-untouched cases, caught by officers=unassigned.
+    expect(where).toBe('WHERE v.days_since_officer_action > 14 AND v.officer_target_overdue');
+    expect(params).toEqual([]);
+  });
+
+  test('workingStatuses compiles to = ANY(text[]) like the other multi-selects', () => {
+    const { where, params } = buildListFilterSql({ workingStatuses: ['in_progress', 'blocked'] });
+    expect(where).toBe('WHERE v.working_status = ANY($1::text[])');
+    expect(params).toEqual([['in_progress', 'blocked']]);
   });
 
   test('everything at once: scope first, search last, params in order', () => {
@@ -102,8 +116,8 @@ describe('buildListFilterSql — toggles + search combine', () => {
       'GWI',
     );
     expect(where.startsWith('WHERE upper(v.effective_agency) = $1 AND ')).toBe(true);
-    expect(where).toContain('doa.case_id IS NULL');
-    expect(where).toContain('v.committed_overdue');
+    expect(where).toContain('v.assignee_user_id IS NULL');
+    expect(where).toContain('v.effective_target_overdue');
     expect(where).toContain('ILIKE $4'); // $1 scope, $2 agencies, $3 statuses, $4 search
     expect(params).toEqual(['GWI', ['GWI'], ['Open'], '%pump%']);
   });

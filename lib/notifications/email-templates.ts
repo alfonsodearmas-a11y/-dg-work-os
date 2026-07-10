@@ -131,6 +131,10 @@ function subjectForEvent(n: EmailNotification): string {
       return `[DG Work OS] ${n.title}`;
     case 'task_agency_head_notice':
       return `[DG Work OS] ${n.title}`;
+    case 'outreach_update_mention':
+      return `[DG Work OS] ${n.actor_name || 'Someone'} mentioned you on outreach ${n.parent_entity_title || 'case'}`;
+    case 'outreach_case_update':
+      return `[DG Work OS] Update on outreach ${n.parent_entity_title || 'case'}`;
     default:
       return `[DG Work OS] ${n.title}`;
   }

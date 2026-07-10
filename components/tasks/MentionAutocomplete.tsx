@@ -15,8 +15,11 @@ interface MentionAutocompleteProps {
   onSelect: (user: MentionUser, triggerStart: number, queryLength: number) => void;
 }
 
-// Short labels for compact mention popover
+// Short labels for compact mention popover (current roles first; the rest are
+// legacy names that survive only in old comment rows).
 const MENTION_ROLE_LABELS: Record<string, string> = {
+  superadmin: 'Ministry',
+  agency_manager: 'Manager',
   dg: 'DG',
   minister: 'Minister',
   ps: 'Perm. Sec.',

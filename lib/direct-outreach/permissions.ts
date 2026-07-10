@@ -16,6 +16,27 @@ export function canAssignOutreachCase(
   return userAgency.toUpperCase() === effectiveAgency.toUpperCase();
 }
 
+/**
+ * Who may post progress updates / set working status / set the officer target
+ * date (v3): the ASSIGNED officer, the owning agency's manager, or a
+ * superadmin. NOTE: the route's agency-scoped getCase runs FIRST, so an
+ * agency_manager outside the case's effective agency gets an opaque 404
+ * before this helper is consulted — including an assignee stranded by a
+ * workbook agency change (locked decision: no cross-agency access; the owning
+ * manager reassigns). The identity clause is defense-in-depth for callers
+ * that can already see the case, not a scope override.
+ */
+export function canPostOutreachUpdate(
+  role: string | null | undefined,
+  userId: string | null | undefined,
+  userAgency: string | null | undefined,
+  effectiveAgency: string | null | undefined,
+  assigneeUserId: string | null | undefined,
+): boolean {
+  if (assigneeUserId && userId && userId === assigneeUserId) return true;
+  return canAssignOutreachCase(role, userAgency, effectiveAgency);
+}
+
 /** Who may be assigned (locked decision Q3): the case agency's active users + superadmins. */
 export function isValidAssignmentTarget(
   target: { role: string | null; agency: string | null; is_active: boolean },

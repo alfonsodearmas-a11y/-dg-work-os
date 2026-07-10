@@ -1,8 +1,8 @@
 // Direct Outreach — pure WHERE-clause builder for the open-cases list.
 // Extracted from queries.ts so the filter/param math is unit-testable without a
-// database. Table aliases are fixed by the caller's FROM clause:
-//   v   = direct_outreach_open_v
-//   doa = direct_outreach_assignments (LEFT JOIN)
+// database. Table alias fixed by the caller's FROM clause:
+//   v = direct_outreach_open_v (view v4 carries assignee/state/staleness — the
+//       old doa assignments join is gone as of migration 151)
 //
 // Multi-value filters use the repo's raw-SQL precedent `col = ANY($n::text[])`
 // (node-postgres serializes JS arrays to PG arrays) — never expanded IN lists.
@@ -10,7 +10,7 @@
 // are additional ANDs, so they can narrow but never widen a manager's scope.
 
 import type { OutreachListFilters } from './types';
-import { UNASSIGNED_OFFICER } from './types';
+import { OUTREACH_STALE_OFFICER_DAYS, UNASSIGNED_OFFICER } from './types';
 
 export interface FilterSql {
   /** '' or 'WHERE ...' */
@@ -53,6 +53,9 @@ export function buildListFilterSql(
   if (filters.regions?.length) {
     conditions.push(`v.region = ANY(${p(filters.regions)}::text[])`);
   }
+  if (filters.workingStatuses?.length) {
+    conditions.push(`v.working_status = ANY(${p(filters.workingStatuses)}::text[])`);
+  }
 
   // Officer multi-select: uuids and/or the 'unassigned' sentinel, OR-combined
   // within the filter (a case matches any selected officer or unassignedness).
@@ -62,23 +65,30 @@ export function buildListFilterSql(
     const uuids = filters.officers.filter((o) => o !== UNASSIGNED_OFFICER && UUID_RE.test(o));
     const wantUnassigned = filters.officers.includes(UNASSIGNED_OFFICER);
     const parts: string[] = [];
-    if (uuids.length) parts.push(`doa.assignee_user_id = ANY(${p(uuids)}::uuid[])`);
-    if (wantUnassigned) parts.push('doa.case_id IS NULL');
+    if (uuids.length) parts.push(`v.assignee_user_id = ANY(${p(uuids)}::uuid[])`);
+    if (wantUnassigned) parts.push('v.assignee_user_id IS NULL');
     if (parts.length === 1) conditions.push(parts[0]);
     else if (parts.length > 1) conditions.push(`(${parts.join(' OR ')})`);
     // all values were junk → no condition at all
   }
 
   if (filters.assignedToMe) {
-    conditions.push(`doa.assignee_user_id = ${p(filters.assignedToMe)}::uuid`);
+    conditions.push(`v.assignee_user_id = ${p(filters.assignedToMe)}::uuid`);
   }
 
   // Independent toggles — plain AND predicates.
   if (filters.highPriority) conditions.push(`v.priority_flag = 'Elevated'`);
   if (filters.stalled60) conditions.push('v.days_idle > 60');
   if (filters.stalled90) conditions.push('v.days_idle > 90');
-  if (filters.hasTarget) conditions.push('v.committed_date IS NOT NULL');
-  if (filters.overdue) conditions.push('v.committed_overdue');
+  // Q4: target/overdue follow the EFFECTIVE target (officer date > heuristic).
+  if (filters.hasTarget) conditions.push('v.effective_target_date IS NOT NULL');
+  if (filters.overdue) conditions.push('v.effective_target_overdue');
+  // NULL days_since_officer_action (unassigned & untouched) is deliberately
+  // excluded — those cases are caught by the unassigned officer filter/flag.
+  if (filters.staleOfficer) {
+    conditions.push(`v.days_since_officer_action > ${OUTREACH_STALE_OFFICER_DAYS}`);
+  }
+  if (filters.officerOverdue) conditions.push('v.officer_target_overdue');
 
   if (filters.search) {
     const ph = p(`%${filters.search}%`);

@@ -54,6 +54,27 @@ export function AgencyScorecards({ agencies }: AgencyScorecardsProps) {
                 <p className="text-[11px] uppercase tracking-wider text-navy-600 mt-1">Open</p>
               </div>
             </div>
+            {/* v3 accountability row — officer-activity signals */}
+            <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-navy-800/40">
+              <div>
+                <p className={`text-lg font-bold tabular-nums leading-none ${a.unassigned > 0 ? 'text-amber-400' : 'text-slate-400'}`}>
+                  {a.unassigned}
+                </p>
+                <p className="text-[11px] uppercase tracking-wider text-navy-600 mt-1">Unassigned</p>
+              </div>
+              <div>
+                <p className={`text-lg font-bold tabular-nums leading-none ${a.stale_officer > 0 ? 'text-red-400' : 'text-slate-400'}`}>
+                  {a.stale_officer}
+                </p>
+                <p className="text-[11px] uppercase tracking-wider text-navy-600 mt-1">Stale</p>
+              </div>
+              <div>
+                <p className={`text-lg font-bold tabular-nums leading-none ${a.officer_overdue > 0 ? 'text-red-400' : 'text-slate-400'}`}>
+                  {a.officer_overdue}
+                </p>
+                <p className="text-[11px] uppercase tracking-wider text-navy-600 mt-1">Overdue</p>
+              </div>
+            </div>
             {a.transferred_in > 0 && (
               <p className="text-[11px] text-amber-400/90 mt-2">
                 ▸ {a.transferred_in} transferred in

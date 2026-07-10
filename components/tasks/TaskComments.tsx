@@ -5,6 +5,7 @@ import { useSession } from '@/components/providers/SupabaseSessionProvider';
 import { Send, Loader2, MessageSquare } from 'lucide-react';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { MentionAutocomplete, type MentionUser } from './MentionAutocomplete';
+import { draftToRaw as sharedDraftToRaw, renderMentionBody } from '@/components/mentions/mention-helpers';
 
 interface Comment {
   id: string;
@@ -25,41 +26,6 @@ interface TaskCommentsProps {
 
 // Map of userId -> display name built from users prop + fetched comments
 type UserMap = Map<string, string>;
-
-/** Parse @[userId] tokens and render with highlighted names */
-function renderCommentBody(body: string, userMap: UserMap) {
-  const parts: (string | { userId: string; name: string })[] = [];
-  const regex = /@\[([0-9a-f-]{36})\]/g;
-  let lastIndex = 0;
-  let match;
-
-  while ((match = regex.exec(body)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(body.substring(lastIndex, match.index));
-    }
-    const userId = match[1];
-    parts.push({ userId, name: userMap.get(userId) || 'Unknown' });
-    lastIndex = match.index + match[0].length;
-  }
-
-  if (lastIndex < body.length) {
-    parts.push(body.substring(lastIndex));
-  }
-
-  return (
-    <span>
-      {parts.map((part, i) =>
-        typeof part === 'string' ? (
-          <span key={i}>{part}</span>
-        ) : (
-          <span key={i} className="text-gold-500 font-medium">
-            @{part.name}
-          </span>
-        )
-      )}
-    </span>
-  );
-}
 
 export function TaskComments({ taskId, users, focusCommentId }: TaskCommentsProps) {
   const { data: session } = useSession();
@@ -144,18 +110,7 @@ export function TaskComments({ taskId, users, focusCommentId }: TaskCommentsProp
 
   // Convert draft text (with @DisplayName) to raw text (with @[userId])
   const draftToRaw = useCallback(
-    (text: string): string => {
-      let raw = text;
-      // Sort mentions by name length desc to avoid partial replacements
-      const sorted = Array.from(mentions.entries()).sort(
-        ([a], [b]) => b.length - a.length
-      );
-      for (const [displayName, userId] of sorted) {
-        // Replace @DisplayName with @[userId]
-        raw = raw.replaceAll(`@${displayName}`, `@[${userId}]`);
-      }
-      return raw;
-    },
+    (text: string): string => sharedDraftToRaw(text, mentions),
     [mentions]
   );
 
@@ -283,7 +238,7 @@ export function TaskComments({ taskId, users, focusCommentId }: TaskCommentsProp
                     </span>
                   </div>
                   <p className="text-sm text-slate-200 leading-relaxed mt-0.5 whitespace-pre-wrap break-words">
-                    {renderCommentBody(comment.body, userMap)}
+                    {renderMentionBody(comment.body, userMap)}
                   </p>
                 </div>
               </div>

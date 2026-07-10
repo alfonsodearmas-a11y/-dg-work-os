@@ -13,6 +13,9 @@ export function parentDeepLinkPath(
   switch (parentEntityType) {
     case 'task':
       return `/tasks?taskId=${parentEntityId}`;
+    case 'outreach_case':
+      // Direct Outreach dashboard reads ?case= once on mount to open the panel.
+      return `/direct-outreach?case=${parentEntityId}`;
     default:
       return null;
   }

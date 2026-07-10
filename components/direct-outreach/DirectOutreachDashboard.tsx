@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { CalendarX, CheckCircle2, Clock, Inbox, Radio, Search, Upload, X } from 'lucide-react';
+import { CalendarX, CheckCircle2, Inbox, Radio, Search, Upload, UserX, X } from 'lucide-react';
 import { MultiSelect } from '@/components/oversight/shared';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
 import { fmtGuyanaDateTime } from '@/lib/format';
@@ -12,9 +12,19 @@ import type {
   OutreachSummary,
   OutreachUploadSummary,
 } from '@/lib/direct-outreach/types';
-import { OUTREACH_AGENCIES, OUTREACH_STATUSES, OUTREACH_THEMES, UNASSIGNED_OFFICER } from '@/lib/direct-outreach/types';
+import {
+  OUTREACH_AGENCIES,
+  OUTREACH_DEFAULT_SORT,
+  OUTREACH_STALE_OFFICER_DAYS,
+  OUTREACH_STATUSES,
+  OUTREACH_THEMES,
+  OUTREACH_WORKING_STATUSES,
+  OUTREACH_WORKING_STATUS_LABELS,
+  UNASSIGNED_OFFICER,
+} from '@/lib/direct-outreach/types';
 import { OutreachStatCard } from './OutreachStatCard';
 import { AgencyScorecards } from './AgencyScorecards';
+import { OfficerLoadTable } from './OfficerLoadTable';
 import { CasesTable } from './CasesTable';
 import { CaseDetailPanel } from './CaseDetailPanel';
 
@@ -27,17 +37,22 @@ interface Toggles {
   stalled90: boolean;
   target: boolean;
   overdue: boolean;
+  stale: boolean;
+  officerOverdue: boolean;
   mine: boolean;
 }
 
 const NO_TOGGLES: Toggles = {
-  high: false, stalled60: false, stalled90: false, target: false, overdue: false, mine: false,
+  high: false, stalled60: false, stalled90: false, target: false, overdue: false,
+  stale: false, officerOverdue: false, mine: false,
 };
 
 const TOGGLE_PILLS: { key: keyof Toggles; label: string }[] = [
   { key: 'high', label: 'High priority' },
-  { key: 'stalled60', label: 'Stalled >60d' },
-  { key: 'stalled90', label: 'Stalled >90d' },
+  { key: 'stale', label: `No officer update >${OUTREACH_STALE_OFFICER_DAYS}d` },
+  { key: 'officerOverdue', label: 'Officer overdue' },
+  { key: 'stalled60', label: 'OP stalled >60d' },
+  { key: 'stalled90', label: 'OP stalled >90d' },
   { key: 'target', label: 'Has target date' },
   { key: 'overdue', label: 'Overdue' },
   { key: 'mine', label: 'Assigned to me' },
@@ -90,10 +105,12 @@ export function DirectOutreachDashboard() {
   const [outreaches, setOutreaches] = useState<string[]>([]);
   const [regions, setRegions] = useState<string[]>([]);
   const [officers, setOfficers] = useState<string[]>([]);
+  const [workingStatuses, setWorkingStatuses] = useState<string[]>([]);
   const [toggles, setToggles] = useState<Toggles>(NO_TOGGLES);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [sort, setSort] = useState<OutreachSortField>('days_idle');
+  // Q6 default: officer-action staleness, most neglected (never touched) first.
+  const [sort, setSort] = useState<OutreachSortField>(OUTREACH_DEFAULT_SORT);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   // ?case= deep link (notification links land here). Fully DERIVED selection:
@@ -147,11 +164,14 @@ export function DirectOutreachDashboard() {
     if (outreaches.length) params.set('outreaches', outreaches.join(','));
     if (regions.length) params.set('regions', regions.join(','));
     if (officers.length) params.set('officers', officers.join(','));
+    if (workingStatuses.length) params.set('working', workingStatuses.join(','));
     if (toggles.high) params.set('high', '1');
     if (toggles.stalled60) params.set('stalled60', '1');
     if (toggles.stalled90) params.set('stalled90', '1');
     if (toggles.target) params.set('target', '1');
     if (toggles.overdue) params.set('overdue', '1');
+    if (toggles.stale) params.set('stale', '1');
+    if (toggles.officerOverdue) params.set('officer_overdue', '1');
     if (toggles.mine) params.set('mine', '1');
     if (debouncedSearch) params.set('search', debouncedSearch);
     try {
@@ -168,7 +188,7 @@ export function DirectOutreachDashboard() {
     } finally {
       if (seq === casesRequestSeq.current) setCasesLoading(false);
     }
-  }, [agencies, statuses, themes, outreaches, regions, officers, toggles, debouncedSearch, sort, sortDir]);
+  }, [agencies, statuses, themes, outreaches, regions, officers, workingStatuses, toggles, debouncedSearch, sort, sortDir]);
 
   useEffect(() => {
     loadSummary();
@@ -189,7 +209,8 @@ export function DirectOutreachDashboard() {
     } else {
       setSort(field);
       setSortDir(
-        field === 'case_id' || field === 'agency' || field === 'status' || field === 'theme' || field === 'assignee'
+        field === 'case_id' || field === 'agency' || field === 'status' || field === 'theme'
+          || field === 'assignee' || field === 'working_status'
           ? 'asc'
           : 'desc',
       );
@@ -254,6 +275,7 @@ export function DirectOutreachDashboard() {
     ...(outreaches.length ? [{ label: `Outreach (${outreaches.length})`, onClear: () => setOutreaches([]) }] : []),
     ...(regions.length ? [{ label: `Region (${regions.length})`, onClear: () => setRegions([]) }] : []),
     ...(officers.length ? [{ label: `Officer (${officers.length})`, onClear: () => setOfficers([]) }] : []),
+    ...(workingStatuses.length ? [{ label: `Progress (${workingStatuses.length})`, onClear: () => setWorkingStatuses([]) }] : []),
     ...TOGGLE_PILLS.filter((p) => toggles[p.key]).map((p) => ({
       label: p.label,
       onClear: () => setToggle(p.key, false),
@@ -263,7 +285,7 @@ export function DirectOutreachDashboard() {
 
   const clearAllFilters = () => {
     setAgencies([]); setStatuses([]); setThemes([]);
-    setOutreaches([]); setRegions([]); setOfficers([]);
+    setOutreaches([]); setRegions([]); setOfficers([]); setWorkingStatuses([]);
     setToggles(NO_TOGGLES); setSearch('');
   };
 
@@ -290,6 +312,12 @@ export function DirectOutreachDashboard() {
                 Imported {uploadSummary.cases} case{uploadSummary.cases === 1 ? '' : 's'} ·{' '}
                 {uploadSummary.updates} comment{uploadSummary.updates === 1 ? '' : 's'}{' '}
                 ({uploadSummary.open} open / {uploadSummary.resolved} resolved)
+              </p>
+            )}
+            {uploadSummary && uploadSummary.unrecognized_agencies?.length > 0 && (
+              <p className="text-amber-400 text-sm mt-1">
+                Unrecognized agency value{uploadSummary.unrecognized_agencies.length === 1 ? '' : 's'} in the
+                workbook: {uploadSummary.unrecognized_agencies.join(', ')} — stored verbatim, check for typos.
               </p>
             )}
           </div>
@@ -327,7 +355,7 @@ export function DirectOutreachDashboard() {
         </div>
       )}
 
-      {/* KPI row */}
+      {/* KPI row — officer accountability is the module's center of gravity (v3) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <OutreachStatCard
           label="Open Backlog"
@@ -335,26 +363,33 @@ export function DirectOutreachDashboard() {
           icon={Inbox}
           iconBg="rgba(212,175,55,0.15)"
           iconColor="#f4d03f"
-          sub={totals && totals.unassigned_open > 0 ? `${totals.unassigned_open} unassigned` : undefined}
-          onClick={clearAllFilters}
+          sub={totals && totals.unassigned_open > 0 ? `${totals.unassigned_open} unassigned — click to filter` : undefined}
+          active={officers.length === 1 && officers[0] === UNASSIGNED_OFFICER}
+          onClick={() =>
+            setOfficers((prev) =>
+              prev.length === 1 && prev[0] === UNASSIGNED_OFFICER ? [] : [UNASSIGNED_OFFICER],
+            )
+          }
         />
         <OutreachStatCard
-          label="Stalled >90d"
-          value={totals?.stalled_90 ?? '—'}
-          icon={Clock}
+          label="Needs Officer Action"
+          value={totals?.stale_officer ?? '—'}
+          icon={UserX}
           iconBg="rgba(220,38,38,0.15)"
           iconColor="#f87171"
-          active={toggles.stalled90}
-          onClick={() => setToggle('stalled90')}
+          sub={`no officer update in >${OUTREACH_STALE_OFFICER_DAYS}d`}
+          active={toggles.stale}
+          onClick={() => setToggle('stale')}
         />
         <OutreachStatCard
-          label="Overdue Commitments"
-          value={totals?.overdue_commitments ?? '—'}
+          label="Officer Overdue"
+          value={totals?.officer_overdue ?? '—'}
           icon={CalendarX}
           iconBg="rgba(220,38,38,0.15)"
           iconColor="#f87171"
-          active={toggles.overdue}
-          onClick={() => setToggle('overdue')}
+          sub="officer-committed dates past due"
+          active={toggles.officerOverdue}
+          onClick={() => setToggle('officerOverdue')}
         />
         <OutreachStatCard
           label="Resolution Rate"
@@ -368,6 +403,14 @@ export function DirectOutreachDashboard() {
 
       {/* Agency scorecards */}
       {summary && <AgencyScorecards agencies={summary.agencies} />}
+
+      {/* Per-officer workload (v3) — row click filters to that officer */}
+      {summary && (
+        <OfficerLoadTable
+          officers={summary.officer_load}
+          onSelect={(officerId) => setOfficers([officerId])}
+        />
+      )}
 
       {/* Controls */}
       <div className="card-premium p-4 space-y-3">
@@ -409,6 +452,15 @@ export function DirectOutreachDashboard() {
             options={officerOptions}
             selected={officers}
             onChange={setOfficers}
+          />
+          <MultiSelect
+            label="Progress"
+            options={OUTREACH_WORKING_STATUSES.map((s) => ({
+              value: s,
+              label: OUTREACH_WORKING_STATUS_LABELS[s],
+            }))}
+            selected={workingStatuses}
+            onChange={setWorkingStatuses}
           />
         </div>
 

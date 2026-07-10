@@ -114,6 +114,7 @@ function deriveIcon(eventType: NotificationEventType): string {
   switch (eventType) {
     case 'comment_mention':
     case 'comment_reply':
+    case 'outreach_update_mention':
       return 'at-sign';
     case 'task_assigned':
     case 'task_status_change':
@@ -123,6 +124,7 @@ function deriveIcon(eventType: NotificationEventType): string {
     case 'subtask_completed':
     case 'outreach_assigned':
     case 'outreach_transferred':
+    case 'outreach_case_update':
       return 'task';
     default:
       return 'bell';

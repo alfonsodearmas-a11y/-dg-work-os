@@ -231,6 +231,29 @@ describe('snapshot-survival tripwire', () => {
     expect(source).not.toMatch(/direct_outreach_assignments/);
     expect(source).not.toMatch(/direct_outreach_agency_overrides/);
     expect(source).not.toMatch(/direct_outreach_transfers/);
+    // v3: officer progress log + working state survive uploads the same way.
+    expect(source).not.toMatch(/direct_outreach_officer_updates/);
+    expect(source).not.toMatch(/direct_outreach_case_state/);
+  });
+});
+
+describe('agency normalization (v3)', () => {
+  test('agency cells are uppercased; unknown values are stored verbatim and reported', () => {
+    const lowercase = [...CASE_101];
+    lowercase[1] = 'gwi'; // Agency column
+    const unknown = [...CASE_102];
+    unknown[0] = 103;
+    unknown[1] = 'MOH '; // trailing space + not an outreach agency
+    const parsed = parseOutreachWorkbook(buildWorkbook({ dataRows: [lowercase, unknown] }));
+
+    expect(parsed.cases.find((c) => c.case_id === 101)!.agency).toBe('GWI');
+    expect(parsed.cases.find((c) => c.case_id === 103)!.agency).toBe('MOH'); // stored, trimmed+uppercased
+    expect(parsed.unrecognized_agencies).toEqual(['MOH']);
+  });
+
+  test('known agencies produce no unrecognized entries', () => {
+    const parsed = parseOutreachWorkbook(buildWorkbook({ dataRows: [CASE_101, CASE_102] }));
+    expect(parsed.unrecognized_agencies).toEqual([]);
   });
 });
 
