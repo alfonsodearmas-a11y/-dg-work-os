@@ -69,6 +69,8 @@ export type EventPreferencesMap = {
   task_referred_to_minister: EventPrefEntry;
   outreach_assigned: EventPrefEntry;
   outreach_transferred: EventPrefEntry;
+  outreach_update_mention: EventPrefEntry;
+  outreach_case_update: EventPrefEntry;
 };
 
 export type DigestFrequency = 'daily' | 'weekly' | 'off';
@@ -643,6 +645,10 @@ export const DEFAULT_EVENT_PREFERENCES: EventPreferencesMap = {
   // task_assigned. (Omitting an event here silently disables its email.)
   outreach_assigned: { in_app: true, email: 'instant' },
   outreach_transferred: { in_app: true, email: 'instant' },
+  // v3 officer progress updates: a mention is directed at you (instant, like
+  // comment_mention); an update on your assigned case is ambient (digest).
+  outreach_update_mention: { in_app: true, email: 'instant' },
+  outreach_case_update: { in_app: true, email: 'digest' },
 };
 
 export async function getPreferences(userId: string): Promise<NotificationPrefs> {

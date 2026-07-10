@@ -16,7 +16,9 @@ export type NotificationEventType =
   | 'task_agency_head_notice'
   | 'task_referred_to_minister'
   | 'outreach_assigned'
-  | 'outreach_transferred';
+  | 'outreach_transferred'
+  | 'outreach_update_mention'
+  | 'outreach_case_update';
 
 export interface TierContext {
   taskPriority?: string;   // 'low' | 'medium' | 'high' | 'critical'
@@ -117,5 +119,13 @@ export function classifyNotificationTier(
     case 'outreach_assigned':
     case 'outreach_transferred':
       return 'important';
+
+    // ── Direct Outreach v3: officer progress updates. A mention is directed
+    //     ("you, specifically") — important, like comment_mention's base tier;
+    //     an update on your assigned case is ambient progress — informational.
+    case 'outreach_update_mention':
+      return 'important';
+    case 'outreach_case_update':
+      return 'informational';
   }
 }

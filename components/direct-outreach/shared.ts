@@ -1,6 +1,7 @@
 // Direct Outreach UI — tiny shared display helpers.
 
 import { AGENCY_HEX_COLORS, AGENCY_NAMES } from '@/lib/constants/agencies';
+import type { OutreachWorkingStatus } from '@/lib/direct-outreach/types';
 
 type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info' | 'gold';
 
@@ -38,5 +39,22 @@ export function idleColorClass(daysIdle: number | null | undefined): string {
   if (daysIdle == null) return 'text-navy-600';
   if (daysIdle > 90) return 'text-red-400';
   if (daysIdle >= 30) return 'text-amber-400';
+  return 'text-emerald-400';
+}
+
+/** Internal working-status badge variants (v3). */
+export const WORKING_STATUS_VARIANTS: Record<OutreachWorkingStatus, BadgeVariant> = {
+  not_started: 'default',
+  in_progress: 'info',
+  blocked: 'danger',
+  resolved_pending_verification: 'success',
+};
+
+/** Officer-activity traffic light (v3, tighter than OP idle): green <7,
+ *  amber 7-14, red >14; red also for null (unassigned & never updated). */
+export function officerActionColorClass(days: number | null | undefined): string {
+  if (days == null) return 'text-red-400';
+  if (days > 14) return 'text-red-400';
+  if (days >= 7) return 'text-amber-400';
   return 'text-emerald-400';
 }

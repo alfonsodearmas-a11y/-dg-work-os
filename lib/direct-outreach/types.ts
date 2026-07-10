@@ -1,10 +1,25 @@
 // Direct Outreach — shared types. Client-safe: types only, no server imports
-// (mirrors the lib/calendar-types.ts client/server boundary pattern).
+// (mirrors the lib/calendar-types.ts client/server boundary pattern; the
+// constants import below is type-only and erased at build).
 
-/** OP Direct agencies. PUA = ministry-level (Public Utilities and Aviation). */
-export type OutreachAgency = 'GPL' | 'GWI' | 'PUA';
+import type { UserAgency } from '@/lib/constants/agencies';
 
-export const OUTREACH_AGENCIES: OutreachAgency[] = ['GWI', 'GPL', 'PUA'];
+/** OP Direct's ministry-level bucket (Public Utilities & Aviation = the ministry itself). */
+export const OUTREACH_MINISTRY = 'PUA' as const;
+
+/**
+ * Agencies a case can belong to / be transferred to — THE single source for
+ * the transfer enum, filter and transfer dropdowns, and scorecard ordering.
+ * Every entry except PUA MUST be a valid users.agency value (the `satisfies`
+ * clause enforces this at compile time) so agency_manager scoping and
+ * assignment work unmodified. Adding an agency = one entry here.
+ * GWI/GPL keep their positions so existing scorecard order is stable.
+ */
+export const OUTREACH_AGENCIES = [
+  'GWI', 'GPL', 'HECI', 'MARAD', 'CJIA', 'GCAA', 'HAS', OUTREACH_MINISTRY,
+] as const satisfies readonly (UserAgency | typeof OUTREACH_MINISTRY)[];
+
+export type OutreachAgency = (typeof OUTREACH_AGENCIES)[number];
 
 /** OP Direct case statuses (status_ids 1-7). */
 export const OUTREACH_STATUSES = [
@@ -32,6 +47,53 @@ export const OUTREACH_THEMES = [
 export type OutreachTheme = (typeof OUTREACH_THEMES)[number];
 
 export type PriorityFlag = 'Normal' | 'Elevated';
+
+// ── Officer-driven working state (v3) ────────────────────────────────────────
+
+/** Internal DG-OS progress — distinct from the imported OP Direct `status`,
+ *  which stays the official one (only it opens/closes a case). */
+export const OUTREACH_WORKING_STATUSES = [
+  'not_started',
+  'in_progress',
+  'blocked',
+  'resolved_pending_verification',
+] as const;
+export type OutreachWorkingStatus = (typeof OUTREACH_WORKING_STATUSES)[number];
+
+export const OUTREACH_WORKING_STATUS_LABELS: Record<OutreachWorkingStatus, string> = {
+  not_started: 'Not started',
+  in_progress: 'In progress',
+  blocked: 'Blocked',
+  resolved_pending_verification: 'Resolved — pending verification',
+};
+
+/** "No officer update in >Nd" threshold shared by the KPI card and filter pill. */
+export const OUTREACH_STALE_OFFICER_DAYS = 14;
+
+/** One row of the append-only officer progress log (survives uploads). */
+export interface OutreachOfficerUpdate {
+  id: string;
+  case_id: number;
+  /** Null = deleted user (renders "Former user"). */
+  author_id: string | null;
+  author_name: string | null;
+  author_agency: string | null;
+  /** Raw @[uuid] mention format (Tasks wire format); the client renders names. */
+  body: string | null;
+  new_working_status: OutreachWorkingStatus | null;
+  new_target_date: string | null;
+  target_cleared: boolean;
+  created_at: string;
+}
+
+/** Current working state for one case ('not_started' + no target when no row). */
+export interface OutreachCaseState {
+  working_status: OutreachWorkingStatus;
+  target_date: string | null;
+  updated_by: string | null;
+  updated_by_name: string | null;
+  updated_at: string | null;
+}
 
 /** How extractTargetDate matched the text — coarser patterns are less certain. */
 export type TargetDateType = 'day' | 'month' | 'month-range' | 'quarter' | 'year-end';
@@ -84,6 +146,18 @@ export interface OutreachCaseRow {
   committed_source: string | null;
   committed_by: string | null;
   committed_overdue: boolean;
+  // ── v3 officer-driven fields (view v4, migration 151) ──────────────────────
+  working_status: OutreachWorkingStatus;
+  /** Explicit officer commitment — survives uploads, outranks the heuristic. */
+  officer_target_date: string | null;
+  officer_target_overdue: boolean;
+  /** COALESCE(officer target, auto-detected committed_date). */
+  effective_target_date: string | null;
+  effective_target_overdue: boolean;
+  last_officer_update_at: string | null;
+  /** Guyana days since GREATEST(last officer update, assigned_at); NULL only
+   *  when the case is unassigned AND never updated ("most neglected"). */
+  days_since_officer_action: number | null;
 }
 
 /** Full case detail (any status) + computed aging. */
@@ -131,10 +205,29 @@ export interface OutreachAgencySummary {
   resolution_rate: number | null;
   stalled_60: number;
   stalled_90: number;
+  /** Open cases whose EFFECTIVE target (officer > heuristic) is past (Q4). */
   overdue_commitments: number;
   with_target: number;
   /** Open cases owned via a transfer override (amendment B legibility count). */
   transferred_in: number;
+  // ── v3 accountability counts ────────────────────────────────────────────
+  unassigned: number;
+  /** days_since_officer_action > OUTREACH_STALE_OFFICER_DAYS. */
+  stale_officer: number;
+  /** Officer-set target date past (strict — heuristic dates excluded). */
+  officer_overdue: number;
+}
+
+/** Per-officer accountability rollup over their assigned open cases. */
+export interface OutreachOfficerLoad {
+  id: string;
+  name: string | null;
+  agency: string | null;
+  open_cases: number;
+  stale_cases: number;
+  overdue_commitments: number;
+  /** Newest update AUTHORED by this officer (strict per-author). */
+  last_update_at: string | null;
 }
 
 export interface OutreachSummary {
@@ -149,8 +242,14 @@ export interface OutreachSummary {
     with_target: number;
     transferred_in: number;
     unassigned_open: number;
+    /** Assigned-or-updated open cases with no officer activity in >14d. */
+    stale_officer: number;
+    /** Open cases whose officer-set target date is past. */
+    officer_overdue: number;
   };
   agencies: OutreachAgencySummary[];
+  /** Per-officer workload strip (scoped like everything else). */
+  officer_load: OutreachOfficerLoad[];
   /** Scoped option sources for the filter dropdowns. */
   filter_options: {
     regions: string[];
@@ -172,8 +271,14 @@ export type OutreachSortField =
   | 'days_idle'
   | 'days_open'
   | 'latest_update_date'
-  | 'committed_date'
-  | 'assignee';
+  | 'target_date'
+  | 'assignee'
+  | 'working_status'
+  | 'officer_update';
+
+/** Default sort (Q6): officer-action staleness, most neglected first —
+ *  unassigned-and-untouched (NULL) cases sort to the TOP, then stalest. */
+export const OUTREACH_DEFAULT_SORT: OutreachSortField = 'officer_update';
 
 /** Sentinel accepted in `officers` alongside user uuids. */
 export const UNASSIGNED_OFFICER = 'unassigned';
@@ -189,12 +294,21 @@ export interface OutreachListFilters {
   officers?: string[];
   /** Session user id, resolved by the route from the "Assigned to me" toggle. */
   assignedToMe?: string;
+  /** v3: internal working-status multi-select. */
+  workingStatuses?: string[];
   /** Independent toggles (replace the old single-select backlog view). */
   highPriority?: boolean;
   stalled60?: boolean;
   stalled90?: boolean;
+  /** Effective target exists (officer-set or auto-detected) — Q4 semantics. */
   hasTarget?: boolean;
+  /** Effective target past — Q4 semantics. */
   overdue?: boolean;
+  /** No officer activity in >OUTREACH_STALE_OFFICER_DAYS (NULLs excluded —
+   *  those are unassigned-and-untouched, caught by officers=unassigned). */
+  staleOfficer?: boolean;
+  /** Officer-set target date past (strict). */
+  officerOverdue?: boolean;
   search?: string;
   sort?: OutreachSortField;
   sort_dir?: 'asc' | 'desc';
@@ -206,4 +320,7 @@ export interface OutreachUploadSummary {
   updates: number;
   open: number;
   resolved: number;
+  /** Distinct Agency values outside OUTREACH_AGENCIES (stored verbatim but
+   *  surfaced so a typo'd workbook is visible instead of silently bucketed). */
+  unrecognized_agencies: string[];
 }

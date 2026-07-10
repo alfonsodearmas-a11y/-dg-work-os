@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Bell, Clock, Moon, Mail, AtSign, Reply, UserPlus, AlertTriangle, CalendarClock, ArrowRightLeft, CheckCircle2, ListChecks, Check } from 'lucide-react';
+import { Bell, Clock, Moon, Mail, AtSign, Reply, UserPlus, AlertTriangle, CalendarClock, ArrowRightLeft, CheckCircle2, ListChecks, Check, MessageSquare } from 'lucide-react';
 import type { NotificationPrefs, EventPreferencesMap, EventEmailPref, DigestFrequency } from '@/lib/notifications';
 
 // ---------------------------------------------------------------------------
@@ -100,6 +100,8 @@ const EVENT_TYPES: EventTypeMeta[] = [
   { key: 'subtask_completed', label: 'Subtask Completed', description: 'When a subtask is finished', icon: ListChecks },
   { key: 'outreach_assigned', label: 'Outreach Case Assigned', description: 'When a Direct Outreach case is assigned to you', icon: UserPlus },
   { key: 'outreach_transferred', label: 'Outreach Case Transferred', description: 'When an outreach case is transferred to your agency', icon: ArrowRightLeft },
+  { key: 'outreach_update_mention', label: 'Outreach Update @Mentions', description: 'When someone tags you in an outreach progress update', icon: AtSign },
+  { key: 'outreach_case_update', label: 'Outreach Case Updates', description: 'Progress updates on outreach cases assigned to you', icon: MessageSquare },
 ];
 
 // ---------------------------------------------------------------------------

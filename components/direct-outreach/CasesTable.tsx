@@ -6,7 +6,15 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
 import { fmtDate, truncate } from '@/lib/format';
 import type { OutreachCaseRow, OutreachSortField } from '@/lib/direct-outreach/types';
-import { OUTREACH_STATUS_VARIANTS, idleColorClass, initials, outreachAgencyColor } from './shared';
+import { OUTREACH_WORKING_STATUS_LABELS } from '@/lib/direct-outreach/types';
+import {
+  OUTREACH_STATUS_VARIANTS,
+  WORKING_STATUS_VARIANTS,
+  idleColorClass,
+  initials,
+  officerActionColorClass,
+  outreachAgencyColor,
+} from './shared';
 
 interface CasesTableProps {
   cases: OutreachCaseRow[];
@@ -86,8 +94,9 @@ export function CasesTable({ cases, loading, sort, sortDir, onSort, onSelect, ca
               <SortableTh field="theme" sort={sort} sortDir={sortDir} onSort={onSort}>Theme / Issue</SortableTh>
               <SortableTh field="assignee" sort={sort} sortDir={sortDir} onSort={onSort}>Officer</SortableTh>
               <SortableTh field="latest_update_date" sort={sort} sortDir={sortDir} onSort={onSort}>Latest Update</SortableTh>
-              <SortableTh field="days_idle" sort={sort} sortDir={sortDir} onSort={onSort}>Idle</SortableTh>
-              <SortableTh field="committed_date" sort={sort} sortDir={sortDir} onSort={onSort}>Target Date</SortableTh>
+              <SortableTh field="officer_update" sort={sort} sortDir={sortDir} onSort={onSort}>Officer Update</SortableTh>
+              <SortableTh field="days_idle" sort={sort} sortDir={sortDir} onSort={onSort}>OP Idle</SortableTh>
+              <SortableTh field="target_date" sort={sort} sortDir={sortDir} onSort={onSort}>Target Date</SortableTh>
               <th aria-label="Open detail" />
             </tr>
           </thead>
@@ -146,16 +155,37 @@ export function CasesTable({ cases, loading, sort, sortDir, onSort, onSelect, ca
                 </td>
                 <td>
                   {c.assignee_user_id ? (
-                    <span className="flex items-center gap-2" title={c.assignee_name ?? undefined}>
-                      <span className="w-6 h-6 rounded-full bg-navy-800 flex items-center justify-center text-xs font-bold text-slate-400 shrink-0">
-                        {initials(c.assignee_name)}
+                    <div>
+                      <span className="flex items-center gap-2" title={c.assignee_name ?? undefined}>
+                        <span className="w-6 h-6 rounded-full bg-navy-800 flex items-center justify-center text-xs font-bold text-slate-400 shrink-0">
+                          {initials(c.assignee_name)}
+                        </span>
+                        <span className="text-xs text-slate-400 truncate max-w-[110px]">
+                          {c.assignee_name ?? 'Unknown'}
+                        </span>
                       </span>
-                      <span className="text-xs text-slate-400 truncate max-w-[110px]">
-                        {c.assignee_name ?? 'Unknown'}
-                      </span>
-                    </span>
+                      {c.working_status !== 'not_started' && (
+                        <span className="inline-block mt-1">
+                          <Badge variant={WORKING_STATUS_VARIANTS[c.working_status]}>
+                            {OUTREACH_WORKING_STATUS_LABELS[c.working_status]}
+                          </Badge>
+                        </span>
+                      )}
+                    </div>
                   ) : (
-                    <span className="text-xs text-navy-600">—</span>
+                    <div>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                        Unassigned
+                      </span>
+                      {/* A manager can set progress before assigning — still show it. */}
+                      {c.working_status !== 'not_started' && (
+                        <span className="block mt-1">
+                          <Badge variant={WORKING_STATUS_VARIANTS[c.working_status]}>
+                            {OUTREACH_WORKING_STATUS_LABELS[c.working_status]}
+                          </Badge>
+                        </span>
+                      )}
+                    </div>
                   )}
                 </td>
                 <td>
@@ -171,16 +201,38 @@ export function CasesTable({ cases, loading, sort, sortDir, onSort, onSelect, ca
                   )}
                 </td>
                 <td>
+                  {/* Days since officer action; NULL = unassigned & untouched ("most neglected"). */}
+                  <span
+                    className={`font-semibold tabular-nums ${officerActionColorClass(c.days_since_officer_action)}`}
+                    title={
+                      c.days_since_officer_action == null
+                        ? 'No officer has ever been assigned or posted an update'
+                        : `${c.days_since_officer_action} days since the last officer action`
+                    }
+                  >
+                    {c.days_since_officer_action == null ? 'Never' : `${c.days_since_officer_action}d`}
+                  </span>
+                </td>
+                <td>
                   <span className={`font-semibold tabular-nums ${idleColorClass(c.days_idle)}`}>
                     {c.days_idle == null ? '—' : `${c.days_idle}d`}
                   </span>
                 </td>
                 <td>
-                  {c.committed_date ? (
-                    <Badge variant={c.committed_overdue ? 'danger' : 'success'}>
-                      {fmtDate(c.committed_date)}
-                      {c.committed_overdue && ' · OVERDUE'}
-                    </Badge>
+                  {c.effective_target_date ? (
+                    <span
+                      title={
+                        c.officer_target_date
+                          ? 'Officer-committed target date'
+                          : 'Auto-detected from imported comments — verify'
+                      }
+                    >
+                      <Badge variant={c.effective_target_overdue ? 'danger' : 'success'}>
+                        {c.officer_target_date ? '' : '≈ '}
+                        {fmtDate(c.effective_target_date)}
+                        {c.effective_target_overdue && ' · OVERDUE'}
+                      </Badge>
+                    </span>
                   ) : (
                     <span className="text-xs text-navy-600">—</span>
                   )}

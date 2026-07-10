@@ -11,6 +11,7 @@ import * as XLSX from 'xlsx';
 import { transaction } from '@/lib/db-pg';
 import { logger } from '@/lib/logger';
 import { classifyTheme, extractTargetDate, isSubstantive, priorityFlag } from './compute';
+import { OUTREACH_AGENCIES } from './types';
 import type { OutreachUploadSummary } from './types';
 
 /** Workbook-shape problems the upload route reports back as a 400. */
@@ -74,6 +75,8 @@ export interface ParsedWorkbook {
   duplicate_cases: number;
   /** Data rows dropped because the Case ID cell was non-empty but not a valid integer. */
   invalid_case_rows: number;
+  /** Distinct normalized Agency values outside OUTREACH_AGENCIES (stored verbatim). */
+  unrecognized_agencies: string[];
 }
 
 // ── Cell readers ─────────────────────────────────────────────────────────────
@@ -260,6 +263,8 @@ export function parseOutreachWorkbook(buffer: Buffer): ParsedWorkbook {
   const cases = new Map<number, ParsedCase>();
   let duplicateCases = 0;
   let invalidCaseRows = 0;
+  const unrecognizedAgencies = new Set<string>();
+  const knownAgencies = new Set<string>(OUTREACH_AGENCIES);
   for (const row of dataTable.rows) {
     const rawCaseId = d(row, 'Case ID');
     const caseId = int(rawCaseId);
@@ -273,7 +278,11 @@ export function parseOutreachWorkbook(buffer: Buffer): ParsedWorkbook {
       duplicateCases++;
       continue;
     }
-    const agency = text(d(row, 'Agency'));
+    // Normalize to uppercase (agency semantics compare upper() everywhere);
+    // unknown values are STORED VERBATIM (a new agency in a future workbook
+    // must not brick the upload) but tracked so the uploader sees them.
+    const agency = text(d(row, 'Agency'))?.toUpperCase() ?? null;
+    if (agency && !knownAgencies.has(agency)) unrecognizedAgencies.add(agency);
     const description = text(d(row, 'Issue Description'));
     const category = text(d(row, 'Service Category')); // schema home: category_name
     const priority = int(d(row, 'Priority Code')) ?? 0;
@@ -355,6 +364,7 @@ export function parseOutreachWorkbook(buffer: Buffer): ParsedWorkbook {
     skipped_updates: skippedUpdates,
     duplicate_cases: duplicateCases,
     invalid_case_rows: invalidCaseRows,
+    unrecognized_agencies: [...unrecognizedAgencies].sort(),
   };
 }
 
@@ -395,6 +405,12 @@ export async function importOutreachWorkbook(buffer: Buffer): Promise<OutreachUp
         invalid_case_rows: parsed.invalid_case_rows,
       },
       '[direct-outreach] workbook rows dropped during import',
+    );
+  }
+  if (parsed.unrecognized_agencies.length > 0) {
+    logger.warn(
+      { unrecognized_agencies: parsed.unrecognized_agencies },
+      '[direct-outreach] workbook contains agency values outside OUTREACH_AGENCIES',
     );
   }
 
@@ -444,6 +460,7 @@ export async function importOutreachWorkbook(buffer: Buffer): Promise<OutreachUp
     updates: parsed.updates.length,
     open: parsed.cases.length - resolved,
     resolved,
+    unrecognized_agencies: parsed.unrecognized_agencies,
   };
   logger.info(summary, '[direct-outreach] workbook import complete');
   return summary;

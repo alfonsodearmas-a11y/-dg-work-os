@@ -57,6 +57,8 @@ export function classifyTheme(
 
   if (ag === 'GWI') return 'Water-Supply';
   if (ag === 'GPL') return 'Electricity-Supply';
+  if (ag === 'HECI') return 'Electricity-Supply';
+  if (ag === 'MARAD' || ag === 'CJIA' || ag === 'GCAA' || ag === 'HAS') return 'Aviation-Transport';
   return 'Other';
 }
 

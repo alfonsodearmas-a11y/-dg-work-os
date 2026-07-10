@@ -68,6 +68,14 @@ describe('classifyTheme', () => {
     expect(classifyTheme('Follow up requested', null, 'PUA')).toBe('Other');
     expect(classifyTheme(null, null, null)).toBe('Other');
   });
+
+  test('v3 agency fallbacks: HECI electric; MARAD/CJIA/GCAA/HAS aviation-transport', () => {
+    expect(classifyTheme('Follow up requested', null, 'HECI')).toBe('Electricity-Supply');
+    expect(classifyTheme('Follow up requested', null, 'MARAD')).toBe('Aviation-Transport');
+    expect(classifyTheme('Follow up requested', null, 'CJIA')).toBe('Aviation-Transport');
+    expect(classifyTheme('Follow up requested', null, 'GCAA')).toBe('Aviation-Transport');
+    expect(classifyTheme('Follow up requested', null, 'HAS')).toBe('Aviation-Transport');
+  });
 });
 
 describe('extractTargetDate', () => {

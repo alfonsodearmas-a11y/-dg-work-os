@@ -1,16 +1,29 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowRightLeft, CalendarClock, Radio, X } from 'lucide-react';
+import { ArrowRightLeft, CalendarClock, ClipboardList, Pencil, Radio, UserCircle2, X } from 'lucide-react';
 import { SlidePanel } from '@/components/layout/SlidePanel';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { fmtDate, fmtGuyanaDate, fmtGuyanaDateTime } from '@/lib/format';
 import { isSubstantive } from '@/lib/direct-outreach/compute';
-import { canAssignOutreachCase } from '@/lib/direct-outreach/permissions';
-import { OUTREACH_AGENCIES } from '@/lib/direct-outreach/types';
-import type { OutreachCaseDetail, OutreachTransfer, OutreachUpdate } from '@/lib/direct-outreach/types';
+import { canAssignOutreachCase, canPostOutreachUpdate } from '@/lib/direct-outreach/permissions';
+import {
+  OUTREACH_AGENCIES,
+  OUTREACH_WORKING_STATUSES,
+  OUTREACH_WORKING_STATUS_LABELS,
+} from '@/lib/direct-outreach/types';
+import type {
+  OutreachCaseDetail,
+  OutreachCaseState,
+  OutreachOfficerUpdate,
+  OutreachTransfer,
+  OutreachUpdate,
+  OutreachWorkingStatus,
+} from '@/lib/direct-outreach/types';
 import { useEffectiveUser } from '@/components/providers/ViewAsProvider';
+import type { MentionUser } from '@/components/tasks/MentionAutocomplete';
+import { OfficerUpdates } from './OfficerUpdates';
 import { OUTREACH_STATUS_VARIANTS, idleColorClass, initials, outreachAgencyColor } from './shared';
 
 interface CaseDetailPanelProps {
@@ -24,7 +37,17 @@ interface CaseDetailResponse {
   case: OutreachCaseDetail;
   updates: OutreachUpdate[];
   transfers: OutreachTransfer[];
+  officer_updates: OutreachOfficerUpdate[];
+  state: OutreachCaseState;
 }
+
+// Per-status ACTIVE pill classes (inactive pills share the muted treatment).
+const STATUS_PILL_ACTIVE: Record<OutreachWorkingStatus, string> = {
+  not_started: 'bg-navy-800 text-slate-300 border-navy-600',
+  in_progress: 'bg-blue-500/15 text-blue-400 border-blue-500/40',
+  blocked: 'bg-red-500/15 text-red-400 border-red-500/40',
+  resolved_pending_verification: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40',
+};
 
 interface AssignableUser {
   id: string;
@@ -67,10 +90,34 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
   const [transferring, setTransferring] = useState(false);
   const [transferErrorState, setTransferErrorState] = useState<{ caseId: number; message: string } | null>(null);
 
+  // Progress & commitment (v3) — status pill save + target-date editor, both
+  // keyed by caseId so half-typed state never leaks across case switches.
+  const [savingStatus, setSavingStatus] = useState(false);
+  const [targetForm, setTargetForm] = useState<{ caseId: number | null; editing: boolean; value: string }>({
+    caseId: null,
+    editing: false,
+    value: '',
+  });
+  const [savingTarget, setSavingTarget] = useState(false);
+  const [postErrorState, setPostErrorState] = useState<{ caseId: number; message: string } | null>(null);
+  // Optimistic overrides after a successful post: the detail refetch is async,
+  // so without these the pills/buttons re-enable against STALE server state and
+  // a second click appends a duplicate row to the permanent log. Cleared when
+  // the refetch lands (keyed by caseId so they never leak across cases).
+  // `target` uses undefined = no override, null = cleared.
+  const [optimistic, setOptimistic] = useState<{
+    caseId: number;
+    status?: OutreachWorkingStatus;
+    target?: string | null;
+  } | null>(null);
+
   const transferTarget = transferForm.caseId === caseId ? transferForm.target : '';
   const transferReason = transferForm.caseId === caseId ? transferForm.reason : '';
   const assignError = assignErrorState?.caseId === caseId ? assignErrorState.message : null;
   const transferError = transferErrorState?.caseId === caseId ? transferErrorState.message : null;
+  const postError = postErrorState?.caseId === caseId ? postErrorState.message : null;
+  const targetEditing = targetForm.caseId === caseId && targetForm.editing;
+  const targetValue = targetForm.caseId === caseId ? targetForm.value : '';
 
   useEffect(() => {
     if (caseId === null) return;
@@ -90,6 +137,8 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
         if (cancelled) return;
         setDetail({ caseId, data });
         setFetchError((prev) => (prev?.caseId === caseId ? null : prev));
+        // Fresh server state supersedes any optimistic override for this case.
+        setOptimistic((prev) => (prev?.caseId === caseId ? null : prev));
       })
       .catch((err: Error) => {
         if (cancelled) return;
@@ -112,9 +161,26 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
     ? canAssignOutreachCase(effectiveUser.role, effectiveUser.agency, c.effective_agency)
     : false;
 
-  // Load the assignable-user list once per case when the viewer can assign.
+  // Progress updates / working status / target date (v3): the assigned officer
+  // too, even without assign rights. Rendered on effectiveUser (ViewAs-aware);
+  // the route re-authorizes on the real session.
+  const canPost = c
+    ? canPostOutreachUpdate(
+        effectiveUser.role,
+        effectiveUser.id,
+        effectiveUser.agency,
+        c.effective_agency,
+        c.assignee_user_id,
+      )
+    : false;
+
+  // Load the case-agency user list once per case when the viewer can assign
+  // (picker) or post (mention autocomplete) — one fetch feeds both. The
+  // effective_agency guard keeps a null-agency case (where a superadmin or the
+  // assignee can still post) from fetching ?agency= → ALL users, whose
+  // out-of-scope mentions the server would silently drop anyway.
   useEffect(() => {
-    if (!c || !canAssign) return;
+    if (!c || !c.effective_agency || (!canAssign && !canPost)) return;
     let cancelled = false;
     setAssignableUsers(null);
     fetch(`/api/tasks/users?agency=${encodeURIComponent(c.effective_agency ?? '')}`)
@@ -130,7 +196,7 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [c?.case_id, c?.effective_agency, canAssign]);
+  }, [c?.case_id, c?.effective_agency, canAssign, canPost]);
 
   const reload = () => setReloadSeq((s) => s + 1);
 
@@ -193,6 +259,91 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
     }
   };
 
+  // One POST endpoint carries remarks, working-status changes, and target-date
+  // set/clear (appended to the permanent officer log server-side).
+  const postUpdate = async (payload: {
+    body?: string;
+    working_status?: OutreachWorkingStatus;
+    target_date?: string | null;
+  }): Promise<{ ok: boolean; error?: string }> => {
+    if (caseId === null) return { ok: false, error: 'No case selected' };
+    setPostErrorState(null);
+    try {
+      const res = await fetch(`/api/direct-outreach/${caseId}/updates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const message = await res
+          .json()
+          .then((b) => b?.error as string | undefined)
+          .catch(() => undefined);
+        throw new Error(message || 'Failed to post update');
+      }
+      reload();
+      onChanged?.();
+      return { ok: true };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to post update';
+      setPostErrorState({ caseId, message });
+      return { ok: false, error: message };
+    }
+  };
+
+  // Displayed state = optimistic override (post landed, refetch in flight) or server truth.
+  const displayedStatus =
+    optimistic?.caseId === caseId && optimistic.status !== undefined
+      ? optimistic.status
+      : current?.state.working_status;
+  const displayedTarget =
+    optimistic?.caseId === caseId && optimistic.target !== undefined
+      ? optimistic.target
+      : current?.state.target_date ?? null;
+
+  const handleStatusChange = async (status: OutreachWorkingStatus) => {
+    if (savingStatus || caseId === null || !current || displayedStatus === status) return;
+    setSavingStatus(true);
+    try {
+      const res = await postUpdate({ working_status: status });
+      if (res.ok) setOptimistic((prev) => ({ caseId, ...(prev?.caseId === caseId ? prev : {}), status }));
+    } finally {
+      setSavingStatus(false);
+    }
+  };
+
+  const handleTargetSave = async () => {
+    if (savingTarget || caseId === null || !targetValue) return;
+    setSavingTarget(true);
+    try {
+      const res = await postUpdate({ target_date: targetValue });
+      if (res.ok) {
+        setOptimistic((prev) => ({ caseId, ...(prev?.caseId === caseId ? prev : {}), target: targetValue }));
+        setTargetForm({ caseId, editing: false, value: '' });
+      }
+    } finally {
+      setSavingTarget(false);
+    }
+  };
+
+  const handleTargetClear = async () => {
+    if (savingTarget || caseId === null) return;
+    setSavingTarget(true);
+    try {
+      const res = await postUpdate({ target_date: null });
+      if (res.ok) setOptimistic((prev) => ({ caseId, ...(prev?.caseId === caseId ? prev : {}), target: null }));
+    } finally {
+      setSavingTarget(false);
+    }
+  };
+
+  const mentionUsers: MentionUser[] = (assignableUsers ?? []).map((u) => ({
+    id: u.id,
+    name: u.name ?? 'Unknown',
+    role: u.role,
+    agency: u.agency,
+  }));
+
   return (
     <SlidePanel
       isOpen={caseId !== null}
@@ -243,11 +394,137 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
             </div>
           )}
 
+          {/* Progress & commitment (v3) — the case's action center */}
+          <div className={`card-premium p-4 ${canPost ? 'border-l-2 border-l-gold-500/40' : ''}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <ClipboardList size={14} className={canPost ? 'text-gold-500' : 'text-navy-600'} aria-hidden="true" />
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-navy-600">
+                Progress &amp; commitment
+              </p>
+            </div>
+
+            {canPost ? (
+              <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label="Working status">
+                {OUTREACH_WORKING_STATUSES.map((s) => {
+                  const active = displayedStatus === s;
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => handleStatusChange(s)}
+                      disabled={savingStatus}
+                      className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors disabled:opacity-60 ${
+                        active
+                          ? STATUS_PILL_ACTIVE[s]
+                          : 'bg-navy-900/60 text-slate-400 border-navy-800 hover:border-gold-500/40 hover:text-gold-500'
+                      }`}
+                    >
+                      {OUTREACH_WORKING_STATUS_LABELS[s]}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <Badge variant={
+                displayedStatus === 'blocked' ? 'danger'
+                  : displayedStatus === 'in_progress' ? 'info'
+                    : displayedStatus === 'resolved_pending_verification' ? 'success'
+                      : 'default'
+              }>
+                {OUTREACH_WORKING_STATUS_LABELS[displayedStatus ?? 'not_started']}
+              </Badge>
+            )}
+            {current.state.updated_at && (
+              <p className="text-[11px] text-navy-600 mt-2">
+                set by {current.state.updated_by_name ?? 'Former user'} · {fmtGuyanaDate(current.state.updated_at)}
+              </p>
+            )}
+
+            {/* Officer target date — the explicit commitment (outranks the heuristic) */}
+            <div className="mt-4 pt-3 border-t border-navy-800/40">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-navy-600 mb-2">
+                Officer target date
+              </p>
+              {displayedTarget && !targetEditing ? (
+                <div className="flex items-center gap-2">
+                  <p className="text-xl font-bold text-white tabular-nums">{fmtDate(displayedTarget)}</p>
+                  {c.officer_target_overdue && <Badge variant="danger">OVERDUE</Badge>}
+                  {canPost && (
+                    <span className="flex items-center gap-1 ml-auto">
+                      <button
+                        type="button"
+                        onClick={() => setTargetForm({ caseId, editing: true, value: displayedTarget ?? '' })}
+                        disabled={savingTarget}
+                        className="p-1.5 rounded-lg text-navy-600 hover:text-gold-500 hover:bg-gold-500/10 transition-colors disabled:opacity-60"
+                        aria-label="Edit target date"
+                        title="Edit target date"
+                      >
+                        <Pencil className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleTargetClear}
+                        disabled={savingTarget}
+                        className="p-1.5 rounded-lg text-navy-600 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-60"
+                        aria-label="Clear target date"
+                        title="Clear target date"
+                      >
+                        <X className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </span>
+                  )}
+                </div>
+              ) : targetEditing ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="date"
+                    value={targetValue}
+                    onChange={(e) => setTargetForm({ caseId, editing: true, value: e.target.value })}
+                    className="input-premium text-sm"
+                    aria-label="Target date"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleTargetSave}
+                    disabled={!targetValue || savingTarget}
+                    className="btn-gold text-xs !py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {savingTarget ? 'Saving…' : 'Save'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTargetForm({ caseId, editing: false, value: '' })}
+                    className="text-xs text-navy-600 hover:text-gold-500 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : canPost ? (
+                <button
+                  type="button"
+                  onClick={() => setTargetForm({ caseId, editing: true, value: '' })}
+                  className="btn-navy text-xs !py-1.5 flex items-center gap-1.5"
+                >
+                  <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
+                  Set target date
+                </button>
+              ) : (
+                <p className="text-xs text-navy-600 italic">No officer commitment yet.</p>
+              )}
+            </div>
+            {postError && <p className="text-red-400 text-xs mt-2">{postError}</p>}
+          </div>
+
           {/* Responsible officer */}
-          <div className="card-premium p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-navy-600 mb-3">
-              Responsible officer
-            </p>
+          <div className={`card-premium p-4 ${canAssign ? 'border-l-2 border-l-gold-500/40' : ''}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <UserCircle2 size={14} className={canAssign ? 'text-gold-500' : 'text-navy-600'} aria-hidden="true" />
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-navy-600">
+                Responsible officer
+              </p>
+            </div>
             {c.assignee_user_id ? (
               <div className="flex items-center gap-3">
                 <span className="w-9 h-9 rounded-full bg-navy-800 flex items-center justify-center text-xs font-bold text-slate-400 shrink-0">
@@ -278,6 +555,9 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
 
             {canAssign && (
               <div className="mt-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-500/80 mb-1.5">
+                  Assign
+                </p>
                 <select
                   value=""
                   onChange={(e) => {
@@ -309,7 +589,7 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
 
           {/* Agency transfer (superadmin) */}
           {(isSuperadmin || current.transfers.length > 0) && (
-            <div className="card-premium p-4">
+            <div className={`card-premium p-4 ${isSuperadmin ? 'border-l-2 border-l-gold-500/40' : ''}`}>
               <div className="flex items-center gap-2 mb-3">
                 <ArrowRightLeft size={14} className="text-amber-400" aria-hidden="true" />
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-navy-600">
@@ -425,6 +705,11 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
                 {c.committed_by && (
                   <p className="text-[11px] text-navy-600 mt-1.5">— {c.committed_by}</p>
                 )}
+                {displayedTarget && (
+                  <p className="text-[11px] text-navy-600 mt-2">
+                    The officer commitment above supersedes this detection.
+                  </p>
+                )}
               </>
             ) : (
               <p className="text-xs text-navy-600 italic">
@@ -432,6 +717,17 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
               </p>
             )}
           </div>
+
+          {/* Officer progress updates (v3 — the writable log) */}
+          <OfficerUpdates
+            updates={current.officer_updates}
+            users={mentionUsers}
+            canPost={canPost}
+            onSubmit={async (rawBody) => {
+              const res = await postUpdate({ body: rawBody });
+              return res.ok ? null : res.error ?? 'Failed to post update';
+            }}
+          />
 
           {/* Imported comment timeline (read-only) */}
           <div>
