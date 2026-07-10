@@ -77,6 +77,9 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
 
   // Officer assignment — errors keyed by caseId so they don't leak across cases.
   const [assignableUsers, setAssignableUsers] = useState<AssignableUser[] | null>(null);
+  // Superadmin picker: EVERY active human user (any agency/role), fetched once
+  // per panel lifetime — a superadmin may assign anyone as responsible officer.
+  const [allOfficers, setAllOfficers] = useState<AssignableUser[] | null>(null);
   const [savingAssignee, setSavingAssignee] = useState(false);
   const [assignErrorState, setAssignErrorState] = useState<{ caseId: number; message: string } | null>(null);
 
@@ -197,6 +200,24 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [c?.case_id, c?.effective_agency, canAssign, canPost]);
+
+  // Superadmin assign picker: the full human user list (any agency, any role).
+  // Case-independent, so one fetch serves every case this panel opens.
+  useEffect(() => {
+    if (!isSuperadmin || caseId === null || allOfficers !== null) return;
+    let cancelled = false;
+    fetch('/api/direct-outreach/officers')
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load officers'))))
+      .then((data: { users: AssignableUser[] }) => {
+        if (!cancelled) setAllOfficers(data.users ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setAllOfficers([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isSuperadmin, caseId, allOfficers]);
 
   const reload = () => setReloadSeq((s) => s + 1);
 
@@ -553,38 +574,44 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
               <p className="text-xs text-navy-600 italic">Unassigned</p>
             )}
 
-            {canAssign && (
-              <div className="mt-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-500/80 mb-1.5">
-                  Assign
-                </p>
-                <select
-                  value=""
-                  onChange={(e) => {
-                    if (e.target.value) handleAssign(e.target.value);
-                  }}
-                  disabled={savingAssignee || assignableUsers === null}
-                  className="input-premium w-full text-sm disabled:opacity-60"
-                  aria-label="Assign officer"
-                >
-                  <option value="">
-                    {assignableUsers === null
-                      ? 'Loading officers…'
-                      : c.assignee_user_id
-                        ? 'Reassign to…'
-                        : 'Assign an officer…'}
-                  </option>
-                  {(assignableUsers ?? [])
-                    .filter((u) => u.id !== c.assignee_user_id)
-                    .map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name ?? u.id}{u.agency ? ` (${u.agency})` : u.role === 'superadmin' ? ' (Ministry)' : ''}
-                      </option>
-                    ))}
-                </select>
-                {assignError && <p className="text-red-400 text-xs mt-2">{assignError}</p>}
-              </div>
-            )}
+            {canAssign && (() => {
+              // Superadmins pick from EVERY human user; managers keep the
+              // case-agency list (locked Q3). Both label "Name (Agency)" with
+              // a Ministry fallback for agency-less superadmins.
+              const pickerUsers = isSuperadmin ? allOfficers : assignableUsers;
+              return (
+                <div className="mt-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-500/80 mb-1.5">
+                    Assign
+                  </p>
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value) handleAssign(e.target.value);
+                    }}
+                    disabled={savingAssignee || pickerUsers === null}
+                    className="input-premium w-full text-sm disabled:opacity-60"
+                    aria-label="Assign officer"
+                  >
+                    <option value="">
+                      {pickerUsers === null
+                        ? 'Loading officers…'
+                        : c.assignee_user_id
+                          ? 'Reassign to…'
+                          : 'Assign an officer…'}
+                    </option>
+                    {(pickerUsers ?? [])
+                      .filter((u) => u.id !== c.assignee_user_id)
+                      .map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name ?? u.id}{u.agency ? ` (${u.agency})` : u.role === 'superadmin' ? ' (Ministry)' : ''}
+                        </option>
+                      ))}
+                  </select>
+                  {assignError && <p className="text-red-400 text-xs mt-2">{assignError}</p>}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Agency transfer (superadmin) */}
