@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { buildListFilterSql } from './filter-sql';
+import { outreachRegionSql } from './region';
 import { UNASSIGNED_OFFICER } from './types';
 
 const U1 = '11111111-1111-4111-8111-111111111111';
@@ -68,7 +69,8 @@ describe('buildListFilterSql — multi-selects', () => {
     expect(where).toContain('v.status = ANY($1::text[])');
     expect(where).toContain('v.theme = ANY($2::text[])');
     expect(where).toContain('v.outreach_location = ANY($3::text[])');
-    expect(where).toContain('v.region = ANY($4::text[])');
+    // Region has no column of its own — it is derived from outreach_location.
+    expect(where).toContain(`${outreachRegionSql('v.outreach_location')} = ANY($4::text[])`);
     expect(params).toEqual([['Open', 'Referred'], ['Water-Supply'], ['Anna Regina'], ['Region 2']]);
   });
 
