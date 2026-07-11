@@ -436,7 +436,25 @@ export function DirectOutreachDashboard() {
 
       {/* Compact stat strip — same numbers and same filter params as the old
           KPI cards; clicking a stat while Overview is active jumps to Cases. */}
-      <div className="card-premium p-3">
+      <div className="card-premium p-3 space-y-3">
+        {/* A summary failure is ALWAYS surfaced here (never silent). When we
+            still hold the last-loaded numbers, keep showing them beneath this
+            notice rather than blanking the strip or presenting stale as live. */}
+        {summaryError && (
+          <div
+            className="flex items-center justify-between gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2"
+            role="alert"
+          >
+            <p className="text-sm text-red-400">
+              {totals
+                ? 'Couldn’t refresh the summary — showing the last loaded numbers.'
+                : summaryError}
+            </p>
+            <button type="button" onClick={loadSummary} className="btn-navy text-xs shrink-0">
+              Retry
+            </button>
+          </div>
+        )}
         {totals ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
             <StatCell
@@ -472,18 +490,11 @@ export function DirectOutreachDashboard() {
               sub={`${totals.resolved} of ${totals.total} cases resolved`}
             />
           </div>
-        ) : summaryError ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-4 text-center" role="alert">
-            <p className="text-sm text-red-400">{summaryError}</p>
-            <button type="button" onClick={loadSummary} className="btn-navy text-xs">
-              Retry
-            </button>
-          </div>
-        ) : (
+        ) : !summaryError ? (
           <div className="flex items-center justify-center py-4" role="status" aria-label="Loading summary">
             <Spinner />
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Controls — 3 default chips; every other filter keeps its exact params

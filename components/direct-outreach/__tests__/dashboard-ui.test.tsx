@@ -325,4 +325,23 @@ describe('summary failure degrades gracefully', () => {
     expect(await screen.findByRole('button', { name: /Open backlog/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
   });
+
+  it('a refresh failing AFTER a good load keeps the numbers but still shows a retry — never silent', async () => {
+    await renderDashboard(); // first summary load succeeds → stat strip present
+    expect(screen.getByRole('button', { name: /Open backlog/ })).toBeInTheDocument();
+
+    // A later refresh fails. Driven here via the superadmin upload, which
+    // re-fetches the summary on success — same class as a case-edit refreshAll.
+    summaryFails = true;
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(['x'], 'op.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // A retry signal appears (the failure is NOT silent) …
+    expect(await screen.findByRole('button', { name: /retry/i })).toBeInTheDocument();
+    // … while the last-known numbers stay on screen (NOT blanked).
+    expect(screen.getByRole('button', { name: /Open backlog/ })).toBeInTheDocument();
+  });
 });
