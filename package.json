@@ -15,7 +15,8 @@
     "test:e2e:ui": "playwright test --ui",
     "verify:no-bypass": "bash scripts/verify-no-bypass.sh",
     "check:drift": "node scripts/check-schema-drift.mjs",
-    "refresh:schema-snapshot": "node scripts/refresh-schema-snapshot.mjs"
+    "refresh:schema-snapshot": "node scripts/refresh-schema-snapshot.mjs",
+    "bridge:opdirect": "npx tsx scripts/opdirect-outbox-bridge.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.72.1",

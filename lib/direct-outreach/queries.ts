@@ -8,6 +8,7 @@
 
 import { query, transaction } from '@/lib/db-pg';
 import { buildListFilterSql } from './filter-sql';
+import { composeOfficerUpdateOutbox, enqueueOutboxRow, resolveMentionsForOutbox } from './outbox';
 import { sortRegions } from './region';
 import type {
   OutreachAgencySummary,
@@ -460,25 +461,58 @@ export async function setAssignee(
   assigneeUserId: string,
   byUserId: string,
   expectedEffectiveAgency: string | null,
+  byLabel: string,
 ): Promise<boolean> {
-  const result = await query(
-    `INSERT INTO direct_outreach_assignments (case_id, assignee_user_id, assigned_by, assigned_at)
-     SELECT c.case_id, $2::uuid, $3::uuid, now()
-       FROM direct_outreach_cases c
-       LEFT JOIN direct_outreach_agency_overrides o ON o.case_id = c.case_id
-      WHERE c.case_id = $1
-        AND upper(coalesce(o.agency, c.agency)) IS NOT DISTINCT FROM upper($4::text)
-     ON CONFLICT (case_id) DO UPDATE SET
-       assignee_user_id = EXCLUDED.assignee_user_id,
-       assigned_by = EXCLUDED.assigned_by,
-       assigned_at = now()`,
-    [caseId, assigneeUserId, byUserId, expectedEffectiveAgency],
-  );
-  return (result.rowCount ?? 0) > 0;
+  return transaction(async (client) => {
+    const result = await client.query(
+      `INSERT INTO direct_outreach_assignments (case_id, assignee_user_id, assigned_by, assigned_at)
+       SELECT c.case_id, $2::uuid, $3::uuid, now()
+         FROM direct_outreach_cases c
+         LEFT JOIN direct_outreach_agency_overrides o ON o.case_id = c.case_id
+        WHERE c.case_id = $1
+          AND upper(coalesce(o.agency, c.agency)) IS NOT DISTINCT FROM upper($4::text)
+       ON CONFLICT (case_id) DO UPDATE SET
+         assignee_user_id = EXCLUDED.assignee_user_id,
+         assigned_by = EXCLUDED.assigned_by,
+         assigned_at = now()`,
+      [caseId, assigneeUserId, byUserId, expectedEffectiveAgency],
+    );
+    if ((result.rowCount ?? 0) === 0) return false;
+
+    // OP Direct write-back: co-committed with the assignment so the queue can
+    // never record a change that didn't happen (and vice versa).
+    const target = await client.query(`SELECT name FROM users WHERE id = $1`, [assigneeUserId]);
+    const assigneeName = (target.rows[0]?.name as string | null) || 'Unknown user';
+    await enqueueOutboxRow(client, {
+      caseId,
+      sourceKind: 'assignment',
+      commentText: `Assigned to ${assigneeName}`,
+      authorUserId: byUserId,
+      authorLabel: byLabel,
+    });
+    return true;
+  });
 }
 
-export async function clearAssignee(caseId: number): Promise<void> {
-  await query(`DELETE FROM direct_outreach_assignments WHERE case_id = $1`, [caseId]);
+export async function clearAssignee(caseId: number, byUserId: string, byLabel: string): Promise<void> {
+  await transaction(async (client) => {
+    const deleted = await client.query(
+      `DELETE FROM direct_outreach_assignments WHERE case_id = $1 RETURNING assignee_user_id`,
+      [caseId],
+    );
+    const removedId = deleted.rows[0]?.assignee_user_id as string | undefined;
+    if (!removedId) return; // already unassigned — nothing changed, nothing to tell OP
+
+    const target = await client.query(`SELECT name FROM users WHERE id = $1`, [removedId]);
+    const removedName = (target.rows[0]?.name as string | null) || 'Unknown user';
+    await enqueueOutboxRow(client, {
+      caseId,
+      sourceKind: 'unassignment',
+      commentText: `Unassigned ${removedName}`,
+      authorUserId: byUserId,
+      authorLabel: byLabel,
+    });
+  });
 }
 
 // ── Officer progress updates (v3 — append-only, Q5) ─────────────────────────
@@ -486,6 +520,8 @@ export async function clearAssignee(caseId: number): Promise<void> {
 export interface OfficerUpdateInput {
   caseId: number;
   authorId: string;
+  /** Display name for OP Direct attribution ("[DGOS-…] {label}: …"). */
+  authorLabel: string;
   /** Remark text in raw @[uuid] mention format; null when state-change only. */
   body: string | null;
   /** null = untouched. */
@@ -500,7 +536,7 @@ export interface OfficerUpdateInput {
  * disagree. There is deliberately no update/delete counterpart (Q5).
  */
 export async function insertOfficerUpdate(input: OfficerUpdateInput): Promise<OutreachOfficerUpdate> {
-  const { caseId, authorId, body, workingStatus, targetDate } = input;
+  const { caseId, authorId, authorLabel, body, workingStatus, targetDate } = input;
   const touchTarget = targetDate !== undefined;
 
   const inserted = await transaction(async (client) => {
@@ -530,7 +566,25 @@ export async function insertOfficerUpdate(input: OfficerUpdateInput): Promise<Ou
       );
     }
 
-    return row.rows[0] as OutreachOfficerUpdate;
+    // OP Direct write-back: one update = one outbox row = one OP comment,
+    // co-committed with the log insert. Mentions go out as plain @Name (full
+    // length — the 140-char cleanMentionBody truncation is notifications-only).
+    const insertedRow = row.rows[0] as OutreachOfficerUpdate;
+    const resolvedBody = body ? await resolveMentionsForOutbox(client, body) : null;
+    const composed = composeOfficerUpdateOutbox({ body: resolvedBody, workingStatus, targetDate });
+    if (composed) {
+      await enqueueOutboxRow(client, {
+        caseId,
+        sourceKind: composed.sourceKind,
+        officerUpdateId: insertedRow.id,
+        commentText: composed.commentText,
+        opStatusTarget: composed.opStatusTarget,
+        authorUserId: authorId,
+        authorLabel,
+      });
+    }
+
+    return insertedRow;
   });
 
   return inserted;

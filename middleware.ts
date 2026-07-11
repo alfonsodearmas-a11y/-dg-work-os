@@ -25,6 +25,12 @@ function isPublicPath(pathname: string): boolean {
     pathname.startsWith('/api/ai/precompute-daily') ||
     pathname.startsWith('/api/cron/') ||
     pathname.startsWith('/api/oversight/sync') ||
+    // OP Direct outbox bridge routes: session-less local bridge authenticates
+    // with a constant-time BRIDGE_TOKEN header inside the route (superadmin
+    // session also accepted there). retry/skip/list stay session-gated here.
+    pathname === '/api/direct-outreach/outbox/export' ||
+    pathname === '/api/direct-outreach/outbox/ack' ||
+    /^\/api\/direct-outreach\/outbox\/[^/]+\/fail$/.test(pathname) ||
     pathname.startsWith('/api/tm/cron/') ||
     pathname.startsWith('/serwist') ||
     pathname.startsWith('/upload')

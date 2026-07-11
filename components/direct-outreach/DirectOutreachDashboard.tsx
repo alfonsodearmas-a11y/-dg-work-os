@@ -27,6 +27,7 @@ import {
 } from '@/lib/direct-outreach/types';
 import { AgencyScorecards } from './AgencyScorecards';
 import { OfficerLoadTable } from './OfficerLoadTable';
+import { OutboxPanel } from './OutboxPanel';
 import { CasesTable } from './CasesTable';
 import { CaseDetailPanel } from './CaseDetailPanel';
 
@@ -177,9 +178,10 @@ export function DirectOutreachDashboard() {
   // Q6 default: officer-action staleness, most neglected (never touched) first.
   const [sort, setSort] = useState<OutreachSortField>(OUTREACH_DEFAULT_SORT);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  // Cases | Overview tab — pure presentation state (no query param governs it
-  // today, so a reload lands back on the default Cases tab).
-  const [activeTab, setActiveTab] = useState<'cases' | 'overview'>('cases');
+  // Cases | Overview | Outbox tab — pure presentation state (no query param
+  // governs it today, so a reload lands back on the default Cases tab). The
+  // Outbox tab is superadmin-only (server 403s everyone else anyway).
+  const [activeTab, setActiveTab] = useState<'cases' | 'overview' | 'outbox'>('cases');
 
   // ?case= deep link (notification links land here). Fully DERIVED selection:
   // user actions record an override relative to the current URL param, so a
@@ -427,11 +429,15 @@ export function DirectOutreachDashboard() {
         </div>
       )}
 
-      {/* Cases | Overview tab switcher */}
+      {/* Cases | Overview | Outbox tab switcher */}
       <Tabs
-        tabs={[{ id: 'cases', label: 'Cases' }, { id: 'overview', label: 'Overview' }]}
+        tabs={[
+          { id: 'cases', label: 'Cases' },
+          { id: 'overview', label: 'Overview' },
+          ...(isSuperadmin ? [{ id: 'outbox', label: 'OP Direct outbox' }] : []),
+        ]}
         activeTab={activeTab}
-        onChange={(id) => setActiveTab(id as 'cases' | 'overview')}
+        onChange={(id) => setActiveTab(id as 'cases' | 'overview' | 'outbox')}
       />
 
       {/* Compact stat strip — same numbers and same filter params as the old
@@ -646,6 +652,10 @@ export function DirectOutreachDashboard() {
             hasActiveFilters={chips.length > 0}
             onClearFilters={clearAllFilters}
           />
+        </div>
+      ) : activeTab === 'outbox' && isSuperadmin ? (
+        <div role="tabpanel" id="tabpanel-outbox" aria-labelledby="tab-outbox">
+          <OutboxPanel />
         </div>
       ) : (
         <div role="tabpanel" id="tabpanel-overview" aria-labelledby="tab-overview" className="space-y-8">

@@ -100,8 +100,11 @@ export async function PATCH(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
+    // Attribution label carried into the OP Direct outbox by the enqueue hooks.
+    const actorLabel = session.user.name || session.user.email || 'Unknown user';
+
     if (assigneeUserId === null) {
-      await clearAssignee(caseIdNum);
+      await clearAssignee(caseIdNum, session.user.id, actorLabel);
       return NextResponse.json({ assignee: null });
     }
 
@@ -118,7 +121,7 @@ export async function PATCH(
 
     // Guarded write: no-ops (→409) if a concurrent transfer changed the
     // case's effective agency after the permission check above.
-    const applied = await setAssignee(caseIdNum, assigneeUserId, session.user.id, effectiveAgency);
+    const applied = await setAssignee(caseIdNum, assigneeUserId, session.user.id, effectiveAgency, actorLabel);
     if (!applied) {
       return NextResponse.json(
         { error: 'Case ownership changed — reload and try again' },

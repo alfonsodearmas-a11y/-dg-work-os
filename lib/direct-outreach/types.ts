@@ -314,6 +314,45 @@ export interface OutreachListFilters {
   sort_dir?: 'asc' | 'desc';
 }
 
+// ── OP Direct write-back outbox (migration 152) ─────────────────────────────
+
+export const OUTREACH_OUTBOX_KINDS = [
+  'assignment',
+  'unassignment',
+  'status',
+  'remark',
+  'target',
+] as const;
+export type OutreachOutboxSourceKind = (typeof OUTREACH_OUTBOX_KINDS)[number];
+
+export const OUTREACH_OUTBOX_STATUSES = ['pending', 'posted', 'skipped', 'failed'] as const;
+export type OutreachOutboxStatus = (typeof OUTREACH_OUTBOX_STATUSES)[number];
+
+/** One queued OP Direct write-back (survives uploads — keyed by value, no FK). */
+export interface OutreachOutboxRow {
+  id: string;
+  case_id: number;
+  source_kind: OutreachOutboxSourceKind;
+  /** Idempotency marker the bridge prepends to the OP comment. */
+  dgos_ref: string;
+  comment_text: string;
+  /** OP Direct status NAME to set in the same save, or null (comment only). */
+  op_status_target: string | null;
+  author_label: string;
+  status: OutreachOutboxStatus;
+  opdirect_comment_id: string | null;
+  attempts: number;
+  last_error: string | null;
+  posted_at: string | null;
+  created_at: string;
+}
+
+/** GET /api/direct-outreach/outbox payload (superadmin UI). */
+export interface OutreachOutboxSummary {
+  counts: Record<OutreachOutboxStatus, number>;
+  rows: OutreachOutboxRow[];
+}
+
 /** Returned by the workbook upload (full snapshot replace). */
 export interface OutreachUploadSummary {
   cases: number;
