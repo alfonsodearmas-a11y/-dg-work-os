@@ -35,3 +35,25 @@ describe('getSummary — region filter options', () => {
     expect(summary.filter_options.regions).toEqual([]);
   });
 });
+
+describe('getSummary — pooler pressure', () => {
+  // The Supabase pooler runs in SESSION mode (pool_size 15, shared). A parallel
+  // fan-out of every summary query exhausted it under concurrent dashboard loads
+  // (EMAXCONNSESSION / connection timeout). The reads must run sequentially so
+  // this endpoint holds at most one pooled connection at a time.
+  test('runs its reads sequentially — never more than one query in flight', async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    query.mockImplementation(async () => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      inFlight -= 1;
+      return { rows: [] };
+    });
+
+    await getSummary();
+
+    expect(maxInFlight).toBe(1);
+  });
+});

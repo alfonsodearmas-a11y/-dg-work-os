@@ -370,7 +370,9 @@ export function DirectOutreachDashboard() {
             Works visibility over the Presidential Direct Outreach case load
             {summary?.last_synced_at
               ? ` · last uploaded ${fmtGuyanaDateTime(summary.last_synced_at)}`
-              : ' · not yet uploaded'}
+              : summary
+                ? ' · not yet uploaded'
+                : /* summary not loaded (loading or errored) — never claim a state */ ''}
           </p>
           {/* aria-live: announce async upload outcomes to screen readers */}
           <div role="status" aria-live="polite">
@@ -417,9 +419,11 @@ export function DirectOutreachDashboard() {
         )}
       </div>
 
-      {(summaryError || casesError) && (
+      {/* Only a LIST failure is page-level; a summary failure degrades to a
+          scoped retry on the stat strip so the case list still stands alone. */}
+      {casesError && (
         <div className="card-premium p-4 border border-red-500/30">
-          <p className="text-red-400 text-sm">{summaryError || casesError}</p>
+          <p className="text-red-400 text-sm">{casesError}</p>
         </div>
       )}
 
@@ -468,11 +472,18 @@ export function DirectOutreachDashboard() {
               sub={`${totals.resolved} of ${totals.total} cases resolved`}
             />
           </div>
-        ) : !summaryError ? (
+        ) : summaryError ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-4 text-center" role="alert">
+            <p className="text-sm text-red-400">{summaryError}</p>
+            <button type="button" onClick={loadSummary} className="btn-navy text-xs">
+              Retry
+            </button>
+          </div>
+        ) : (
           <div className="flex items-center justify-center py-4" role="status" aria-label="Loading summary">
             <Spinner />
           </div>
-        ) : null}
+        )}
       </div>
 
       {/* Controls — 3 default chips; every other filter keeps its exact params
