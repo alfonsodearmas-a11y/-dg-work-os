@@ -63,6 +63,9 @@ export function buildListFilterSql(
   if (filters.outreaches?.length) {
     conditions.push(`v.outreach_location = ANY(${p(filters.outreaches)}::text[])`);
   }
+  // region is a real, populated column now (derived from outreach_location at
+  // import — see lib/direct-outreach/region.ts). A NULL region (no region in the
+  // location text) never matches ANY(...), so those cases are correctly excluded.
   if (filters.regions?.length) {
     conditions.push(`v.region = ANY(${p(filters.regions)}::text[])`);
   }

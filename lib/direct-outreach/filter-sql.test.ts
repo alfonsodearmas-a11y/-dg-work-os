@@ -68,6 +68,7 @@ describe('buildListFilterSql — multi-selects', () => {
     expect(where).toContain('v.status = ANY($1::text[])');
     expect(where).toContain('v.theme = ANY($2::text[])');
     expect(where).toContain('v.outreach_location = ANY($3::text[])');
+    // region is a real populated column (derived at import), filtered directly.
     expect(where).toContain('v.region = ANY($4::text[])');
     expect(params).toEqual([['Open', 'Referred'], ['Water-Supply'], ['Anna Regina'], ['Region 2']]);
   });

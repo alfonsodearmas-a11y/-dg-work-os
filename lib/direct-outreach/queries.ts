@@ -8,6 +8,7 @@
 
 import { query, transaction } from '@/lib/db-pg';
 import { buildListFilterSql } from './filter-sql';
+import { sortRegions } from './region';
 import type {
   OutreachAgencySummary,
   OutreachCaseDetail,
@@ -57,75 +58,80 @@ export async function getSummary(agencyScope?: string): Promise<OutreachSummary>
   const caseScope = agencyScope ? 'AND upper(coalesce(o.agency, c.agency)) = $1' : '';
   const openScope = agencyScope ? 'AND upper(v.effective_agency) = $1' : '';
 
-  const [caseStats, openStats, syncState, regionOpts, outreachOpts, officerOpts, officerLoad] =
-    await Promise.all([
-      query(
-        `SELECT upper(coalesce(o.agency, c.agency)) AS agency,
-                count(*)::int AS total,
-                count(*) FILTER (WHERE c.status = 'Resolved')::int AS resolved
-           FROM direct_outreach_cases c
-           LEFT JOIN direct_outreach_agency_overrides o ON o.case_id = c.case_id
-          WHERE coalesce(o.agency, c.agency) IS NOT NULL ${caseScope}
-          GROUP BY upper(coalesce(o.agency, c.agency))`,
-        scopeParams,
-      ),
-      // Q4: overdue/with_target follow the EFFECTIVE target (officer > heuristic).
-      query(
-        `SELECT upper(v.effective_agency) AS agency,
-                count(*)::int AS open,
-                count(*) FILTER (WHERE v.days_idle > 60)::int AS stalled_60,
-                count(*) FILTER (WHERE v.days_idle > 90)::int AS stalled_90,
-                count(*) FILTER (WHERE v.effective_target_overdue)::int AS overdue_commitments,
-                count(*) FILTER (WHERE v.effective_target_date IS NOT NULL)::int AS with_target,
-                count(*) FILTER (WHERE v.transferred)::int AS transferred_in,
-                count(*) FILTER (WHERE v.assignee_user_id IS NULL)::int AS unassigned,
-                count(*) FILTER (WHERE v.days_since_officer_action > ${OUTREACH_STALE_OFFICER_DAYS})::int AS stale_officer,
-                count(*) FILTER (WHERE v.officer_target_overdue)::int AS officer_overdue
-           FROM direct_outreach_open_v v
-          WHERE v.effective_agency IS NOT NULL ${openScope}
-          GROUP BY upper(v.effective_agency)`,
-        scopeParams,
-      ),
-      query(
-        `SELECT last_synced_at, cases_seen, updates_seen
-           FROM direct_outreach_sync_state
-          WHERE id = 1`,
-      ),
-      query(
-        `SELECT DISTINCT v.region FROM direct_outreach_open_v v
-          WHERE v.region IS NOT NULL ${openScope} ORDER BY v.region`,
-        scopeParams,
-      ),
-      query(
-        `SELECT DISTINCT v.outreach_location FROM direct_outreach_open_v v
-          WHERE v.outreach_location IS NOT NULL ${openScope} ORDER BY v.outreach_location`,
-        scopeParams,
-      ),
-      query(
-        `SELECT DISTINCT au.id, au.name
-           FROM direct_outreach_open_v v
-           JOIN users au ON au.id = v.assignee_user_id
-          WHERE true ${openScope}
-          ORDER BY au.name NULLS LAST`,
-        scopeParams,
-      ),
-      // Per-officer accountability rollup over assigned open cases; the
-      // last-update column is strict per-author (their own posts only).
-      query(
-        `SELECT au.id, au.name, au.agency,
-                count(*)::int AS open_cases,
-                count(*) FILTER (WHERE v.days_since_officer_action > ${OUTREACH_STALE_OFFICER_DAYS})::int AS stale_cases,
-                count(*) FILTER (WHERE v.officer_target_overdue)::int AS overdue_commitments,
-                (SELECT max(u.created_at) FROM direct_outreach_officer_updates u
-                  WHERE u.author_id = au.id) AS last_update_at
-           FROM direct_outreach_open_v v
-           JOIN users au ON au.id = v.assignee_user_id
-          WHERE true ${openScope}
-          GROUP BY au.id, au.name, au.agency
-          ORDER BY stale_cases DESC, open_cases DESC, au.name NULLS LAST`,
-        scopeParams,
-      ),
-    ]);
+  // Reads run SEQUENTIALLY, not via Promise.all: the Supabase pooler is in
+  // session mode (pool_size 15, shared), and a 7-way parallel fan-out per call
+  // exhausted it under concurrent dashboard loads (EMAXCONNSESSION / connection
+  // timeout). Awaiting one at a time holds at most one pooled connection here —
+  // slightly higher latency for far fewer connections. (queries.test.ts pins this.)
+  const caseStats = await query(
+    `SELECT upper(coalesce(o.agency, c.agency)) AS agency,
+            count(*)::int AS total,
+            count(*) FILTER (WHERE c.status = 'Resolved')::int AS resolved
+       FROM direct_outreach_cases c
+       LEFT JOIN direct_outreach_agency_overrides o ON o.case_id = c.case_id
+      WHERE coalesce(o.agency, c.agency) IS NOT NULL ${caseScope}
+      GROUP BY upper(coalesce(o.agency, c.agency))`,
+    scopeParams,
+  );
+  // Q4: overdue/with_target follow the EFFECTIVE target (officer > heuristic).
+  const openStats = await query(
+    `SELECT upper(v.effective_agency) AS agency,
+            count(*)::int AS open,
+            count(*) FILTER (WHERE v.days_idle > 60)::int AS stalled_60,
+            count(*) FILTER (WHERE v.days_idle > 90)::int AS stalled_90,
+            count(*) FILTER (WHERE v.effective_target_overdue)::int AS overdue_commitments,
+            count(*) FILTER (WHERE v.effective_target_date IS NOT NULL)::int AS with_target,
+            count(*) FILTER (WHERE v.transferred)::int AS transferred_in,
+            count(*) FILTER (WHERE v.assignee_user_id IS NULL)::int AS unassigned,
+            count(*) FILTER (WHERE v.days_since_officer_action > ${OUTREACH_STALE_OFFICER_DAYS})::int AS stale_officer,
+            count(*) FILTER (WHERE v.officer_target_overdue)::int AS officer_overdue
+       FROM direct_outreach_open_v v
+      WHERE v.effective_agency IS NOT NULL ${openScope}
+      GROUP BY upper(v.effective_agency)`,
+    scopeParams,
+  );
+  const syncState = await query(
+    `SELECT last_synced_at, cases_seen, updates_seen
+       FROM direct_outreach_sync_state
+      WHERE id = 1`,
+  );
+  // region is a real, populated column (derived from outreach_location at
+  // import — see lib/direct-outreach/region.ts). Sorted naturally in TS
+  // (Region 2 before Region 10) rather than lexically in SQL.
+  const regionOpts = await query(
+    `SELECT DISTINCT v.region FROM direct_outreach_open_v v
+      WHERE v.region IS NOT NULL ${openScope}`,
+    scopeParams,
+  );
+  const outreachOpts = await query(
+    `SELECT DISTINCT v.outreach_location FROM direct_outreach_open_v v
+      WHERE v.outreach_location IS NOT NULL ${openScope} ORDER BY v.outreach_location`,
+    scopeParams,
+  );
+  const officerOpts = await query(
+    `SELECT DISTINCT au.id, au.name
+       FROM direct_outreach_open_v v
+       JOIN users au ON au.id = v.assignee_user_id
+      WHERE true ${openScope}
+      ORDER BY au.name NULLS LAST`,
+    scopeParams,
+  );
+  // Per-officer accountability rollup over assigned open cases; the
+  // last-update column is strict per-author (their own posts only).
+  const officerLoad = await query(
+    `SELECT au.id, au.name, au.agency,
+            count(*)::int AS open_cases,
+            count(*) FILTER (WHERE v.days_since_officer_action > ${OUTREACH_STALE_OFFICER_DAYS})::int AS stale_cases,
+            count(*) FILTER (WHERE v.officer_target_overdue)::int AS overdue_commitments,
+            (SELECT max(u.created_at) FROM direct_outreach_officer_updates u
+              WHERE u.author_id = au.id) AS last_update_at
+       FROM direct_outreach_open_v v
+       JOIN users au ON au.id = v.assignee_user_id
+      WHERE true ${openScope}
+      GROUP BY au.id, au.name, au.agency
+      ORDER BY stale_cases DESC, open_cases DESC, au.name NULLS LAST`,
+    scopeParams,
+  );
 
   const byAgency = new Map<string, OutreachAgencySummary>();
   const blank = (agency: string): OutreachAgencySummary => ({
@@ -208,7 +214,7 @@ export async function getSummary(agencyScope?: string): Promise<OutreachSummary>
     agencies,
     officer_load: officerLoad.rows as OutreachOfficerLoad[],
     filter_options: {
-      regions: regionOpts.rows.map((r) => r.region as string),
+      regions: sortRegions(regionOpts.rows.map((r) => r.region as string)),
       outreach_locations: outreachOpts.rows.map((r) => r.outreach_location as string),
       officers: officerOpts.rows.map((r) => ({ id: r.id as string, name: (r.name as string) ?? null })),
     },

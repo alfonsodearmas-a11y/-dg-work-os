@@ -67,6 +67,8 @@ function jsonRes(body: unknown, ok = true, status = 200): Response {
 let listCalls: string[] = [];
 /** When true, list requests carrying high=1 return zero rows. */
 let emptyWhenHigh = false;
+/** When true, the summary endpoint returns 500 (list is unaffected). */
+let summaryFails = false;
 
 function lastParams(): URLSearchParams {
   return new URLSearchParams(listCalls[listCalls.length - 1].split('?')[1]);
@@ -75,6 +77,7 @@ function lastParams(): URLSearchParams {
 beforeEach(() => {
   listCalls = [];
   emptyWhenHigh = false;
+  summaryFails = false;
   global.fetch = vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input);
     if (url.startsWith('/api/direct-outreach?')) {
@@ -83,7 +86,9 @@ beforeEach(() => {
       const cases = emptyWhenHigh && params.get('high') === '1' ? [] : [caseRow];
       return jsonRes({ cases, truncated: false });
     }
-    if (url === '/api/direct-outreach') return jsonRes(summaryPayload);
+    if (url === '/api/direct-outreach') {
+      return summaryFails ? jsonRes({ error: 'boom' }, false, 500) : jsonRes(summaryPayload);
+    }
     return jsonRes({});
   }) as unknown as typeof fetch;
 });
@@ -292,5 +297,51 @@ describe('overview drill-down', () => {
     fireEvent.click(screen.getByText('Alice Persaud'));
     expect(screen.getByRole('tab', { name: 'Cases' })).toHaveAttribute('aria-selected', 'true');
     await waitFor(() => expect(lastParams().get('officers')).toBe('off-1'));
+  });
+});
+
+describe('summary failure degrades gracefully', () => {
+  it('scopes the failure to the stat strip (retry), keeps the list, and never mislabels upload state', async () => {
+    summaryFails = true;
+    await renderDashboard();
+
+    // The list is independent and still renders.
+    expect(screen.getByText('John Doe')).toBeInTheDocument();
+    // A scoped retry appears (the summary card degraded, not the page).
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+    // The stat strip grid is absent (no totals) …
+    expect(screen.queryByRole('button', { name: /Open backlog/ })).not.toBeInTheDocument();
+    // … but the subtitle must NOT falsely claim the data was never uploaded.
+    expect(screen.queryByText(/not yet uploaded/i)).not.toBeInTheDocument();
+  });
+
+  it('retry re-fetches the summary and renders the stat strip', async () => {
+    summaryFails = true;
+    await renderDashboard();
+
+    summaryFails = false; // backend recovers
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+
+    expect(await screen.findByRole('button', { name: /Open backlog/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+  });
+
+  it('a refresh failing AFTER a good load keeps the numbers but still shows a retry — never silent', async () => {
+    await renderDashboard(); // first summary load succeeds → stat strip present
+    expect(screen.getByRole('button', { name: /Open backlog/ })).toBeInTheDocument();
+
+    // A later refresh fails. Driven here via the superadmin upload, which
+    // re-fetches the summary on success — same class as a case-edit refreshAll.
+    summaryFails = true;
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(['x'], 'op.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // A retry signal appears (the failure is NOT silent) …
+    expect(await screen.findByRole('button', { name: /retry/i })).toBeInTheDocument();
+    // … while the last-known numbers stay on screen (NOT blanked).
+    expect(screen.getByRole('button', { name: /Open backlog/ })).toBeInTheDocument();
   });
 });

@@ -115,17 +115,41 @@ describe('parseOutreachWorkbook — Data sheet mapping', () => {
     expect(parsed.invalid_case_rows).toBe(0);
   });
 
-  test('maps optional Region and Point Person headers when present', () => {
+  // region has no workbook column; it is derived from the Outreach Location free
+  // text at import (numeric AND spelled-out forms → canonical "Region N").
+  const withLocation = (caseId: number, location: string): unknown[] => {
+    const row = [...CASE_101];
+    row[0] = caseId; // Case ID
+    row[11] = location; // Outreach Location
+    return row;
+  };
+
+  test('derives region from a numeric Outreach Location', () => {
+    const { cases } = parseOutreachWorkbook(
+      buildWorkbook({ dataRows: [withLocation(301, 'Region 3: Hyronie Market Tarmac')] }),
+    );
+    expect(cases[0].region).toBe('Region 3');
+  });
+
+  test('derives the same region from a spelled-out Outreach Location', () => {
+    const { cases } = parseOutreachWorkbook(
+      buildWorkbook({ dataRows: [withLocation(302, 'Region Three: Cabinet Outreach')] }),
+    );
+    expect(cases[0].region).toBe('Region 3');
+  });
+
+  test('a stray "Region" header is ignored — region comes from the location', () => {
     const headers = [...DATA_HEADERS, 'Region', 'Point Person'];
-    const row = [...CASE_101, 'Region 2', 'S. Persaud'];
+    const row = [...withLocation(303, 'Region 3: Leonora'), 'Region 9', 'S. Persaud'];
     const { cases } = parseOutreachWorkbook(
       buildWorkbook({ sheets: { Data: [headers, row], 'Comments Log': [COMMENT_HEADERS] } }),
     );
-    expect(cases[0].region).toBe('Region 2');
+    expect(cases[0].region).toBe('Region 3'); // from the location, NOT the header's "Region 9"
     expect(cases[0].point_person).toBe('S. Persaud');
   });
 
-  test('older workbooks without Region / Point Person still upload (nulls)', () => {
+  test('a location naming no region → null region', () => {
+    // CASE_101's Outreach Location is "Anna Regina Outreach" (a place, no region).
     const { cases } = parseOutreachWorkbook(buildWorkbook({ dataRows: [CASE_101] }));
     expect(cases[0].region).toBeNull();
     expect(cases[0].point_person).toBeNull();

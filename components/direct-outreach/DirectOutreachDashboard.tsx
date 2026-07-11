@@ -370,7 +370,9 @@ export function DirectOutreachDashboard() {
             Works visibility over the Presidential Direct Outreach case load
             {summary?.last_synced_at
               ? ` · last uploaded ${fmtGuyanaDateTime(summary.last_synced_at)}`
-              : ' · not yet uploaded'}
+              : summary
+                ? ' · not yet uploaded'
+                : /* summary not loaded (loading or errored) — never claim a state */ ''}
           </p>
           {/* aria-live: announce async upload outcomes to screen readers */}
           <div role="status" aria-live="polite">
@@ -417,9 +419,11 @@ export function DirectOutreachDashboard() {
         )}
       </div>
 
-      {(summaryError || casesError) && (
+      {/* Only a LIST failure is page-level; a summary failure degrades to a
+          scoped retry on the stat strip so the case list still stands alone. */}
+      {casesError && (
         <div className="card-premium p-4 border border-red-500/30">
-          <p className="text-red-400 text-sm">{summaryError || casesError}</p>
+          <p className="text-red-400 text-sm">{casesError}</p>
         </div>
       )}
 
@@ -432,7 +436,25 @@ export function DirectOutreachDashboard() {
 
       {/* Compact stat strip — same numbers and same filter params as the old
           KPI cards; clicking a stat while Overview is active jumps to Cases. */}
-      <div className="card-premium p-3">
+      <div className="card-premium p-3 space-y-3">
+        {/* A summary failure is ALWAYS surfaced here (never silent). When we
+            still hold the last-loaded numbers, keep showing them beneath this
+            notice rather than blanking the strip or presenting stale as live. */}
+        {summaryError && (
+          <div
+            className="flex items-center justify-between gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2"
+            role="alert"
+          >
+            <p className="text-sm text-red-400">
+              {totals
+                ? 'Couldn’t refresh the summary — showing the last loaded numbers.'
+                : summaryError}
+            </p>
+            <button type="button" onClick={loadSummary} className="btn-navy text-xs shrink-0">
+              Retry
+            </button>
+          </div>
+        )}
         {totals ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
             <StatCell
