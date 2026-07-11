@@ -11,6 +11,7 @@ import * as XLSX from 'xlsx';
 import { transaction } from '@/lib/db-pg';
 import { logger } from '@/lib/logger';
 import { classifyTheme, extractTargetDate, isSubstantive, priorityFlag } from './compute';
+import { extractOutreachRegion } from './region';
 import { OUTREACH_AGENCIES } from './types';
 import type { OutreachUploadSummary } from './types';
 
@@ -286,6 +287,7 @@ export function parseOutreachWorkbook(buffer: Buffer): ParsedWorkbook {
     const description = text(d(row, 'Issue Description'));
     const category = text(d(row, 'Service Category')); // schema home: category_name
     const priority = int(d(row, 'Priority Code')) ?? 0;
+    const outreachLocation = text(d(row, 'Outreach Location'));
     cases.set(caseId, {
       case_id: caseId,
       agency,
@@ -298,11 +300,15 @@ export function parseOutreachWorkbook(buffer: Buffer): ParsedWorkbook {
       client_name: text(d(row, 'Client Name')),
       client_phone: text(d(row, 'Contact')),
       client_address: text(d(row, 'Locality / Address')),
-      outreach_location: text(d(row, 'Outreach Location')),
+      outreach_location: outreachLocation,
       outreach_date: toDateOnly(d(row, 'Outreach Date')),
-      // Optional headers (newer workbooks) — reader() yields null when absent,
-      // so an older workbook without these columns still uploads cleanly.
-      region: text(d(row, 'Region')),
+      // region is not a workbook column — it is embedded in the Outreach Location
+      // free text ("Region 6", "Region Three: …"). Derive the canonical "Region N"
+      // (or null) here so every downstream path reads one populated column.
+      // See lib/direct-outreach/region.ts.
+      region: extractOutreachRegion(outreachLocation),
+      // Optional header (newer workbooks) — reader() yields null when absent, so
+      // an older workbook without this column still uploads cleanly.
       point_person: text(d(row, 'Point Person')),
       created_at: toTimestamp(d(row, 'Date Logged')),
       // Rollups filled by applyRollups; defaults for cases with no comments

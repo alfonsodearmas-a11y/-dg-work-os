@@ -163,3 +163,23 @@ describe('panel layout reorg', () => {
     expect(region).toContainElement(screen.getByRole('radiogroup', { name: 'Working status' }));
   });
 });
+
+describe('region metadata (populated column)', () => {
+  it('surfaces the case region getCase now returns', async () => {
+    caseOverrides = { region: 'Region 3' };
+    await renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /Case details/ }));
+
+    const field = screen.getByText('Region').parentElement!; // <p>Region</p> + value
+    expect(field).toHaveTextContent('Region 3');
+  });
+
+  it('shows an em dash for a case with no derivable region', async () => {
+    caseOverrides = { region: null };
+    await renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /Case details/ }));
+
+    const value = screen.getByText('Region').parentElement!.querySelector('div');
+    expect(value?.textContent).toBe('—');
+  });
+});

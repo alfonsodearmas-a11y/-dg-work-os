@@ -11,10 +11,10 @@
 // region at all.
 //
 // This module is the single source of truth for turning that free text into a
-// canonical "Region N" label. `extractOutreachRegion` (+ `distinctRegions`)
-// builds the filter dropdown's options; `outreachRegionSql` produces the SQL
-// predicate the list query filters on. Both are driven by WORD_TO_NUM, so the
-// dropdown and the filter can never name a region the other side can't match.
+// canonical "Region N" label. It runs ONCE, at import time (and in the one-time
+// backfill), to populate direct_outreach_cases.region — so filter, options, and
+// the case detail panel all read one real column. There is no read-time SQL
+// twin: the derivation lives here, in TypeScript, only.
 
 /** Spelled-out region → its number. Guyana has exactly 10 administrative regions. */
 const WORD_TO_NUM: Record<string, number> = {
@@ -49,40 +49,11 @@ function regionNumber(region: string): number {
 
 /**
  * Distinct, naturally-ordered regions (Region 2 before Region 10, not lexical).
+ * The list-summary uses this to order the distinct region values it reads back
+ * from the populated direct_outreach_cases.region column.
  */
 export function sortRegions(regions: Iterable<string>): string[] {
   return [...new Set(regions)].sort(
     (a, b) => regionNumber(a) - regionNumber(b) || a.localeCompare(b),
   );
-}
-
-/**
- * The dropdown option source: distinct non-null regions present in a set of
- * outreach_location values, naturally sorted. Empty when no row names a region.
- */
-export function distinctRegions(locations: Iterable<string | null | undefined>): string[] {
-  const found = new Set<string>();
-  for (const location of locations) {
-    const region = extractOutreachRegion(location);
-    if (region) found.add(region);
-  }
-  return sortRegions(found);
-}
-
-/**
- * Postgres expression mapping a text column to canonical "Region N" (or NULL),
- * mirroring extractOutreachRegion for use in the list-filter WHERE clause. `col`
- * is a caller-fixed column reference (e.g. 'v.outreach_location'), never user
- * input. `\y` is a Postgres word boundary; `[[:space:]]` its \s equivalent.
- */
-export function outreachRegionSql(col: string): string {
-  const numeric = `regexp_match(${col}, 'region[[:space:]]+(10|[1-9])\\y', 'i')`;
-  const wordBranches = Object.entries(WORD_TO_NUM)
-    .map(([word, num]) => `    WHEN ${col} ~* 'region[[:space:]]+${word}\\y' THEN 'Region ${num}'`)
-    .join('\n');
-  return `CASE
-    WHEN (${numeric})[1] IS NOT NULL THEN 'Region ' || (${numeric})[1]
-${wordBranches}
-    ELSE NULL
-  END`;
 }

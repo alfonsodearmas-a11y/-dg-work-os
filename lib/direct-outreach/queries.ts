@@ -8,7 +8,7 @@
 
 import { query, transaction } from '@/lib/db-pg';
 import { buildListFilterSql } from './filter-sql';
-import { distinctRegions } from './region';
+import { sortRegions } from './region';
 import type {
   OutreachAgencySummary,
   OutreachCaseDetail,
@@ -58,7 +58,7 @@ export async function getSummary(agencyScope?: string): Promise<OutreachSummary>
   const caseScope = agencyScope ? 'AND upper(coalesce(o.agency, c.agency)) = $1' : '';
   const openScope = agencyScope ? 'AND upper(v.effective_agency) = $1' : '';
 
-  const [caseStats, openStats, syncState, outreachOpts, officerOpts, officerLoad] =
+  const [caseStats, openStats, syncState, regionOpts, outreachOpts, officerOpts, officerLoad] =
     await Promise.all([
       query(
         `SELECT upper(coalesce(o.agency, c.agency)) AS agency,
@@ -92,9 +92,14 @@ export async function getSummary(agencyScope?: string): Promise<OutreachSummary>
            FROM direct_outreach_sync_state
           WHERE id = 1`,
       ),
-      // Region has no populated column of its own — it is derived from
-      // outreach_location (see lib/direct-outreach/region.ts), so the region
-      // dropdown options fall out of this same distinct-locations set below.
+      // region is a real, populated column (derived from outreach_location at
+      // import — see lib/direct-outreach/region.ts). Sorted naturally in TS
+      // (Region 2 before Region 10) rather than lexically in SQL.
+      query(
+        `SELECT DISTINCT v.region FROM direct_outreach_open_v v
+          WHERE v.region IS NOT NULL ${openScope}`,
+        scopeParams,
+      ),
       query(
         `SELECT DISTINCT v.outreach_location FROM direct_outreach_open_v v
           WHERE v.outreach_location IS NOT NULL ${openScope} ORDER BY v.outreach_location`,
@@ -207,7 +212,7 @@ export async function getSummary(agencyScope?: string): Promise<OutreachSummary>
     agencies,
     officer_load: officerLoad.rows as OutreachOfficerLoad[],
     filter_options: {
-      regions: distinctRegions(outreachOpts.rows.map((r) => r.outreach_location as string)),
+      regions: sortRegions(regionOpts.rows.map((r) => r.region as string)),
       outreach_locations: outreachOpts.rows.map((r) => r.outreach_location as string),
       officers: officerOpts.rows.map((r) => ({ id: r.id as string, name: (r.name as string) ?? null })),
     },

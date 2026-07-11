@@ -1,10 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import {
-  distinctRegions,
-  extractOutreachRegion,
-  outreachRegionSql,
-  sortRegions,
-} from './region';
+import { extractOutreachRegion, sortRegions } from './region';
 
 // The OP Direct workbook has no dedicated region column; the region is embedded
 // as free text in outreach_location. These cases are taken verbatim from the
@@ -59,42 +54,5 @@ describe('sortRegions', () => {
 
   test('dedupes', () => {
     expect(sortRegions(['Region 3', 'Region 3', 'Region 1'])).toEqual(['Region 1', 'Region 3']);
-  });
-});
-
-describe('distinctRegions — the dropdown option source', () => {
-  test('non-empty, deduped, naturally sorted regions present in the data', () => {
-    // A representative slice of the live outreach_location universe.
-    const locations = [
-      'Bartica - Cabinet Outreach',
-      'Region Three: Cabinet Outreach',
-      'Region 3: Hyronie Market Tarmac',
-      'Region 10',
-      'Region 2',
-      'Region 6: New Amsterdam',
-      'Region Six: Berbice Outreach - VP',
-      'Freedom House',
-      null,
-    ];
-    expect(distinctRegions(locations)).toEqual([
-      'Region 2',
-      'Region 3',
-      'Region 6',
-      'Region 10',
-    ]);
-  });
-
-  test('no region-bearing rows → empty (the honest "nothing to filter" state)', () => {
-    expect(distinctRegions(['Freedom House', 'Public Day - VP', null])).toEqual([]);
-  });
-});
-
-describe('outreachRegionSql — the filter predicate source', () => {
-  test('references the given column and mirrors both numeric and word forms', () => {
-    const sql = outreachRegionSql('v.outreach_location');
-    expect(sql).toContain('v.outreach_location');
-    expect(sql).toContain('regexp_match'); // numeric branch
-    expect(sql).toContain("'Region 3'"); // a spelled-out branch
-    expect(sql).toContain("'Region 10'");
   });
 });

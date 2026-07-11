@@ -9,7 +9,6 @@
 // The session-derived agency scope is ALWAYS the first condition; user filters
 // are additional ANDs, so they can narrow but never widen a manager's scope.
 
-import { outreachRegionSql } from './region';
 import type { OutreachListFilters } from './types';
 import { OUTREACH_STALE_OFFICER_DAYS, UNASSIGNED_OFFICER } from './types';
 
@@ -64,11 +63,11 @@ export function buildListFilterSql(
   if (filters.outreaches?.length) {
     conditions.push(`v.outreach_location = ANY(${p(filters.outreaches)}::text[])`);
   }
-  // Region lives embedded in outreach_location free text (no populated column of
-  // its own), so match the derived region — same canonical labels the dropdown
-  // offers via distinctRegions. `regions` stays the wire param; nothing new.
+  // region is a real, populated column now (derived from outreach_location at
+  // import — see lib/direct-outreach/region.ts). A NULL region (no region in the
+  // location text) never matches ANY(...), so those cases are correctly excluded.
   if (filters.regions?.length) {
-    conditions.push(`${outreachRegionSql('v.outreach_location')} = ANY(${p(filters.regions)}::text[])`);
+    conditions.push(`v.region = ANY(${p(filters.regions)}::text[])`);
   }
   if (filters.workingStatuses?.length) {
     conditions.push(`v.working_status = ANY(${p(filters.workingStatuses)}::text[])`);
