@@ -3,8 +3,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireRole } from '@/lib/auth-helpers';
-import { ackOutboxRow, isBridgeAuthorized } from '@/lib/direct-outreach/outbox';
+import { ackOutboxRows } from '@/lib/direct-outreach/outbox';
+import { requireBridgeOrSuperadmin } from '@/lib/direct-outreach/outbox-auth';
 import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
@@ -20,10 +20,8 @@ const ackSchema = z
   .max(500);
 
 export async function POST(request: NextRequest) {
-  if (!isBridgeAuthorized(request)) {
-    const authResult = await requireRole(['superadmin']);
-    if (authResult instanceof NextResponse) return authResult;
-  }
+  const denied = await requireBridgeOrSuperadmin(request);
+  if (denied) return denied;
 
   const parsed = ackSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
@@ -31,10 +29,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    let acked = 0;
-    for (const item of parsed.data) {
-      if (await ackOutboxRow(item.id, item.opdirect_comment_id ?? null)) acked += 1;
-    }
+    // One set-based statement regardless of batch size; rows not currently
+    // pending simply don't count (the caller compares acked vs sent).
+    const acked = await ackOutboxRows(parsed.data);
     return NextResponse.json({ acked });
   } catch (err) {
     logger.error({ err }, '[direct-outreach] outbox ack failed');

@@ -1,7 +1,7 @@
 // Direct Outreach UI — tiny shared display helpers.
 
 import { AGENCY_HEX_COLORS, AGENCY_NAMES } from '@/lib/constants/agencies';
-import type { OutreachWorkingStatus } from '@/lib/direct-outreach/types';
+import type { OutreachOutboxStatus, OutreachWorkingStatus } from '@/lib/direct-outreach/types';
 
 type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info' | 'gold';
 
@@ -48,6 +48,14 @@ export const WORKING_STATUS_VARIANTS: Record<OutreachWorkingStatus, BadgeVariant
   in_progress: 'info',
   blocked: 'danger',
   resolved_pending_verification: 'success',
+};
+
+/** OP Direct outbox queue-status badge variants. */
+export const OUTBOX_STATUS_VARIANTS: Record<OutreachOutboxStatus, BadgeVariant> = {
+  pending: 'warning',
+  posted: 'success',
+  skipped: 'default',
+  failed: 'danger',
 };
 
 /** Officer-activity traffic light (v3, tighter than OP idle): green <7,

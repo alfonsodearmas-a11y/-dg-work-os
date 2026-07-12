@@ -17,7 +17,7 @@ const { clientQuery, query, transaction } = vi.hoisted(() => {
 });
 vi.mock('@/lib/db-pg', () => ({ query, transaction }));
 
-import { clearAssignee, insertOfficerUpdate, setAssignee } from '@/lib/direct-outreach/queries';
+import { clearAssignee, executeTransfer, insertOfficerUpdate, setAssignee } from '@/lib/direct-outreach/queries';
 
 const CASE_ID = 58244;
 const ACTOR = 'aaaaaaaa-1111-4222-8333-444444444444';
@@ -66,8 +66,8 @@ beforeEach(() => {
 describe('assignment / unassignment enqueue', () => {
   it('assign → one outbox row: kind assignment, "Assigned to {name}", actor attribution', async () => {
     clientQuery.mockImplementation(async (sql: string) => {
-      if (sql.includes('INSERT INTO direct_outreach_assignments')) return { rowCount: 1, rows: [] };
-      if (sql.includes('FROM users')) return { rows: [{ name: 'John Smith' }] };
+      if (sql.includes('INSERT INTO direct_outreach_assignments'))
+        return { rowCount: 1, rows: [{ assignee_name: 'John Smith' }] };
       return { rowCount: 1, rows: [] };
     });
     const applied = await setAssignee(CASE_ID, ASSIGNEE, ACTOR, 'GPL', 'DG Alfonso');
@@ -84,20 +84,26 @@ describe('assignment / unassignment enqueue', () => {
     });
   });
 
-  it('guard-failed assign (concurrent transfer) → NO outbox row', async () => {
-    clientQuery.mockImplementation(async (sql: string) => {
-      if (sql.includes('INSERT INTO direct_outreach_assignments')) return { rowCount: 0, rows: [] };
-      return { rowCount: 0, rows: [] };
-    });
+  it('guard-failed assign (concurrent transfer) → false, NO outbox row', async () => {
+    clientQuery.mockImplementation(async () => ({ rowCount: 0, rows: [] }));
     expect(await setAssignee(CASE_ID, ASSIGNEE, ACTOR, 'GPL', 'DG Alfonso')).toBe(false);
     expect(outboxCall()).toBeUndefined();
   });
 
+  it('no-op re-assign of the current officer → true, but NO duplicate outbox row', async () => {
+    clientQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('INSERT INTO direct_outreach_assignments')) return { rowCount: 0, rows: [] };
+      if (sql.includes('SELECT 1')) return { rowCount: 1, rows: [{ '?column?': 1 }] };
+      return { rowCount: 0, rows: [] };
+    });
+    expect(await setAssignee(CASE_ID, ASSIGNEE, ACTOR, 'GPL', 'DG Alfonso')).toBe(true);
+    expect(outboxCall()).toBeUndefined(); // nothing changed, nothing to tell OP
+  });
+
   it('unassign → one outbox row: kind unassignment, "Unassigned {name}"', async () => {
     clientQuery.mockImplementation(async (sql: string) => {
-      if (sql.startsWith('DELETE FROM direct_outreach_assignments'))
-        return { rows: [{ assignee_user_id: ASSIGNEE }], rowCount: 1 };
-      if (sql.includes('FROM users')) return { rows: [{ name: 'John Smith' }] };
+      if (sql.includes('DELETE FROM direct_outreach_assignments'))
+        return { rows: [{ assignee_user_id: ASSIGNEE, assignee_name: 'John Smith' }], rowCount: 1 };
       return { rowCount: 1, rows: [] };
     });
     await clearAssignee(CASE_ID, ACTOR, 'DG Alfonso');
@@ -114,7 +120,7 @@ describe('assignment / unassignment enqueue', () => {
 
   it('unassign when already unassigned → nothing changed, NO outbox row', async () => {
     clientQuery.mockImplementation(async (sql: string) => {
-      if (sql.startsWith('DELETE FROM direct_outreach_assignments')) return { rows: [], rowCount: 0 };
+      if (sql.includes('DELETE FROM direct_outreach_assignments')) return { rows: [], rowCount: 0 };
       return { rowCount: 0, rows: [] };
     });
     await clearAssignee(CASE_ID, ACTOR, 'DG Alfonso');
@@ -127,10 +133,10 @@ describe('officer-update enqueue — one update = one combined row', () => {
     clientQuery.mockImplementation(async (sql: string) => {
       if (sql.includes('INSERT INTO direct_outreach_officer_updates'))
         return { rows: [{ id: UPDATE_ID, case_id: CASE_ID, ...logRow }], rowCount: 1 };
-      if (sql.includes('SELECT id, name FROM users'))
-        return { rows: [{ id: ASSIGNEE, name: 'Jane Officer' }] };
       return { rowCount: 1, rows: [] };
     });
+    // Mention names resolve on the pool BEFORE the transaction opens.
+    query.mockResolvedValue({ rows: [{ id: ASSIGNEE, name: 'Jane Officer' }] });
   }
 
   const base = { caseId: CASE_ID, authorId: ACTOR, authorLabel: 'Officer One' };
@@ -209,5 +215,52 @@ describe('officer-update enqueue — one update = one combined row', () => {
       '@Jane Officer verified on site · Status -> Resolved — pending verification · Target date -> 2026-08-15',
     );
     expect(outboxCall()?.target).toBe('Resolved');
+  });
+});
+
+describe('transfer enqueue — a transfer that removes an officer IS an unassignment', () => {
+  function armTransferClient(withAssignee: boolean) {
+    clientQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('FOR UPDATE OF c'))
+        return { rows: [{ workbook_agency: 'GPL', effective_agency: 'GPL' }], rowCount: 1 };
+      if (sql.includes('FOR UPDATE OF a'))
+        return withAssignee
+          ? { rows: [{ assignee_user_id: ASSIGNEE, assignee_name: 'John Smith' }], rowCount: 1 }
+          : { rows: [], rowCount: 0 };
+      return { rowCount: 1, rows: [] };
+    });
+  }
+
+  it('assigned case transferred → unassignment row co-committed in the SAME transaction', async () => {
+    armTransferClient(true);
+    const result = await executeTransfer({
+      caseId: CASE_ID,
+      toAgency: 'GWI',
+      reason: 'water issue',
+      byUserId: ACTOR,
+      byLabel: 'DG Alfonso',
+    });
+    expect(result).toEqual({ ok: true, fromAgency: 'GPL', clearedAssigneeUserId: ASSIGNEE });
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(outboxCall()).toMatchObject({
+      caseId: CASE_ID,
+      kind: 'unassignment',
+      comment: 'Unassigned John Smith',
+      author: ACTOR,
+      label: 'DG Alfonso',
+    });
+  });
+
+  it('unassigned case transferred → no outbox row', async () => {
+    armTransferClient(false);
+    const result = await executeTransfer({
+      caseId: CASE_ID,
+      toAgency: 'GWI',
+      reason: 'water issue',
+      byUserId: ACTOR,
+      byLabel: 'DG Alfonso',
+    });
+    expect(result).toMatchObject({ ok: true, clearedAssigneeUserId: null });
+    expect(outboxCall()).toBeUndefined();
   });
 });

@@ -118,7 +118,7 @@ describe('GET /api/direct-outreach/outbox/export (bridge)', () => {
 });
 
 describe('POST /api/direct-outreach/outbox/ack', () => {
-  it('acks pending rows → posted, recording opdirect_comment_id', async () => {
+  it('acks pending rows → posted in ONE set-based statement, recording opdirect_comment_id', async () => {
     query.mockResolvedValue({ rowCount: 1, rows: [] });
     const res = await ackPOST(
       req('/api/direct-outreach/outbox/ack', {
@@ -129,10 +129,12 @@ describe('POST /api/direct-outreach/outbox/ack', () => {
     );
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ acked: 1 });
+    expect(query).toHaveBeenCalledTimes(1); // batch of N is still one statement
     const [sql, params] = query.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain(`SET status = 'posted'`);
-    expect(sql).toContain(`WHERE id = $1 AND status = 'pending'`);
-    expect(params).toEqual([ROW_ID, '139251']);
+    expect(sql).toContain('FROM unnest($1::uuid[], $2::text[])');
+    expect(sql).toContain(`t.status = 'pending'`);
+    expect(params).toEqual([[ROW_ID], ['139251']]);
   });
 
   it('invalid body → 400', async () => {
@@ -144,8 +146,8 @@ describe('POST /api/direct-outreach/outbox/ack', () => {
 });
 
 describe('POST /api/direct-outreach/outbox/[id]/fail', () => {
-  it('pending → failed with attempts++ and last_error', async () => {
-    query.mockResolvedValue({ rowCount: 1, rows: [] });
+  it('pending → failed with attempts++ and last_error, in one round trip', async () => {
+    query.mockResolvedValue({ rows: [{ current: 'pending', applied: true }] });
     const res = await failPOST(
       req(`/api/direct-outreach/outbox/${ROW_ID}/fail`, {
         method: 'POST',
@@ -155,25 +157,23 @@ describe('POST /api/direct-outreach/outbox/[id]/fail', () => {
       idParams,
     );
     expect(res.status).toBe(200);
+    expect(query).toHaveBeenCalledTimes(1); // guarded UPDATE + current status in one statement
     const [sql, params] = query.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain('attempts = attempts + 1');
-    expect(sql).toContain(`SET status = 'failed'`);
-    expect(params).toEqual([ROW_ID, 'Save button not found']);
+    expect(sql).toContain(`status = 'failed'`);
+    expect(params).toEqual([ROW_ID, ['pending'], 'Save button not found']);
   });
 
-  it('non-pending row → 409; unknown row → 404', async () => {
-    query.mockImplementation(async (sql: string) =>
-      sql.startsWith('UPDATE') ? { rowCount: 0, rows: [] } : { rows: [{ status: 'posted' }] },
-    );
+  it('non-pending row → 409 with the current status; unknown row → 404', async () => {
+    query.mockResolvedValue({ rows: [{ current: 'posted', applied: false }] });
     const conflict = await failPOST(
       req(`/api/direct-outreach/outbox/${ROW_ID}/fail`, { method: 'POST', token: TOKEN, body: { last_error: 'x' } }),
       idParams,
     );
     expect(conflict.status).toBe(409);
+    expect((await conflict.json()).error).toContain('posted');
 
-    query.mockImplementation(async (sql: string) =>
-      sql.startsWith('UPDATE') ? { rowCount: 0, rows: [] } : { rows: [] },
-    );
+    query.mockResolvedValue({ rows: [] });
     const missing = await failPOST(
       req(`/api/direct-outreach/outbox/${ROW_ID}/fail`, { method: 'POST', token: TOKEN, body: { last_error: 'x' } }),
       idParams,
@@ -195,24 +195,23 @@ describe('POST retry/skip — superadmin ONLY (bridge token is NOT accepted)', (
 
   it('retry: failed|skipped → pending', async () => {
     superadmin();
-    query.mockResolvedValue({ rowCount: 1, rows: [] });
+    query.mockResolvedValue({ rows: [{ current: 'failed', applied: true }] });
     const res = await retryPOST(req(`/api/direct-outreach/outbox/${ROW_ID}/retry`, { method: 'POST' }), idParams);
     expect(res.status).toBe(200);
-    const [sql] = query.mock.calls[0] as [string];
-    expect(sql).toContain(`SET status = 'pending'`);
-    expect(sql).toContain(`IN ('failed', 'skipped')`);
+    const [sql, params] = query.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain(`status = 'pending'`);
+    expect(params).toEqual([ROW_ID, ['failed', 'skipped']]);
   });
 
   it('skip: pending → skipped; posted row → 409', async () => {
     superadmin();
-    query.mockResolvedValue({ rowCount: 1, rows: [] });
+    query.mockResolvedValue({ rows: [{ current: 'pending', applied: true }] });
     const ok = await skipPOST(req(`/api/direct-outreach/outbox/${ROW_ID}/skip`, { method: 'POST' }), idParams);
     expect(ok.status).toBe(200);
-    expect(String(query.mock.calls[0][0])).toContain(`SET status = 'skipped'`);
+    expect(String(query.mock.calls[0][0])).toContain(`status = 'skipped'`);
+    expect(query.mock.calls[0][1]).toEqual([ROW_ID, ['pending']]);
 
-    query.mockImplementation(async (sql: string) =>
-      sql.startsWith('UPDATE') ? { rowCount: 0, rows: [] } : { rows: [{ status: 'posted' }] },
-    );
+    query.mockResolvedValue({ rows: [{ current: 'posted', applied: false }] });
     const conflict = await skipPOST(req(`/api/direct-outreach/outbox/${ROW_ID}/skip`, { method: 'POST' }), idParams);
     expect(conflict.status).toBe(409);
   });

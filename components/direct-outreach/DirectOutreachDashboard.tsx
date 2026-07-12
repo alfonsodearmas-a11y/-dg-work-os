@@ -180,8 +180,11 @@ export function DirectOutreachDashboard() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   // Cases | Overview | Outbox tab — pure presentation state (no query param
   // governs it today, so a reload lands back on the default Cases tab). The
-  // Outbox tab is superadmin-only (server 403s everyone else anyway).
+  // Outbox tab is superadmin-only (server 403s everyone else anyway); the
+  // clamp below keeps the tab strip consistent when view-as demotes the role
+  // while Outbox is active (otherwise no tab would render as selected).
   const [activeTab, setActiveTab] = useState<'cases' | 'overview' | 'outbox'>('cases');
+  const visibleTab = activeTab === 'outbox' && !isSuperadmin ? 'cases' : activeTab;
 
   // ?case= deep link (notification links land here). Fully DERIVED selection:
   // user actions record an override relative to the current URL param, so a
@@ -436,7 +439,7 @@ export function DirectOutreachDashboard() {
           { id: 'overview', label: 'Overview' },
           ...(isSuperadmin ? [{ id: 'outbox', label: 'OP Direct outbox' }] : []),
         ]}
-        activeTab={activeTab}
+        activeTab={visibleTab}
         onChange={(id) => setActiveTab(id as 'cases' | 'overview' | 'outbox')}
       />
 
@@ -639,7 +642,7 @@ export function DirectOutreachDashboard() {
       </div>
 
       {/* Tab panels — ids match the tab ids the Tabs primitive emits */}
-      {activeTab === 'cases' ? (
+      {visibleTab === 'cases' ? (
         <div role="tabpanel" id="tabpanel-cases" aria-labelledby="tab-cases">
           <CasesTable
             cases={cases}
@@ -653,7 +656,7 @@ export function DirectOutreachDashboard() {
             onClearFilters={clearAllFilters}
           />
         </div>
-      ) : activeTab === 'outbox' && isSuperadmin ? (
+      ) : visibleTab === 'outbox' ? (
         <div role="tabpanel" id="tabpanel-outbox" aria-labelledby="tab-outbox">
           <OutboxPanel />
         </div>

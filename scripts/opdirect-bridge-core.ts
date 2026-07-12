@@ -54,22 +54,38 @@ export function findMarkerEntry(
 
 export type RowPlan =
   | { action: 'ack'; opdirectCommentId: string | null }
-  | { action: 'post' };
+  | { action: 'post' }
+  | { action: 'conflict'; reason: string };
 
 /**
  * Idempotency guard: if the marker is already in the case history AND there is
  * no status target (or OP already shows it), the row was posted by a previous
- * run whose ack never landed — ack it, don't re-post. Everything else posts.
+ * run whose ack never landed — ack it, don't re-post.
+ *
+ * Marker present but OP's current status ≠ the target is a CONFLICT, not a
+ * re-post: the comment already went out, and someone on the OP side has since
+ * moved the case (e.g. Resolved → Closed). Re-posting would duplicate the
+ * marker comment AND silently revert their change — so the row fails loudly
+ * for a human decision instead. Fresh rows (no marker) always post.
  */
 export function planForRow(row: OutboxExportRow, history: OpHistoryEntry[]): RowPlan {
   const marker = findMarkerEntry(history, row.dgos_ref);
-  if (marker && (!row.op_status_target || currentOpStatus(history) === row.op_status_target)) {
+  if (!marker) return { action: 'post' };
+  const current = currentOpStatus(history);
+  if (!row.op_status_target || current === row.op_status_target) {
     return {
       action: 'ack',
       opdirectCommentId: marker.case_detail_id != null ? String(marker.case_detail_id) : null,
     };
   }
-  return { action: 'post' };
+  return {
+    action: 'conflict',
+    reason:
+      `comment [${row.dgos_ref}] is already in OP history but the case status is ` +
+      `'${current ?? 'unknown'}', not '${row.op_status_target}' — the case moved on the OP side ` +
+      `after the original post; re-posting would duplicate the comment and revert that change. ` +
+      `Resolve manually, then Skip or Retry the row.`,
+  };
 }
 
 // ── Run summary ───────────────────────────────────────────────────────────────

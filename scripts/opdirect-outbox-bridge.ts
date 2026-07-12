@@ -89,10 +89,18 @@ async function fetchPending(): Promise<OutboxExportRow[]> {
 }
 
 async function ackRow(id: string, opdirectCommentId: string | null): Promise<void> {
-  await dgFetch('/api/direct-outreach/outbox/ack', {
+  const res = (await dgFetch('/api/direct-outreach/outbox/ack', {
     method: 'POST',
     body: JSON.stringify([{ id, opdirect_comment_id: opdirectCommentId }]),
-  });
+  })) as { acked?: number };
+  if (res.acked !== 1) {
+    // The comment IS in OP Direct; DG OS just didn't move the row (someone
+    // skipped/failed it mid-run). Surface it — the queue view needs a human.
+    console.warn(
+      `  WARNING: ack for outbox row ${id} matched ${res.acked ?? 0} rows — the row changed state ` +
+        `in DG OS while the bridge was posting; reconcile it in the OP Direct outbox tab.`,
+    );
+  }
 }
 
 async function failRow(id: string, lastError: string): Promise<void> {
@@ -238,7 +246,10 @@ async function main(): Promise<void> {
       throw new Error('OP Direct /ministry did not render the cases table (#tblCases) — cannot continue');
     }
 
+    let rowIndex = 0;
     for (const row of rows) {
+      rowIndex += 1;
+      let touchedUi = false;
       try {
         const history = await fetchHistory(context, row.case_id);
         const plan = planForRow(row, history);
@@ -252,6 +263,9 @@ async function main(): Promise<void> {
             console.log(`case ${row.case_id} [${row.dgos_ref}]: already in OP history — acked`);
             results.push({ caseId: row.case_id, dgosRef: row.dgos_ref, outcome: 'already-posted' });
           }
+        } else if (plan.action === 'conflict') {
+          // Never silently re-post over a manual OP-side change — loud failure.
+          throw new Error(plan.reason);
         } else {
           const comment = buildOpComment(row);
           if (DRY_RUN) {
@@ -261,6 +275,7 @@ async function main(): Promise<void> {
             );
             results.push({ caseId: row.case_id, dgosRef: row.dgos_ref, outcome: 'dry-run' });
           } else {
+            touchedUi = true;
             const commentId = await postRow(page, context, row, comment);
             await ackRow(row.id, commentId);
             console.log(
@@ -282,7 +297,11 @@ async function main(): Promise<void> {
         }
         await closeCasePanel(page).catch(() => {});
       }
-      await page.waitForTimeout(ROW_DELAY_MS);
+      // Pace only where the OP UI was actually driven, and never after the
+      // last row — dry runs and ack-only rows don't need throttling.
+      if (touchedUi && rowIndex < rows.length) {
+        await page.waitForTimeout(ROW_DELAY_MS);
+      }
     }
   } finally {
     await context.close();

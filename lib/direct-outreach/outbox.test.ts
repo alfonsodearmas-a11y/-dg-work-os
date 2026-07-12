@@ -2,9 +2,10 @@
 // lib/direct-outreach/outbox.ts; the transaction-level enqueue hooks are
 // covered in queries-outbox.test.ts).
 
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/lib/db-pg', () => ({ query: vi.fn(), transaction: vi.fn() }));
+const { query } = vi.hoisted(() => ({ query: vi.fn() }));
+vi.mock('@/lib/db-pg', () => ({ query, transaction: vi.fn() }));
 
 import type { PoolClient } from 'pg';
 import {
@@ -13,6 +14,10 @@ import {
   enqueueOutboxRow,
   resolveMentionsForOutbox,
 } from '@/lib/direct-outreach/outbox';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe('OP_STATUS_TARGETS — the single explicit DG→OP map', () => {
   it('maps ONLY resolved_pending_verification → Resolved', () => {
@@ -129,22 +134,39 @@ describe('enqueueOutboxRow — dgos_ref minted from the row id', () => {
   });
 });
 
-describe('resolveMentionsForOutbox — full-length @Name resolution (no 140-char cut)', () => {
-  it('replaces @[uuid] with @Name and keeps unknown uuids as @User', async () => {
-    const uid = '11111111-2222-4333-8444-555555555555';
-    const unknown = '99999999-8888-4777-8666-555555555555';
-    const clientQuery = vi.fn().mockResolvedValue({ rows: [{ id: uid, name: 'Jane Officer' }] });
-    const client = { query: clientQuery } as unknown as PoolClient;
+describe('resolveMentionsForOutbox — strict uuids, full-length @Name resolution', () => {
+  const UID = '11111111-2222-4333-8444-555555555555';
+  const UNKNOWN = '99999999-8888-4777-8666-555555555555';
+
+  it('replaces @[uuid] with @Name and keeps unknown uuids as @User (no 140-char cut)', async () => {
+    query.mockResolvedValue({ rows: [{ id: UID, name: 'Jane Officer' }] });
     const long = 'x'.repeat(300);
-    const out = await resolveMentionsForOutbox(client, `@[${uid}] and @[${unknown}] — ${long}`);
+    const out = await resolveMentionsForOutbox(`@[${UID}] and @[${UNKNOWN}] — ${long}`);
     expect(out).toBe(`@Jane Officer and @User — ${long}`);
     expect(out.length).toBeGreaterThan(140); // notifications truncate; the outbox must not
   });
 
+  it('runs on the POOL (pre-transaction), not a client', async () => {
+    query.mockResolvedValue({ rows: [{ id: UID, name: 'Jane Officer' }] });
+    await resolveMentionsForOutbox(`@[${UID}] ping`);
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('FROM users'), [[UID]]);
+  });
+
+  it('uppercase uuid mentions resolve to the real name (canonical-lowercase lookup)', async () => {
+    query.mockResolvedValue({ rows: [{ id: UID, name: 'Jane Officer' }] });
+    const out = await resolveMentionsForOutbox(`@[${UID.toUpperCase()}] please review`);
+    expect(out).toBe('@Jane Officer please review');
+  });
+
+  it('malformed 36-char tokens are NOT cast to uuid — left verbatim, no query, no 22P02', async () => {
+    const notAUuid = 'f'.repeat(36); // 36 hex chars, no hyphens — old loose regex matched this
+    const out = await resolveMentionsForOutbox(`@[${notAUuid}] and @[${'-'.repeat(36)}]`);
+    expect(out).toBe(`@[${notAUuid}] and @[${'-'.repeat(36)}]`);
+    expect(query).not.toHaveBeenCalled();
+  });
+
   it('no mentions → no user query at all', async () => {
-    const clientQuery = vi.fn();
-    const client = { query: clientQuery } as unknown as PoolClient;
-    expect(await resolveMentionsForOutbox(client, 'plain remark')).toBe('plain remark');
-    expect(clientQuery).not.toHaveBeenCalled();
+    expect(await resolveMentionsForOutbox('plain remark')).toBe('plain remark');
+    expect(query).not.toHaveBeenCalled();
   });
 });

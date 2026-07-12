@@ -12,18 +12,9 @@ import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
 import { fmtGuyanaDateTime, truncate } from '@/lib/format';
-import type {
-  OutreachOutboxRow,
-  OutreachOutboxStatus,
-  OutreachOutboxSummary,
-} from '@/lib/direct-outreach/types';
-
-const STATUS_VARIANTS: Record<OutreachOutboxStatus, 'default' | 'success' | 'warning' | 'danger'> = {
-  pending: 'warning',
-  posted: 'success',
-  skipped: 'default',
-  failed: 'danger',
-};
+import { OUTREACH_OUTBOX_STATUSES } from '@/lib/direct-outreach/types';
+import type { OutreachOutboxRow, OutreachOutboxSummary } from '@/lib/direct-outreach/types';
+import { OUTBOX_STATUS_VARIANTS } from './shared';
 
 const KIND_LABELS: Record<OutreachOutboxRow['source_kind'], string> = {
   assignment: 'Assignment',
@@ -32,8 +23,6 @@ const KIND_LABELS: Record<OutreachOutboxRow['source_kind'], string> = {
   remark: 'Remark',
   target: 'Target date',
 };
-
-const COUNT_ORDER: OutreachOutboxStatus[] = ['pending', 'posted', 'skipped', 'failed'];
 
 export function OutboxPanel() {
   const [data, setData] = useState<OutreachOutboxSummary | null>(null);
@@ -108,10 +97,10 @@ export function OutboxPanel() {
       {/* Counts strip */}
       <div className="card-premium p-3">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {COUNT_ORDER.map((status) => (
+          {OUTREACH_OUTBOX_STATUSES.map((status) => (
             <div key={status} className="flex items-center gap-2 px-2 py-1">
               <span className="stat-number text-2xl">{data.counts[status] ?? 0}</span>
-              <Badge variant={STATUS_VARIANTS[status]}>{status}</Badge>
+              <Badge variant={OUTBOX_STATUS_VARIANTS[status]}>{status}</Badge>
             </div>
           ))}
         </div>
@@ -145,7 +134,7 @@ export function OutboxPanel() {
                   <tr key={row.id}>
                     <td>
                       <div className="flex flex-col gap-1">
-                        <Badge variant={STATUS_VARIANTS[row.status]}>{row.status}</Badge>
+                        <Badge variant={OUTBOX_STATUS_VARIANTS[row.status]}>{row.status}</Badge>
                         {row.status === 'failed' && row.last_error && (
                           <span className="text-xs text-red-400" title={row.last_error}>
                             {truncate(row.last_error, 60)}

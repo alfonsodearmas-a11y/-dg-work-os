@@ -464,8 +464,14 @@ export async function setAssignee(
   byLabel: string,
 ): Promise<boolean> {
   return transaction(async (client) => {
+    // The DO UPDATE is gated on an ACTUAL assignee change: re-assigning the
+    // current officer must not enqueue a duplicate "Assigned to X" comment
+    // into OP Direct (and no longer resets assigned_at, so the staleness
+    // clock isn't wiped by a no-op re-submit). The RETURNING scalar subquery
+    // fetches the name in the same statement.
     const result = await client.query(
-      `INSERT INTO direct_outreach_assignments (case_id, assignee_user_id, assigned_by, assigned_at)
+      `INSERT INTO direct_outreach_assignments AS a
+         (case_id, assignee_user_id, assigned_by, assigned_at)
        SELECT c.case_id, $2::uuid, $3::uuid, now()
          FROM direct_outreach_cases c
          LEFT JOIN direct_outreach_agency_overrides o ON o.case_id = c.case_id
@@ -474,15 +480,32 @@ export async function setAssignee(
        ON CONFLICT (case_id) DO UPDATE SET
          assignee_user_id = EXCLUDED.assignee_user_id,
          assigned_by = EXCLUDED.assigned_by,
-         assigned_at = now()`,
+         assigned_at = now()
+       WHERE a.assignee_user_id IS DISTINCT FROM EXCLUDED.assignee_user_id
+       RETURNING (SELECT name FROM users u WHERE u.id = a.assignee_user_id) AS assignee_name`,
       [caseId, assigneeUserId, byUserId, expectedEffectiveAgency],
     );
-    if ((result.rowCount ?? 0) === 0) return false;
+
+    if ((result.rowCount ?? 0) === 0) {
+      // Nothing written: either the agency guard failed (concurrent transfer
+      // → 409 in the route) or this was a no-op re-assign of the current
+      // officer (→ success, but nothing to tell OP Direct). Distinguish here.
+      const noop = await client.query(
+        `SELECT 1
+           FROM direct_outreach_assignments a
+           JOIN direct_outreach_cases c ON c.case_id = a.case_id
+           LEFT JOIN direct_outreach_agency_overrides o ON o.case_id = a.case_id
+          WHERE a.case_id = $1
+            AND a.assignee_user_id = $2::uuid
+            AND upper(coalesce(o.agency, c.agency)) IS NOT DISTINCT FROM upper($3::text)`,
+        [caseId, assigneeUserId, expectedEffectiveAgency],
+      );
+      return (noop.rowCount ?? 0) > 0;
+    }
 
     // OP Direct write-back: co-committed with the assignment so the queue can
     // never record a change that didn't happen (and vice versa).
-    const target = await client.query(`SELECT name FROM users WHERE id = $1`, [assigneeUserId]);
-    const assigneeName = (target.rows[0]?.name as string | null) || 'Unknown user';
+    const assigneeName = (result.rows[0]?.assignee_name as string | null) || 'Unknown user';
     await enqueueOutboxRow(client, {
       caseId,
       sourceKind: 'assignment',
@@ -496,15 +519,18 @@ export async function setAssignee(
 
 export async function clearAssignee(caseId: number, byUserId: string, byLabel: string): Promise<void> {
   await transaction(async (client) => {
+    // Name resolved in the same statement — nothing else runs while the
+    // transaction holds the deleted row's lock.
     const deleted = await client.query(
-      `DELETE FROM direct_outreach_assignments WHERE case_id = $1 RETURNING assignee_user_id`,
+      `DELETE FROM direct_outreach_assignments a
+        WHERE a.case_id = $1
+        RETURNING a.assignee_user_id,
+                  (SELECT name FROM users u WHERE u.id = a.assignee_user_id) AS assignee_name`,
       [caseId],
     );
-    const removedId = deleted.rows[0]?.assignee_user_id as string | undefined;
-    if (!removedId) return; // already unassigned — nothing changed, nothing to tell OP
+    if (!deleted.rows[0]?.assignee_user_id) return; // already unassigned — nothing to tell OP
 
-    const target = await client.query(`SELECT name FROM users WHERE id = $1`, [removedId]);
-    const removedName = (target.rows[0]?.name as string | null) || 'Unknown user';
+    const removedName = (deleted.rows[0].assignee_name as string | null) || 'Unknown user';
     await enqueueOutboxRow(client, {
       caseId,
       sourceKind: 'unassignment',
@@ -539,6 +565,10 @@ export async function insertOfficerUpdate(input: OfficerUpdateInput): Promise<Ou
   const { caseId, authorId, authorLabel, body, workingStatus, targetDate } = input;
   const touchTarget = targetDate !== undefined;
 
+  // Mention names need no transactional consistency — resolve on the pool
+  // BEFORE the write transaction so the transaction stays as short as before.
+  const resolvedBody = body ? await resolveMentionsForOutbox(body) : null;
+
   const inserted = await transaction(async (client) => {
     const row = await client.query(
       `INSERT INTO direct_outreach_officer_updates
@@ -570,7 +600,6 @@ export async function insertOfficerUpdate(input: OfficerUpdateInput): Promise<Ou
     // co-committed with the log insert. Mentions go out as plain @Name (full
     // length — the 140-char cleanMentionBody truncation is notifications-only).
     const insertedRow = row.rows[0] as OutreachOfficerUpdate;
-    const resolvedBody = body ? await resolveMentionsForOutbox(client, body) : null;
     const composed = composeOfficerUpdateOutbox({ body: resolvedBody, workingStatus, targetDate });
     if (composed) {
       await enqueueOutboxRow(client, {
@@ -635,8 +664,10 @@ export async function executeTransfer(input: {
   toAgency: string;
   reason: string;
   byUserId: string;
+  /** OP Direct attribution for the unassignment a transfer performs. */
+  byLabel: string;
 }): Promise<TransferResult> {
-  const { caseId, toAgency, reason, byUserId } = input;
+  const { caseId, toAgency, reason, byUserId, byLabel } = input;
 
   return transaction(async (client): Promise<TransferResult> => {
     // Lock the case row — the serialization point for all transfers of this
@@ -659,10 +690,15 @@ export async function executeTransfer(input: {
     }
 
     const current = await client.query(
-      `SELECT assignee_user_id FROM direct_outreach_assignments WHERE case_id = $1 FOR UPDATE`,
+      `SELECT a.assignee_user_id,
+              (SELECT name FROM users u WHERE u.id = a.assignee_user_id) AS assignee_name
+         FROM direct_outreach_assignments a
+        WHERE a.case_id = $1
+        FOR UPDATE OF a`,
       [caseId],
     );
     const clearedAssigneeUserId: string | null = current.rows[0]?.assignee_user_id ?? null;
+    const clearedAssigneeName: string | null = current.rows[0]?.assignee_name ?? null;
 
     if (workbookAgency && toAgency.toUpperCase() === workbookAgency.toUpperCase()) {
       // Revert: back to the workbook agency — drop the override entirely.
@@ -685,6 +721,18 @@ export async function executeTransfer(input: {
        VALUES ($1, $2, $3, $4::uuid, $5, $6::uuid)`,
       [caseId, fromAgency, toAgency, clearedAssigneeUserId, reason, byUserId],
     );
+
+    // A transfer that removed an officer IS an unassignment — OP Direct must
+    // hear about it like any other (module RULE), co-committed with the change.
+    if (clearedAssigneeUserId) {
+      await enqueueOutboxRow(client, {
+        caseId,
+        sourceKind: 'unassignment',
+        commentText: `Unassigned ${clearedAssigneeName || 'Unknown user'}`,
+        authorUserId: byUserId,
+        authorLabel: byLabel,
+      });
+    }
 
     return { ok: true, fromAgency, clearedAssigneeUserId };
   });

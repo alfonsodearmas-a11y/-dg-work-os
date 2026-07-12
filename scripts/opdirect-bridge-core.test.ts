@@ -76,7 +76,7 @@ describe('planForRow — the idempotency guard', () => {
     expect(planForRow(ROW, history)).toEqual({ action: 'ack', opdirectCommentId: '140002' });
   });
 
-  it('marker present but OP status has drifted from the target → post again', () => {
+  it('marker present but OP status has drifted → loud CONFLICT (never re-post/revert)', () => {
     const history = [
       entry({
         case_detail_id: 140002,
@@ -86,7 +86,12 @@ describe('planForRow — the idempotency guard', () => {
       }),
       entry({ status_name: 'Open', comment: 'Reopened by OP', created_at: '2026-07-11T00:00:00Z' }),
     ];
-    expect(planForRow(ROW, history)).toEqual({ action: 'post' });
+    const plan = planForRow(ROW, history);
+    expect(plan.action).toBe('conflict');
+    if (plan.action === 'conflict') {
+      expect(plan.reason).toContain(ROW.dgos_ref);
+      expect(plan.reason).toContain("'Open', not 'Resolved'");
+    }
   });
 
   it('resolved row plan → would set status Resolved + post the comment', () => {

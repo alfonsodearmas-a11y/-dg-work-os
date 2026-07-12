@@ -4,18 +4,15 @@
 // reach the route-level check at all.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireRole } from '@/lib/auth-helpers';
 import { query } from '@/lib/db-pg';
-import { isBridgeAuthorized } from '@/lib/direct-outreach/outbox';
+import { requireBridgeOrSuperadmin } from '@/lib/direct-outreach/outbox-auth';
 import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  if (!isBridgeAuthorized(request)) {
-    const authResult = await requireRole(['superadmin']);
-    if (authResult instanceof NextResponse) return authResult;
-  }
+  const denied = await requireBridgeOrSuperadmin(request);
+  if (denied) return denied;
 
   try {
     const result = await query(

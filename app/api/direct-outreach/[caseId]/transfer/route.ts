@@ -59,6 +59,7 @@ export async function POST(
       toAgency: to_agency,
       reason,
       byUserId: session.user.id,
+      byLabel: session.user.name || session.user.email || 'Unknown user',
     });
 
     if (!result.ok) {

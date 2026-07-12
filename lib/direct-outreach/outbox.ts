@@ -1,17 +1,17 @@
 // Direct Outreach — OP Direct write-back outbox (server-only).
 //
 // RULE (docs: scripts/opdirect-outbox-bridge.README.md): every Direct Outreach
-// mutation — officer assignment/unassignment, working-status change, remark,
-// target-date change — enqueues ONE direct_outreach_opdirect_outbox row IN THE
-// SAME TRANSACTION as the underlying change (enqueueOutboxRow takes the
-// caller's PoolClient for exactly that reason). A local, session-bound bridge
-// (scripts/opdirect-outbox-bridge.ts) posts each row to OP Direct as a case
-// comment; when op_status_target is set the bridge also sets that status in the
-// same save (OP's Update form requires a comment, so status+comment go together).
+// mutation — officer assignment/unassignment (including the clear a transfer
+// performs), working-status change, remark, target-date change — enqueues ONE
+// direct_outreach_opdirect_outbox row IN THE SAME TRANSACTION as the underlying
+// change (enqueueOutboxRow takes the caller's PoolClient for exactly that
+// reason). A local, session-bound bridge (scripts/opdirect-outbox-bridge.ts)
+// posts each row to OP Direct as a case comment; when op_status_target is set
+// the bridge also sets that status in the same save (OP's Update form requires
+// a comment, so status+comment go together).
 
-import { randomUUID, timingSafeEqual } from 'crypto';
+import { randomUUID } from 'crypto';
 import type { PoolClient } from 'pg';
-import type { NextRequest } from 'next/server';
 import { query } from '@/lib/db-pg';
 import {
   OUTREACH_WORKING_STATUS_LABELS,
@@ -28,6 +28,9 @@ import {
 export const OP_STATUS_TARGETS: Partial<Record<OutreachWorkingStatus, string>> = {
   resolved_pending_verification: 'Resolved',
 };
+
+/** Route-param guard shared by the [id] transition routes. */
+export const OUTBOX_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // ── Enqueue (always inside the caller's transaction) ─────────────────────────
 
@@ -109,94 +112,108 @@ export function composeOfficerUpdateOutbox(parts: OfficerUpdateOutboxParts): Com
 
 // ── Mention resolution for outbound comments ─────────────────────────────────
 
-const MENTION_RE = /@\[([0-9a-f-]{36})\]/gi;
+// STRICT canonical uuid inside @[…] — deliberately tighter than the loose
+// 36-char class in lib/notifications/mention-utils.ts: these captures are cast
+// to ::uuid[] in SQL, so a sloppy match (e.g. 36 hex chars, no hyphens) must be
+// left as literal text instead of aborting the caller's write with 22P02.
+const MENTION_RE = /@\[([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\]/gi;
 
 /**
  * Replace @[uuid] mentions with plain @Name for the OP Direct comment. Unlike
  * cleanMentionBody (notifications, 140-char truncation) this keeps the full
- * remark and runs on the caller's transaction client.
+ * remark. Runs on the pool — the names need no transactional consistency, so
+ * callers resolve BEFORE opening their write transaction.
  */
-export async function resolveMentionsForOutbox(client: PoolClient, body: string): Promise<string> {
-  const ids = [...new Set([...body.matchAll(MENTION_RE)].map((m) => m[1]))];
+export async function resolveMentionsForOutbox(body: string): Promise<string> {
+  const ids = [...new Set([...body.matchAll(MENTION_RE)].map((m) => m[1].toLowerCase()))];
   if (ids.length === 0) return body;
-  const result = await client.query(`SELECT id, name FROM users WHERE id = ANY($1::uuid[])`, [ids]);
+  const result = await query(`SELECT id, name FROM users WHERE id = ANY($1::uuid[])`, [ids]);
   const names = new Map<string, string>(
-    (result.rows as { id: string; name: string | null }[]).map((r) => [r.id, r.name || 'User']),
+    (result.rows as { id: string; name: string | null }[]).map((r) => [r.id.toLowerCase(), r.name || 'User']),
   );
-  return body.replace(MENTION_RE, (_, uid: string) => `@${names.get(uid) || 'User'}`);
-}
-
-// ── Bridge token auth (constant-time; export/ack/fail routes) ────────────────
-
-/** Same idiom as app/api/upload/auth: length mismatch burns a dummy compare. */
-function constantTimeCompare(a: string, b: string): boolean {
-  try {
-    const bufA = Buffer.from(a, 'utf-8');
-    const bufB = Buffer.from(b, 'utf-8');
-    if (bufA.length !== bufB.length) {
-      timingSafeEqual(bufA, Buffer.alloc(bufA.length));
-      return false;
-    }
-    return timingSafeEqual(bufA, bufB);
-  } catch {
-    return false;
-  }
-}
-
-/**
- * True when the request carries the shared bridge secret. Missing env or header
- * always denies (the caller then falls back to the superadmin session check).
- */
-export function isBridgeAuthorized(request: NextRequest): boolean {
-  const secret = process.env.BRIDGE_TOKEN?.trim();
-  const token = request.headers.get('x-bridge-token');
-  if (!secret || !token) return false;
-  return constantTimeCompare(token, secret);
+  // Postgres returns canonical-lowercase ids; the body may carry uppercase.
+  return body.replace(MENTION_RE, (_, uid: string) => `@${names.get(uid.toLowerCase()) || 'User'}`);
 }
 
 // ── Status transitions (raw db-pg; guarded by current status) ────────────────
 
-export async function ackOutboxRow(id: string, opdirectCommentId: string | null): Promise<boolean> {
+export type OutboxTransitionResult =
+  | { applied: true }
+  | { applied: false; current: OutreachOutboxStatus }
+  | { applied: false; current: null }; // row does not exist
+
+/**
+ * One round trip: attempt the guarded transition and, when it doesn't apply,
+ * report the row's current status (or null when the id is unknown) from the
+ * same statement — no separate existence probe, no read-after-write race.
+ */
+async function applyOutboxTransition(
+  id: string,
+  fromStatuses: OutreachOutboxStatus[],
+  setSql: string,
+  setParams: unknown[],
+): Promise<OutboxTransitionResult> {
+  // $1 = id, $2 = allowed from-statuses; SET params start at $3.
+  const offset = 3;
+  const sets = setSql.replace(/\$(\d+)/g, (_, n) => `$${Number(n) + offset - 1}`);
   const result = await query(
-    `UPDATE direct_outreach_opdirect_outbox
-        SET status = 'posted', posted_at = now(), opdirect_comment_id = $2
-      WHERE id = $1 AND status = 'pending'`,
-    [id, opdirectCommentId],
+    `WITH target AS (
+       SELECT id, status FROM direct_outreach_opdirect_outbox WHERE id = $1
+     ), upd AS (
+       UPDATE direct_outreach_opdirect_outbox
+          SET ${sets}
+        WHERE id = $1 AND status = ANY($2::text[])
+        RETURNING id
+     )
+     SELECT t.status AS current, (u.id IS NOT NULL) AS applied
+       FROM target t LEFT JOIN upd u ON u.id = t.id`,
+    [id, fromStatuses, ...setParams],
   );
-  return (result.rowCount ?? 0) > 0;
+  const row = result.rows[0] as { current: OutreachOutboxStatus; applied: boolean } | undefined;
+  if (!row) return { applied: false, current: null };
+  return row.applied ? { applied: true } : { applied: false, current: row.current };
 }
 
-export async function failOutboxRow(id: string, lastError: string): Promise<boolean> {
-  const result = await query(
-    `UPDATE direct_outreach_opdirect_outbox
-        SET status = 'failed', attempts = attempts + 1, last_error = $2
-      WHERE id = $1 AND status = 'pending'`,
-    [id, lastError],
+export function ackOutboxRow(id: string, opdirectCommentId: string | null): Promise<OutboxTransitionResult> {
+  return applyOutboxTransition(
+    id,
+    ['pending'],
+    `status = 'posted', posted_at = now(), opdirect_comment_id = $1`,
+    [opdirectCommentId],
   );
-  return (result.rowCount ?? 0) > 0;
 }
 
-export async function retryOutboxRow(id: string): Promise<boolean> {
-  const result = await query(
-    `UPDATE direct_outreach_opdirect_outbox
-        SET status = 'pending'
-      WHERE id = $1 AND status IN ('failed', 'skipped')`,
-    [id],
+export function failOutboxRow(id: string, lastError: string): Promise<OutboxTransitionResult> {
+  return applyOutboxTransition(
+    id,
+    ['pending'],
+    `status = 'failed', attempts = attempts + 1, last_error = $1`,
+    [lastError],
   );
-  return (result.rowCount ?? 0) > 0;
 }
 
-export async function skipOutboxRow(id: string): Promise<boolean> {
-  const result = await query(
-    `UPDATE direct_outreach_opdirect_outbox
-        SET status = 'skipped'
-      WHERE id = $1 AND status = 'pending'`,
-    [id],
-  );
-  return (result.rowCount ?? 0) > 0;
+export function retryOutboxRow(id: string): Promise<OutboxTransitionResult> {
+  return applyOutboxTransition(id, ['failed', 'skipped'], `status = 'pending'`, []);
 }
 
-export async function getOutboxStatus(id: string): Promise<OutreachOutboxStatus | null> {
-  const result = await query(`SELECT status FROM direct_outreach_opdirect_outbox WHERE id = $1`, [id]);
-  return (result.rows[0]?.status as OutreachOutboxStatus | undefined) ?? null;
+export function skipOutboxRow(id: string): Promise<OutboxTransitionResult> {
+  return applyOutboxTransition(id, ['pending'], `status = 'skipped'`, []);
+}
+
+/**
+ * Set-based batch ack: one statement regardless of batch size (the route
+ * accepts up to 500 items). Returns how many rows actually moved to posted.
+ */
+export async function ackOutboxRows(
+  items: { id: string; opdirect_comment_id?: string | null }[],
+): Promise<number> {
+  if (items.length === 0) return 0;
+  const result = await query(
+    `UPDATE direct_outreach_opdirect_outbox t
+        SET status = 'posted', posted_at = now(), opdirect_comment_id = v.cid
+       FROM unnest($1::uuid[], $2::text[]) AS v(id, cid)
+      WHERE t.id = v.id AND t.status = 'pending'`,
+    [items.map((i) => i.id), items.map((i) => i.opdirect_comment_id ?? null)],
+  );
+  return result.rowCount ?? 0;
 }

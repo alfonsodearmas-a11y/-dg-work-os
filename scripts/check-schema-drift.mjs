@@ -215,10 +215,22 @@ function checkRawSql(file, src) {
     // 'Removed from report') are not parsed as table/column references.
     const staticSql = sql.replace(/\$\{[^}]+\}/g, ` ${DYN} `).replace(/'(?:[^']|'')*'/g, "''");
     const aliasMap = {};
-    const fromJoinRe = /\b(?:FROM|JOIN|INTO|UPDATE)\s+([A-Za-z_]\w*)(?:\s+(?:AS\s+)?([A-Za-z_]\w*))?/gi;
+    // CTE names (`WITH x AS (...), y AS (...)`) are query-local, not tables.
+    const cteNames = new Set();
+    const cteRe = /(?:\bWITH|\)\s*,)\s*([A-Za-z_]\w*)\s+AS\s*\(/gi;
+    let cte;
+    while ((cte = cteRe.exec(staticSql))) cteNames.add(cte[1].toLowerCase());
+    const fromJoinRe = /\b(?:FROM|JOIN|INTO|UPDATE)\s+([A-Za-z_]\w*)(?:\s*\()?(?:\s+(?:AS\s+)?([A-Za-z_]\w*))?/gi;
     let f;
     while ((f = fromJoinRe.exec(staticSql))) {
       const tbl = f[1], alias = f[2];
+      // `FROM fn(...)` is a set-returning function call (unnest, jsonb_each,
+      // generate_series...), not a table reference.
+      if (f[0].endsWith('(')) continue;
+      if (cteNames.has(tbl.toLowerCase())) {
+        if (alias) aliasMap[alias] = null; // alias of a CTE — column refs unknown, skip them
+        continue;
+      }
       if (tbl === DYN) { if (alias) aliasMap[alias] = null; continue; }
       const t = tbl.toLowerCase();
       if (t === DYN.toLowerCase()) continue;
