@@ -103,6 +103,7 @@ export async function POST(
     const update = await insertOfficerUpdate({
       caseId: caseIdNum,
       authorId: session.user.id,
+      authorLabel: session.user.name || session.user.email || 'Unknown user',
       body: body ?? null,
       workingStatus: working_status ?? null,
       targetDate,

@@ -1,954 +1,4 @@
 {
- "fks": [
-  {
-   "col": "user_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "user_settings"
-  },
-  {
-   "col": "application_id",
-   "ref": "customer_applications",
-   "refcol": "id",
-   "src": "customer_application_notes"
-  },
-  {
-   "col": "document_id",
-   "ref": "documents",
-   "refcol": "id",
-   "src": "document_chunks"
-  },
-  {
-   "col": "document_id",
-   "ref": "documents",
-   "refcol": "id",
-   "src": "document_queries"
-  },
-  {
-   "col": "upload_id",
-   "ref": "gpl_uploads",
-   "refcol": "id",
-   "src": "gpl_daily_summary"
-  },
-  {
-   "col": "upload_id",
-   "ref": "gpl_uploads",
-   "refcol": "id",
-   "src": "gpl_daily_stations"
-  },
-  {
-   "col": "upload_id",
-   "ref": "gpl_uploads",
-   "refcol": "id",
-   "src": "gpl_daily_units"
-  },
-  {
-   "col": "upload_id",
-   "ref": "gpl_uploads",
-   "refcol": "id",
-   "src": "gpl_analysis"
-  },
-  {
-   "col": "task_id",
-   "ref": "tasks",
-   "refcol": "id",
-   "src": "meeting_actions"
-  },
-  {
-   "col": "actor_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "admin_audit_log"
-  },
-  {
-   "col": "target_user_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "admin_audit_log"
-  },
-  {
-   "col": "replaced_by",
-   "ref": "daily_uploads",
-   "refcol": "id",
-   "src": "daily_uploads"
-  },
-  {
-   "col": "user_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "ai_metric_snapshot"
-  },
-  {
-   "col": "updated_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "customer_applications"
-  },
-  {
-   "col": "nearest_airstrip_id",
-   "ref": "airstrips",
-   "refcol": "id",
-   "src": "communities"
-  },
-  {
-   "col": "created_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "communities"
-  },
-  {
-   "col": "updated_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "communities"
-  },
-  {
-   "col": "project_id",
-   "ref": "projects",
-   "refcol": "id",
-   "src": "project_notes"
-  },
-  {
-   "col": "project_id",
-   "ref": "projects",
-   "refcol": "id",
-   "src": "project_summaries"
-  },
-  {
-   "col": "user_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "saved_filters"
-  },
-  {
-   "col": "project_id",
-   "ref": "projects",
-   "refcol": "project_id",
-   "src": "funding_distributions"
-  },
-  {
-   "col": "project_id",
-   "ref": "projects",
-   "refcol": "project_id",
-   "src": "project_progress_details"
-  },
-  {
-   "col": "upload_id",
-   "ref": "gpl_kpi_uploads",
-   "refcol": "id",
-   "src": "gpl_kpi_ai_analysis"
-  },
-  {
-   "col": "community_id",
-   "ref": "communities",
-   "refcol": "id",
-   "src": "water_status"
-  },
-  {
-   "col": "created_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "water_status"
-  },
-  {
-   "col": "updated_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "water_status"
-  },
-  {
-   "col": "community_id",
-   "ref": "communities",
-   "refcol": "id",
-   "src": "water_sources"
-  },
-  {
-   "col": "created_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "water_sources"
-  },
-  {
-   "col": "updated_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "water_sources"
-  },
-  {
-   "col": "community_id",
-   "ref": "communities",
-   "refcol": "id",
-   "src": "water_status_log"
-  },
-  {
-   "col": "upload_id",
-   "ref": "daily_uploads",
-   "refcol": "id",
-   "src": "daily_metrics"
-  },
-  {
-   "col": "upload_id",
-   "ref": "daily_uploads",
-   "refcol": "id",
-   "src": "daily_analysis"
-  },
-  {
-   "col": "changed_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "water_status_log"
-  },
-  {
-   "col": "snapshot_id",
-   "ref": "gpl_snapshots",
-   "refcol": "id",
-   "src": "gpl_outstanding"
-  },
-  {
-   "col": "snapshot_id",
-   "ref": "gpl_snapshots",
-   "refcol": "id",
-   "src": "gpl_completed"
-  },
-  {
-   "col": "snapshot_id",
-   "ref": "gpl_snapshots",
-   "refcol": "id",
-   "src": "gpl_snapshot_metrics"
-  },
-  {
-   "col": "first_seen_snapshot_id",
-   "ref": "gpl_snapshots",
-   "refcol": "id",
-   "src": "gpl_chronic_outliers"
-  },
-  {
-   "col": "latest_snapshot_id",
-   "ref": "gpl_snapshots",
-   "refcol": "id",
-   "src": "gpl_chronic_outliers"
-  },
-  {
-   "col": "community_id",
-   "ref": "communities",
-   "refcol": "id",
-   "src": "electricity_status"
-  },
-  {
-   "col": "created_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "electricity_status"
-  },
-  {
-   "col": "parent_id",
-   "ref": "task_comments",
-   "refcol": "id",
-   "src": "task_comments"
-  },
-  {
-   "col": "application_id",
-   "ref": "customer_applications",
-   "refcol": "id",
-   "src": "customer_application_documents"
-  },
-  {
-   "col": "updated_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "electricity_status"
-  },
-  {
-   "col": "application_id",
-   "ref": "customer_applications",
-   "refcol": "id",
-   "src": "customer_application_activity_log"
-  },
-  {
-   "col": "community_id",
-   "ref": "communities",
-   "refcol": "id",
-   "src": "electricity_sources"
-  },
-  {
-   "col": "assigned_to",
-   "ref": "users",
-   "refcol": "id",
-   "src": "projects"
-  },
-  {
-   "col": "created_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "electricity_sources"
-  },
-  {
-   "col": "updated_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "electricity_sources"
-  },
-  {
-   "col": "community_id",
-   "ref": "communities",
-   "refcol": "id",
-   "src": "electricity_status_log"
-  },
-  {
-   "col": "changed_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "electricity_status_log"
-  },
-  {
-   "col": "meeting_id",
-   "ref": "meetings",
-   "refcol": "id",
-   "src": "meeting_actions"
-  },
-  {
-   "col": "owner_user_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "object_ownership"
-  },
-  {
-   "col": "user_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "object_access_grants"
-  },
-  {
-   "col": "granted_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "object_access_grants"
-  },
-  {
-   "col": "user_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "activity_logs"
-  },
-  {
-   "col": "created_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "subtasks"
-  },
-  {
-   "col": "user_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "task_activity"
-  },
-  {
-   "col": "created_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "task_templates"
-  },
-  {
-   "col": "recurrence_assignee_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "task_templates"
-  },
-  {
-   "col": "assigned_by_user_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "tasks"
-  },
-  {
-   "col": "created_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "users"
-  },
-  {
-   "col": "invited_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "users"
-  },
-  {
-   "col": "owner_user_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "tasks"
-  },
-  {
-   "col": "created_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "customer_applications"
-  },
-  {
-   "col": "uploaded_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "customer_application_documents"
-  },
-  {
-   "col": "performed_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "customer_application_activity_log"
-  },
-  {
-   "col": "created_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "customer_application_notes"
-  },
-  {
-   "col": "user_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "task_comments"
-  },
-  {
-   "col": "user_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "project_notes"
-  },
-  {
-   "col": "task_id",
-   "ref": "tasks",
-   "refcol": "id",
-   "src": "task_activity"
-  },
-  {
-   "col": "task_id",
-   "ref": "tasks",
-   "refcol": "id",
-   "src": "task_comments"
-  },
-  {
-   "col": "task_id",
-   "ref": "tasks",
-   "refcol": "id",
-   "src": "subtasks"
-  },
-  {
-   "col": "created_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "airstrips"
-  },
-  {
-   "col": "updated_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "airstrips"
-  },
-  {
-   "col": "airstrip_id",
-   "ref": "airstrips",
-   "refcol": "id",
-   "src": "airstrip_maintenance_log"
-  },
-  {
-   "col": "verified_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "airstrip_maintenance_log"
-  },
-  {
-   "col": "created_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "airstrip_maintenance_log"
-  },
-  {
-   "col": "airstrip_id",
-   "ref": "airstrips",
-   "refcol": "id",
-   "src": "airstrip_photos"
-  },
-  {
-   "col": "maintenance_log_id",
-   "ref": "airstrip_maintenance_log",
-   "refcol": "id",
-   "src": "airstrip_photos"
-  },
-  {
-   "col": "uploaded_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "airstrip_photos"
-  },
-  {
-   "col": "airstrip_id",
-   "ref": "airstrips",
-   "refcol": "id",
-   "src": "airstrip_inspections"
-  },
-  {
-   "col": "created_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "airstrip_inspections"
-  },
-  {
-   "col": "airstrip_id",
-   "ref": "airstrips",
-   "refcol": "id",
-   "src": "airstrip_status_log"
-  },
-  {
-   "col": "changed_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "airstrip_status_log"
-  },
-  {
-   "col": "sub_programme_code",
-   "ref": "sub_programme",
-   "refcol": "code",
-   "src": "tender"
-  },
-  {
-   "col": "project_id",
-   "ref": "delayed_projects",
-   "refcol": "id",
-   "src": "delayed_project_snapshots"
-  },
-  {
-   "col": "project_id",
-   "ref": "delayed_projects",
-   "refcol": "id",
-   "src": "interventions"
-  },
-  {
-   "col": "programme_code",
-   "ref": "programme",
-   "refcol": "code",
-   "src": "sub_programme"
-  },
-  {
-   "col": "uploaded_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "upload"
-  },
-  {
-   "col": "programme_code",
-   "ref": "programme",
-   "refcol": "code",
-   "src": "tender"
-  },
-  {
-   "col": "first_seen_upload_id",
-   "ref": "upload",
-   "refcol": "id",
-   "src": "tender"
-  },
-  {
-   "col": "last_seen_upload_id",
-   "ref": "upload",
-   "refcol": "id",
-   "src": "tender"
-  },
-  {
-   "col": "tender_id",
-   "ref": "tender",
-   "refcol": "id",
-   "src": "tender_field_change"
-  },
-  {
-   "col": "upload_id",
-   "ref": "upload",
-   "refcol": "id",
-   "src": "tender_field_change"
-  },
-  {
-   "col": "changed_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "tender_field_change"
-  },
-  {
-   "col": "upload_id",
-   "ref": "upload",
-   "refcol": "id",
-   "src": "tender_match_review"
-  },
-  {
-   "col": "resolution_tender_id",
-   "ref": "tender",
-   "refcol": "id",
-   "src": "tender_match_review"
-  },
-  {
-   "col": "resolved_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "tender_match_review"
-  },
-  {
-   "col": "tender_id",
-   "ref": "tender",
-   "refcol": "id",
-   "src": "tender_document"
-  },
-  {
-   "col": "uploaded_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "tender_document"
-  },
-  {
-   "col": "tender_id",
-   "ref": "tender",
-   "refcol": "id",
-   "src": "tender_note"
-  },
-  {
-   "col": "created_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "tender_note"
-  },
-  {
-   "col": "upload_id",
-   "ref": "upload",
-   "refcol": "id",
-   "src": "tender_upload_snapshot"
-  },
-  {
-   "col": "tender_id",
-   "ref": "tender",
-   "refcol": "id",
-   "src": "tender_upload_snapshot"
-  },
-  {
-   "col": "updated_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "agency_psip_focal_point"
-  },
-  {
-   "col": "changed_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "agency_psip_focal_point_history"
-  },
-  {
-   "col": "tender_id",
-   "ref": "tender",
-   "refcol": "id",
-   "src": "psip_nag_record"
-  },
-  {
-   "col": "decided_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "procurement_excluded_fingerprint"
-  },
-  {
-   "col": "updated_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "psip_nag_settings"
-  },
-  {
-   "col": "created_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "tender"
-  },
-  {
-   "col": "resolution_tender_id",
-   "ref": "tender",
-   "refcol": "id",
-   "src": "procurement_match_decision"
-  },
-  {
-   "col": "decided_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "procurement_match_decision"
-  },
-  {
-   "col": "reviewed_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "action_item_extractions"
-  },
-  {
-   "col": "extraction_id",
-   "ref": "action_item_extractions",
-   "refcol": "id",
-   "src": "tasks"
-  },
-  {
-   "col": "delegated_to_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "tasks"
-  },
-  {
-   "col": "completed_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "tasks"
-  },
-  {
-   "col": "verified_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "tasks"
-  },
-  {
-   "col": "supersedes_id",
-   "ref": "tasks",
-   "refcol": "id",
-   "src": "tasks"
-  },
-  {
-   "col": "actor_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "procurement_decision"
-  },
-  {
-   "col": "approved_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "procurement_decision"
-  },
-  {
-   "col": "archived_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "tender"
-  },
-  {
-   "col": "tender_id",
-   "ref": "tender",
-   "refcol": "id",
-   "src": "tender_presence_event"
-  },
-  {
-   "col": "upload_id",
-   "ref": "upload",
-   "refcol": "id",
-   "src": "tender_presence_event"
-  },
-  {
-   "col": "actor_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "tender_presence_event"
-  },
-  {
-   "col": "task_id",
-   "ref": "tasks",
-   "refcol": "id",
-   "src": "task_watchers"
-  },
-  {
-   "col": "user_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "task_watchers"
-  },
-  {
-   "col": "added_by_user_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "task_watchers"
-  },
-  {
-   "col": "tender_id",
-   "ref": "tender",
-   "refcol": "id",
-   "src": "tender_status_decision"
-  },
-  {
-   "col": "decision_id",
-   "ref": "procurement_decision",
-   "refcol": "id",
-   "src": "tender_status_decision"
-  },
-  {
-   "col": "decided_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "tender_status_decision"
-  },
-  {
-   "col": "task_id",
-   "ref": "tasks",
-   "refcol": "id",
-   "src": "action_item_events"
-  },
-  {
-   "col": "actor_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "action_item_events"
-  },
-  {
-   "col": "sent_by_user_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "agency_intel_reports"
-  },
-  {
-   "col": "last_seen_batch_id",
-   "ref": "upload_batches",
-   "refcol": "id",
-   "src": "delayed_projects"
-  },
-  {
-   "col": "resolved_by_batch_id",
-   "ref": "upload_batches",
-   "refcol": "id",
-   "src": "delayed_projects"
-  },
-  {
-   "col": "extraction_id",
-   "ref": "action_item_extractions",
-   "refcol": "id",
-   "src": "meetings_seen"
-  },
-  {
-   "col": "task_id",
-   "ref": "tasks",
-   "refcol": "id",
-   "src": "agency_head_notification_log"
-  },
-  {
-   "col": "generated_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "nptab_reports"
-  },
-  {
-   "col": "queued_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "nptab_report_queue"
-  },
-  {
-   "col": "dequeued_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "nptab_report_queue"
-  },
-  {
-   "col": "included_in_report_id",
-   "ref": "nptab_reports",
-   "refcol": "id",
-   "src": "nptab_report_queue"
-  },
-  {
-   "col": "report_id",
-   "ref": "nptab_reports",
-   "refcol": "id",
-   "src": "nptab_report_audit_log"
-  },
-  {
-   "col": "changed_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "nptab_report_audit_log"
-  },
-  {
-   "col": "referred_to_minister_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "tasks"
-  },
-  {
-   "col": "created_by_user_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "agency_scheduled_reports"
-  },
-  {
-   "col": "updated_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "airstrip_settings"
-  },
-  {
-   "col": "responsible_manager_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "airstrips"
-  },
-  {
-   "col": "created_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "contractors"
-  },
-  {
-   "col": "airstrip_id",
-   "ref": "airstrips",
-   "refcol": "id",
-   "src": "airstrip_contractors"
-  },
-  {
-   "col": "contractor_id",
-   "ref": "contractors",
-   "refcol": "id",
-   "src": "airstrip_contractors"
-  },
-  {
-   "col": "created_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "airstrip_contractors"
-  },
-  {
-   "col": "case_id",
-   "ref": "direct_outreach_cases",
-   "refcol": "case_id",
-   "src": "direct_outreach_updates"
-  },
-  {
-   "col": "assignee_user_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "direct_outreach_assignments"
-  },
-  {
-   "col": "assigned_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "direct_outreach_assignments"
-  },
-  {
-   "col": "set_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "direct_outreach_agency_overrides"
-  },
-  {
-   "col": "transferred_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "direct_outreach_transfers"
-  },
-  {
-   "col": "author_id",
-   "ref": "users",
-   "refcol": "id",
-   "src": "direct_outreach_officer_updates"
-  },
-  {
-   "col": "updated_by",
-   "ref": "users",
-   "refcol": "id",
-   "src": "direct_outreach_case_state"
-  }
- ],
  "generated_note": "Committed prod schema snapshot for check:drift. Refresh via: npm run refresh:schema-snapshot.",
  "schema": "public",
  "tables": {
@@ -1586,6 +636,23 @@
    "new_target_date",
    "new_working_status",
    "target_cleared"
+  ],
+  "direct_outreach_opdirect_outbox": [
+   "attempts",
+   "author_label",
+   "author_user_id",
+   "case_id",
+   "comment_text",
+   "created_at",
+   "dgos_ref",
+   "id",
+   "last_error",
+   "officer_update_id",
+   "op_status_target",
+   "opdirect_comment_id",
+   "posted_at",
+   "source_kind",
+   "status"
   ],
   "direct_outreach_open_v": [
    "age_bucket",
@@ -3302,5 +2369,955 @@
    "previous_status",
    "reason"
   ]
- }
+ },
+ "fks": [
+  {
+   "src": "user_settings",
+   "col": "user_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "customer_application_notes",
+   "col": "application_id",
+   "ref": "customer_applications",
+   "refcol": "id"
+  },
+  {
+   "src": "document_chunks",
+   "col": "document_id",
+   "ref": "documents",
+   "refcol": "id"
+  },
+  {
+   "src": "document_queries",
+   "col": "document_id",
+   "ref": "documents",
+   "refcol": "id"
+  },
+  {
+   "src": "gpl_daily_summary",
+   "col": "upload_id",
+   "ref": "gpl_uploads",
+   "refcol": "id"
+  },
+  {
+   "src": "gpl_daily_stations",
+   "col": "upload_id",
+   "ref": "gpl_uploads",
+   "refcol": "id"
+  },
+  {
+   "src": "gpl_daily_units",
+   "col": "upload_id",
+   "ref": "gpl_uploads",
+   "refcol": "id"
+  },
+  {
+   "src": "gpl_analysis",
+   "col": "upload_id",
+   "ref": "gpl_uploads",
+   "refcol": "id"
+  },
+  {
+   "src": "meeting_actions",
+   "col": "task_id",
+   "ref": "tasks",
+   "refcol": "id"
+  },
+  {
+   "src": "admin_audit_log",
+   "col": "actor_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "admin_audit_log",
+   "col": "target_user_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "daily_uploads",
+   "col": "replaced_by",
+   "ref": "daily_uploads",
+   "refcol": "id"
+  },
+  {
+   "src": "ai_metric_snapshot",
+   "col": "user_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "customer_applications",
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "communities",
+   "col": "nearest_airstrip_id",
+   "ref": "airstrips",
+   "refcol": "id"
+  },
+  {
+   "src": "communities",
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "communities",
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "project_notes",
+   "col": "project_id",
+   "ref": "projects",
+   "refcol": "id"
+  },
+  {
+   "src": "project_summaries",
+   "col": "project_id",
+   "ref": "projects",
+   "refcol": "id"
+  },
+  {
+   "src": "saved_filters",
+   "col": "user_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "funding_distributions",
+   "col": "project_id",
+   "ref": "projects",
+   "refcol": "project_id"
+  },
+  {
+   "src": "project_progress_details",
+   "col": "project_id",
+   "ref": "projects",
+   "refcol": "project_id"
+  },
+  {
+   "src": "gpl_kpi_ai_analysis",
+   "col": "upload_id",
+   "ref": "gpl_kpi_uploads",
+   "refcol": "id"
+  },
+  {
+   "src": "water_status",
+   "col": "community_id",
+   "ref": "communities",
+   "refcol": "id"
+  },
+  {
+   "src": "water_status",
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "water_status",
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "water_sources",
+   "col": "community_id",
+   "ref": "communities",
+   "refcol": "id"
+  },
+  {
+   "src": "water_sources",
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "water_sources",
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "water_status_log",
+   "col": "community_id",
+   "ref": "communities",
+   "refcol": "id"
+  },
+  {
+   "src": "daily_metrics",
+   "col": "upload_id",
+   "ref": "daily_uploads",
+   "refcol": "id"
+  },
+  {
+   "src": "daily_analysis",
+   "col": "upload_id",
+   "ref": "daily_uploads",
+   "refcol": "id"
+  },
+  {
+   "src": "water_status_log",
+   "col": "changed_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "direct_outreach_officer_updates",
+   "col": "author_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "direct_outreach_case_state",
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "gpl_outstanding",
+   "col": "snapshot_id",
+   "ref": "gpl_snapshots",
+   "refcol": "id"
+  },
+  {
+   "src": "gpl_completed",
+   "col": "snapshot_id",
+   "ref": "gpl_snapshots",
+   "refcol": "id"
+  },
+  {
+   "src": "gpl_snapshot_metrics",
+   "col": "snapshot_id",
+   "ref": "gpl_snapshots",
+   "refcol": "id"
+  },
+  {
+   "src": "gpl_chronic_outliers",
+   "col": "first_seen_snapshot_id",
+   "ref": "gpl_snapshots",
+   "refcol": "id"
+  },
+  {
+   "src": "gpl_chronic_outliers",
+   "col": "latest_snapshot_id",
+   "ref": "gpl_snapshots",
+   "refcol": "id"
+  },
+  {
+   "src": "electricity_status",
+   "col": "community_id",
+   "ref": "communities",
+   "refcol": "id"
+  },
+  {
+   "src": "electricity_status",
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "task_comments",
+   "col": "parent_id",
+   "ref": "task_comments",
+   "refcol": "id"
+  },
+  {
+   "src": "customer_application_documents",
+   "col": "application_id",
+   "ref": "customer_applications",
+   "refcol": "id"
+  },
+  {
+   "src": "electricity_status",
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "customer_application_activity_log",
+   "col": "application_id",
+   "ref": "customer_applications",
+   "refcol": "id"
+  },
+  {
+   "src": "electricity_sources",
+   "col": "community_id",
+   "ref": "communities",
+   "refcol": "id"
+  },
+  {
+   "src": "projects",
+   "col": "assigned_to",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "electricity_sources",
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "electricity_sources",
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "electricity_status_log",
+   "col": "community_id",
+   "ref": "communities",
+   "refcol": "id"
+  },
+  {
+   "src": "electricity_status_log",
+   "col": "changed_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "meeting_actions",
+   "col": "meeting_id",
+   "ref": "meetings",
+   "refcol": "id"
+  },
+  {
+   "src": "object_ownership",
+   "col": "owner_user_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "object_access_grants",
+   "col": "user_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "object_access_grants",
+   "col": "granted_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "activity_logs",
+   "col": "user_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "subtasks",
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "task_activity",
+   "col": "user_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "task_templates",
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "task_templates",
+   "col": "recurrence_assignee_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "tasks",
+   "col": "assigned_by_user_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "users",
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "users",
+   "col": "invited_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "tasks",
+   "col": "owner_user_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "customer_applications",
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "customer_application_documents",
+   "col": "uploaded_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "customer_application_activity_log",
+   "col": "performed_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "customer_application_notes",
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "task_comments",
+   "col": "user_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "project_notes",
+   "col": "user_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "task_activity",
+   "col": "task_id",
+   "ref": "tasks",
+   "refcol": "id"
+  },
+  {
+   "src": "task_comments",
+   "col": "task_id",
+   "ref": "tasks",
+   "refcol": "id"
+  },
+  {
+   "src": "subtasks",
+   "col": "task_id",
+   "ref": "tasks",
+   "refcol": "id"
+  },
+  {
+   "src": "airstrips",
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "airstrips",
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "airstrip_maintenance_log",
+   "col": "airstrip_id",
+   "ref": "airstrips",
+   "refcol": "id"
+  },
+  {
+   "src": "airstrip_maintenance_log",
+   "col": "verified_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "airstrip_maintenance_log",
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "airstrip_photos",
+   "col": "airstrip_id",
+   "ref": "airstrips",
+   "refcol": "id"
+  },
+  {
+   "src": "airstrip_photos",
+   "col": "maintenance_log_id",
+   "ref": "airstrip_maintenance_log",
+   "refcol": "id"
+  },
+  {
+   "src": "airstrip_photos",
+   "col": "uploaded_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "airstrip_inspections",
+   "col": "airstrip_id",
+   "ref": "airstrips",
+   "refcol": "id"
+  },
+  {
+   "src": "airstrip_inspections",
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "airstrip_status_log",
+   "col": "airstrip_id",
+   "ref": "airstrips",
+   "refcol": "id"
+  },
+  {
+   "src": "airstrip_status_log",
+   "col": "changed_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "tender",
+   "col": "sub_programme_code",
+   "ref": "sub_programme",
+   "refcol": "code"
+  },
+  {
+   "src": "delayed_project_snapshots",
+   "col": "project_id",
+   "ref": "delayed_projects",
+   "refcol": "id"
+  },
+  {
+   "src": "interventions",
+   "col": "project_id",
+   "ref": "delayed_projects",
+   "refcol": "id"
+  },
+  {
+   "src": "sub_programme",
+   "col": "programme_code",
+   "ref": "programme",
+   "refcol": "code"
+  },
+  {
+   "src": "upload",
+   "col": "uploaded_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "tender",
+   "col": "programme_code",
+   "ref": "programme",
+   "refcol": "code"
+  },
+  {
+   "src": "tender",
+   "col": "first_seen_upload_id",
+   "ref": "upload",
+   "refcol": "id"
+  },
+  {
+   "src": "tender",
+   "col": "last_seen_upload_id",
+   "ref": "upload",
+   "refcol": "id"
+  },
+  {
+   "src": "tender_field_change",
+   "col": "tender_id",
+   "ref": "tender",
+   "refcol": "id"
+  },
+  {
+   "src": "tender_field_change",
+   "col": "upload_id",
+   "ref": "upload",
+   "refcol": "id"
+  },
+  {
+   "src": "tender_field_change",
+   "col": "changed_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "tender_match_review",
+   "col": "upload_id",
+   "ref": "upload",
+   "refcol": "id"
+  },
+  {
+   "src": "tender_match_review",
+   "col": "resolution_tender_id",
+   "ref": "tender",
+   "refcol": "id"
+  },
+  {
+   "src": "tender_match_review",
+   "col": "resolved_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "tender_document",
+   "col": "tender_id",
+   "ref": "tender",
+   "refcol": "id"
+  },
+  {
+   "src": "tender_document",
+   "col": "uploaded_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "tender_note",
+   "col": "tender_id",
+   "ref": "tender",
+   "refcol": "id"
+  },
+  {
+   "src": "tender_note",
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "tender_upload_snapshot",
+   "col": "upload_id",
+   "ref": "upload",
+   "refcol": "id"
+  },
+  {
+   "src": "tender_upload_snapshot",
+   "col": "tender_id",
+   "ref": "tender",
+   "refcol": "id"
+  },
+  {
+   "src": "agency_psip_focal_point",
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "agency_psip_focal_point_history",
+   "col": "changed_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "psip_nag_record",
+   "col": "tender_id",
+   "ref": "tender",
+   "refcol": "id"
+  },
+  {
+   "src": "procurement_excluded_fingerprint",
+   "col": "decided_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "psip_nag_settings",
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "tender",
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "procurement_match_decision",
+   "col": "resolution_tender_id",
+   "ref": "tender",
+   "refcol": "id"
+  },
+  {
+   "src": "procurement_match_decision",
+   "col": "decided_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "action_item_extractions",
+   "col": "reviewed_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "tasks",
+   "col": "extraction_id",
+   "ref": "action_item_extractions",
+   "refcol": "id"
+  },
+  {
+   "src": "tasks",
+   "col": "delegated_to_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "tasks",
+   "col": "completed_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "tasks",
+   "col": "verified_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "tasks",
+   "col": "supersedes_id",
+   "ref": "tasks",
+   "refcol": "id"
+  },
+  {
+   "src": "procurement_decision",
+   "col": "actor_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "procurement_decision",
+   "col": "approved_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "tender",
+   "col": "archived_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "tender_presence_event",
+   "col": "tender_id",
+   "ref": "tender",
+   "refcol": "id"
+  },
+  {
+   "src": "tender_presence_event",
+   "col": "upload_id",
+   "ref": "upload",
+   "refcol": "id"
+  },
+  {
+   "src": "tender_presence_event",
+   "col": "actor_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "task_watchers",
+   "col": "task_id",
+   "ref": "tasks",
+   "refcol": "id"
+  },
+  {
+   "src": "task_watchers",
+   "col": "user_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "task_watchers",
+   "col": "added_by_user_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "tender_status_decision",
+   "col": "tender_id",
+   "ref": "tender",
+   "refcol": "id"
+  },
+  {
+   "src": "tender_status_decision",
+   "col": "decision_id",
+   "ref": "procurement_decision",
+   "refcol": "id"
+  },
+  {
+   "src": "tender_status_decision",
+   "col": "decided_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "direct_outreach_updates",
+   "col": "case_id",
+   "ref": "direct_outreach_cases",
+   "refcol": "case_id"
+  },
+  {
+   "src": "action_item_events",
+   "col": "task_id",
+   "ref": "tasks",
+   "refcol": "id"
+  },
+  {
+   "src": "action_item_events",
+   "col": "actor_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "agency_intel_reports",
+   "col": "sent_by_user_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "delayed_projects",
+   "col": "last_seen_batch_id",
+   "ref": "upload_batches",
+   "refcol": "id"
+  },
+  {
+   "src": "delayed_projects",
+   "col": "resolved_by_batch_id",
+   "ref": "upload_batches",
+   "refcol": "id"
+  },
+  {
+   "src": "meetings_seen",
+   "col": "extraction_id",
+   "ref": "action_item_extractions",
+   "refcol": "id"
+  },
+  {
+   "src": "agency_head_notification_log",
+   "col": "task_id",
+   "ref": "tasks",
+   "refcol": "id"
+  },
+  {
+   "src": "direct_outreach_assignments",
+   "col": "assignee_user_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "direct_outreach_assignments",
+   "col": "assigned_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "nptab_reports",
+   "col": "generated_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "nptab_report_queue",
+   "col": "queued_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "nptab_report_queue",
+   "col": "dequeued_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "nptab_report_queue",
+   "col": "included_in_report_id",
+   "ref": "nptab_reports",
+   "refcol": "id"
+  },
+  {
+   "src": "nptab_report_audit_log",
+   "col": "report_id",
+   "ref": "nptab_reports",
+   "refcol": "id"
+  },
+  {
+   "src": "nptab_report_audit_log",
+   "col": "changed_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "tasks",
+   "col": "referred_to_minister_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "agency_scheduled_reports",
+   "col": "created_by_user_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "direct_outreach_agency_overrides",
+   "col": "set_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "direct_outreach_transfers",
+   "col": "transferred_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "airstrip_settings",
+   "col": "updated_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "airstrips",
+   "col": "responsible_manager_id",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "contractors",
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id"
+  },
+  {
+   "src": "airstrip_contractors",
+   "col": "airstrip_id",
+   "ref": "airstrips",
+   "refcol": "id"
+  },
+  {
+   "src": "airstrip_contractors",
+   "col": "contractor_id",
+   "ref": "contractors",
+   "refcol": "id"
+  },
+  {
+   "src": "airstrip_contractors",
+   "col": "created_by",
+   "ref": "users",
+   "refcol": "id"
+  }
+ ]
 }

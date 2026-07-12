@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { timingSafeEqual, createHash } from 'crypto';
+import { createHash } from 'crypto';
 import { parseBody, withErrorHandler } from '@/lib/api-utils';
+import { constantTimeCompare } from '@/lib/constant-time';
 
 const VALID_AGENCIES = ['GPL', 'GWI'] as const;
 type Agency = typeof VALID_AGENCIES[number];
@@ -27,20 +28,6 @@ function isRateLimited(ip: string): boolean {
   entry.count++;
   if (entry.count > 5) return true;
   return false;
-}
-
-function constantTimeCompare(a: string, b: string): boolean {
-  try {
-    const bufA = Buffer.from(a, 'utf-8');
-    const bufB = Buffer.from(b, 'utf-8');
-    if (bufA.length !== bufB.length) {
-      timingSafeEqual(bufA, Buffer.alloc(bufA.length));
-      return false;
-    }
-    return timingSafeEqual(bufA, bufB);
-  } catch {
-    return false;
-  }
 }
 
 function makeUploadToken(code: string, agency: string): string {
