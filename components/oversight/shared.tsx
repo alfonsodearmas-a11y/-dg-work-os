@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
 import { HEALTH_DOT, OVERSIGHT_STATUS_COLORS, getDeadlineBadge } from './types';
 import { Badge } from '@/components/ui/Badge';
@@ -72,7 +73,7 @@ export function OversightKpiCard({ label, value, sub }: { label: string; value: 
 }
 
 export function MultiSelect({
-  label, options, selected, onChange, renderOption, disabled = false,
+  label, options, selected, onChange, renderOption, disabled = false, closeOnSelect = false,
 }: {
   label: string;
   options: { value: string; label: string }[];
@@ -81,30 +82,95 @@ export function MultiSelect({
   renderOption?: (opt: { value: string; label: string }) => React.ReactNode;
   /** Disables the trigger (e.g. while the option source is loading or saving). */
   disabled?: boolean;
+  /** Close the menu after a single pick — for single-select adapters (e.g. the
+   *  officer picker). Filters leave this false so several values can be chosen
+   *  without the menu closing. */
+  closeOnSelect?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  // Viewport-anchored menu position. The menu is portaled to <body> to escape
+  // any ancestor stacking/overflow trap (a .card-premium backdrop-filter
+  // context, the SlidePanel scroll container) that would otherwise clip it or
+  // pin its z-index below later-painted sibling cards. Because it is fixed,
+  // its coordinates are recomputed from the trigger on open and on scroll/resize.
+  const [pos, setPos] = useState<{ top: number; left: number; minWidth: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const el = triggerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const minWidth = Math.max(r.width, 200);
+      // Clamp so a right-edge trigger can't push the menu off-screen.
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - minWidth - 8));
+      setPos({ top: r.bottom + 4, left, minWidth });
+    };
+    place();
+    window.addEventListener('scroll', place, true); // capture: catch nested scroll containers
+    window.addEventListener('resize', place);
+    return () => {
+      window.removeEventListener('scroll', place, true);
+      window.removeEventListener('resize', place);
+    };
+  }, [open]);
+
   useEffect(() => {
-    function handler(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-  function toggle(val: string) { onChange(selected.includes(val) ? selected.filter(v => v !== val) : [...selected, val]); }
+    if (!open) return;
+    // The portaled menu is NOT a DOM descendant of the trigger, so it must be
+    // excluded from outside-click detection explicitly — otherwise a mousedown
+    // on an option reads as "outside" and closes the menu before the click can
+    // toggle it.
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (wrapRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    // Escape closes the menu and is stopped here so it does not also reach an
+    // enclosing SlidePanel's window-level Escape handler and close the panel.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  function toggle(val: string) {
+    onChange(selected.includes(val) ? selected.filter(v => v !== val) : [...selected, val]);
+    if (closeOnSelect) { setOpen(false); triggerRef.current?.focus(); }
+  }
+
   return (
-    <div ref={ref} className="relative">
-      <button type="button" disabled={disabled} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen(!open)} className="bg-navy-950 border border-navy-800 rounded-lg px-3 py-2 text-sm text-white focus:border-gold-500 focus:outline-none flex items-center gap-2 w-full md:min-w-[130px] md:w-auto disabled:opacity-60 disabled:cursor-not-allowed">
+    <div ref={wrapRef} className="relative">
+      <button ref={triggerRef} type="button" disabled={disabled} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen(!open)} className="bg-navy-950 border border-navy-800 rounded-lg px-3 py-2 text-sm text-white focus:border-gold-500 focus:outline-none flex items-center gap-2 w-full md:min-w-[130px] md:w-auto disabled:opacity-60 disabled:cursor-not-allowed">
         <span className="truncate">{selected.length ? `${label} (${selected.length})` : label}</span>
         <ChevronDown className={`h-3.5 w-3.5 text-navy-600 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
-      {open && !disabled && (
-        <div className="absolute top-full left-0 mt-1 bg-navy-900 border border-navy-800 rounded-lg shadow-xl z-50 min-w-[200px] max-h-[300px] overflow-y-auto">
+      {open && !disabled && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={menuRef}
+          style={{ position: 'fixed', top: pos?.top ?? 0, left: pos?.left ?? 0, minWidth: pos?.minWidth ?? 200 }}
+          className="bg-navy-900 border border-navy-800 rounded-lg shadow-xl z-[60] max-h-[300px] overflow-y-auto"
+        >
           {options.map(opt => (
             <label key={opt.value} className="flex items-center gap-2 px-3 py-2 hover:bg-navy-950/60 cursor-pointer text-sm">
               <input type="checkbox" checked={selected.includes(opt.value)} onChange={() => toggle(opt.value)} className="accent-gold-500" />
               {renderOption ? renderOption(opt) : <span className="text-white">{opt.label}</span>}
             </label>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

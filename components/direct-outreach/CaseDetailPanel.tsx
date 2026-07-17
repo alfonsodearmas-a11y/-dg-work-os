@@ -538,6 +538,7 @@ export function CaseDetailPanel({ caseId, onClose, onChanged }: CaseDetailPanelP
                           const picked = vals[vals.length - 1];
                           if (picked) handleAssign(picked);
                         }}
+                        closeOnSelect
                         disabled={savingAssignee || pickerFailed || pickerUsers === null}
                       />
                       {pickerFailed && (

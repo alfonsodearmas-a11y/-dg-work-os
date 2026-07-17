@@ -128,6 +128,27 @@ describe('officer picker (MultiSelect adapter)', () => {
     expect(writes[0].init.body).toBe(JSON.stringify({ assignee_user_id: null }));
   });
 
+  it('Escape closes the officer menu without closing the whole panel', async () => {
+    const onClose = vi.fn();
+    render(<CaseDetailPanel caseId={7} onClose={onClose} />);
+    await screen.findByText('No water');
+
+    const trigger = await screen.findByRole('button', { name: 'Assign an officer…' });
+    await waitFor(() => expect(trigger).not.toBeDisabled());
+    fireEvent.click(trigger);
+    expect(await screen.findByRole('checkbox', { name: 'Alice Persaud (GWI)' })).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    // Menu closed…
+    await waitFor(() =>
+      expect(screen.queryByRole('checkbox', { name: 'Alice Persaud (GWI)' })).not.toBeInTheDocument(),
+    );
+    // …but the panel stayed open — its window-level Escape must not have fired.
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText('No water')).toBeInTheDocument();
+  });
+
   it('a failed officer fetch disables the picker and offers a retry — never an empty picker', async () => {
     officersFails = true;
     await renderPanel();
